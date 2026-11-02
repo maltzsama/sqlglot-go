@@ -713,6 +713,43 @@ const (
 	// `DECLARE <name> <type> [DEFAULT <expr>]` local variables (also T-SQL upstream).
 	KindDeclare
 	KindDeclareItem
+	// TSQL cluster: nodes the T-SQL dialect parses into. Execute/ExecuteSql
+	// (ddl.py:436-444), ScopeResolution/QueryOption/ForClause/XMLKeyValueOption
+	// (query.py:914-919,2081-2097), StoredProcedure (query.py:2115), Convert
+	// (functions.py:89), and the temporal/string/math function nodes below.
+	KindExecute
+	KindExecuteSql
+	KindScopeResolution
+	KindQueryOption
+	KindXMLKeyValueOption
+	KindForClause
+	KindJSONArrayAgg
+	KindConvert
+	KindTimeFromParts
+	KindTimestampFromParts
+	KindDateFromParts
+	KindSplitPart
+	KindStoredProcedure
+	KindLastDay
+	KindAtan2
+	KindUuid
+	KindRepeat
+	KindLeft
+	KindRight
+	KindSHA
+	KindSHA1Digest
+	KindCurrentTimestampLTZ
+	KindDateStrToDate
+	KindTimestampAdd
+	KindTsOrDsDiff
+	KindNumberToStr
+	KindIsAscii
+	KindVolatileProperty
+	// TSQL cluster, cont.: NextValueFor (ddl.py:432) and the CLUSTERED/NONCLUSTERED
+	// column constraints (constraints.py:64,139) used by T-SQL's UNIQUE/PK index syntax.
+	KindNextValueFor
+	KindClusteredColumnConstraint
+	KindNonClusteredColumnConstraint
 )
 
 type Trait uint32
@@ -1317,6 +1354,38 @@ var argTypes = map[Kind][]argSpec{
 	KindTimeToStr:              {{"this", true}, {"format", true}, {"culture", false}, {"zone", false}},
 	KindStarMap:                defaultArgTypes,
 	KindVarMap:                 {{"keys", true}, {"values", true}},
+	// TSQL cluster.
+	KindExecute:                      {{"this", true}, {"expressions", false}, {"return_status", false}},
+	KindExecuteSql:                   {{"this", true}, {"expressions", false}, {"return_status", false}},
+	KindScopeResolution:              {{"this", false}, {"expression", true}},
+	KindQueryOption:                  {{"this", true}, {"expression", false}},
+	KindXMLKeyValueOption:            {{"this", true}, {"expression", false}},
+	KindForClause:                    {{"kind", true}, {"expressions", false}},
+	KindJSONArrayAgg:                 {{"this", true}, {"order", false}, {"null_handling", false}, {"return_type", false}, {"strict", false}},
+	KindConvert:                      {{"this", true}, {"expression", true}, {"style", false}, {"safe", false}},
+	KindTimeFromParts:                {{"hour", true}, {"min", true}, {"sec", true}, {"nano", false}, {"fractions", false}, {"precision", false}, {"overflow", false}},
+	KindTimestampFromParts:           {{"year", true}, {"month", true}, {"day", true}, {"hour", true}, {"min", true}, {"sec", true}, {"zone", false}, {"milli", false}, {"this", false}, {"expression", false}},
+	KindDateFromParts:                {{"year", true}, {"month", false}, {"day", false}, {"allow_overflow", false}},
+	KindSplitPart:                    {{"this", true}, {"delimiter", false}, {"part_index", false}, {"part_index_zero_as_one", false}, {"empty_delimiter_returns_whole", false}},
+	KindStoredProcedure:              {{"this", true}, {"expressions", false}, {"wrapped", false}},
+	KindLastDay:                      {{"this", true}, {"unit", false}},
+	KindAtan2:                        {{"this", true}, {"expression", true}},
+	KindUuid:                         {{"this", false}, {"name", false}, {"is_string", false}},
+	KindRepeat:                       {{"this", true}, {"times", true}},
+	KindLeft:                         {{"this", true}, {"expression", true}, {"negative_length_returns_empty", false}},
+	KindRight:                        {{"this", true}, {"expression", true}, {"negative_length_returns_empty", false}},
+	KindSHA:                          defaultArgTypes,
+	KindSHA1Digest:                   defaultArgTypes,
+	KindCurrentTimestampLTZ:          {},
+	KindDateStrToDate:                defaultArgTypes,
+	KindTimestampAdd:                 {{"this", true}, {"expression", true}, {"unit", false}},
+	KindTsOrDsDiff:                   {{"this", true}, {"expression", true}, {"unit", false}},
+	KindNumberToStr:                  {{"this", true}, {"format", true}, {"culture", false}},
+	KindIsAscii:                      defaultArgTypes,
+	KindVolatileProperty:             {{"this", false}},
+	KindNextValueFor:                 {{"this", true}, {"order", false}},
+	KindClusteredColumnConstraint:    defaultArgTypes,
+	KindNonClusteredColumnConstraint: defaultArgTypes,
 }
 
 var traitsOf = map[Kind]Trait{
@@ -1599,6 +1668,29 @@ var traitsOf = map[Kind]Trait{
 	KindTimeToStr:        TraitCondition | TraitFunc,
 	KindStarMap:          TraitCondition | TraitFunc,
 	KindVarMap:           TraitCondition | TraitFunc,
+	// TSQL cluster: Func subclasses are Conditions with TraitFunc; JSONArrayAgg is an
+	// aggregate too (json.py:22). Query/DDL/property nodes carry no traits.
+	KindJSONArrayAgg:        TraitCondition | TraitFunc | TraitAggFunc,
+	KindConvert:             TraitCondition | TraitFunc,
+	KindTimeFromParts:       TraitCondition | TraitFunc,
+	KindTimestampFromParts:  TraitCondition | TraitFunc,
+	KindDateFromParts:       TraitCondition | TraitFunc,
+	KindSplitPart:           TraitCondition | TraitFunc,
+	KindLastDay:             TraitCondition | TraitFunc,
+	KindAtan2:               TraitCondition | TraitFunc,
+	KindUuid:                TraitCondition | TraitFunc,
+	KindRepeat:              TraitCondition | TraitFunc,
+	KindLeft:                TraitCondition | TraitFunc,
+	KindRight:               TraitCondition | TraitFunc,
+	KindSHA:                 TraitCondition | TraitFunc,
+	KindSHA1Digest:          TraitCondition | TraitFunc,
+	KindCurrentTimestampLTZ: TraitCondition | TraitFunc,
+	KindDateStrToDate:       TraitCondition | TraitFunc,
+	KindTimestampAdd:        TraitCondition | TraitFunc,
+	KindTsOrDsDiff:          TraitCondition | TraitFunc,
+	KindNumberToStr:         TraitCondition | TraitFunc,
+	KindIsAscii:             TraitCondition | TraitFunc,
+	KindNextValueFor:        TraitCondition | TraitFunc,
 }
 
 var primitive = map[Kind]bool{
@@ -2082,6 +2174,38 @@ var className = map[Kind]string{
 	KindTimeToStr:              "TimeToStr",
 	KindStarMap:                "StarMap",
 	KindVarMap:                 "VarMap",
+	// TSQL cluster.
+	KindExecute:                      "Execute",
+	KindExecuteSql:                   "ExecuteSql",
+	KindScopeResolution:              "ScopeResolution",
+	KindQueryOption:                  "QueryOption",
+	KindXMLKeyValueOption:            "XMLKeyValueOption",
+	KindForClause:                    "ForClause",
+	KindJSONArrayAgg:                 "JSONArrayAgg",
+	KindConvert:                      "Convert",
+	KindTimeFromParts:                "TimeFromParts",
+	KindTimestampFromParts:           "TimestampFromParts",
+	KindDateFromParts:                "DateFromParts",
+	KindSplitPart:                    "SplitPart",
+	KindStoredProcedure:              "StoredProcedure",
+	KindLastDay:                      "LastDay",
+	KindAtan2:                        "Atan2",
+	KindUuid:                         "Uuid",
+	KindRepeat:                       "Repeat",
+	KindLeft:                         "Left",
+	KindRight:                        "Right",
+	KindSHA:                          "SHA",
+	KindSHA1Digest:                   "SHA1Digest",
+	KindCurrentTimestampLTZ:          "CurrentTimestampLTZ",
+	KindDateStrToDate:                "DateStrToDate",
+	KindTimestampAdd:                 "TimestampAdd",
+	KindTsOrDsDiff:                   "TsOrDsDiff",
+	KindNumberToStr:                  "NumberToStr",
+	KindIsAscii:                      "IsAscii",
+	KindVolatileProperty:             "VolatileProperty",
+	KindNextValueFor:                 "NextValueFor",
+	KindClusteredColumnConstraint:    "ClusteredColumnConstraint",
+	KindNonClusteredColumnConstraint: "NonClusteredColumnConstraint",
 }
 
 // varLenArgs is the authoritative is_var_len_args=True set (mirroring the upstream Func

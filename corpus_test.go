@@ -228,8 +228,8 @@ func writeGaps(fails map[gapKey]string) error {
 	return os.WriteFile(parityGapsPath, []byte(b.String()), 0o644)
 }
 
-// Scope B includes MySQL, Postgres, and the Presto-family dialects Athena, Trino,
-// Presto, and Hive. Their gaps in testdata/parity_gaps.txt are the generator-port
+// Scope B includes MySQL, Postgres, the Presto-family dialects Athena, Trino,
+// Presto, and Hive, and TSQL. Their gaps in testdata/parity_gaps.txt are the generator-port
 // burndown list. Pass and total floors are monotonic: raise them, never lower them.
 const (
 	minPassBase     = 980
@@ -239,6 +239,7 @@ const (
 	minPassTrino    = 67
 	minPassPresto   = 170
 	minPassHive     = 141
+	minPassTSQL     = 566
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
@@ -250,6 +251,7 @@ const (
 	minTotalTrino    = 115
 	minTotalPresto   = 170
 	minTotalHive     = 141
+	minTotalTSQL     = 613
 )
 
 // TestCorpus is the single round-trip harness for both the base-dialect
@@ -303,6 +305,7 @@ func TestCorpus(t *testing.T) {
 		{"trino", minPassTrino, minTotalTrino},
 		{"presto", minPassPresto, minTotalPresto},
 		{"hive", minPassHive, minTotalHive},
+		{"tsql", minPassTSQL, minTotalTSQL},
 	}
 	var counts []string
 	for _, floor := range floors {

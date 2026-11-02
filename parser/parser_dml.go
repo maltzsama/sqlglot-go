@@ -149,6 +149,9 @@ func (p *Parser) parseUpdate() exp.Expression {
 			kwargs["order"] = p.parseOrder(nil, false)
 		case p.match(tokens.LIMIT, false):
 			kwargs["limit"] = p.parseLimit(nil, false, false)
+		case p.dialect.Name == "tsql" && p.match(tokens.OPTION, false):
+			// parsers/tsql.py:780-783: UPDATE ... OPTION (...).
+			kwargs["options"] = p.parseTSQLOptions()
 		default:
 			return p.expression(exp.Update(kwargs), nil, nil)
 		}

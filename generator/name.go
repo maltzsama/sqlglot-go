@@ -24,6 +24,8 @@ var sqlNameOverrides = map[expressions.Kind]string{
 	expressions.KindSHA2:         "SHA2",
 	expressions.KindSHA2Digest:   "SHA2_DIGEST",
 	expressions.KindDayOfWeekIso: "DAYOFWEEK_ISO",
+	// TSQL cluster: _sql_names[0] for JSONArrayAgg is JSON_ARRAYAGG.
+	expressions.KindJSONArrayAgg: "JSON_ARRAYAGG",
 }
 
 func (g *Generator) sqlName(kind expressions.Kind) string {

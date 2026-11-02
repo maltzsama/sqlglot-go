@@ -13,10 +13,14 @@ import (
 // TrinoGenerator subclasses PrestoGenerator. Dialects that register nothing (base, mysql,
 // postgres) resolve straight to the shared tables, byte-identical to before.
 var (
-	dialectDispatch          = map[string]map[expressions.Kind]func(*Generator, expressions.Expression) string{}
-	dialectTypeMappings      = map[string]map[expressions.DType]string{}
-	dialectPropertyLocations = map[string]map[expressions.Kind]propertyLocation{}
-	dialectParents           = map[string]string{
+	dialectDispatch     = map[string]map[expressions.Kind]func(*Generator, expressions.Expression) string{}
+	dialectTypeMappings = map[string]map[expressions.DType]string{}
+	// dialectRemovedTypeMappings records a dialect that removes a base TYPE_MAPPING entry
+	// (generators/tsql.py:171-176 drops NCHAR/NVARCHAR), so the type renders with its own
+	// DType name instead of the base mapping.
+	dialectRemovedTypeMappings = map[string]map[expressions.DType]bool{}
+	dialectPropertyLocations   = map[string]map[expressions.Kind]propertyLocation{}
+	dialectParents             = map[string]string{
 		"trino":        "presto",
 		"athena-trino": "trino",
 		"athena-hive":  "hive",
@@ -46,6 +50,18 @@ func registerDialectTypeMapping(name string, delta map[expressions.DType]string)
 	}
 	for dtype, mapped := range delta {
 		dialectTypeMappings[name][dtype] = mapped
+	}
+}
+
+// registerDialectRemoveTypeMappings removes base TYPE_MAPPING entries for a dialect: the DType
+// then renders as its own name (e.g. NVARCHAR rather than the base's VARCHAR).
+func registerDialectRemoveTypeMappings(name string, dtypes ...expressions.DType) {
+	name = strings.ToLower(name)
+	if dialectRemovedTypeMappings[name] == nil {
+		dialectRemovedTypeMappings[name] = map[expressions.DType]bool{}
+	}
+	for _, dtype := range dtypes {
+		dialectRemovedTypeMappings[name][dtype] = true
 	}
 }
 
@@ -90,6 +106,9 @@ func (g *Generator) lookupDispatch(kind expressions.Kind) func(*Generator, expre
 
 func (g *Generator) lookupTypeMapping(dtype expressions.DType) (string, bool) {
 	for key := g.overrideKey(); key != ""; key = dialectParents[key] {
+		if dialectRemovedTypeMappings[key][dtype] {
+			return string(dtype), true
+		}
 		if mapped, ok := dialectTypeMappings[key][dtype]; ok {
 			return mapped, true
 		}

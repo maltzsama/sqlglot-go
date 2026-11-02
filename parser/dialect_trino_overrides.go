@@ -115,7 +115,9 @@ func (p *Parser) parseDeclareItem() exp.Expression {
 	if p.match(tokens.TABLE) {
 		kind = p.parseSchema(nil)
 	} else {
-		kind = p.parseTypes(true, false, true, false)
+		// parser.py:6467-6473: _parse_types defaults check_func=False. Passing true made a
+		// parameterized type (CHAR(1), VARCHAR(100)) retreat and fail the whole DECLARE.
+		kind = p.parseTypes(false, false, true, false)
 	}
 	var dflt exp.Expression
 	if p.match(tokens.DEFAULT) || p.match(tokens.EQ) {
