@@ -767,7 +767,7 @@ func (p *Parser) parseSetOperations(this exp.Expression) exp.Expression {
 	if this != nil && isSetOperation(this.Kind()) {
 		expression := this.Expr()
 		if expression != nil {
-			for _, arg := range []string{"order", "limit", "offset"} {
+			for arg := range p.dialect.SetOpModifiers {
 				if e := asExpr(expression.Arg(arg)); e != nil {
 					this.Set(arg, e.Pop())
 				}
@@ -1583,6 +1583,8 @@ func (p *Parser) parseTableAlias(aliasTokensArg map[tokens.TokenType]bool) exp.E
 	return tableAlias
 }
 
+var tsqlJoinHints = map[string]bool{"LOOP": true, "HASH": true, "MERGE": true, "REMOTE": true}
+
 var joinMethods = map[tokens.TokenType]bool{tokens.ASOF: true, tokens.NATURAL: true, tokens.POSITIONAL: true}
 var joinSides = map[tokens.TokenType]bool{tokens.FULL: true, tokens.LEFT: true, tokens.RIGHT: true}
 var joinKinds = map[tokens.TokenType]bool{tokens.ANTI: true, tokens.CROSS: true, tokens.INNER: true, tokens.OUTER: true, tokens.SEMI: true, tokens.STRAIGHT_JOIN: true}
@@ -1617,6 +1619,11 @@ func (p *Parser) parseJoin(skipJoinToken bool, parseBracket bool, aliasTokensArg
 	}
 	index := p.index
 	method, side, kind := p.parseJoinParts()
+	// parsers/tsql.py:406 JOIN_HINTS: `INNER LOOP JOIN` / `HASH JOIN` / `MERGE JOIN`.
+	var joinHint string
+	if p.dialect.Name == "tsql" && p.matchTexts(tsqlJoinHints) {
+		joinHint = stringsUpper(p.prev.Text)
+	}
 	join := p.match(tokens.JOIN) || (kind != nil && kind.TokenType == tokens.STRAIGHT_JOIN)
 	joinComments := p.prevComments
 	if !skipJoinToken && !join {
@@ -1636,6 +1643,9 @@ func (p *Parser) parseJoin(skipJoinToken bool, parseBracket bool, aliasTokensArg
 	}
 	if side != nil {
 		kwargs["side"] = stringsUpper(side.Text)
+	}
+	if joinHint != "" {
+		kwargs["hint"] = joinHint
 	}
 	if kind != nil {
 		kwargs["kind"] = stringsUpper(kind.Text)

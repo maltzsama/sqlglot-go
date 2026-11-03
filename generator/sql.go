@@ -1419,7 +1419,12 @@ func (g *Generator) insertSQL(e expressions.Expression) string {
 		defaultValues = "DEFAULT VALUES"
 	}
 	returning := g.sqlKey(e, "returning")
-	expressionSQL = expressionSQL + onConflict + defaultValues + returning
+	if g.dialect.ReturningEnd {
+		expressionSQL = expressionSQL + onConflict + defaultValues + returning
+	} else {
+		// generator.py:2318-2321: OUTPUT/RETURNING goes before the source.
+		expressionSQL = returning + expressionSQL + onConflict
+	}
 	partitionBy := g.sqlKey(e, "partition")
 	if partitionBy != "" {
 		partitionBy = " " + partitionBy
@@ -1450,6 +1455,9 @@ func (g *Generator) updateSQL(e expressions.Expression) string {
 	order := g.sqlKey(e, "order")
 	limit := g.sqlKey(e, "limit")
 	expressionSQL := fromSQL + whereSQL + returning
+	if !g.dialect.ReturningEnd {
+		expressionSQL = returning + fromSQL + whereSQL
+	}
 	options := g.expressions(exprsOptions{expression: e, key: "options"})
 	if options != "" {
 		options = " OPTION(" + options + ")"
@@ -1481,6 +1489,9 @@ func (g *Generator) deleteSQL(e expressions.Expression) string {
 		tables = " " + tables
 	}
 	expressionSQL := this + using + cluster + where + returning + order + limit
+	if !g.dialect.ReturningEnd {
+		expressionSQL = returning + this + using + cluster + where + order + limit
+	}
 	return g.prependCtes(e, "DELETE"+hint+tables+expressionSQL)
 }
 
@@ -1563,6 +1574,17 @@ func (g *Generator) mergeSQL(e expressions.Expression) string {
 		e = g.mergeWithoutTarget(e)
 	}
 	table := asExpression(e.Arg("this"))
+	tableAlias := ""
+	// generator.py:4857-4866: T-SQL MERGE places the table hint before the alias.
+	if table != nil {
+		if hints, ok := table.Arg("hints").([]expressions.Expression); ok && len(hints) > 0 &&
+			hints[0].Kind() == expressions.KindWithTableHint {
+			if alias := asExpression(table.Arg("alias")); alias != nil {
+				tableAlias = " AS " + g.gen(alias)
+				table.Set("alias", nil)
+			}
+		}
+	}
 	this := g.gen(table)
 	using := "USING " + g.sqlKey(e, "using")
 	whens := g.sqlKey(e, "whens")
@@ -1580,7 +1602,7 @@ func (g *Generator) mergeSQL(e expressions.Expression) string {
 		whens += returning
 	}
 	sep := g.sep()
-	return g.prependCtes(e, "MERGE INTO "+this+sep+using+sep+on+sep+whens)
+	return g.prependCtes(e, "MERGE INTO "+this+tableAlias+sep+using+sep+on+sep+whens)
 }
 
 func (g *Generator) whenSQL(e expressions.Expression) string {

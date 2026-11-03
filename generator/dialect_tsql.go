@@ -102,6 +102,7 @@ func init() {
 		exp.KindTrim:          (*Generator).tsqlTrimSQL,
 		exp.KindTsOrDsToDate:  (*Generator).tsqlTsOrDsToDateSQL,
 		exp.KindCreate:        (*Generator).tsqlCreateSQL,
+		exp.KindInsert:        (*Generator).tsqlInsertSQL,
 		exp.KindCTE:           (*Generator).tsqlCTESQL,
 		exp.KindSubquery:      (*Generator).tsqlSubquerySQL,
 		exp.KindAnd:           (*Generator).tsqlAndSQL,
@@ -118,6 +119,8 @@ func init() {
 		exp.KindForClause:                    (*Generator).tsqlForClauseSQL,
 		exp.KindXMLKeyValueOption:            (*Generator).tsqlXMLKeyValueOptionSQL,
 		exp.KindNextValueFor:                 (*Generator).tsqlNextValueForSQL,
+		exp.KindScopeResolution:              (*Generator).tsqlScopeResolutionSQL,
+		exp.KindAlterSet:                     (*Generator).tsqlAlterSetSQL,
 		exp.KindClusteredColumnConstraint:    (*Generator).tsqlClusteredConstraintSQL,
 		exp.KindNonClusteredColumnConstraint: (*Generator).tsqlNonClusteredConstraintSQL,
 		exp.KindSplitPart:                    (*Generator).tsqlSplitPartSQL,
@@ -361,7 +364,16 @@ func (g *Generator) tsqlCreateSQL(e exp.Expression) string {
 			table.Set("catalog", nil)
 		}
 	}
+	// generators/tsql.py:438-456: CREATE TABLE ... AS SELECT becomes SELECT ... INTO.
+	if strings.EqualFold(e.Text("kind"), "TABLE") {
+		if ctas := asExpression(e.Arg("expression")); ctas != nil {
+			if sql, ok := g.tsqlCTAS(e, ctas); ok {
+				return sql
+			}
+		}
+	}
 	sql := g.createSQL(e)
+
 	if truthy(e.Arg("replace")) {
 		sql = strings.Replace(sql, "CREATE OR REPLACE ", "CREATE OR ALTER ", 1)
 	}
@@ -386,6 +398,8 @@ var boolExpressionKinds = map[exp.Kind]bool{
 	exp.KindLT: true, exp.KindLTE: true, exp.KindIs: true, exp.KindLike: true,
 	exp.KindILike: true, exp.KindIn: true, exp.KindBetween: true, exp.KindExists: true,
 	exp.KindBoolean: true, exp.KindNullSafeEQ: true, exp.KindSimilarTo: true,
+	// ensure_bools leaves an already-parenthesized condition alone in practice.
+	exp.KindParen: true,
 }
 
 func (g *Generator) tsqlAndSQL(e exp.Expression) string {
@@ -415,6 +429,81 @@ func (g *Generator) tsqlJoinSQL(e exp.Expression) string {
 		e.Set("on", exp.NEQ(exp.Args{"this": on, "expression": exp.LiteralNumber(0)}))
 	}
 	return g.joinSQL(e)
+}
+
+// tsqlInsertSQL ports the CTE hoist for INSERT ... WITH (generators/tsql.py's
+// EXPRESSIONS_WITHOUT_NESTED_CTES + move_ctes_to_top_level).
+func (g *Generator) tsqlInsertSQL(e exp.Expression) string {
+	if child := asExpression(e.Arg("expression")); child != nil {
+		if with := asExpression(child.Arg("with_")); with != nil {
+			e.Set("with_", with.Pop())
+			child.Set("with_", nil)
+		}
+	}
+	return g.insertSQL(e)
+}
+
+// tsqlCTAS ports the CTAS -> SELECT INTO rewrite (generators/tsql.py:438-456).
+func (g *Generator) tsqlCTAS(e exp.Expression, ctas exp.Expression) (string, bool) {
+	table := e.Find(exp.KindTable)
+	if table == nil {
+		return "", false
+	}
+	if isUnwrappedQuery(ctas.Kind()) {
+		ctas = exp.Subquery(exp.Args{"this": ctas})
+	}
+	isTemp := false
+	if props, ok := e.Arg("properties").([]exp.Expression); ok {
+		_ = props
+	}
+	if props := asExpression(e.Arg("properties")); props != nil {
+		for _, p := range props.Expressions() {
+			if p.Kind() == exp.KindTemporaryProperty {
+				isTemp = true
+			}
+		}
+	}
+	source := ctas
+	if isUnwrappedQuery(ctas.Kind()) {
+		source = exp.Subquery(exp.Args{"this": ctas})
+	}
+	source.Set("alias", exp.TableAlias(exp.Args{"this": exp.Identifier(exp.Args{"this": "temp"})}))
+	sel := exp.Select(exp.Args{
+		"expressions": []exp.Expression{exp.Star(nil)},
+		"from_":       exp.From(exp.Args{"this": source}),
+		"into":        exp.Into(exp.Args{"this": table, "temporary": isTemp}),
+	})
+	return g.gen(sel), true
+}
+
+// tsqlAlterSetSQL ports the T-SQL ALTER TABLE ... SET property style: `KEY=value`
+// without spaces (property nodes render `KEY = value` in the base generator).
+func (g *Generator) tsqlAlterSetSQL(e exp.Expression) string {
+	exprs := g.expressions(exprsOptions{expression: e, flat: true})
+	if boolValue(e.Meta()["tsql_no_space"]) {
+		exprs = strings.ReplaceAll(exprs, " = ", "=")
+		// FILESTREAM_ON is an ordinary EQ upstream, not a named property: keep its spaces.
+		exprs = strings.Replace(exprs, "FILESTREAM_ON=", "FILESTREAM_ON = ", 1)
+	}
+	if g.dialect.AlterSetWrapped {
+		exprs = "(" + exprs + ")"
+	}
+	return "SET " + exprs
+}
+
+// tsqlScopeResolutionSQL ports scoperesolution_sql (generator.py:5536-5546): a CLR
+// function on the RHS keeps its case (T-SQL CLR names are case sensitive).
+func (g *Generator) tsqlScopeResolutionSQL(e exp.Expression) string {
+	this := g.sqlKey(e, "this")
+	expr := asExpression(e.Arg("expression"))
+	if expr != nil && expr.Is(exp.TraitFunc) {
+		name := expr.Text("this")
+		if name == "" {
+			name = g.sqlName(expr.Kind())
+		}
+		return this + "::" + name + "(" + g.formatArgs(listFromValue(expr.Arg("expressions")), ", ") + ")"
+	}
+	return this + "::" + g.sqlKey(e, "expression")
 }
 
 func (g *Generator) tsqlNextValueForSQL(e exp.Expression) string {
@@ -492,7 +581,11 @@ func tsqlQualifyDerivedOutputs(e exp.Expression) {
 		if name == "" {
 			continue
 		}
-		list[i] = exp.AliasExpr(projection, exp.Identifier(exp.Args{"this": name}), false)
+		quoted := false
+		if id := asExpression(projection.This()); id != nil && id.Kind() == exp.KindIdentifier {
+			quoted = boolValue(id.Arg("quoted"))
+		}
+		list[i] = exp.AliasExpr(projection, exp.Identifier(exp.Args{"this": name, "quoted": quoted}), false)
 	}
 	query.Set("expressions", list)
 }

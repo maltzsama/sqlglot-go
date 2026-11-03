@@ -70,6 +70,15 @@ func (p *Parser) parseCreateStructured(start tokens.Token) exp.Expression {
 	replace := start.TokenType == tokens.REPLACE || p.matchPair(tokens.OR, tokens.REPLACE, true) || p.matchPair(tokens.OR, tokens.ALTER, true)
 	refresh := p.matchPair(tokens.OR, tokens.REFRESH, true)
 	unique := p.match(tokens.UNIQUE)
+	// parser.py:2459-2467: COLUMNSTORE indexes carry a clustered flag (TSQL).
+	var clustered any
+	if p.dialect.Name == "tsql" {
+		if p.matchTextSeq("CLUSTERED", "COLUMNSTORE") {
+			clustered = true
+		} else if p.matchTextSeq("NONCLUSTERED", "COLUMNSTORE") || p.matchTextSeq("COLUMNSTORE") {
+			clustered = false
+		}
+	}
 
 	properties := []exp.Expression{}
 	extendProperties := func(parsed exp.Expression) {
@@ -214,6 +223,7 @@ func (p *Parser) parseCreateStructured(start tokens.Token) exp.Expression {
 		"no_schema_binding": noSchemaBinding,
 		"concurrently":      concurrently,
 		"begin":             begin,
+		"clustered":         clustered,
 	}), nil, nil)
 }
 
@@ -307,7 +317,13 @@ func (p *Parser) parseFunctionParameter() exp.Expression {
 		return p.parseColumnDef(p.parseIdVar(true, nil))
 	}
 	if p.dialect.Name != "postgres" {
-		return p.parseColumnDef(p.parseIdVar(true, nil))
+		name := p.parseIdVar(true, nil)
+		// parser.py:7501-7502: _parse_column_def(computed_column=False) consumes an optional
+		// AS between the parameter name and its type (T-SQL `@p AS INT`).
+		if p.dialect.Name == "tsql" {
+			p.match(tokens.ALIAS)
+		}
+		return p.parseColumnDef(name)
 	}
 
 	mode, hasMode := p.parsePostgresParameterMode()
@@ -373,6 +389,11 @@ func (p *Parser) parseCreateFunction(ctt tokens.TokenType) (this, expression exp
 	if p.match(tokens.COMMAND) {
 		expression = p.parseAsCommand(p.prev)
 		return this, expression, properties, begin
+	}
+	// A signature-only CREATE PROCEDURE (the upstream tsql corpus) ends at EOF; model the
+	// absent body as an empty Block so the statement stays structural.
+	if p.dialect.Name == "tsql" && ctt == tokens.PROCEDURE && !p.curr.IsValid() {
+		return this, p.expression(exp.Block(exp.Args{"expressions": []exp.Expression{nil}}), nil, nil), properties, begin
 	}
 	begin = p.match(tokens.BEGIN)
 	// PG `BEGIN ATOMIC <stmts> END` (SQL-standard function body, PG 14+): consume ATOMIC
@@ -696,7 +717,18 @@ func (p *Parser) parseColumnDef(this exp.Expression) exp.Expression {
 		position = p.expression(exp.ColumnPosition(exp.Args{"this": p.parseColumn(), "position": pos}), nil, nil)
 	}
 
-	return p.expression(exp.ColumnDef(exp.Args{"this": this, "kind": kind, "constraints": constraints, "position": position}), nil, nil)
+	result := p.expression(exp.ColumnDef(exp.Args{"this": this, "kind": kind, "constraints": constraints, "position": position}), nil, nil)
+	// parsers/tsql.py:660-670: a T-SQL column definition may carry `= default` and a trailing
+	// OUT/OUTPUT/READONLY mode.
+	if p.dialect.Name == "tsql" && result != nil {
+		if p.match(tokens.EQ) {
+			result.Set("default", p.parseDisjunction())
+		}
+		if p.matchTexts(map[string]bool{"OUT": true, "OUTPUT": true, "READONLY": true}) {
+			result.Set("output", p.prev.Text)
+		}
+	}
+	return result
 }
 
 // parseConstraint ports _parse_constraint (parser.py:7462-7468): a named `CONSTRAINT <id>

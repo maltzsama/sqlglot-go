@@ -29,6 +29,9 @@ var (
 	mysqlConstraintParsers      map[string]func(*Parser) exp.Expression
 	mysqlConstraintParserKeySet map[string]bool
 
+	tsqlConstraintParsers      map[string]func(*Parser) exp.Expression
+	tsqlConstraintParserKeySet map[string]bool
+
 	// schemaUnnamedConstraints/mysqlSchemaUnnamedConstraints port the base subset of
 	// SCHEMA_UNNAMED_CONSTRAINTS (parser.py:1458-1468) that this port has parsers for
 	// (CHECK/EXCLUDE/FOREIGN KEY/LIKE/PRIMARY KEY/UNIQUE), plus mysql's FULLTEXT/INDEX/
@@ -162,6 +165,24 @@ func init() {
 	}
 	mysqlConstraintParserKeySet = funcMapKeys(mysqlConstraintParsers)
 
+	// TSQL adds the CLUSTERED/NONCLUSTERED index constraints (parser.py:1428-1431),
+	// which the base registry defers.
+	tsqlConstraintParsers = make(map[string]func(*Parser) exp.Expression, len(constraintParsers)+2)
+	for k, v := range constraintParsers {
+		tsqlConstraintParsers[k] = v
+	}
+	tsqlConstraintParsers["CLUSTERED"] = func(p *Parser) exp.Expression {
+		return p.expression(exp.ClusteredColumnConstraint(exp.Args{
+			"this": p.parseWrappedCsv(func() exp.Expression { return p.parseOrdered(nil) }),
+		}), nil, nil)
+	}
+	tsqlConstraintParsers["NONCLUSTERED"] = func(p *Parser) exp.Expression {
+		return p.expression(exp.NonClusteredColumnConstraint(exp.Args{
+			"this": p.parseWrappedCsv(func() exp.Expression { return p.parseOrdered(nil) }),
+		}), nil, nil)
+	}
+	tsqlConstraintParserKeySet = funcMapKeys(tsqlConstraintParsers)
+
 	// mysqlSchemaUnnamedConstraints ports parsers/mysql.py:265-271
 	// MySQLParser.SCHEMA_UNNAMED_CONSTRAINTS: the base set plus FULLTEXT/INDEX/KEY/SPATIAL.
 	mysqlSchemaUnnamedConstraints = make(map[string]bool, len(schemaUnnamedConstraints)+4)
@@ -185,15 +206,21 @@ func funcMapKeys(m map[string]func(*Parser) exp.Expression) map[string]bool {
 }
 
 func (p *Parser) constraintParsers() map[string]func(*Parser) exp.Expression {
-	if p.dialect.Name == "mysql" {
+	switch p.dialect.Name {
+	case "mysql":
 		return mysqlConstraintParsers
+	case "tsql":
+		return tsqlConstraintParsers
 	}
 	return constraintParsers
 }
 
 func (p *Parser) constraintParserKeys() map[string]bool {
-	if p.dialect.Name == "mysql" {
+	switch p.dialect.Name {
+	case "mysql":
 		return mysqlConstraintParserKeySet
+	case "tsql":
+		return tsqlConstraintParserKeySet
 	}
 	return constraintParserKeySet
 }
