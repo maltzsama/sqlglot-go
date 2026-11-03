@@ -46,3 +46,50 @@
 {"dialect":"trino","category":"parse: Expecting","sql":"WITH FUNCTION test_repeat(a BIGINT) RETURNS BIGINT BEGIN REPEAT SET a = a + 1; UNTIL a >= 10 END REPEAT; RETURN a; END SELECT TEST_REPEAT(5)"}
 {"dialect":"trino","category":"parse: Expecting","sql":"WITH FUNCTION to_one_hundred(start_value BIGINT, step BIGINT) RETURNS BIGINT BEGIN DECLARE count BIGINT DEFAULT 0; DECLARE current BIGINT DEFAULT 0; SET current = start_value; abc: LOOP IF current >= 100 THEN LEAVE abc; END IF; SET count = count + 1; SET current = current + step; END LOOP; RETURN count; END SELECT TO_ONE_HUNDRED(0, 10)"}
 {"dialect":"trino","category":"parse: Expecting","sql":"WITH FUNCTION while_case(n BIGINT) RETURNS BIGINT BEGIN DECLARE i BIGINT DEFAULT 0; WHILE i < n DO CASE WHEN i = 0 THEN SET i = 1; ELSE SET i = i + 1; END CASE; END WHILE; RETURN i; END SELECT WHILE_CASE(3)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"\n            CREATE FUNCTION udfProductInYear (\n                @model_year INT\n            )\n            RETURNS TABLE\n            AS\n            RETURN\n                SELECT\n                    product_name,\n                    model_year,\n                    list_price\n                FROM\n                    production.products\n                WHERE\n                    model_year = @model_year\n            "}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"COPY INTO test_1 FROM 'path' WITH (FORMAT_NAME = test, FILE_TYPE = 'CSV', CREDENTIAL = (IDENTITY='Shared Access Signature', SECRET='token'), FIELDTERMINATOR = ';', ROWTERMINATOR = '0X0A', ENCODING = 'UTF8', DATEFORMAT = 'ymd', MAXERRORS = 10, ERRORFILE = 'errorsfolder', IDENTITY_INSERT = 'ON')"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"DELETE x OUTPUT x.a FROM z"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"IF ((@x = @y AND GETDATE() = GETDATE()) OR (GETDATE() = @t)) BEGIN SET @query_result = (SELECT MAX(id) + 1 FROM t); END"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"INSERT INTO foo.bar WITH cte AS (SELECT 1 AS one) SELECT * FROM cte"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"INSERT INTO x (y) OUTPUT x.a, x.b INTO l SELECT * FROM z"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"INSERT INTO x (y) OUTPUT x.a, x.b SELECT * FROM z"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_ARRAYAGG(c ABSENT ON NULL)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_ARRAYAGG(c NULL ON NULL)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_ARRAYAGG(c ORDER BY c ABSENT ON NULL)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_ARRAYAGG(c ORDER BY c NULL ON NULL)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_ARRAYAGG(c ORDER BY c)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_ARRAYAGG(c1 ORDER BY c1)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"MERGE INTO mytable WITH (HOLDLOCK) AS T USING mytable_merge AS S ON (T.user_id = S.user_id) WHEN NOT MATCHED THEN INSERT (c1, c2) VALUES (S.c1, S.c2)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM (SELECT \"c\") AS subq"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"STRING_AGG(x, '|') WITHIN GROUP (ORDER BY z ASC)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"STRING_AGG(x, y) WITHIN GROUP (ORDER BY z DESC)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"UPDATE x SET y = 1 OUTPUT x.a, x.b FROM y"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"UPDATE x SET y = 1 OUTPUT x.a, x.b INTO @y FROM y"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"WITH t AS (SELECT \"c\") SELECT * FROM t"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT COUNT(*) FROM (SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2 ORDER BY a DESC) AS t"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2 ORDER BY a DESC"}
+{"dialect":"tsql","category":"gen: ddl/properties","sql":"ALTER TABLE tbl ADD CONSTRAINT cnstr PRIMARY KEY CLUSTERED (ID), CONSTRAINT cnstr2 UNIQUE CLUSTERED (ID)"}
+{"dialect":"tsql","category":"gen: ddl/properties","sql":"ALTER TABLE tbl SET (DATA_DELETION=OFF)"}
+{"dialect":"tsql","category":"gen: ddl/properties","sql":"ALTER TABLE tbl SET (SYSTEM_VERSIONING=OFF)"}
+{"dialect":"tsql","category":"gen: ddl/properties","sql":"CREATE COLUMNSTORE INDEX index_name ON foo.bar"}
+{"dialect":"tsql","category":"gen: ddl/properties","sql":"CREATE PROCEDURE test(@v1 AS INTEGER = 1, @v2 AS CHAR(1) = 'c')"}
+{"dialect":"tsql","category":"gen: ddl/properties","sql":"CREATE TABLE schema.table AS SELECT a, id FROM (SELECT a, (SELECT id FROM tb ORDER BY t DESC LIMIT 1) as id FROM tbl) AS _subquery"}
+{"dialect":"tsql","category":"gen: ddl/properties","sql":"CREATE TABLE test (\"data\" CHAR(7), \"valid_from\" DATETIME2(2) GENERATED ALWAYS AS ROW START NOT NULL, \"valid_to\" DATETIME2(2) GENERATED ALWAYS AS ROW END NOT NULL, PERIOD FOR SYSTEM_TIME (\"valid_from\", \"valid_to\")) WITH(SYSTEM_VERSIONING=ON)"}
+{"dialect":"tsql","category":"gen: ddl/properties","sql":"CREATE TABLE x (CONSTRAINT \"pk_mytable\" UNIQUE NONCLUSTERED (a DESC)) ON b (c)"}
+{"dialect":"tsql","category":"generate: error","sql":"GEOGRAPHY::Point(latitude, longitude, 4326)"}
+{"dialect":"tsql","category":"generate: error","sql":"GEOGRAPHY::STGeomFromText('POLYGON((-122.358 47.653 , -122.348 47.649, -122.348 47.658, -122.358 47.658, -122.358 47.653))', 4326)"}
+{"dialect":"tsql","category":"generate: error","sql":"LOGIN::EricKurjan"}
+{"dialect":"tsql","category":"generate: error","sql":"bar::baZ(1, 2)"}
+{"dialect":"tsql","category":"parse: Expecting )","sql":"\n            SELECT *\n            FROM OPENJSON ( @json )\n            WITH (\n                          Number   VARCHAR(200)   '$.Order.Number',\n                          Date     DATETIME       '$.Order.Date',\n                          Customer VARCHAR(200)   '$.AccountNumber',\n                          Quantity INT            '$.Item.Quantity',\n                          [Order]  NVARCHAR(MAX)  AS JSON\n             )\n            "}
+{"dialect":"tsql","category":"parse: Expecting )","sql":"INSERT INTO Production.UpdatedInventory SELECT ProductID, LocationID, NewQty, PreviousQty FROM (MERGE INTO Production.ProductInventory AS pi USING (SELECT ProductID, SUM(OrderQty) FROM Sales.SalesOrderDetail AS sod INNER JOIN Sales.SalesOrderHeader AS soh ON sod.SalesOrderID = soh.SalesOrderID AND soh.OrderDate BETWEEN '20030701' AND '20030731' GROUP BY ProductID) AS src(ProductID, OrderQty) ON pi.ProductID = src.ProductID WHEN MATCHED AND pi.Quantity - src.OrderQty >= 0 THEN UPDATE SET pi.Quantity = pi.Quantity - src.OrderQty WHEN MATCHED AND pi.Quantity - src.OrderQty <= 0 THEN DELETE OUTPUT $action, Inserted.ProductID, Inserted.LocationID, Inserted.Quantity AS NewQty, Deleted.Quantity AS PreviousQty) AS Changes(Action, ProductID, LocationID, NewQty, PreviousQty) WHERE Action = 'UPDATE'"}
+{"dialect":"tsql","category":"parse: Expecting )","sql":"SELECT * FROM OPENJSON(@array) WITH (month VARCHAR(3), temp int, month_id tinyint '$.sql:identity()') as months"}
+{"dialect":"tsql","category":"parse: Invalid expression / Unexpected token","sql":"::FOO(a, b)"}
+{"dialect":"tsql","category":"parse: Invalid expression / Unexpected token","sql":"SELECT x FROM a INNER LOOP JOIN b ON b.id = a.id"}
+{"dialect":"tsql","category":"parse: Required keyword","sql":"ALTER TABLE tbl SET (DATA_DELETION=ON(FILTER_COLUMN=col, RETENTION_PERIOD=5 MONTHS))"}
+{"dialect":"tsql","category":"parse: Required keyword","sql":"ALTER TABLE tbl SET (DATA_DELETION=ON)"}
+{"dialect":"tsql","category":"parse: Required keyword","sql":"ALTER TABLE tbl SET (SYSTEM_VERSIONING=ON(HISTORY_TABLE=db.tbl, DATA_CONSISTENCY_CHECK=OFF, HISTORY_RETENTION_PERIOD=5 DAYS))"}
+{"dialect":"tsql","category":"parse: Required keyword","sql":"ALTER TABLE tbl SET (SYSTEM_VERSIONING=ON(HISTORY_TABLE=db.tbl, HISTORY_RETENTION_PERIOD=INFINITE))"}
+{"dialect":"tsql","category":"parse: Unsupported routine definition","sql":"CREATE TRIGGER ddl_trig ON DATABASE FOR CREATE_TABLE AS BEGIN INSERT INTO schema_changes (event_type, event_time, login_name) VALUES ('CREATE_TABLE', GETDATE(), SYSTEM_USER) END"}
+{"dialect":"tsql","category":"parse: Unsupported routine definition","sql":"CREATE TRIGGER reminder ON customers AFTER INSERT AS BEGIN INSERT INTO audit_log (customer_id, action, created_at) SELECT id, 'INSERT', GETDATE() FROM inserted END"}
+{"dialect":"tsql","category":"parse: Unsupported routine definition","sql":"CREATE TRIGGER updview ON vw_employees INSTEAD OF UPDATE AS BEGIN UPDATE employees SET salary = inserted.salary FROM inserted WHERE employees.id = inserted.id END"}

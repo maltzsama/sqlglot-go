@@ -593,3 +593,25 @@ testdata/fidelity_cases.txt + fidelity_test.go; corpus stays 955/424/468 base/my
   `CREATE FUNCTION ... AS $$ ... $$` dollar-quoted UDF bodies now parse to exp.Heredoc, and
   procedure BEGIN...END bodies to exp.Block (+ exp.WhileBlock/EndStatement), matching upstream
   parser.py:2114-2135/2463/9368-9370. See procedure_block_test.go + the fidelity oracle rows.
+
+## TSQL (SQL Server) dialect — DONE (issue #118)
+
+Ported 1:1 from `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/tsql.py`.
+`dialects.GetOrRaise("tsql")` returns a real dialect: CASE_INSENSITIVE normalization, `[bracket]`
+identifiers, `N'...'` national strings, `@`/`@@`/`#` single tokens, `GO` batches, `0x` hex literals,
+`TYPED_DIVISION`, `CONCAT_COALESCE`, `LIMIT_IS_TOP`, `LIMIT_FETCH=FETCH`, `ENSURE_BOOLS`, and the
+TSQL `FUNCTIONS` overlay (CONVERT, DATEADD/DATEDIFF/DATENAME/DATEPART/DATETRUNC, ISNULL, LEN/LEFT/
+RIGHT, GETDATE/SYSDATETIME/SYSDATETIMEOFFSET/NEWID, EOMONTH, FORMAT, HASHBYTES, PARSENAME, ...).
+
+Parsed end to end: `SELECT TOP n [PERCENT] [WITH TIES]`, `OFFSET ... FETCH`, `CROSS/OUTER APPLY`,
+`FOR XML|JSON|BROWSE`, `OPTION (...)`, `DECLARE`/`EXECUTE`/`sp_executesql`, `BEGIN/COMMIT/ROLLBACK`
+transactions, `NEXT VALUE FOR`, `#temp`/`##global` tables, `IDENTITY`, `CLUSTERED`/`NONCLUSTERED`
+constraints, `x::y` scope resolution, and the TSQL DDL/DML forms exercised by the corpus.
+
+Corpus: `testdata/dialect_identity.jsonl` now carries the 613 `validate_identity` cases extracted
+from `tests/dialects/test_tsql.py` (`scripts/extract_dialect_corpus.py --dialects tsql`); the floors
+in `corpus_test.go` are **566/613**, and the remaining 47 rows are the burndown list in
+`testdata/parity_gaps.txt`: CREATE PROCEDURE/TRIGGER bodies, `CREATE TABLE ... AS SELECT` → `SELECT
+... INTO`, OUTPUT-clause position, MERGE hint placement, temporal `SYSTEM_VERSIONING` DDL,
+`ALTER TABLE ... SET` property nodes, catalog-qualified CREATE VIEW, and a few JSON/COPY
+canonicalization edges.

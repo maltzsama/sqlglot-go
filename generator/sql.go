@@ -127,8 +127,37 @@ func (g *Generator) expressionSQL(e expressions.Expression) string { return g.sq
 
 func (g *Generator) nullSQL(e expressions.Expression) string { return "NULL" }
 
+// boolTypes ports TSQLGenerator.BIT_TYPES (generators/tsql.py:31): parents whose boolean
+// operands render as 1/0 rather than a comparison.
+var boolTypes = map[expressions.Kind]bool{
+	expressions.KindEQ:     true,
+	expressions.KindNEQ:    true,
+	expressions.KindIs:     true,
+	expressions.KindIn:     true,
+	expressions.KindSelect: true,
+	expressions.KindAlias:  true,
+}
+
 func (g *Generator) booleanSQL(e expressions.Expression) string {
-	if boolValue(e.Arg("this")) {
+	truth := boolValue(e.Arg("this"))
+	if g.dialect.EnsureBools {
+		// generators/tsql.py:378-384: a boolean literal in a predicate position (or inside
+		// VALUES) is 1/0; elsewhere TSQL has no boolean type, so it emits a comparison.
+		parent := e.Parent()
+		inValues := e.FindAncestor(expressions.KindValues, expressions.KindSelect) != nil &&
+			e.FindAncestor(expressions.KindValues, expressions.KindSelect).Kind() == expressions.KindValues
+		if (parent != nil && boolTypes[parent.Kind()]) || inValues {
+			if truth {
+				return "1"
+			}
+			return "0"
+		}
+		if truth {
+			return "(1 = 1)"
+		}
+		return "(1 = 0)"
+	}
+	if truth {
 		return "TRUE"
 	}
 	return "FALSE"
@@ -541,6 +570,12 @@ func (g *Generator) prependCtes(e expressions.Expression, sql string) string {
 
 func (g *Generator) queryModifiers(e expressions.Expression, sqls ...string) string {
 	limit := asExpression(e.Arg("limit"))
+	// generator.py:3275-3285 LIMIT_FETCH: rewrite between the LIMIT and FETCH spellings.
+	if g.dialect.LimitFetch == "FETCH" && limit != nil && limit.Kind() == expressions.KindLimit {
+		limit = expressions.Fetch(expressions.Args{"direction": "FIRST", "count": limit.Arg("expression")})
+	} else if g.dialect.LimitFetch == "LIMIT" && limit != nil && limit.Kind() == expressions.KindFetch {
+		limit = expressions.Limit(expressions.Args{"expression": limit.Arg("count")})
+	}
 	fetch := limit != nil && limit.Kind() == expressions.KindFetch
 	parts := append([]string{}, sqls...)
 	for _, join := range listFromValue(e.Arg("joins")) {
@@ -581,6 +616,10 @@ func (g *Generator) afterLimitModifiers(e expressions.Expression) []string {
 func (g *Generator) optionsModifier(e expressions.Expression) string {
 	options := g.expressions(exprsOptions{expression: e, key: "options"})
 	if options != "" {
+		// generators/tsql.py:602-604: TSQL spells the modifier `OPTION (...)`.
+		if g.isDialect("tsql") {
+			return " OPTION" + g.wrap(options)
+		}
 		return " " + options
 	}
 	return ""
@@ -593,7 +632,16 @@ func (g *Generator) selectSQL(e expressions.Expression) string {
 		distinct = " " + distinct
 	}
 	kind := g.sqlKey(e, "kind")
+	// generators/tsql.py:3347-3351 / generator.py:3347-3351: with LIMIT_IS_TOP a Limit is
+	// rendered as SELECT TOP and removed from the trailing modifiers.
 	top := ""
+	if g.dialect.LimitIsTop {
+		if limit := asExpression(e.Arg("limit")); limit != nil && limit.Kind() == expressions.KindLimit &&
+			asExpression(e.Arg("offset")) == nil {
+			top = " " + g.limitTopSQL(limit)
+			e.Set("limit", nil)
+		}
+	}
 	expressionsSQL := g.expressions(exprsOptions{expression: e})
 	if kind != "" {
 		if kind == "STRUCT" || kind == "VALUE" {
@@ -623,8 +671,13 @@ func (g *Generator) selectSQL(e expressions.Expression) string {
 	if into != nil && g.dialect.SupportsSelectInto && !intoIsFileWrite {
 		intoInline = g.sqlKey(e, "into")
 	}
+	// generator.py:3388-3390: LIMIT_IS_TOP dialects place DISTINCT/hint before TOP.
+	prefix := "SELECT" + top + hint + distinct
+	if g.dialect.LimitIsTop {
+		prefix = "SELECT" + distinct + hint + top
+	}
 	sql := g.queryModifiers(e,
-		"SELECT"+top+hint+distinct+operationModifiers+kind+expressionsSQL,
+		prefix+operationModifiers+kind+expressionsSQL,
 		intoInline,
 		g.sqlKey(e, "from_"),
 	)
@@ -815,6 +868,32 @@ func (g *Generator) limitSQL(e expressions.Expression) string {
 	}
 	limitOptions := g.sqlKey(e, "limit_options")
 	return this + g.seg("LIMIT") + " " + argsSQL + limitOptions + exprs
+}
+
+// limitTopSQL ports limit_sql(..., top=True) (generator.py:2932-2948): the SELECT TOP form
+// used by LIMIT_IS_TOP dialects. A non-literal argument is parenthesized, e.g. `TOP (@n)`.
+func (g *Generator) limitTopSQL(e expressions.Expression) string {
+	var parts []string
+	needsParens := false
+	for _, key := range []string{"offset", "expression"} {
+		v := e.Arg(key)
+		if !truthy(v) {
+			continue
+		}
+		parts = append(parts, g.gen(v))
+		if ex, ok := v.(expressions.Expression); !ok || !ex.IsNumber() {
+			needsParens = true
+		}
+	}
+	argsSQL := strings.Join(parts, ", ")
+	if needsParens {
+		argsSQL = "(" + argsSQL + ")"
+	}
+	exprs := g.expressions(exprsOptions{expression: e, flat: true})
+	if exprs != "" {
+		exprs = " BY " + exprs
+	}
+	return "TOP " + argsSQL + g.sqlKey(e, "limit_options") + exprs
 }
 
 func (g *Generator) offsetSQL(e expressions.Expression) string {
@@ -1024,7 +1103,7 @@ func (g *Generator) setOperationsSQL(e expressions.Expression) string {
 func (g *Generator) withSQL(e expressions.Expression) string {
 	sql := g.expressions(exprsOptions{expression: e, flat: true})
 	recursive := ""
-	if boolValue(e.Arg("recursive")) {
+	if boolValue(e.Arg("recursive")) && g.dialect.CteRecursiveKeywordRequired {
 		recursive = "RECURSIVE "
 	}
 	search := g.sqlKey(e, "search")
@@ -2010,6 +2089,25 @@ func (g *Generator) formatJSONSQL(e expressions.Expression) string {
 }
 
 // jsonColumnDefSQL ports generator.py:3838 jsoncolumndef_sql.
+// jsonArrayAggSQL ports jsonarrayagg_sql (generator.py:3870-3882).
+func (g *Generator) jsonArrayAggSQL(e expressions.Expression) string {
+	this := g.sqlKey(e, "this")
+	order := g.sqlKey(e, "order")
+	nullHandling := stringValue(e.Arg("null_handling"))
+	if nullHandling != "" {
+		nullHandling = " " + nullHandling
+	}
+	returnType := g.sqlKey(e, "return_type")
+	if returnType != "" {
+		returnType = " RETURNING " + returnType
+	}
+	strict := ""
+	if truthy(e.Arg("strict")) {
+		strict = " STRICT"
+	}
+	return "JSON_ARRAYAGG(" + this + order + nullHandling + returnType + strict + ")"
+}
+
 func (g *Generator) jsonColumnDefSQL(e expressions.Expression) string {
 	path := g.sqlKey(e, "path")
 	if path != "" {

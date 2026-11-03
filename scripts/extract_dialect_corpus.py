@@ -55,12 +55,13 @@ from tests.dialects.test_dialect import Validator  # noqa: E402
 from tests.dialects.test_athena import TestAthena  # noqa: E402
 from tests.dialects.test_trino import TestTrino  # noqa: E402
 from tests.dialects.test_presto import TestPresto  # noqa: E402
-from tests.dialects.test_hive import TestHive  # noqa: E402
+from tests.dialects.test_hive import TestHive
+from tests.dialects.test_tsql import TestTSQL  # noqa: E402
 from tests.dialects.test_mysql import TestMySQL  # noqa: E402
 from tests.dialects.test_postgres import TestPostgres  # noqa: E402
 
-DIALECTS = ("mysql", "postgres", "athena", "trino", "presto", "hive")
-SAME_DIALECT_WRITES = {"athena", "trino", "presto", "hive"}
+DIALECTS = ("mysql", "postgres", "athena", "trino", "presto", "hive", "tsql")
+SAME_DIALECT_WRITES = {"athena", "trino", "presto", "hive", "tsql"}
 
 captured = []
 
@@ -150,6 +151,12 @@ def main():
     parser.add_argument(
         "--dialects", help="comma-separated dialects to replace; default: all six, full rewrite"
     )
+    parser.add_argument(
+        "--allow-failures",
+        action="store_true",
+        help="record what was captured instead of aborting on unittest failures (use while "
+        "bringing a new dialect up; the corpus is a burndown list, not a release gate)",
+    )
     args = parser.parse_args()
     selected = set(DIALECTS if args.dialects is None else args.dialects.split(","))
     unknown = selected.difference(DIALECTS)
@@ -158,7 +165,7 @@ def main():
 
     runner = unittest.TextTestRunner(verbosity=0)
     unexpected = []
-    for cls in (TestMySQL, TestPostgres, TestAthena, TestTrino, TestPresto, TestHive):
+    for cls in (TestMySQL, TestPostgres, TestAthena, TestTrino, TestPresto, TestHive, TestTSQL):
         if cls.dialect not in selected:
             continue
         result = runner.run(unittest.defaultTestLoader.loadTestsFromTestCase(cls))
@@ -173,7 +180,7 @@ def main():
         for test, _ in list(result.skipped):
             unexpected.append(".".join(_test_key(test)) + " (skipped)")
 
-    if unexpected:
+    if unexpected and not args.allow_failures:
         print(
             "Refusing to write corpus: the unexpected unittest failure(s)/skip(s) below may "
             "have truncated a test method before its validate_identity calls fired. Fix the "

@@ -118,6 +118,7 @@ func init() {
 	dispatch[expressions.KindLateral] = (*Generator).lateralSQL
 	dispatch[expressions.KindValues] = (*Generator).valuesSQL
 	dispatch[expressions.KindColumnDef] = (*Generator).columnDefSQL
+	dispatch[expressions.KindJSONArrayAgg] = (*Generator).jsonArrayAggSQL
 	dispatch[expressions.KindDataType] = (*Generator).dataTypeSQL
 	dispatch[expressions.KindDataTypeParam] = (*Generator).dataTypeParamSQL
 	dispatch[expressions.KindCast] = (*Generator).castSQL

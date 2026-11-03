@@ -353,6 +353,18 @@ type Dialect struct {
 	// the built node's own "coalesce" arg to match; postgres is the only override (true) among
 	// base/mysql/postgres.
 	ConcatCoalesce bool
+	// LimitIsTop ports generator.py:382 LIMIT_IS_TOP: a Limit renders as SELECT TOP n
+	// instead of a trailing LIMIT clause (TSQL, Teradata).
+	LimitIsTop bool
+	// LimitFetch ports generator.py:343 LIMIT_FETCH: "LIMIT" or "FETCH". "FETCH" rewrites a
+	// Limit into a FETCH clause; "LIMIT" rewrites a Fetch into a LIMIT clause.
+	LimitFetch string
+	// EnsureBools ports generator.py ENSURE_BOOLS: render boolean literals as 1/0 in
+	// predicate positions and (1 = 1)/(1 = 0) elsewhere (TSQL has no boolean type).
+	EnsureBools bool
+	// CteRecursiveKeywordRequired ports generator.py CTE_RECURSIVE_KEYWORD_REQUIRED
+	// (default True); TSQL omits the RECURSIVE keyword.
+	CteRecursiveKeywordRequired bool
 }
 
 func Base() *Dialect {
@@ -492,6 +504,10 @@ func Base() *Dialect {
 		// parser.py:1831 ZONE_AWARE_TIMESTAMP_CONSTRUCTOR = False (base); presto overrides to
 		// True (parsers/presto.py:61).
 		ZoneAwareTimestampConstructor: false,
+		// generator.py:343 LIMIT_FETCH = "ALL" (base: no Limit/Fetch rewriting).
+		LimitFetch: "ALL",
+		// generator.py CTE_RECURSIVE_KEYWORD_REQUIRED defaults to True upstream.
+		CteRecursiveKeywordRequired: true,
 	}
 }
 
@@ -624,6 +640,8 @@ func dialectByName(name string) (*Dialect, error) {
 		return Hive(), nil
 	case "athena":
 		return Athena(), nil
+	case "tsql":
+		return TSQL(), nil
 	default:
 		return nil, fmt.Errorf("unknown dialect %q", name)
 	}

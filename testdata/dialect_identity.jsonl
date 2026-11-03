@@ -1371,6 +1371,619 @@
 {"dialect": "trino", "sql": "WITH FUNCTION while_case(n BIGINT) RETURNS BIGINT BEGIN DECLARE i BIGINT DEFAULT 0; WHILE i < n DO CASE WHEN i = 0 THEN SET i = 1; ELSE SET i = i + 1; END CASE; END WHILE; RETURN i; END SELECT WHILE_CASE(3)", "want": "WITH FUNCTION while_case(n BIGINT) RETURNS BIGINT BEGIN DECLARE i BIGINT DEFAULT 0; WHILE i < n DO CASE WHEN i = 0 THEN SET i = 1; ELSE SET i = i + 1; END CASE; END WHILE; RETURN i; END SELECT WHILE_CASE(3)", "pretty": false, "identify": false}
 {"dialect": "trino", "sql": "WITH function AS (SELECT 1 AS x) SELECT x FROM function", "want": "WITH function AS (SELECT 1 AS x) SELECT x FROM function", "pretty": false, "identify": false}
 {"dialect": "trino", "sql": "WITH function(x) AS (SELECT 1) SELECT x FROM function", "want": "WITH function(x) AS (SELECT 1) SELECT x FROM function", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "\n            CREATE FUNCTION udfProductInYear (\n                @model_year INT\n            )\n            RETURNS TABLE\n            AS\n            RETURN\n                SELECT\n                    product_name,\n                    model_year,\n                    list_price\n                FROM\n                    production.products\n                WHERE\n                    model_year = @model_year\n            ", "want": "CREATE FUNCTION udfProductInYear(\n    @model_year INTEGER\n)\nRETURNS TABLE AS\nRETURN SELECT\n  product_name,\n  model_year,\n  list_price\nFROM production.products\nWHERE\n  model_year = @model_year", "pretty": true, "identify": false}
+{"dialect": "tsql", "sql": "\n            SELECT *\n            FROM OPENJSON ( @json )\n            WITH (\n                          Number   VARCHAR(200)   '$.Order.Number',\n                          Date     DATETIME       '$.Order.Date',\n                          Customer VARCHAR(200)   '$.AccountNumber',\n                          Quantity INT            '$.Item.Quantity',\n                          [Order]  NVARCHAR(MAX)  AS JSON\n             )\n            ", "want": "SELECT\n  *\nFROM OPENJSON(@json) WITH (\n    Number VARCHAR(200) '$.Order.Number',\n    Date DATETIME '$.Order.Date',\n    Customer VARCHAR(200) '$.AccountNumber',\n    Quantity INTEGER '$.Item.Quantity',\n    [Order] NVARCHAR(MAX) AS JSON\n)", "pretty": true, "identify": false}
+{"dialect": "tsql", "sql": "##x", "want": "##x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "#x", "want": "#x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "'a' + 'b'", "want": "'a' + 'b'", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "'a' || 'b'", "want": "'a' + 'b'", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "1 AND true", "want": "1 <> 0 AND (1 = 1)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "::FOO(a, b)", "want": "::FOO(a, b)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "@x", "want": "@x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE a ADD b INTEGER, c INTEGER", "want": "ALTER TABLE a ADD b INTEGER, c INTEGER", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE a ALTER COLUMN b CHAR(10) COLLATE abc", "want": "ALTER TABLE a ALTER COLUMN b CHAR(10) COLLATE abc", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE a ALTER COLUMN b INTEGER", "want": "ALTER TABLE a ALTER COLUMN b INTEGER", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE a ALTER COLUMN b INTEGER NOT NULL", "want": "ALTER TABLE a ALTER COLUMN b INTEGER NOT NULL", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE a ALTER COLUMN b INTEGER NULL", "want": "ALTER TABLE a ALTER COLUMN b INTEGER NULL", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE a ALTER COLUMN b VARCHAR(10) COLLATE Latin1_General_CI_AS NOT NULL", "want": "ALTER TABLE a ALTER COLUMN b VARCHAR(10) COLLATE Latin1_General_CI_AS NOT NULL", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE dbo.DocExe DROP CONSTRAINT FK_Column_B", "want": "ALTER TABLE dbo.DocExe DROP CONSTRAINT FK_Column_B", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE t1 WITH CHECK ADD CONSTRAINT ctr FOREIGN KEY (c1) REFERENCES t2 (c2)", "want": "ALTER TABLE t1 WITH CHECK ADD CONSTRAINT ctr FOREIGN KEY (c1) REFERENCES t2 (c2)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE tbl ADD CONSTRAINT cnstr PRIMARY KEY CLUSTERED (ID), CONSTRAINT cnstr2 UNIQUE CLUSTERED (ID)", "want": "ALTER TABLE tbl ADD CONSTRAINT cnstr PRIMARY KEY CLUSTERED (ID), CONSTRAINT cnstr2 UNIQUE CLUSTERED (ID)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE tbl SET (DATA_DELETION=OFF)", "want": "ALTER TABLE tbl SET (DATA_DELETION=OFF)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE tbl SET (DATA_DELETION=ON(FILTER_COLUMN=col, RETENTION_PERIOD=5 MONTHS))", "want": "ALTER TABLE tbl SET (DATA_DELETION=ON(FILTER_COLUMN=col, RETENTION_PERIOD=5 MONTHS))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE tbl SET (DATA_DELETION=ON)", "want": "ALTER TABLE tbl SET (DATA_DELETION=ON)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE tbl SET (FILESTREAM_ON = 'test')", "want": "ALTER TABLE tbl SET (FILESTREAM_ON = 'test')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE tbl SET (SYSTEM_VERSIONING=OFF)", "want": "ALTER TABLE tbl SET (SYSTEM_VERSIONING=OFF)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE tbl SET (SYSTEM_VERSIONING=ON(HISTORY_TABLE=db.tbl, DATA_CONSISTENCY_CHECK=OFF, HISTORY_RETENTION_PERIOD=5 DAYS))", "want": "ALTER TABLE tbl SET (SYSTEM_VERSIONING=ON(HISTORY_TABLE=db.tbl, DATA_CONSISTENCY_CHECK=OFF, HISTORY_RETENTION_PERIOD=5 DAYS))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER TABLE tbl SET (SYSTEM_VERSIONING=ON(HISTORY_TABLE=db.tbl, HISTORY_RETENTION_PERIOD=INFINITE))", "want": "ALTER TABLE tbl SET (SYSTEM_VERSIONING=ON(HISTORY_TABLE=db.tbl, HISTORY_RETENTION_PERIOD=INFINITE))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER VIEW v AS SELECT * FROM foo WHERE c > 100", "want": "ALTER VIEW v AS SELECT * FROM foo WHERE c > 100", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER VIEW v AS SELECT a, b, c, d FROM foo", "want": "ALTER VIEW v AS SELECT a, b, c, d FROM foo", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER VIEW v WITH ENCRYPTION AS SELECT * FROM foo WHERE c > 100", "want": "ALTER VIEW v WITH ENCRYPTION AS SELECT * FROM foo WHERE c > 100", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER VIEW v WITH SCHEMABINDING AS SELECT * FROM foo WHERE c > 100", "want": "ALTER VIEW v WITH SCHEMABINDING AS SELECT * FROM foo WHERE c > 100", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ALTER VIEW v WITH VIEW_METADATA AS SELECT * FROM foo WHERE c > 100", "want": "ALTER VIEW v WITH VIEW_METADATA AS SELECT * FROM foo WHERE c > 100", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "BEGIN", "want": "BEGIN", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "BEGIN TRAN", "want": "BEGIN TRANSACTION", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "BEGIN TRANSACTION", "want": "BEGIN TRANSACTION", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "BEGIN TRANSACTION @tran_name_variable", "want": "BEGIN TRANSACTION @tran_name_variable", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "BEGIN TRANSACTION transaction_name", "want": "BEGIN TRANSACTION transaction_name", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "BEGIN TRANSACTION transaction_name WITH MARK 'description'", "want": "BEGIN TRANSACTION transaction_name WITH MARK 'description'", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CASE WHEN TRUE THEN 'y' WHEN FALSE THEN 'n' ELSE NULL END", "want": "CASE WHEN (1 = 1) THEN 'y' WHEN (1 = 0) THEN 'n' ELSE NULL END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CASE WHEN a IN (TRUE) THEN 'y' ELSE 'n' END", "want": "CASE WHEN a IN (1) THEN 'y' ELSE 'n' END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CASE WHEN a NOT IN (FALSE) THEN 'y' ELSE 'n' END", "want": "CASE WHEN NOT a IN (0) THEN 'y' ELSE 'n' END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(X AS BIGINT)", "want": "CAST(X AS BIGINT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(X AS INT)", "want": "CAST(X AS INTEGER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(X AS SMALLINT)", "want": "CAST(X AS SMALLINT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(X AS TINYINT)", "want": "CAST(X AS TINYINT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS BIT)", "want": "CAST(x AS BIT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS BOOLEAN)", "want": "CAST(x AS BIT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS DATETIME)", "want": "CAST(x AS DATETIME)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS DATETIME2)", "want": "CAST(x AS DATETIME2)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS IMAGE)", "want": "CAST(x AS IMAGE)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS MONEY)", "want": "CAST(x AS MONEY)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS ROWVERSION)", "want": "CAST(x AS ROWVERSION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS SMALLDATETIME)", "want": "CAST(x AS SMALLDATETIME)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS SMALLMONEY)", "want": "CAST(x AS SMALLMONEY)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS SQL_VARIANT)", "want": "CAST(x AS SQL_VARIANT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS UNIQUEIDENTIFIER)", "want": "CAST(x AS UNIQUEIDENTIFIER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS XML)", "want": "CAST(x AS XML)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x AS int) OR y", "want": "CAST(x AS INTEGER) <> 0 OR y <> 0", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as BIT)", "want": "CAST(x AS BIT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as CHAR(1))", "want": "CAST(x AS CHAR(1))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as DATE)", "want": "CAST(x AS DATE)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as DATETIME2)", "want": "CAST(x AS DATETIME2)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as DATETIMEOFFSET)", "want": "CAST(x AS DATETIMEOFFSET)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as DECIMAL(15, 4))", "want": "CAST(x AS NUMERIC(15, 4))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as DOUBLE)", "want": "CAST(x AS FLOAT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as FLOAT(32))", "want": "CAST(x AS FLOAT(32))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as FLOAT(36))", "want": "CAST(x AS FLOAT(36))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as FLOAT(6))", "want": "CAST(x AS FLOAT(6))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as FLOAT(64))", "want": "CAST(x AS FLOAT(64))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as FLOAT(99))", "want": "CAST(x AS FLOAT(99))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as FLOAT)", "want": "CAST(x AS FLOAT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as MONEY)", "want": "CAST(x AS MONEY)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as NCHAR(1))", "want": "CAST(x AS NCHAR(1))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as NUMERIC(13,3))", "want": "CAST(x AS NUMERIC(13, 3))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as NVARCHAR(2))", "want": "CAST(x AS NVARCHAR(2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as REAL)", "want": "CAST(x AS FLOAT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as SMALLMONEY)", "want": "CAST(x AS SMALLMONEY)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as TIME(4))", "want": "CAST(x AS TIME(4))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as UNIQUEIDENTIFIER)", "want": "CAST(x AS UNIQUEIDENTIFIER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as VARBINARY)", "want": "CAST(x AS VARBINARY)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CAST(x as VARCHAR(2))", "want": "CAST(x AS VARCHAR(2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CEILING(2)", "want": "CEILING(2)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CHARINDEX('sub', 'testsubstring')", "want": "CHARINDEX('sub', 'testsubstring')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CHARINDEX('sub', 'testsubstring', 3)", "want": "CHARINDEX('sub', 'testsubstring', 3)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CHARINDEX(x, y)", "want": "CHARINDEX(x, y)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CHARINDEX(x, y, 9)", "want": "CHARINDEX(x, y, 9)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "COMMIT", "want": "COMMIT TRANSACTION", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "COMMIT TRAN", "want": "COMMIT TRANSACTION", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "COMMIT TRANSACTION", "want": "COMMIT TRANSACTION", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "COMMIT TRANSACTION @tran_name_variable", "want": "COMMIT TRANSACTION @tran_name_variable", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "COMMIT TRANSACTION @tran_name_variable WITH (DELAYED_DURABILITY = ON)", "want": "COMMIT TRANSACTION @tran_name_variable WITH (DELAYED_DURABILITY = ON)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "COMMIT TRANSACTION transaction_name", "want": "COMMIT TRANSACTION transaction_name", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "COMMIT TRANSACTION transaction_name WITH (DELAYED_DURABILITY = OFF)", "want": "COMMIT TRANSACTION transaction_name WITH (DELAYED_DURABILITY = OFF)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(CHAR(40), x)", "want": "CONVERT(CHAR(40), x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(CHAR, x)", "want": "CONVERT(CHAR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(DATE, x, 121)", "want": "CONVERT(DATE, x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(DATETIME, x, 121)", "want": "CONVERT(DATETIME, x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(DATETIME2, x, 121)", "want": "CONVERT(DATETIME2, x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(INT, CONVERT(NUMERIC, '444.75'))", "want": "CONVERT(INTEGER, CONVERT(NUMERIC, '444.75'))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(INT, x)", "want": "CONVERT(INTEGER, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(INT, x, 121)", "want": "CONVERT(INTEGER, x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(NCHAR(40), x)", "want": "CONVERT(NCHAR(40), x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(NCHAR, x)", "want": "CONVERT(NCHAR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(NVARCHAR(200), x)", "want": "CONVERT(NVARCHAR(200), x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(NVARCHAR(40), x, 121)", "want": "CONVERT(NVARCHAR(40), x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(NVARCHAR(MAX), x)", "want": "CONVERT(NVARCHAR(MAX), x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(NVARCHAR(MAX), x, 121)", "want": "CONVERT(NVARCHAR(MAX), x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(NVARCHAR, x)", "want": "CONVERT(NVARCHAR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(NVARCHAR, x, 121)", "want": "CONVERT(NVARCHAR, x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(VARCHAR(200), x)", "want": "CONVERT(VARCHAR(200), x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(VARCHAR(40), x, 121)", "want": "CONVERT(VARCHAR(40), x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(VARCHAR(MAX), x)", "want": "CONVERT(VARCHAR(MAX), x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(VARCHAR(MAX), x, 121)", "want": "CONVERT(VARCHAR(MAX), x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(VARCHAR, x)", "want": "CONVERT(VARCHAR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CONVERT(VARCHAR, x, 121)", "want": "CONVERT(VARCHAR, x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "COPY INTO test_1 FROM 'path' WITH (FORMAT_NAME = test, FILE_TYPE = 'CSV', CREDENTIAL = (IDENTITY='Shared Access Signature', SECRET='token'), FIELDTERMINATOR = ';', ROWTERMINATOR = '0X0A', ENCODING = 'UTF8', DATEFORMAT = 'ymd', MAXERRORS = 10, ERRORFILE = 'errorsfolder', IDENTITY_INSERT = 'ON')", "want": "COPY INTO test_1 FROM 'path' WITH (FORMAT_NAME = test, FILE_TYPE = 'CSV', CREDENTIAL = (IDENTITY='Shared Access Signature', SECRET='token'), FIELDTERMINATOR = ';', ROWTERMINATOR = '0X0A', ENCODING = 'UTF8', DATEFORMAT = 'ymd', MAXERRORS = 10, ERRORFILE = 'errorsfolder', IDENTITY_INSERT = 'ON')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE CLUSTERED COLUMNSTORE INDEX index_name ON foo.bar", "want": "CREATE CLUSTERED COLUMNSTORE INDEX index_name ON foo.bar", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE CLUSTERED INDEX [IX_OfficeTagDetail_TagDetailID] ON [dbo].[OfficeTagDetail]([TagDetailID] ASC)", "want": "CREATE CLUSTERED INDEX [IX_OfficeTagDetail_TagDetailID] ON [dbo].[OfficeTagDetail]([TagDetailID] ASC)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE COLUMNSTORE INDEX index_name ON foo.bar", "want": "CREATE NONCLUSTERED COLUMNSTORE INDEX index_name ON foo.bar", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE FUNCTION dbo.ISOweek(@DATE DATETIME2) RETURNS INTEGER", "want": "CREATE FUNCTION dbo.ISOweek(@DATE DATETIME2) RETURNS INTEGER", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE FUNCTION dbo.f() RETURNS TABLE AS RETURN (WITH subquery AS (SELECT id AS id FROM subtable) SELECT other_id FROM main_table AS mt INNER JOIN subquery ON subquery.id = mt.other_id)", "want": "CREATE FUNCTION dbo.f() RETURNS TABLE AS RETURN (WITH subquery AS (SELECT id AS id FROM subtable) SELECT other_id FROM main_table AS mt INNER JOIN subquery ON subquery.id = mt.other_id)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE FUNCTION foo() RETURNS @contacts TABLE (first_name VARCHAR(50), phone VARCHAR(25)) AS SELECT @fname, @phone", "want": "CREATE FUNCTION foo() RETURNS @contacts TABLE (first_name VARCHAR(50), phone VARCHAR(25)) AS SELECT @fname, @phone", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE FUNCTION foo(@bar INTEGER) RETURNS @foo TABLE (x INTEGER, y NUMERIC) AS RETURN SELECT 1", "want": "CREATE FUNCTION foo(@bar INTEGER) RETURNS @foo TABLE (x INTEGER, y NUMERIC) AS RETURN SELECT 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE FUNCTION foo(@bar INTEGER) RETURNS TABLE AS RETURN SELECT 1", "want": "CREATE FUNCTION foo(@bar INTEGER) RETURNS TABLE AS RETURN SELECT 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE INDEX [x] ON [y]([z] ASC) WITH (allow_page_locks=on) ON PRIMARY", "want": "CREATE INDEX [x] ON [y]([z] ASC) WITH (allow_page_locks=on) ON PRIMARY", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE INDEX [x] ON [y]([z] ASC) WITH (allow_page_locks=on) ON X([y])", "want": "CREATE INDEX [x] ON [y]([z] ASC) WITH (allow_page_locks=on) ON X([y])", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE NONCLUSTERED COLUMNSTORE INDEX index_name ON foo.bar", "want": "CREATE NONCLUSTERED COLUMNSTORE INDEX index_name ON foo.bar", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE OR ALTER VIEW a.b AS SELECT 1", "want": "CREATE OR ALTER VIEW a.b AS SELECT 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROC foo @ID INTEGER, @AGE INTEGER AS SELECT DB_NAME(@ID) AS ThatDB", "want": "CREATE PROC foo @ID INTEGER, @AGE INTEGER AS SELECT DB_NAME(@ID) AS ThatDB", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROC foo AS SELECT BAR() AS baz", "want": "CREATE PROC foo AS SELECT BAR() AS baz", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE foo @a INTEGER, @b INTEGER AS SELECT @a = SUM(bla) FROM baz AS bar", "want": "CREATE PROCEDURE foo @a INTEGER, @b INTEGER AS SELECT @a = SUM(bla) FROM baz AS bar", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE foo AS BEGIN DELETE FROM bla WHERE foo < CURRENT_TIMESTAMP - 7; END", "want": "CREATE PROCEDURE foo AS BEGIN DELETE FROM bla WHERE foo < GETDATE() - 7; END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE foo AS SELECT BAR() AS baz", "want": "CREATE PROCEDURE foo AS SELECT BAR() AS baz", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE foo WITH ENCRYPTION AS SELECT 1", "want": "CREATE PROCEDURE foo WITH ENCRYPTION AS SELECT 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE foo WITH EXECUTE AS 'username' AS SELECT 1", "want": "CREATE PROCEDURE foo WITH EXECUTE AS 'username' AS SELECT 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE foo WITH EXECUTE AS OWNER AS SELECT 1", "want": "CREATE PROCEDURE foo WITH EXECUTE AS OWNER AS SELECT 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE foo WITH EXECUTE AS OWNER, SCHEMABINDING, NATIVE_COMPILATION AS SELECT 1", "want": "CREATE PROCEDURE foo WITH EXECUTE AS OWNER, SCHEMABINDING, NATIVE_COMPILATION AS SELECT 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE foo WITH NATIVE_COMPILATION AS SELECT 1", "want": "CREATE PROCEDURE foo WITH NATIVE_COMPILATION AS SELECT 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE foo WITH RECOMPILE AS SELECT 1", "want": "CREATE PROCEDURE foo WITH RECOMPILE AS SELECT 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE foo WITH SCHEMABINDING AS SELECT 1", "want": "CREATE PROCEDURE foo WITH SCHEMABINDING AS SELECT 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE test(@v1 AS INTEGER = 1, @v2 AS CHAR(1) = 'c')", "want": "CREATE PROCEDURE test(@v1 INTEGER = 1, @v2 CHAR(1) = 'c')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE test(@v1 INTEGER = 1 OUT, @v2 CHAR(1) OUT)", "want": "CREATE PROCEDURE test(@v1 INTEGER = 1 OUT, @v2 CHAR(1) OUT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE test(@v1 INTEGER = 1 OUTPUT, @v2 CHAR(1) OUTPUT)", "want": "CREATE PROCEDURE test(@v1 INTEGER = 1 OUTPUT, @v2 CHAR(1) OUTPUT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE test(@v1 INTEGER = 1 READONLY, @v2 CHAR(1) READONLY)", "want": "CREATE PROCEDURE test(@v1 INTEGER = 1 READONLY, @v2 CHAR(1) READONLY)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE PROCEDURE test(@v1 INTEGER = 1, @v2 CHAR(1) = 'c')", "want": "CREATE PROCEDURE test(@v1 INTEGER = 1, @v2 CHAR(1) = 'c')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE SCHEMA testSchema", "want": "CREATE SCHEMA testSchema", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE \"dbo\".\"benchmark\" (\"name\" CHAR(7) NOT NULL, \"internal_id\" VARCHAR(10) NOT NULL, UNIQUE CLUSTERED (\"internal_id\" ASC))", "want": "CREATE TABLE [dbo].[benchmark] ([name] CHAR(7) NOT NULL, [internal_id] VARCHAR(10) NOT NULL, UNIQUE CLUSTERED ([internal_id] ASC))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE \"dbo\".\"benchmark\" (\"name\" CHAR(7) NOT NULL, \"internal_id\" VARCHAR(10) NOT NULL, UNIQUE NONCLUSTERED (\"internal_id\" ASC))", "want": "CREATE TABLE [dbo].[benchmark] ([name] CHAR(7) NOT NULL, [internal_id] VARCHAR(10) NOT NULL, UNIQUE NONCLUSTERED ([internal_id] ASC))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE #mytemp (a INTEGER, b CHAR(2), c TIME(4), d FLOAT(24))", "want": "CREATE TABLE #mytemp (a INTEGER, b CHAR(2), c TIME(4), d FLOAT(24))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE #mytemptable (a INTEGER)", "want": "CREATE TABLE #mytemptable (a INTEGER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE [#temptest] (name INTEGER)", "want": "CREATE TABLE [#temptest] (name INTEGER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE [db].[tbl]([a] [int])", "want": "CREATE TABLE [db].[tbl] ([a] INTEGER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE db.t1 (a INTEGER, b INTEGER, CONSTRAINT c PRIMARY KEY (a DESC, b))", "want": "CREATE TABLE db.t1 (a INTEGER, b INTEGER, CONSTRAINT c PRIMARY KEY (a DESC, b))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE db.t1 (a INTEGER, b VARCHAR(50), CONSTRAINT c PRIMARY KEY (a DESC))", "want": "CREATE TABLE db.t1 (a INTEGER, b VARCHAR(50), CONSTRAINT c PRIMARY KEY (a DESC))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE schema.table AS SELECT a, id FROM (SELECT a, (SELECT id FROM tb ORDER BY t DESC LIMIT 1) as id FROM tbl) AS _subquery", "want": "SELECT * INTO schema.table FROM (SELECT a AS a, id AS id FROM (SELECT a AS a, (SELECT TOP 1 id FROM tb ORDER BY t DESC) AS id FROM tbl) AS _subquery) AS temp", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE t (col1 DATETIME2(2))", "want": "CREATE TABLE t (col1 DATETIME2(2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE tbl (a AS (x + 1) PERSISTED, b AS (y + 2), c AS (y / 3) PERSISTED NOT NULL)", "want": "CREATE TABLE tbl (a AS (x + 1) PERSISTED, b AS (y + 2), c AS (y / 3) PERSISTED NOT NULL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE test (\"data\" CHAR(7), \"valid_from\" DATETIME2(2) GENERATED ALWAYS AS ROW START NOT NULL, \"valid_to\" DATETIME2(2) GENERATED ALWAYS AS ROW END NOT NULL, PERIOD FOR SYSTEM_TIME (\"valid_from\", \"valid_to\")) WITH(SYSTEM_VERSIONING=ON)", "want": "CREATE TABLE test ([data] CHAR(7), [valid_from] DATETIME2(2) GENERATED ALWAYS AS ROW START NOT NULL, [valid_to] DATETIME2(2) GENERATED ALWAYS AS ROW END NOT NULL, PERIOD FOR SYSTEM_TIME ([valid_from], [valid_to])) WITH(SYSTEM_VERSIONING=ON)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE test ([data] CHAR(7), [valid_from] DATETIME2(2) GENERATED ALWAYS AS ROW START HIDDEN NOT NULL, [valid_to] DATETIME2(2) GENERATED ALWAYS AS ROW END HIDDEN NOT NULL, PERIOD FOR SYSTEM_TIME ([valid_from], [valid_to])) WITH(SYSTEM_VERSIONING=ON(HISTORY_TABLE=[dbo].[benchmark_history], DATA_CONSISTENCY_CHECK=ON))", "want": "CREATE TABLE test ([data] CHAR(7), [valid_from] DATETIME2(2) GENERATED ALWAYS AS ROW START HIDDEN NOT NULL, [valid_to] DATETIME2(2) GENERATED ALWAYS AS ROW END HIDDEN NOT NULL, PERIOD FOR SYSTEM_TIME ([valid_from], [valid_to])) WITH(SYSTEM_VERSIONING=ON(HISTORY_TABLE=[dbo].[benchmark_history], DATA_CONSISTENCY_CHECK=ON))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE test ([data] CHAR(7), [valid_from] DATETIME2(2) GENERATED ALWAYS AS ROW START NOT NULL, [valid_to] DATETIME2(2) GENERATED ALWAYS AS ROW END NOT NULL, PERIOD FOR SYSTEM_TIME ([valid_from], [valid_to])) WITH(SYSTEM_VERSIONING=ON(HISTORY_TABLE=[dbo].[benchmark_history]))", "want": "CREATE TABLE test ([data] CHAR(7), [valid_from] DATETIME2(2) GENERATED ALWAYS AS ROW START NOT NULL, [valid_to] DATETIME2(2) GENERATED ALWAYS AS ROW END NOT NULL, PERIOD FOR SYSTEM_TIME ([valid_from], [valid_to])) WITH(SYSTEM_VERSIONING=ON(HISTORY_TABLE=[dbo].[benchmark_history]))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE test ([data] CHAR(7), [valid_from] DATETIME2(2) GENERATED ALWAYS AS ROW START NOT NULL, [valid_to] DATETIME2(2) GENERATED ALWAYS AS ROW END NOT NULL, PERIOD FOR SYSTEM_TIME ([valid_from], [valid_to])) WITH(SYSTEM_VERSIONING=ON(HISTORY_TABLE=[dbo].[benchmark_history], DATA_CONSISTENCY_CHECK=OFF))", "want": "CREATE TABLE test ([data] CHAR(7), [valid_from] DATETIME2(2) GENERATED ALWAYS AS ROW START NOT NULL, [valid_to] DATETIME2(2) GENERATED ALWAYS AS ROW END NOT NULL, PERIOD FOR SYSTEM_TIME ([valid_from], [valid_to])) WITH(SYSTEM_VERSIONING=ON(HISTORY_TABLE=[dbo].[benchmark_history], DATA_CONSISTENCY_CHECK=OFF))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE test ([data] CHAR(7), [valid_from] DATETIME2(2) GENERATED ALWAYS AS ROW START NOT NULL, [valid_to] DATETIME2(2) GENERATED ALWAYS AS ROW END NOT NULL, PERIOD FOR SYSTEM_TIME ([valid_from], [valid_to])) WITH(SYSTEM_VERSIONING=ON(HISTORY_TABLE=[dbo].[benchmark_history], DATA_CONSISTENCY_CHECK=ON))", "want": "CREATE TABLE test ([data] CHAR(7), [valid_from] DATETIME2(2) GENERATED ALWAYS AS ROW START NOT NULL, [valid_to] DATETIME2(2) GENERATED ALWAYS AS ROW END NOT NULL, PERIOD FOR SYSTEM_TIME ([valid_from], [valid_to])) WITH(SYSTEM_VERSIONING=ON(HISTORY_TABLE=[dbo].[benchmark_history], DATA_CONSISTENCY_CHECK=ON))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE test_table([ID] [BIGINT] NOT NULL,[EffectiveFrom] [DATETIME2] (3) NOT NULL)", "want": "CREATE TABLE test_table ([ID] BIGINT NOT NULL, [EffectiveFrom] DATETIME2(3) NOT NULL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE x ( A INTEGER NOT NULL, B INTEGER NULL )", "want": "CREATE TABLE x (A INTEGER NOT NULL, B INTEGER NULL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE x (A INTEGER NOT NULL, B INTEGER NULL)", "want": "CREATE TABLE x (A INTEGER NOT NULL, B INTEGER NULL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE x (CONSTRAINT \"pk_mytable\" UNIQUE NONCLUSTERED (a DESC)) ON b (c)", "want": "CREATE TABLE x (CONSTRAINT [pk_mytable] UNIQUE NONCLUSTERED (a DESC)) ON b (c)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TABLE x ([zip_cd] VARCHAR(5) NULL NOT FOR REPLICATION, [zip_cd_mkey] VARCHAR(5) NOT NULL, CONSTRAINT [pk_mytable] PRIMARY KEY CLUSTERED ([zip_cd_mkey] ASC) WITH (PAD_INDEX=ON, STATISTICS_NORECOMPUTE=OFF) ON [INDEX]) ON [SECONDARY]", "want": "CREATE TABLE x ([zip_cd] VARCHAR(5) NULL NOT FOR REPLICATION, [zip_cd_mkey] VARCHAR(5) NOT NULL, CONSTRAINT [pk_mytable] PRIMARY KEY CLUSTERED ([zip_cd_mkey] ASC) WITH (PAD_INDEX=ON, STATISTICS_NORECOMPUTE=OFF) ON [INDEX]) ON [SECONDARY]", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TRIGGER ddl_trig ON DATABASE FOR CREATE_TABLE AS BEGIN INSERT INTO schema_changes (event_type, event_time, login_name) VALUES ('CREATE_TABLE', GETDATE(), SYSTEM_USER) END", "want": "CREATE TRIGGER ddl_trig ON DATABASE FOR CREATE_TABLE AS BEGIN INSERT INTO schema_changes (event_type, event_time, login_name) VALUES ('CREATE_TABLE', GETDATE(), SYSTEM_USER) END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TRIGGER reminder ON customers AFTER INSERT AS BEGIN INSERT INTO audit_log (customer_id, action, created_at) SELECT id, 'INSERT', GETDATE() FROM inserted END", "want": "CREATE TRIGGER reminder ON customers AFTER INSERT AS BEGIN INSERT INTO audit_log (customer_id, action, created_at) SELECT id, 'INSERT', GETDATE() FROM inserted END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE TRIGGER updview ON vw_employees INSTEAD OF UPDATE AS BEGIN UPDATE employees SET salary = inserted.salary FROM inserted WHERE employees.id = inserted.id END", "want": "CREATE TRIGGER updview ON vw_employees INSTEAD OF UPDATE AS BEGIN UPDATE employees SET salary = inserted.salary FROM inserted WHERE employees.id = inserted.id END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE VIEW a.b WITH ENCRYPTION AS SELECT * FROM x", "want": "CREATE VIEW a.b WITH ENCRYPTION AS SELECT * FROM x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE VIEW a.b WITH SCHEMABINDING AS SELECT * FROM x", "want": "CREATE VIEW a.b WITH SCHEMABINDING AS SELECT * FROM x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE VIEW a.b WITH VIEW_METADATA AS SELECT * FROM x", "want": "CREATE VIEW a.b WITH VIEW_METADATA AS SELECT * FROM x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE VIEW start WITH SCHEMABINDING AS SELECT a FROM x", "want": "CREATE VIEW start WITH SCHEMABINDING AS SELECT a FROM x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE VIEW t AS WITH cte AS (SELECT 1 AS c) SELECT c FROM cte", "want": "CREATE VIEW t AS WITH cte AS (SELECT 1 AS c) SELECT c FROM cte", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "CREATE view a.b.c", "want": "CREATE VIEW b.c", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(DAY, x)", "want": "DATEPART(DAY, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(DAYOFYEAR, x)", "want": "DATEPART(DAYOFYEAR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(HOUR, x)", "want": "DATEPART(HOUR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(MICROSECOND, x)", "want": "DATEPART(MICROSECOND, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(MILLISECOND, x)", "want": "DATEPART(MILLISECOND, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(MINUTE, x)", "want": "DATEPART(MINUTE, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(MONTH, x)", "want": "DATEPART(MONTH, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(NANOSECOND, x)", "want": "DATEPART(NANOSECOND, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(QUARTER, x)", "want": "DATEPART(QUARTER, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(SECOND, x)", "want": "DATEPART(SECOND, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(TZOFFSET, x)", "want": "DATEPART(TZOFFSET, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(WEEKDAY, x)", "want": "DATEPART(WEEKDAY, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(YEAR, x)", "want": "DATEPART(YEAR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(d, x)", "want": "DATEPART(DAY, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(dd, x)", "want": "DATEPART(DAY, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(dw, x)", "want": "DATEPART(WEEKDAY, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(dy, x)", "want": "DATEPART(DAYOFYEAR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(hh, x)", "want": "DATEPART(HOUR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(m, x)", "want": "DATEPART(MONTH, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(mcs, x)", "want": "DATEPART(MICROSECOND, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(mi, x)", "want": "DATEPART(MINUTE, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(mm, x)", "want": "DATEPART(MONTH, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(ms, x)", "want": "DATEPART(MILLISECOND, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(n, x)", "want": "DATEPART(MINUTE, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(ns, x)", "want": "DATEPART(NANOSECOND, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(q, x)", "want": "DATEPART(QUARTER, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(qq, x)", "want": "DATEPART(QUARTER, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(s, x)", "want": "DATEPART(SECOND, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(ss, x)", "want": "DATEPART(SECOND, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(tz, x)", "want": "DATEPART(TZOFFSET, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(y, x)", "want": "DATEPART(DAYOFYEAR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(yy, x)", "want": "DATEPART(YEAR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DATEPART(yyyy, x)", "want": "DATEPART(YEAR, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DAY(x)", "want": "DAY(x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DECLARE @DWH_DateCreated AS DATETIME2 = CONVERT(DATETIME2, GETDATE(), 104)", "want": "DECLARE @DWH_DateCreated DATETIME2 = CONVERT(DATETIME2, GETDATE(), 104)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DECLARE @MyTableVar TABLE (EmpID INT NOT NULL, PRIMARY KEY CLUSTERED (EmpID), UNIQUE NONCLUSTERED (EmpID), INDEX CustomNonClusteredIndex NONCLUSTERED (EmpID))", "want": "DECLARE @MyTableVar TABLE (EmpID INT NOT NULL, PRIMARY KEY CLUSTERED (EmpID), UNIQUE NONCLUSTERED (EmpID), INDEX CustomNonClusteredIndex NONCLUSTERED (EmpID))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DECLARE @TestVariable AS VARCHAR(100) = 'Save Our Planet'", "want": "DECLARE @TestVariable VARCHAR(100) = 'Save Our Planet'", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DECLARE @X INT", "want": "DECLARE @X INTEGER", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DECLARE @X INT = 1", "want": "DECLARE @X INTEGER = 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DECLARE @X INT, @Y VARCHAR(10)", "want": "DECLARE @X INTEGER, @Y VARCHAR(10)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DECLARE @v1 AS INTEGER = 1, @v2 AS CHAR(1) = 'c'", "want": "DECLARE @v1 INTEGER = 1, @v2 CHAR(1) = 'c'", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DECLARE vendor_cursor CURSOR FOR SELECT VendorID, Name FROM Purchasing.Vendor WHERE PreferredVendorStatus = 1 ORDER BY VendorID", "want": "DECLARE vendor_cursor CURSOR FOR SELECT VendorID, Name FROM Purchasing.Vendor WHERE PreferredVendorStatus = 1 ORDER BY VendorID", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DELETE FROM start WITH (ROWLOCK)", "want": "DELETE FROM start WITH (ROWLOCK)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DELETE x OUTPUT x.a FROM z", "want": "DELETE x OUTPUT x.a FROM z", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "DROP view a.b.c", "want": "DROP VIEW b.c", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "END", "want": "END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "EOMONTH(GETDATE())", "want": "EOMONTH(CAST(GETDATE() AS DATE))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "EOMONTH(GETDATE(), -1)", "want": "EOMONTH(DATEADD(MONTH, -1, CAST(GETDATE() AS DATE)))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "EXEC @RC = dbo.MyProc @id = 7", "want": "EXECUTE @RC = dbo.MyProc @id = 7", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "EXEC MyProc @id = 7, @name = 'Lochristi'", "want": "EXECUTE MyProc @id = 7, @name = 'Lochristi'", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "EXEC sp_executesql @payload", "want": "EXECUTE sp_executesql @payload", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "EXECUTE @return_status = dbo.MyProc @a, @b", "want": "EXECUTE @return_status = dbo.MyProc @a, @b", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "GEOGRAPHY::Point(latitude, longitude, 4326)", "want": "GEOGRAPHY::Point(latitude, longitude, 4326)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "GEOGRAPHY::STGeomFromText('POLYGON((-122.358 47.653 , -122.348 47.649, -122.348 47.658, -122.358 47.658, -122.358 47.653))', 4326)", "want": "GEOGRAPHY::STGeomFromText('POLYGON((-122.358 47.653 , -122.348 47.649, -122.348 47.658, -122.358 47.658, -122.358 47.653))', 4326)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "GO", "want": "GO", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "GRANT EXECUTE ON TestProc TO TesterRole WITH GRANT OPTION", "want": "GRANT EXECUTE ON TestProc TO TesterRole WITH GRANT OPTION", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "GRANT EXECUTE ON TestProc TO User2", "want": "GRANT EXECUTE ON TestProc TO User2", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "GRANT EXECUTE ON TestProc TO User2 AS TesterRole", "want": "GRANT EXECUTE ON TestProc TO User2 AS TesterRole", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "HASHBYTES('MD2', 'x')", "want": "HASHBYTES('MD2', 'x')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "HASHBYTES('MD5', 'x')", "want": "HASHBYTES('MD5', 'x')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "HASHBYTES('SHA1', x)", "want": "HASHBYTES('SHA1', x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "HASHBYTES('SHA2_256', x)", "want": "HASHBYTES('SHA2_256', x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "HASHBYTES('SHA2_512', x)", "want": "HASHBYTES('SHA2_512', x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "IF ((@x = @y AND GETDATE() = GETDATE()) OR (GETDATE() = @t)) BEGIN SET @query_result = (SELECT MAX(id) + 1 FROM t); END", "want": "IF (@x = @y AND GETDATE() = GETDATE()) OR (GETDATE() = @t) BEGIN SET @query_result = (SELECT MAX(id) + 1 FROM t); END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "IF OBJECT_ID('tempdb.dbo.#TempTableName') IS NOT NULL BEGIN DROP TABLE #TempTableName; END", "want": "IF NOT OBJECT_ID('tempdb.dbo.#TempTableName') IS NULL BEGIN DROP TABLE #TempTableName; END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "IF OBJECT_ID('tempdb.dbo.#TempTableName', 'U') IS NOT NULL BEGIN DROP TABLE #TempTableName; END", "want": "IF NOT OBJECT_ID('tempdb.dbo.#TempTableName', 'U') IS NULL BEGIN DROP TABLE #TempTableName; END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "INSERT INTO @TestTable VALUES (1, 'Value1', 12, 20)", "want": "INSERT INTO @TestTable VALUES (1, 'Value1', 12, 20)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "INSERT INTO Production.UpdatedInventory SELECT ProductID, LocationID, NewQty, PreviousQty FROM (MERGE INTO Production.ProductInventory AS pi USING (SELECT ProductID, SUM(OrderQty) FROM Sales.SalesOrderDetail AS sod INNER JOIN Sales.SalesOrderHeader AS soh ON sod.SalesOrderID = soh.SalesOrderID AND soh.OrderDate BETWEEN '20030701' AND '20030731' GROUP BY ProductID) AS src(ProductID, OrderQty) ON pi.ProductID = src.ProductID WHEN MATCHED AND pi.Quantity - src.OrderQty >= 0 THEN UPDATE SET pi.Quantity = pi.Quantity - src.OrderQty WHEN MATCHED AND pi.Quantity - src.OrderQty <= 0 THEN DELETE OUTPUT $action, Inserted.ProductID, Inserted.LocationID, Inserted.Quantity AS NewQty, Deleted.Quantity AS PreviousQty) AS Changes(Action, ProductID, LocationID, NewQty, PreviousQty) WHERE Action = 'UPDATE'", "want": "INSERT INTO Production.UpdatedInventory\nSELECT\n  ProductID,\n  LocationID,\n  NewQty,\n  PreviousQty\nFROM (\n  MERGE INTO Production.ProductInventory AS pi\n  USING (\n    SELECT\n      ProductID,\n      SUM(OrderQty)\n    FROM Sales.SalesOrderDetail AS sod\n    INNER JOIN Sales.SalesOrderHeader AS soh\n      ON sod.SalesOrderID = soh.SalesOrderID\n      AND soh.OrderDate BETWEEN '20030701' AND '20030731'\n    GROUP BY\n      ProductID\n  ) AS src(ProductID, OrderQty)\n  ON pi.ProductID = src.ProductID\n  WHEN MATCHED AND pi.Quantity - src.OrderQty >= 0 THEN UPDATE SET\n    pi.Quantity = pi.Quantity - src.OrderQty\n  WHEN MATCHED AND pi.Quantity - src.OrderQty <= 0 THEN DELETE\n  OUTPUT $action, Inserted.ProductID, Inserted.LocationID, Inserted.Quantity AS NewQty, Deleted.Quantity AS PreviousQty\n) AS Changes(Action, ProductID, LocationID, NewQty, PreviousQty)\nWHERE\n  Action = 'UPDATE'", "pretty": true, "identify": false}
+{"dialect": "tsql", "sql": "INSERT INTO foo.bar WITH cte AS (SELECT 1 AS one) SELECT * FROM cte", "want": "WITH cte AS (SELECT 1 AS one) INSERT INTO foo.bar SELECT * FROM cte", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "INSERT INTO x (y) OUTPUT x.a, x.b INTO l SELECT * FROM z", "want": "INSERT INTO x (y) OUTPUT x.a, x.b INTO l SELECT * FROM z", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "INSERT INTO x (y) OUTPUT x.a, x.b SELECT * FROM z", "want": "INSERT INTO x (y) OUTPUT x.a, x.b SELECT * FROM z", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ISNULL(x, y)", "want": "ISNULL(x, y)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "JSON_ARRAYAGG(c ABSENT ON NULL)", "want": "JSON_ARRAYAGG(c ABSENT ON NULL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "JSON_ARRAYAGG(c NULL ON NULL)", "want": "JSON_ARRAYAGG(c NULL ON NULL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "JSON_ARRAYAGG(c ORDER BY c ABSENT ON NULL)", "want": "JSON_ARRAYAGG(c ORDER BY c ABSENT ON NULL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "JSON_ARRAYAGG(c ORDER BY c NULL ON NULL)", "want": "JSON_ARRAYAGG(c ORDER BY c NULL ON NULL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "JSON_ARRAYAGG(c ORDER BY c)", "want": "JSON_ARRAYAGG(c ORDER BY c)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "JSON_ARRAYAGG(c)", "want": "JSON_ARRAYAGG(c)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "JSON_ARRAYAGG(c1 ORDER BY c1)", "want": "JSON_ARRAYAGG(c1 ORDER BY c1)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "JSON_QUERY(REPLACE(REPLACE(x , '''', '\"'), '\"\"', '\"'))", "want": "ISNULL(JSON_QUERY(REPLACE(REPLACE(x, '''', '\"'), '\"\"', '\"'), '$'), JSON_VALUE(REPLACE(REPLACE(x, '''', '\"'), '\"\"', '\"'), '$'))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "JSON_QUERY(r.JSON, '$.Attr_INT')", "want": "ISNULL(JSON_QUERY(r.JSON, '$.Attr_INT'), JSON_VALUE(r.JSON, '$.Attr_INT'))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "JSON_VALUE(r.JSON, '$.Attr_INT')", "want": "ISNULL(JSON_QUERY(r.JSON, '$.Attr_INT'), JSON_VALUE(r.JSON, '$.Attr_INT'))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "LEN('x')", "want": "LEN('x')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "LEN(1)", "want": "LEN(1)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "LOG(n)", "want": "LOG(n)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "LOG(n, b)", "want": "LOG(n, b)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "LOGIN::EricKurjan", "want": "LOGIN::EricKurjan", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "MERGE INTO mytable WITH (HOLDLOCK) AS T USING mytable_merge AS S ON (T.user_id = S.user_id) WHEN NOT MATCHED THEN INSERT (c1, c2) VALUES (S.c1, S.c2)", "want": "MERGE INTO mytable WITH (HOLDLOCK) AS T USING mytable_merge AS S ON (T.user_id = S.user_id) WHEN NOT MATCHED THEN INSERT (c1, c2) VALUES (S.c1, S.c2)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "MONTH(x)", "want": "MONTH(x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "OBJECT_ID('foo')", "want": "OBJECT_ID('foo')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "OBJECT_ID('foo', 'U')", "want": "OBJECT_ID('foo', 'U')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "PRINT @TestVariable", "want": "PRINT @TestVariable", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "REPLICATE('x', 2)", "want": "REPLICATE('x', 2)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "REVOKE EXECUTE ON TestProc FROM TesterRole", "want": "REVOKE EXECUTE ON TestProc FROM TesterRole", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "REVOKE EXECUTE ON TestProc FROM User2", "want": "REVOKE EXECUTE ON TestProc FROM User2", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ROLLBACK", "want": "ROLLBACK TRANSACTION", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ROLLBACK TRAN", "want": "ROLLBACK TRANSACTION", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ROLLBACK TRANSACTION", "want": "ROLLBACK TRANSACTION", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ROLLBACK TRANSACTION @tran_name_variable", "want": "ROLLBACK TRANSACTION @tran_name_variable", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ROLLBACK TRANSACTION transaction_name", "want": "ROLLBACK TRANSACTION transaction_name", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ROUND(3.14159, 2, 1)", "want": "ROUND(3.14159, 2, 1)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "ROUND(x, 1, 0)", "want": "ROUND(x, 1, 0)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SCHEMA_NAME(id)", "want": "SCHEMA_NAME(id)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT \"x\".\"y\" FROM foo", "want": "SELECT [x].[y] FROM foo", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT (SELECT TOP 5 a, b FROM t ORDER BY b DESC FOR JSON PATH) AS j FROM x", "want": "SELECT (SELECT TOP 5 a, b FROM t ORDER BY b DESC FOR JSON PATH) AS j FROM x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM ##foo", "want": "SELECT * FROM ##foo", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM ##mytemptable", "want": "SELECT * FROM ##mytemptable", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM #foo", "want": "SELECT * FROM #foo", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM #mytemptable", "want": "SELECT * FROM #mytemptable", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM (SELECT \"c\") AS subq", "want": "SELECT * FROM (SELECT [c] AS [c]) AS subq", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM (SELECT 1) AS subq", "want": "SELECT * FROM (SELECT 1 AS [1]) AS subq", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM @x", "want": "SELECT * FROM @x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM OPENJSON(@array) WITH (month VARCHAR(3), temp int, month_id tinyint '$.sql:identity()') as months", "want": "SELECT * FROM OPENJSON(@array) WITH (month VARCHAR(3), temp INTEGER, month_id TINYINT '$.sql:identity()') AS months", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM OPENJSON(@json)", "want": "SELECT * FROM OPENJSON(@json)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(CONCAT UNION)", "want": "SELECT * FROM Table1 OPTION(CONCAT UNION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(DISABLE EXTERNALPUSHDOWN)", "want": "SELECT * FROM Table1 OPTION(DISABLE EXTERNALPUSHDOWN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(DISABLE SCALEOUTEXECUTION)", "want": "SELECT * FROM Table1 OPTION(DISABLE SCALEOUTEXECUTION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(DISABLE_OPTIMIZED_PLAN_FORCING)", "want": "SELECT * FROM Table1 OPTION(DISABLE_OPTIMIZED_PLAN_FORCING)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(EXPAND VIEWS)", "want": "SELECT * FROM Table1 OPTION(EXPAND VIEWS)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(FAST 15)", "want": "SELECT * FROM Table1 OPTION(FAST 15)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(FORCE EXTERNALPUSHDOWN)", "want": "SELECT * FROM Table1 OPTION(FORCE EXTERNALPUSHDOWN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(FORCE ORDER)", "want": "SELECT * FROM Table1 OPTION(FORCE ORDER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(FORCE SCALEOUTEXECUTION)", "want": "SELECT * FROM Table1 OPTION(FORCE SCALEOUTEXECUTION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(HASH GROUP)", "want": "SELECT * FROM Table1 OPTION(HASH GROUP)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(HASH JOIN)", "want": "SELECT * FROM Table1 OPTION(HASH JOIN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(HASH UNION)", "want": "SELECT * FROM Table1 OPTION(HASH UNION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(IGNORE_NONCLUSTERED_COLUMNSTORE_INDEX)", "want": "SELECT * FROM Table1 OPTION(IGNORE_NONCLUSTERED_COLUMNSTORE_INDEX)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(KEEP PLAN)", "want": "SELECT * FROM Table1 OPTION(KEEP PLAN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(KEEPFIXED PLAN)", "want": "SELECT * FROM Table1 OPTION(KEEPFIXED PLAN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(LABEL = 'MyLabel')", "want": "SELECT * FROM Table1 OPTION(LABEL = 'MyLabel')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(LOOP JOIN)", "want": "SELECT * FROM Table1 OPTION(LOOP JOIN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(MAXDOP 13)", "want": "SELECT * FROM Table1 OPTION(MAXDOP 13)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(MAXRECURSION 8)", "want": "SELECT * FROM Table1 OPTION(MAXRECURSION 8)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(MAX_GRANT_PERCENT = 5)", "want": "SELECT * FROM Table1 OPTION(MAX_GRANT_PERCENT = 5)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(MERGE JOIN)", "want": "SELECT * FROM Table1 OPTION(MERGE JOIN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(MERGE UNION)", "want": "SELECT * FROM Table1 OPTION(MERGE UNION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(MIN_GRANT_PERCENT = 10)", "want": "SELECT * FROM Table1 OPTION(MIN_GRANT_PERCENT = 10)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(NO_PERFORMANCE_SPOOL)", "want": "SELECT * FROM Table1 OPTION(NO_PERFORMANCE_SPOOL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(OPTIMIZE FOR UNKNOWN)", "want": "SELECT * FROM Table1 OPTION(OPTIMIZE FOR UNKNOWN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(ORDER GROUP)", "want": "SELECT * FROM Table1 OPTION(ORDER GROUP)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(PARAMETERIZATION FORCED)", "want": "SELECT * FROM Table1 OPTION(PARAMETERIZATION FORCED)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(PARAMETERIZATION SIMPLE)", "want": "SELECT * FROM Table1 OPTION(PARAMETERIZATION SIMPLE)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(QUERYTRACEON 99)", "want": "SELECT * FROM Table1 OPTION(QUERYTRACEON 99)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(RECOMPILE)", "want": "SELECT * FROM Table1 OPTION(RECOMPILE)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(RECOMPILE, USE PLAN N'<xml_plan>', MAX_GRANT_PERCENT = 5)", "want": "SELECT * FROM Table1 OPTION(RECOMPILE, USE PLAN N'<xml_plan>', MAX_GRANT_PERCENT = 5)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(ROBUST PLAN)", "want": "SELECT * FROM Table1 OPTION(ROBUST PLAN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 OPTION(USE PLAN N'<xml_plan>')", "want": "SELECT * FROM Table1 OPTION(USE PLAN N'<xml_plan>')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(CONCAT UNION)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(CONCAT UNION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(DISABLE EXTERNALPUSHDOWN)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(DISABLE EXTERNALPUSHDOWN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(DISABLE SCALEOUTEXECUTION)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(DISABLE SCALEOUTEXECUTION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(DISABLE_OPTIMIZED_PLAN_FORCING)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(DISABLE_OPTIMIZED_PLAN_FORCING)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(EXPAND VIEWS)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(EXPAND VIEWS)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(FAST 15)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(FAST 15)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(FORCE EXTERNALPUSHDOWN)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(FORCE EXTERNALPUSHDOWN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(FORCE ORDER)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(FORCE ORDER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(FORCE SCALEOUTEXECUTION)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(FORCE SCALEOUTEXECUTION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(HASH GROUP)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(HASH GROUP)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(HASH JOIN)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(HASH JOIN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(HASH UNION)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(HASH UNION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(IGNORE_NONCLUSTERED_COLUMNSTORE_INDEX)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(IGNORE_NONCLUSTERED_COLUMNSTORE_INDEX)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(KEEP PLAN)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(KEEP PLAN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(KEEPFIXED PLAN)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(KEEPFIXED PLAN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(LABEL = 'MyLabel')", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(LABEL = 'MyLabel')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(LOOP JOIN)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(LOOP JOIN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(MAXDOP 13)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(MAXDOP 13)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(MAXRECURSION 8)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(MAXRECURSION 8)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(MAX_GRANT_PERCENT = 5)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(MAX_GRANT_PERCENT = 5)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(MERGE JOIN)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(MERGE JOIN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(MERGE UNION)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(MERGE UNION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(MIN_GRANT_PERCENT = 10)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(MIN_GRANT_PERCENT = 10)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(NO_PERFORMANCE_SPOOL)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(NO_PERFORMANCE_SPOOL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(OPTIMIZE FOR UNKNOWN)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(OPTIMIZE FOR UNKNOWN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(ORDER GROUP)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(ORDER GROUP)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(PARAMETERIZATION FORCED)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(PARAMETERIZATION FORCED)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(PARAMETERIZATION SIMPLE)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(PARAMETERIZATION SIMPLE)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(QUERYTRACEON 99)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(QUERYTRACEON 99)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(RECOMPILE)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(RECOMPILE)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(RECOMPILE, USE PLAN N'<xml_plan>', MAX_GRANT_PERCENT = 5)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(RECOMPILE, USE PLAN N'<xml_plan>', MAX_GRANT_PERCENT = 5)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(ROBUST PLAN)", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(ROBUST PLAN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM Table1 WHERE id = 2 OPTION(USE PLAN N'<xml_plan>')", "want": "SELECT * FROM Table1 WHERE id = 2 OPTION(USE PLAN N'<xml_plan>')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM [##temp_table]", "want": "SELECT * FROM [##temp_table]", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM [#temp_table]", "want": "SELECT * FROM [#temp_table]", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM a..b", "want": "SELECT * FROM a..b", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t AS start WITH (NOLOCK)", "want": "SELECT * FROM t AS start WITH (NOLOCK)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR BROWSE", "want": "SELECT * FROM t FOR BROWSE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON AUTO", "want": "SELECT * FROM t FOR JSON AUTO", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON AUTO, INCLUDE_NULL_VALUES", "want": "SELECT * FROM t FOR JSON AUTO, INCLUDE_NULL_VALUES", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON AUTO, ROOT('RootName')", "want": "SELECT * FROM t FOR JSON AUTO, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON AUTO, WITHOUT_ARRAY_WRAPPER", "want": "SELECT * FROM t FOR JSON AUTO, WITHOUT_ARRAY_WRAPPER", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON PATH", "want": "SELECT * FROM t FOR JSON PATH", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON PATH, INCLUDE_NULL_VALUES", "want": "SELECT * FROM t FOR JSON PATH, INCLUDE_NULL_VALUES", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER", "want": "SELECT * FROM t FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON PATH, ROOT('Root'), INCLUDE_NULL_VALUES", "want": "SELECT\n  *\nFROM t\nFOR JSON\n  PATH,\n  ROOT('Root'),\n  INCLUDE_NULL_VALUES", "pretty": true, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON PATH, ROOT('RootName')", "want": "SELECT * FROM t FOR JSON PATH, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON PATH, ROOT('RootName'), INCLUDE_NULL_VALUES", "want": "SELECT * FROM t FOR JSON PATH, ROOT('RootName'), INCLUDE_NULL_VALUES", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON PATH, ROOT('RootName'), INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER", "want": "SELECT * FROM t FOR JSON PATH, ROOT('RootName'), INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON PATH, ROOT('RootName'), WITHOUT_ARRAY_WRAPPER", "want": "SELECT * FROM t FOR JSON PATH, ROOT('RootName'), WITHOUT_ARRAY_WRAPPER", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON PATH, WITHOUT_ARRAY_WRAPPER", "want": "SELECT * FROM t FOR JSON PATH, WITHOUT_ARRAY_WRAPPER", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR JSON PATH, WITHOUT_ARRAY_WRAPPER, ROOT('Root'), INCLUDE_NULL_VALUES", "want": "SELECT * FROM t FOR JSON PATH, WITHOUT_ARRAY_WRAPPER, ROOT('Root'), INCLUDE_NULL_VALUES", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO", "want": "SELECT * FROM t FOR XML AUTO", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, BINARY BASE64", "want": "SELECT * FROM t FOR XML AUTO, BINARY BASE64", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, BINARY BASE64, TYPE", "want": "SELECT * FROM t FOR XML AUTO, BINARY BASE64, TYPE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, BINARY BASE64, TYPE, ROOT('RootName')", "want": "SELECT * FROM t FOR XML AUTO, BINARY BASE64, TYPE, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, ROOT('RootName')", "want": "SELECT * FROM t FOR XML AUTO, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, TYPE", "want": "SELECT * FROM t FOR XML AUTO, TYPE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, TYPE, ROOT('RootName')", "want": "SELECT * FROM t FOR XML AUTO, TYPE, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, XMLDATA", "want": "SELECT * FROM t FOR XML AUTO, XMLDATA", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, XMLDATA, ELEMENTS ABSENT", "want": "SELECT * FROM t FOR XML AUTO, XMLDATA, ELEMENTS ABSENT", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, XMLDATA, ELEMENTS XSINIL", "want": "SELECT * FROM t FOR XML AUTO, XMLDATA, ELEMENTS XSINIL", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, XMLSCHEMA('TargetNameSpaceURI')", "want": "SELECT * FROM t FOR XML AUTO, XMLSCHEMA('TargetNameSpaceURI')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, XMLSCHEMA('TargetNameSpaceURI'), ELEMENTS ABSENT", "want": "SELECT * FROM t FOR XML AUTO, XMLSCHEMA('TargetNameSpaceURI'), ELEMENTS ABSENT", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML AUTO, XMLSCHEMA('TargetNameSpaceURI'), ELEMENTS XSINIL", "want": "SELECT * FROM t FOR XML AUTO, XMLSCHEMA('TargetNameSpaceURI'), ELEMENTS XSINIL", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT", "want": "SELECT * FROM t FOR XML EXPLICIT", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, BINARY BASE64", "want": "SELECT * FROM t FOR XML EXPLICIT, BINARY BASE64", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, BINARY BASE64, TYPE", "want": "SELECT * FROM t FOR XML EXPLICIT, BINARY BASE64, TYPE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, BINARY BASE64, TYPE, ROOT('RootName')", "want": "SELECT * FROM t FOR XML EXPLICIT, BINARY BASE64, TYPE, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, ROOT('RootName')", "want": "SELECT * FROM t FOR XML EXPLICIT, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, TYPE", "want": "SELECT * FROM t FOR XML EXPLICIT, TYPE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, TYPE, ROOT('RootName')", "want": "SELECT * FROM t FOR XML EXPLICIT, TYPE, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA", "want": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA, BINARY BASE64", "want": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA, BINARY BASE64", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA, BINARY BASE64, TYPE", "want": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA, BINARY BASE64, TYPE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA, BINARY BASE64, TYPE, ROOT('RootName')", "want": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA, BINARY BASE64, TYPE, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA, ROOT('RootName')", "want": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA, TYPE", "want": "SELECT * FROM t FOR XML EXPLICIT, XMLDATA, TYPE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName')", "want": "SELECT * FROM t FOR XML PATH('ElementName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), BINARY BASE64", "want": "SELECT * FROM t FOR XML PATH('ElementName'), BINARY BASE64", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), BINARY BASE64, ELEMENTS XSINIL", "want": "SELECT * FROM t FOR XML PATH('ElementName'), BINARY BASE64, ELEMENTS XSINIL", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), BINARY BASE64, TYPE", "want": "SELECT * FROM t FOR XML PATH('ElementName'), BINARY BASE64, TYPE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), BINARY BASE64, TYPE, ROOT('RootName')", "want": "SELECT * FROM t FOR XML PATH('ElementName'), BINARY BASE64, TYPE, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), BINARY BASE64, TYPE, ROOT('RootName'), ELEMENTS ABSENT", "want": "SELECT * FROM t FOR XML PATH('ElementName'), BINARY BASE64, TYPE, ROOT('RootName'), ELEMENTS ABSENT", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), ELEMENTS ABSENT", "want": "SELECT * FROM t FOR XML PATH('ElementName'), ELEMENTS ABSENT", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), ELEMENTS XSINIL", "want": "SELECT * FROM t FOR XML PATH('ElementName'), ELEMENTS XSINIL", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), ROOT('RootName')", "want": "SELECT * FROM t FOR XML PATH('ElementName'), ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), ROOT('RootName'), ELEMENTS XSINIL", "want": "SELECT * FROM t FOR XML PATH('ElementName'), ROOT('RootName'), ELEMENTS XSINIL", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), TYPE", "want": "SELECT * FROM t FOR XML PATH('ElementName'), TYPE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), TYPE, ELEMENTS ABSENT", "want": "SELECT * FROM t FOR XML PATH('ElementName'), TYPE, ELEMENTS ABSENT", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH('ElementName'), TYPE, ROOT('RootName')", "want": "SELECT * FROM t FOR XML PATH('ElementName'), TYPE, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML PATH, BINARY BASE64, ELEMENTS XSINIL", "want": "SELECT\n  *\nFROM t\nFOR XML\n  PATH,\n  BINARY BASE64,\n  ELEMENTS XSINIL", "pretty": true, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName')", "want": "SELECT * FROM t FOR XML RAW('ElementName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), BINARY BASE64", "want": "SELECT * FROM t FOR XML RAW('ElementName'), BINARY BASE64", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), BINARY BASE64, ROOT('RootName')", "want": "SELECT * FROM t FOR XML RAW('ElementName'), BINARY BASE64, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), BINARY BASE64, TYPE", "want": "SELECT * FROM t FOR XML RAW('ElementName'), BINARY BASE64, TYPE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), BINARY BASE64, TYPE, ROOT('RootName')", "want": "SELECT * FROM t FOR XML RAW('ElementName'), BINARY BASE64, TYPE, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), ROOT('RootName')", "want": "SELECT * FROM t FOR XML RAW('ElementName'), ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), TYPE", "want": "SELECT * FROM t FOR XML RAW('ElementName'), TYPE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), TYPE, ROOT('RootName')", "want": "SELECT * FROM t FOR XML RAW('ElementName'), TYPE, ROOT('RootName')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), XMLDATA", "want": "SELECT * FROM t FOR XML RAW('ElementName'), XMLDATA", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), XMLDATA, ELEMENTS ABSENT", "want": "SELECT * FROM t FOR XML RAW('ElementName'), XMLDATA, ELEMENTS ABSENT", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), XMLDATA, ELEMENTS XSINIL", "want": "SELECT * FROM t FOR XML RAW('ElementName'), XMLDATA, ELEMENTS XSINIL", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), XMLSCHEMA('TargetNameSpaceURI')", "want": "SELECT * FROM t FOR XML RAW('ElementName'), XMLSCHEMA('TargetNameSpaceURI')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), XMLSCHEMA('TargetNameSpaceURI'), ELEMENTS ABSENT", "want": "SELECT * FROM t FOR XML RAW('ElementName'), XMLSCHEMA('TargetNameSpaceURI'), ELEMENTS ABSENT", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t FOR XML RAW('ElementName'), XMLSCHEMA('TargetNameSpaceURI'), ELEMENTS XSINIL", "want": "SELECT * FROM t FOR XML RAW('ElementName'), XMLSCHEMA('TargetNameSpaceURI'), ELEMENTS XSINIL", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t ORDER BY (SELECT NULL) OFFSET 2 ROWS", "want": "SELECT * FROM t ORDER BY (SELECT NULL) OFFSET 2 ROWS", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t TABLESAMPLE (10 PERCENT)", "want": "SELECT * FROM t TABLESAMPLE (10 PERCENT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t TABLESAMPLE (10 PERCENT) REPEATABLE (123)", "want": "SELECT * FROM t TABLESAMPLE (10 PERCENT) REPEATABLE (123)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t TABLESAMPLE (20 ROWS)", "want": "SELECT * FROM t TABLESAMPLE (20 ROWS)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t WHERE NOT c", "want": "SELECT * FROM t WHERE NOT c <> 0", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t WITH (NOWAIT)", "want": "SELECT * FROM t WITH (NOWAIT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM t WITH (TABLOCK, INDEX(myindex))", "want": "SELECT * FROM t WITH (TABLOCK, INDEX(myindex))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT * FROM taxi ORDER BY 1 OFFSET 0 ROWS FETCH NEXT 3 ROWS ONLY", "want": "SELECT * FROM taxi ORDER BY 1 OFFSET 0 ROWS FETCH NEXT 3 ROWS ONLY", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT 1 AS \"[x]\"", "want": "SELECT 1 AS [[x]]]", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT 1 FROM a WHERE TRUE", "want": "SELECT 1 FROM a WHERE (1 = 1)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT 1 WHERE EXISTS(SELECT 1)", "want": "SELECT 1 WHERE EXISTS(SELECT 1)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT 1; SELECT 2", "want": "SELECT 1; SELECT 2", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT @x", "want": "SELECT @x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT ATN2(x, y)", "want": "SELECT ATN2(x, y)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT CASE WHEN a > 1 THEN b END", "want": "SELECT CASE WHEN a > 1 THEN b END", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT CAST((SELECT x FROM y) AS VARCHAR) AS test", "want": "SELECT CAST((SELECT x FROM y) AS VARCHAR) AS test", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT CAST(SUBSTRING('ABCD~1234', CHARINDEX('~', 'ABCD~1234') + 1, LEN('ABCD~1234')) AS BIGINT)", "want": "SELECT CAST(SUBSTRING('ABCD~1234', CHARINDEX('~', 'ABCD~1234') + 1, LEN('ABCD~1234')) AS BIGINT)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT CAST([a].[b] AS SMALLINT) FROM foo", "want": "SELECT CAST([a].[b] AS SMALLINT) FROM foo", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT COMPRESS('Hello World')", "want": "SELECT COMPRESS('Hello World')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT CONCAT(column1, column2)", "want": "SELECT CONCAT(column1, column2)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT CONVERT(DATETIME, '2006-04-25T15:50:59.997', 126)", "want": "SELECT CONVERT(DATETIME, '2006-04-25T15:50:59.997', 126)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT CONVERT(VARCHAR(10), testdb.dbo.test.x, 120) y FROM testdb.dbo.test", "want": "SELECT CONVERT(VARCHAR(10), testdb.dbo.test.x, 120) AS y FROM testdb.dbo.test", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT CONVERT(VARCHAR(10), y.x) z FROM testdb.dbo.test y", "want": "SELECT CONVERT(VARCHAR(10), y.x) AS z FROM testdb.dbo.test AS y", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT COUNT(1) FROM x", "want": "SELECT COUNT(1) FROM x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT COUNT_BIG(1) FROM x", "want": "SELECT COUNT_BIG(1) FROM x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEADD(DAY, DATEDIFF(DAY, -3, GETDATE()), '08:00:00')", "want": "SELECT DATEADD(DAY, DATEDIFF(DAY, CAST('1899-12-29' AS DATETIME2), CAST(GETDATE() AS DATETIME2)), '08:00:00')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEADD(DAY, DATEDIFF_BIG(DAY, -3, GETDATE()), '08:00:00')", "want": "SELECT DATEADD(DAY, DATEDIFF_BIG(DAY, CAST('1899-12-29' AS DATETIME2), CAST(GETDATE() AS DATETIME2)), '08:00:00')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEADD(YEAR, 1, '2017/08/25')", "want": "SELECT DATEADD(YEAR, 1, '2017/08/25')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF(DAY, CAST(a AS DATETIME2), CAST(b AS DATETIME2)) AS x FROM foo", "want": "SELECT DATEDIFF(DAY, CAST(a AS DATETIME2), CAST(b AS DATETIME2)) AS x FROM foo", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF(HOUR, 1.5, '2021-01-01')", "want": "SELECT DATEDIFF(HOUR, 1.5, '2021-01-01')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF(day, 1, '2021-01-01')", "want": "SELECT DATEDIFF(DAY, CAST('1900-01-02' AS DATETIME2), CAST('2021-01-01' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF(mm, 'start', 'end')", "want": "SELECT DATEDIFF(MONTH, CAST('start' AS DATETIME2), CAST('end' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF(quarter, 'start', 'end')", "want": "SELECT DATEDIFF(QUARTER, CAST('start' AS DATETIME2), CAST('end' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF(quarter, 0, '2021-01-01')", "want": "SELECT DATEDIFF(QUARTER, CAST('1900-01-01' AS DATETIME2), CAST('2021-01-01' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF(year, '2020-01-01', '2021-01-01')", "want": "SELECT DATEDIFF(YEAR, CAST('2020-01-01' AS DATETIME2), CAST('2021-01-01' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF_BIG(DAY, CAST(a AS DATETIME2), CAST(b AS DATETIME2)) AS x FROM foo", "want": "SELECT DATEDIFF_BIG(DAY, CAST(a AS DATETIME2), CAST(b AS DATETIME2)) AS x FROM foo", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF_BIG(HOUR, 1.5, '2021-01-01')", "want": "SELECT DATEDIFF_BIG(HOUR, 1.5, '2021-01-01')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF_BIG(day, 1, '2021-01-01')", "want": "SELECT DATEDIFF_BIG(DAY, CAST('1900-01-02' AS DATETIME2), CAST('2021-01-01' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF_BIG(mm, 'start', 'end')", "want": "SELECT DATEDIFF_BIG(MONTH, CAST('start' AS DATETIME2), CAST('end' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF_BIG(quarter, 'start', 'end')", "want": "SELECT DATEDIFF_BIG(QUARTER, CAST('start' AS DATETIME2), CAST('end' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF_BIG(quarter, 0, '2021-01-01')", "want": "SELECT DATEDIFF_BIG(QUARTER, CAST('1900-01-01' AS DATETIME2), CAST('2021-01-01' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEDIFF_BIG(year, '2020-01-01', '2021-01-01')", "want": "SELECT DATEDIFF_BIG(YEAR, CAST('2020-01-01' AS DATETIME2), CAST('2021-01-01' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEFROMPARTS('2020', 10, 01)", "want": "SELECT DATEFROMPARTS('2020', 10, 01)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATENAME(dw, '1970-01-01')", "want": "SELECT FORMAT(CAST('1970-01-01' AS DATETIME2), 'dddd')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATENAME(mm, '1970-01-01')", "want": "SELECT FORMAT(CAST('1970-01-01' AS DATETIME2), 'MMMM')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(\"dd\", x)", "want": "SELECT DATEPART(DAY, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(ISOWK, '2024-11-21')", "want": "SELECT DATEPART(ISO_WEEK, '2024-11-21')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(ISOWW, '2024-11-21')", "want": "SELECT DATEPART(ISO_WEEK, '2024-11-21')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(ISO_WEEK, '2024-11-21')", "want": "SELECT DATEPART(ISO_WEEK, '2024-11-21')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(WEEK, '2024-11-21')", "want": "SELECT DATEPART(WEEK, '2024-11-21')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(WK, '2024-11-21')", "want": "SELECT DATEPART(WEEK, '2024-11-21')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(WW, '2024-11-21')", "want": "SELECT DATEPART(WEEK, '2024-11-21')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(YEAR, CAST('2017-01-01' AS DATE))", "want": "SELECT DATEPART(YEAR, CAST('2017-01-01' AS DATE))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(day, CAST('2017-01-02' AS DATE))", "want": "SELECT DATEPART(day, CAST('2017-01-02' AS DATE))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(month, CAST('2017-03-01' AS DATE))", "want": "SELECT DATEPART(month, CAST('2017-03-01' AS DATE))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATEPART(month,'1970-01-01')", "want": "SELECT DATEPART(month, '1970-01-01')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATETIMEFROMPARTS(2013, 4, 5, 12, 00, 00, 0)", "want": "SELECT DATETIMEFROMPARTS(2013, 4, 5, 12, 00, 00, 0)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATETRUNC(month, 'foo')", "want": "SELECT DATETRUNC(MONTH, CAST('foo' AS DATETIME2))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATETRUNC(month, foo)", "want": "SELECT DATETRUNC(MONTH, foo)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DATETRUNC(year, CAST('foo1' AS date))", "want": "SELECT DATETRUNC(YEAR, CAST('foo1' AS DATE))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DISTINCT DepartmentName, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY BaseRate) OVER (PARTITION BY DepartmentName) AS MedianCont FROM dbo.DimEmployee", "want": "SELECT DISTINCT DepartmentName, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY BaseRate) OVER (PARTITION BY DepartmentName) AS MedianCont FROM dbo.DimEmployee", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT DISTINCT TOP 3 * FROM A", "want": "SELECT DISTINCT TOP 3 * FROM A", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT EXP(1)", "want": "SELECT EXP(1)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT Employee_ID, Department_ID FROM @MyTableVar", "want": "SELECT Employee_ID, Department_ID FROM @MyTableVar", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT FORMAT('01-01-1991', 'd.mm.yyyy')", "want": "SELECT FORMAT('01-01-1991', 'd.mm.yyyy')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT FORMAT('01-01-1991', 'dd.mm.yyyy')", "want": "SELECT FORMAT('01-01-1991', 'dd.mm.yyyy')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT FORMAT(1000000.01,'###,###.###')", "want": "SELECT FORMAT(1000000.01, '###,###.###')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT FORMAT(12345, '###.###.###')", "want": "SELECT FORMAT(12345, '###.###.###')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT FORMAT(1234567, 'f')", "want": "SELECT FORMAT(1234567, 'f')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT FORMAT(EndOfDayRate, 'N', 'en-us')", "want": "SELECT FORMAT(EndOfDayRate, 'N', 'en-us')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT FORMAT(date_col, 'dd.mm.yyyy')", "want": "SELECT FORMAT(date_col, 'dd.mm.yyyy')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT FORMAT(date_col, 'm')", "want": "SELECT FORMAT(date_col, 'MMMM d')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT FORMAT(foo, 'dddd', 'de-CH')", "want": "SELECT FORMAT(foo, 'dddd', 'de-CH')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT FORMAT(num_col, 'c')", "want": "SELECT FORMAT(num_col, 'c')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT NEXT VALUE FOR db.schema.sequence_name OVER (ORDER BY foo), col", "want": "SELECT NEXT VALUE FOR db.schema.sequence_name OVER (ORDER BY foo), col", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT PARSENAME('1.2.3', 0)", "want": "SELECT PARSENAME('1.2.3', 0)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT PARSENAME('1.2.3', 1)", "want": "SELECT PARSENAME('1.2.3', 1)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT PARSENAME('1.2.3', 2)", "want": "SELECT PARSENAME('1.2.3', 2)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT PARSENAME('1.2.3', 3)", "want": "SELECT PARSENAME('1.2.3', 3)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT SYSDATETIMEOFFSET()", "want": "SELECT SYSDATETIMEOFFSET()", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TIMEFROMPARTS(23, 59, 59, 0, 0)", "want": "SELECT TIMEFROMPARTS(23, 59, 59, 0, 0)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TOP (2 + 1) 1", "want": "SELECT TOP (2 + 1) 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TOP (SELECT 1) * FROM t", "want": "SELECT TOP (SELECT 1) * FROM t", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TOP 10 PERCENT", "want": "SELECT TOP 10 PERCENT", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TOP 10 PERCENT WITH TIES", "want": "SELECT TOP 10 PERCENT WITH TIES", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TOP 10 s.RECORDID, n.c.VALUE('(/*:FORM_ROOT/*:SOME_TAG)[1]', 'float') AS SOME_TAG_VALUE FROM source_table.dbo.source_data AS s(nolock) CROSS APPLY FormContent.nodes('/*:FORM_ROOT') AS N(C)", "want": "SELECT TOP 10 s.RECORDID, n.c.VALUE('(/*:FORM_ROOT/*:SOME_TAG)[1]', 'float') AS SOME_TAG_VALUE FROM source_table.dbo.source_data AS s(nolock) CROSS APPLY FormContent.nodes('/*:FORM_ROOT') AS N(C)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TRIM('     test    ') AS Result", "want": "SELECT TRIM('     test    ') AS Result", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TRIM('.,! ' FROM '     #     test    .') AS Result", "want": "SELECT TRIM('.,! ' FROM '     #     test    .') AS Result", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TRIM(BOTH 'a' FROM a)", "want": "SELECT TRIM(BOTH 'a' FROM a)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TRUE AS a, FALSE AS b", "want": "SELECT 1 AS a, 0 AS b", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TRUE, FALSE", "want": "SELECT 1, 0", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TestSpecialChar.Test# FROM TestSpecialChar", "want": "SELECT TestSpecialChar.Test# FROM TestSpecialChar", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TestSpecialChar.Test$ FROM TestSpecialChar", "want": "SELECT TestSpecialChar.Test$ FROM TestSpecialChar", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TestSpecialChar.Test@ FROM TestSpecialChar", "want": "SELECT TestSpecialChar.Test@ FROM TestSpecialChar", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT TestSpecialChar.Test_ FROM TestSpecialChar", "want": "SELECT TestSpecialChar.Test_ FROM TestSpecialChar", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT [key], value FROM OPENJSON(@json,'$.path.to.\"sub-object\"')", "want": "SELECT [key], value FROM OPENJSON(@json, '$.path.to.\"sub-object\"')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME ALL AS alias", "want": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME ALL AS alias", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME AS OF 'foo'", "want": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME AS OF 'foo'", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME AS OF 'foo' AS alias", "want": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME AS OF 'foo' AS alias", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME BETWEEN c AND d", "want": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME BETWEEN c AND d", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME CONTAINED IN (c, d)", "want": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME CONTAINED IN (c, d)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME FROM c TO d", "want": "SELECT [x] FROM [a].[b] FOR SYSTEM_TIME FROM c TO d", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT a = 1", "want": "SELECT 1 AS a", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT a = 1 UNION ALL SELECT a = b", "want": "SELECT 1 AS a UNION ALL SELECT b AS a", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT col FROM t OPTION(LABEL = 'foo')", "want": "SELECT col FROM t OPTION(LABEL = 'foo')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT go", "want": "SELECT go", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT j FROM (SELECT a AS j FROM t FOR JSON PATH) AS x", "want": "SELECT j FROM (SELECT a AS j FROM t FOR JSON PATH) AS x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT t.x, y.z FROM x CROSS APPLY tvfTest(t.x) y(z)", "want": "SELECT t.x, y.z FROM x CROSS APPLY TVFTEST(t.x) AS y(z)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT t.x, y.z FROM x OUTER APPLY a.b.tvfTest(t.x)y(z)", "want": "SELECT t.x, y.z FROM x OUTER APPLY a.b.tvfTest(t.x) AS y(z)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT t.x, y.z FROM x OUTER APPLY tvfTest(t.x)y(z)", "want": "SELECT t.x, y.z FROM x OUTER APPLY TVFTEST(t.x) AS y(z)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT val FROM (VALUES ((TRUE), (FALSE), (NULL))) AS t(val)", "want": "SELECT val FROM (VALUES ((1), (0), (NULL))) AS t(val)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT x FROM @MyTableVar AS m JOIN Employee ON m.EmployeeID = Employee.EmployeeID", "want": "SELECT x FROM @MyTableVar AS m JOIN Employee ON m.EmployeeID = Employee.EmployeeID", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT x FROM a INNER LOOP JOIN b ON b.id = a.id", "want": "SELECT x FROM a INNER LOOP JOIN b ON b.id = a.id", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT x FROM a WITH (NOLOCK)", "want": "SELECT x FROM a WITH (NOLOCK)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT x FROM start WITH (NOLOCK)", "want": "SELECT x FROM start WITH (NOLOCK)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT x.a, x.b, t.v, t.y FROM x CROSS APPLY (SELECT v, y FROM t) t(v, y)", "want": "SELECT x.a, x.b, t.v, t.y FROM x CROSS APPLY (SELECT v, y FROM t) AS t(v, y)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT x.a, x.b, t.v, t.y FROM x OUTER APPLY (SELECT v, y FROM t) t(v, y)", "want": "SELECT x.a, x.b, t.v, t.y FROM x OUTER APPLY (SELECT v, y FROM t) AS t(v, y)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SELECT x.a, x.b, t.v, t.y, s.v, s.y FROM x OUTER APPLY (SELECT v, y FROM t) t(v, y) OUTER APPLY (SELECT v, y FROM t) s(v, y) LEFT JOIN z ON z.id = s.id", "want": "SELECT x.a, x.b, t.v, t.y, s.v, s.y FROM x OUTER APPLY (SELECT v, y FROM t) AS t(v, y) OUTER APPLY (SELECT v, y FROM t) AS s(v, y) LEFT JOIN z ON z.id = s.id", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SET @count = (SELECT COUNT(1) FROM x)", "want": "SET @count = (SELECT COUNT(1) FROM x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SET KEY VALUE", "want": "SET KEY VALUE", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "SET XACT_ABORT ON", "want": "SET XACT_ABORT ON", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "STDEV(x)", "want": "STDEV(x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "STRING_AGG(x, '|')", "want": "STRING_AGG(x, '|')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "STRING_AGG(x, '|') WITHIN GROUP (ORDER BY z ASC)", "want": "STRING_AGG(x, '|') WITHIN GROUP (ORDER BY z ASC)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "STRING_AGG(x, y) WITHIN GROUP (ORDER BY z DESC)", "want": "STRING_AGG(x, y) WITHIN GROUP (ORDER BY z DESC)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "TRUNCATE TABLE t1 WITH (PARTITIONS(1, 2 TO 5, 10 TO 20, 84))", "want": "TRUNCATE TABLE t1 WITH (PARTITIONS(1, 2 TO 5, 10 TO 20, 84))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "TRY_CAST(x AS INT)", "want": "TRY_CAST(x AS INTEGER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "TRY_CONVERT(INT, x)", "want": "TRY_CONVERT(INTEGER, x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "TRY_CONVERT(NVARCHAR, x, 121)", "want": "TRY_CONVERT(NVARCHAR, x, 121)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE STATISTICS x", "want": "UPDATE STATISTICS x", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE start WITH (ROWLOCK) SET a = 1", "want": "UPDATE start WITH (ROWLOCK) SET a = 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(CONCAT UNION)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(CONCAT UNION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(DISABLE EXTERNALPUSHDOWN)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(DISABLE EXTERNALPUSHDOWN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(DISABLE SCALEOUTEXECUTION)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(DISABLE SCALEOUTEXECUTION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(DISABLE_OPTIMIZED_PLAN_FORCING)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(DISABLE_OPTIMIZED_PLAN_FORCING)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(EXPAND VIEWS)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(EXPAND VIEWS)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(FAST 15)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(FAST 15)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(FORCE EXTERNALPUSHDOWN)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(FORCE EXTERNALPUSHDOWN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(FORCE ORDER)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(FORCE ORDER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(FORCE SCALEOUTEXECUTION)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(FORCE SCALEOUTEXECUTION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(HASH GROUP)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(HASH GROUP)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(HASH JOIN)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(HASH JOIN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(HASH UNION)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(HASH UNION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(IGNORE_NONCLUSTERED_COLUMNSTORE_INDEX)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(IGNORE_NONCLUSTERED_COLUMNSTORE_INDEX)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(KEEP PLAN)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(KEEP PLAN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(KEEPFIXED PLAN)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(KEEPFIXED PLAN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(LABEL = 'MyLabel')", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(LABEL = 'MyLabel')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(LOOP JOIN)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(LOOP JOIN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MAXDOP 13)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MAXDOP 13)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MAXRECURSION 8)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MAXRECURSION 8)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MAX_GRANT_PERCENT = 5)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MAX_GRANT_PERCENT = 5)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MERGE JOIN)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MERGE JOIN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MERGE UNION)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MERGE UNION)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MIN_GRANT_PERCENT = 10)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(MIN_GRANT_PERCENT = 10)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(NO_PERFORMANCE_SPOOL)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(NO_PERFORMANCE_SPOOL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(OPTIMIZE FOR UNKNOWN)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(OPTIMIZE FOR UNKNOWN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(ORDER GROUP)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(ORDER GROUP)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(PARAMETERIZATION FORCED)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(PARAMETERIZATION FORCED)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(PARAMETERIZATION SIMPLE)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(PARAMETERIZATION SIMPLE)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(QUERYTRACEON 99)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(QUERYTRACEON 99)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(RECOMPILE)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(RECOMPILE)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(RECOMPILE, USE PLAN N'<xml_plan>', MAX_GRANT_PERCENT = 5)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(RECOMPILE, USE PLAN N'<xml_plan>', MAX_GRANT_PERCENT = 5)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(ROBUST PLAN)", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(ROBUST PLAN)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE t1 SET k = t2.k FROM t2 OPTION(USE PLAN N'<xml_plan>')", "want": "UPDATE t1 SET k = t2.k FROM t2 OPTION(USE PLAN N'<xml_plan>')", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE x SET y = 1 OUTPUT x.a, x.b FROM y", "want": "UPDATE x SET y = 1 OUTPUT x.a, x.b FROM y", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "UPDATE x SET y = 1 OUTPUT x.a, x.b INTO @y FROM y", "want": "UPDATE x SET y = 1 OUTPUT x.a, x.b INTO @y FROM y", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "WITH t AS (SELECT \"c\") SELECT * FROM t", "want": "WITH t AS (SELECT [c] AS [c]) SELECT * FROM t", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "WITH t AS (SELECT 0 AS col) SELECT YEAR(col) FROM t", "want": "WITH t AS (SELECT 0 AS col) SELECT YEAR(col) FROM t", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "WITH t AS (SELECT 1) SELECT * FROM t", "want": "WITH t AS (SELECT 1 AS [1]) SELECT * FROM t", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "WITH t(c) AS (SELECT 1) SELECT c INTO #foo FROM t", "want": "WITH t(c) AS (SELECT 1) SELECT c INTO #foo FROM t", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT COUNT(*) FROM (SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2 ORDER BY a DESC) AS t", "want": "WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT COUNT(*) FROM (SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2 ORDER BY a DESC) AS t", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2", "want": "WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2 ORDER BY a DESC", "want": "WITH t1 AS (SELECT 1 AS a), t2 AS (SELECT 1 AS a) SELECT TOP 10 a FROM t1 UNION ALL SELECT TOP 10 a FROM t2 ORDER BY a DESC", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "YEAR(x)", "want": "YEAR(x)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "a != FALSE", "want": "a <> 0", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "a = TRUE", "want": "a = 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "a IS NOT FALSE", "want": "NOT a = 0", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "a IS TRUE", "want": "a = 1", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "bar::baZ(1, 2)", "want": "bar::baZ(1, 2)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "declare @X TABLE (Id INT NOT NULL, Name VARCHAR(100) NOT NULL)", "want": "DECLARE @X TABLE (Id INTEGER NOT NULL, Name VARCHAR(100) NOT NULL)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "declare @X TABLE (Id INT NOT NULL, constraint PK_Id primary key (Id))", "want": "DECLARE @X TABLE (Id INTEGER NOT NULL, CONSTRAINT PK_Id PRIMARY KEY (Id))", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "declare @X UserDefinedTableType", "want": "DECLARE @X UserDefinedTableType", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "declare @X int = (select col from table where id = 1)", "want": "DECLARE @X INTEGER = (SELECT col FROM table WHERE id = 1)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "x::int", "want": "CAST(x AS INTEGER)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "x::varchar", "want": "CAST(x AS VARCHAR)", "pretty": false, "identify": false}
+{"dialect": "tsql", "sql": "x::varchar(MAX)", "want": "CAST(x AS VARCHAR(MAX))", "pretty": false, "identify": false}
 {"dialect": "", "sql": "VALUES (1) UNION SELECT * FROM x", "want": "SELECT * FROM (VALUES (1)) AS _values UNION SELECT * FROM x", "pretty": false}
 {"dialect": "", "sql": "WITH RECURSIVE T(n) AS (VALUES (1) UNION ALL SELECT n + 1 FROM t WHERE n < 100) SELECT SUM(n) FROM t", "want": "WITH RECURSIVE T(n) AS (SELECT * FROM (VALUES (1)) AS _values UNION ALL SELECT n + 1 FROM t WHERE n < 100) SELECT SUM(n) FROM t", "pretty": false}
 {"dialect": "", "sql": "WITH RECURSIVE T(n, m) AS (VALUES (1, 2) UNION ALL SELECT n + 1, n + 2 FROM t) SELECT SUM(n) FROM t", "want": "WITH RECURSIVE T(n, m) AS (SELECT * FROM (VALUES (1, 2)) AS _values UNION ALL SELECT n + 1, n + 2 FROM t) SELECT SUM(n) FROM t", "pretty": false}

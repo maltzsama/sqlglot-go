@@ -567,6 +567,14 @@ func (p *Parser) buildCast(strict bool, args exp.Args) exp.Expression {
 }
 
 func (p *Parser) parseDcolon() exp.Expression {
+	// parsers/tsql.py:510-516: use _parse_types only when the next token is a known type.
+	if p.dialect.Name == "tsql" {
+		if !p.matchSet(typeTokens, false) {
+			if function := p.parseFunction(nil, false, false, false); function != nil {
+				return function
+			}
+		}
+	}
 	return p.parseTypes(false, false, true, false)
 }
 

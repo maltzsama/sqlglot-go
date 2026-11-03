@@ -1001,7 +1001,7 @@ func (p *Parser) parseQueryModifiers(this exp.Expression) exp.Expression {
 			this.Append("laterals", lateral)
 		}
 		for {
-			if !queryModifierTokens[p.curr.TokenType] {
+			if !p.isQueryModifierToken(p.curr.TokenType) {
 				// v30.17.0 (parser.py:4371-4382): a leading START (text) may begin a
 				// START WITH ... CONNECT BY clause.
 				if stringsUpper(p.curr.Text) == "START" && !textMatchExcludedTokens[p.curr.TokenType] {
@@ -1016,7 +1016,7 @@ func (p *Parser) parseQueryModifiers(this exp.Expression) exp.Expression {
 				}
 				break
 			}
-			parse := queryModifierParsers[p.curr.TokenType]
+			parse := p.queryModifierFor(p.curr.TokenType)
 			modTok := p.curr
 			key, expression := parse(p)
 			if expression == nil {
@@ -2663,6 +2663,11 @@ func arrowJSONExtractArgs(p *Parser, this, path exp.Expression) exp.Args {
 var columnOperators = map[tokens.TokenType]columnOpFunc{
 	tokens.DOT: nil,
 	tokens.DCOLON: func(p *Parser, this, to exp.Expression) exp.Expression {
+		// parsers/tsql.py:450-458: T-SQL's `::` is scope resolution unless the RHS is a
+		// concrete data type.
+		if p.dialect.Name == "tsql" && (to == nil || to.Kind() != exp.KindDataType || to.Arg("this") == exp.DTypeUserDefined) {
+			return p.expression(exp.ScopeResolution(exp.Args{"this": this, "expression": to}), nil, nil)
+		}
 		return p.buildCast(p.strictCast, exp.Args{"this": this, "to": to})
 	},
 	tokens.DOTCOLON: func(p *Parser, this, to exp.Expression) exp.Expression {
@@ -3042,6 +3047,29 @@ func (p *Parser) parsePGTypedLiteralValue() exp.Expression {
 }
 
 func (p *Parser) parseIdVar(anyToken bool, toks map[tokens.TokenType]bool) exp.Expression {
+	// parsers/tsql.py:707-722: `#temp` / `##global` identifiers carry the hash as a flag on
+	// the Identifier rather than as part of its name.
+	if p.dialect.Name == "tsql" {
+		// parsers/tsql.py:339-346: BEGIN is never an identifier in T-SQL.
+		if !textMatchExcludedTokens[p.curr.TokenType] && stringsUpper(p.curr.Text) == "BEGIN" {
+			return nil
+		}
+		temporary := p.match(tokens.HASH)
+		global := temporary && p.match(tokens.HASH)
+		expression := p.parseIdVarCore(anyToken, toks)
+		if expression != nil {
+			if global {
+				expression.Set("global_", true)
+			} else if temporary {
+				expression.Set("temporary", true)
+			}
+		}
+		return expression
+	}
+	return p.parseIdVarCore(anyToken, toks)
+}
+
+func (p *Parser) parseIdVarCore(anyToken bool, toks map[tokens.TokenType]bool) exp.Expression {
 	expression := p.parseIdentifier()
 	if expression == nil {
 		if (anyToken && p.advanceAny(false) != nil) || p.matchSet(tokensOrDefault(toks, idVarTokens)) {
@@ -3300,7 +3328,16 @@ func (p *Parser) statementSpanned(this exp.Expression, start, end tokens.Token) 
 // (inside any alias) so the original spelling of an unaliased computed projection is
 // recoverable — e.g. MySQL labels such a column with its verbatim source text.
 func (p *Parser) parseProjection() exp.Expression {
-	return p.parseAlias(p.parseSpanned(p.parseAssignment), false)
+	projection := p.parseAlias(p.parseSpanned(p.parseAssignment), false)
+	// parsers/tsql.py:578-595: T-SQL's `alias = expression` projection is canonicalized to
+	// an Alias of the expression.
+	if p.dialect.Name == "tsql" && projection != nil && projection.Kind() == exp.KindEQ {
+		this := asExpr(projection.Arg("this"))
+		if this != nil && this.Kind() == exp.KindColumn {
+			return exp.AliasExpr(projection.Arg("expression"), this.This(), false)
+		}
+	}
+	return projection
 }
 
 func (p *Parser) parseWith(skipWithToken bool) exp.Expression {
@@ -3595,7 +3632,14 @@ func (p *Parser) parseFunctionCall(functions map[string]func([]exp.Expression) e
 		alias := !knownFunction
 		args := p.parseFunctionArgs(alias)
 		if knownFunction {
-			result = p.validateExpression(function(args), exprArgs(args))
+			// A dialect FUNCTIONS builder may consume/reorder its argument list (TSQL
+			// HASHBYTES pops the hash-kind argument), so the raw arity check would flag a
+			// faithful builder. Base builders are plain FromArgList and keep the check.
+			var validateArgs []any
+			if p.dialect.Functions[upper] == nil {
+				validateArgs = exprArgs(args)
+			}
+			result = p.validateExpression(function(args), validateArgs)
 		} else {
 			var name any = this
 			if tokenType == tokens.IDENTIFIER {
@@ -3732,6 +3776,16 @@ func (p *Parser) parseCase() exp.Expression {
 }
 
 func (p *Parser) parseIf() exp.Expression {
+	// parsers/tsql.py:764-770: T-SQL's IF/ELSE statement builds an IfBlock.
+	if p.dialect.Name == "tsql" && stringsUpper(p.prev.Text) == "IF" {
+		condition := p.parseCondition()
+		trueBlock := p.parseBlock(false)
+		var falseBlock exp.Expression
+		if p.match(tokens.ELSE) {
+			falseBlock = p.parseBlock(false)
+		}
+		return p.expression(exp.IfBlock(exp.Args{"this": condition, "true": trueBlock, "false": falseBlock}), nil, nil)
+	}
 	if p.match(tokens.L_PAREN) {
 		args := p.parseCsv(func() exp.Expression { return p.parseAlias(p.parseAssignment(), true) })
 		this := p.validateExpression(exp.FromArgList(exp.KindIf, args), exprArgs(args))
@@ -3900,21 +3954,37 @@ func (p *Parser) parseLimit(this exp.Expression, top bool, skipLimitToken bool) 
 	}
 	if skipLimitToken || p.match(limitToken) {
 		comments := p.prevComments
-		// LIMIT ALL is a no-op that leaves the query unchanged (parser.py:5569-5570).
-		if p.dialect.SupportsLimitAll && p.match(tokens.ALL) {
-			return this
-		}
-		// Parsing LIMIT x% (i.e. x PERCENT) as a term leads to an error, since we try to
-		// build an exp.Mod expr. For that matter, we backtrack and instead consume the
-		// factor plus parse the percentage separately.
 		var expression exp.Expression
-		index := p.index
-		expression = p.tryParse(p.parseTerm, false)
-		if expression != nil && expression.Kind() == exp.KindMod {
-			p.retreat(index)
-			expression = p.parseFactor()
-		} else if expression == nil {
-			expression = p.parseFactor()
+		if top {
+			// parser.py:5741-5750: TOP takes a number unless parenthesized, where a term or
+			// a parenthesized SELECT is allowed. Using _parse_term unbracketed would swallow
+			// `TOP 10 *` as a multiplication.
+			limitParen := p.match(tokens.L_PAREN)
+			if limitParen {
+				expression = p.parseTerm()
+				if expression == nil {
+					expression = p.parseSelect(false)
+				}
+				p.matchRParen(nil)
+			} else {
+				expression = p.parseNumber()
+			}
+		} else {
+			// LIMIT ALL is a no-op that leaves the query unchanged (parser.py:5569-5570).
+			if p.dialect.SupportsLimitAll && p.match(tokens.ALL) {
+				return this
+			}
+			// Parsing LIMIT x% (i.e. x PERCENT) as a term leads to an error, since we try to
+			// build an exp.Mod expr. For that matter, we backtrack and instead consume the
+			// factor plus parse the percentage separately.
+			index := p.index
+			expression = p.tryParse(p.parseTerm, false)
+			if expression != nil && expression.Kind() == exp.KindMod {
+				p.retreat(index)
+				expression = p.parseFactor()
+			} else if expression == nil {
+				expression = p.parseFactor()
+			}
 		}
 		limitOptions := p.parseLimitOptions()
 		var offset exp.Expression

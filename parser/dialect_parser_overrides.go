@@ -32,6 +32,9 @@ type dialectParserOverrideSet struct {
 	AliasTokens     map[tokens.TokenType]bool
 	PropertyParsers map[string]propertyParserFunc
 	TypeParser      typeParserOverrideFunc
+	// QueryModifiers overrides QUERY_MODIFIER_PARSERS entries (parsers/tsql.py:333-337:
+	// OPTION and FOR).
+	QueryModifiers map[tokens.TokenType]func(*Parser) (string, any)
 }
 
 var dialectParserOverrides = map[string]dialectParserOverrideSet{}
@@ -151,6 +154,24 @@ func (p *Parser) propertyParserKeys() map[string]bool {
 
 func (p *Parser) typeParserOverride() typeParserOverrideFunc {
 	return dialectParserOverrides[p.parserOverrideKey()].TypeParser
+}
+
+// isQueryModifierToken reports whether tt starts a query modifier in this dialect, including
+// an overlay-only modifier such as TSQL's OPTION.
+func (p *Parser) isQueryModifierToken(tt tokens.TokenType) bool {
+	if _, ok := dialectParserOverrides[p.parserOverrideKey()].QueryModifiers[tt]; ok {
+		return true
+	}
+	return queryModifierTokens[tt]
+}
+
+// queryModifierFor resolves a query modifier parser: the dialect overlay wins over the shared
+// QUERY_MODIFIER_PARSERS table.
+func (p *Parser) queryModifierFor(tt tokens.TokenType) func(*Parser) (string, any) {
+	if parse, ok := dialectParserOverrides[p.parserOverrideKey()].QueryModifiers[tt]; ok {
+		return parse
+	}
+	return queryModifierParsers[tt]
 }
 
 func (p *Parser) noParenFunctionParserFor(name string) parserOverrideFunc {

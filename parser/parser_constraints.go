@@ -388,6 +388,18 @@ func (p *Parser) parseUniqueKey() exp.Expression {
 
 // parseUnique ports _parse_unique (parser.py:7509-7519).
 func (p *Parser) parseUnique() exp.Expression {
+	// parsers/tsql.py:772-778: UNIQUE [NON]CLUSTERED (cols).
+	if p.dialect.Name == "tsql" && p.matchTexts(map[string]bool{"CLUSTERED": true, "NONCLUSTERED": true}) {
+		clustered := stringsUpper(p.prev.Text) == "CLUSTERED"
+		columns := p.parseWrappedCsv(func() exp.Expression { return p.parseOrdered(nil) })
+		var this exp.Expression
+		if clustered {
+			this = exp.ClusteredColumnConstraint(exp.Args{"this": columns})
+		} else {
+			this = exp.NonClusteredColumnConstraint(exp.Args{"this": columns})
+		}
+		return p.expression(exp.UniqueColumnConstraint(exp.Args{"this": this}), nil, nil)
+	}
 	p.matchTexts(map[string]bool{"KEY": true, "INDEX": true})
 	// Sequenced as separate statements (rather than inline within the Args literal below)
 	// to guarantee upstream's exact evaluation order (parser.py:7509-7519: nulls, this,
@@ -500,6 +512,10 @@ func (p *Parser) parseForeignKey() exp.Expression {
 // overridden by mysql (parsers/mysql.py:362-369) to support the `col(N)` index-prefix-
 // length form (-> exp.ColumnPrefix).
 func (p *Parser) parsePrimaryKeyPart() exp.Expression {
+	// parsers/tsql.py:818-819: ALTER TABLE ... ADD CONSTRAINT ... PRIMARY KEY (col ASC).
+	if p.dialect.Name == "tsql" {
+		return p.parseOrdered(nil)
+	}
 	if p.dialect.Name != "mysql" {
 		return p.parseField(false, nil, false)
 	}
