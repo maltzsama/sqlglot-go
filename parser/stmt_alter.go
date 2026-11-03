@@ -478,12 +478,42 @@ func (p *Parser) parseAlterTableRename() exp.Expression {
 // STAGE_FILE_FORMAT/STAGE_COPY_OPTIONS branches (Snowflake-only, needing
 // _parse_wrapped_options - not ported anywhere in this codebase) are omitted; unsupported
 // occurrences fall through to the shared property parser and ultimately fail closed.
+// parseTSQLAlterSetItem ports the T-SQL property assignments inside
+// ALTER TABLE ... SET (KEY=value, ...): ON/OFF are reserved keywords in the base parser, so
+// they are consumed as Vars here, and an `ON(...)` option list is parsed recursively.
+func (p *Parser) parseTSQLAlterSetItem() exp.Expression {
+	this := p.parsePrimaryOrVar()
+	if this == nil {
+		this = p.parseVar(true, nil, false)
+	}
+	if !p.match(tokens.EQ) {
+		return this
+	}
+	var value exp.Expression
+	if p.curr.IsValid() && (stringsUpper(p.curr.Text) == "ON" || stringsUpper(p.curr.Text) == "OFF") {
+		p.advance()
+		value = exp.Var(exp.Args{"this": stringsUpper(p.prev.Text)})
+		if p.curr.TokenType == tokens.L_PAREN {
+			options := p.parseWrappedCsv(p.parseTSQLAlterSetItem)
+			value = exp.Anonymous(exp.Args{"this": value.Name(), "expressions": options})
+		}
+	} else {
+		value = p.parseAssignment()
+	}
+	return exp.EQ(exp.Args{"this": this, "expression": value})
+}
+
 func (p *Parser) parseAlterTableSet() exp.Expression {
 	alterSet := p.expression(exp.AlterSet(nil), nil, nil)
 
 	switch {
 	case p.match(tokens.L_PAREN, false) || p.matchTextSeq("TABLE", "PROPERTIES"):
-		alterSet.Set("expressions", p.parseWrappedCsv(p.parseAssignment))
+		if p.dialect.Name == "tsql" {
+			alterSet.Meta()["tsql_no_space"] = true
+			alterSet.Set("expressions", p.parseWrappedCsv(p.parseTSQLAlterSetItem))
+		} else {
+			alterSet.Set("expressions", p.parseWrappedCsv(p.parseAssignment))
+		}
 	case p.peekTextSeq("FILESTREAM_ON"):
 		alterSet.Set("expressions", []exp.Expression{p.parseAssignment()})
 	case p.matchTexts(map[string]bool{"LOGGED": true, "UNLOGGED": true}):

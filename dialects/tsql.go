@@ -29,6 +29,10 @@ func TSQL() *Dialect {
 	d.LimitFetch = "FETCH"
 	d.EnsureBools = true
 	d.CteRecursiveKeywordRequired = false
+	// generators/tsql.py:131 RETURNING_END = False (OUTPUT after the target).
+	d.ReturningEnd = false
+	// parsers/tsql.py:460 SET_OP_MODIFIERS = {"offset"}.
+	d.SetOpModifiers = map[string]bool{"offset": true}
 	d.AlterTableIncludeColumnKeyword = false
 	d.ComputedColumnWithType = false
 	d.TablesampleSeedKeyword = "REPEATABLE"

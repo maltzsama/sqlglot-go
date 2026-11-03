@@ -365,6 +365,12 @@ type Dialect struct {
 	// CteRecursiveKeywordRequired ports generator.py CTE_RECURSIVE_KEYWORD_REQUIRED
 	// (default True); TSQL omits the RECURSIVE keyword.
 	CteRecursiveKeywordRequired bool
+	// ReturningEnd ports generator.py:385 RETURNING_END (default True): whether RETURNING/
+	// OUTPUT renders after the statement body or immediately after the target.
+	ReturningEnd bool
+	// SetOpModifiers ports parser.py:1867 SET_OP_MODIFIERS: which query modifiers attach to
+	// the UNION node rather than its right operand. TSQL keeps only OFFSET there.
+	SetOpModifiers map[string]bool
 }
 
 func Base() *Dialect {
@@ -508,6 +514,10 @@ func Base() *Dialect {
 		LimitFetch: "ALL",
 		// generator.py CTE_RECURSIVE_KEYWORD_REQUIRED defaults to True upstream.
 		CteRecursiveKeywordRequired: true,
+		// generator.py:385 RETURNING_END defaults to True upstream.
+		ReturningEnd: true,
+		// parser.py:1867 SET_OP_MODIFIERS defaults to order/limit/offset.
+		SetOpModifiers: map[string]bool{"order": true, "limit": true, "offset": true},
 	}
 }
 

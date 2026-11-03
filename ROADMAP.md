@@ -610,8 +610,8 @@ constraints, `x::y` scope resolution, and the TSQL DDL/DML forms exercised by th
 
 Corpus: `testdata/dialect_identity.jsonl` now carries the 613 `validate_identity` cases extracted
 from `tests/dialects/test_tsql.py` (`scripts/extract_dialect_corpus.py --dialects tsql`); the floors
-in `corpus_test.go` are **566/613**, and the remaining 47 rows are the burndown list in
-`testdata/parity_gaps.txt`: CREATE PROCEDURE/TRIGGER bodies, `CREATE TABLE ... AS SELECT` → `SELECT
-... INTO`, OUTPUT-clause position, MERGE hint placement, temporal `SYSTEM_VERSIONING` DDL,
-`ALTER TABLE ... SET` property nodes, catalog-qualified CREATE VIEW, and a few JSON/COPY
-canonicalization edges.
+in `corpus_test.go` are **600/613**, and the remaining 13 rows are the burndown list in
+`testdata/parity_gaps.txt`: CREATE TRIGGER bodies, `OPENJSON ... WITH` column definitions,
+MERGE nested in a derived table, temporal `PERIOD FOR SYSTEM_TIME` / `SYSTEM_VERSIONING` DDL,
+`ALTER TABLE ... SET` option lists with interval values, `CREATE TABLE ... ON <filegroup>`,
+nested COPY parameter spacing, and one pretty-print case.
