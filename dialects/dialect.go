@@ -701,6 +701,8 @@ func dialectByName(name string) (*Dialect, error) {
 		return Clickhouse(), nil
 	case "starrocks":
 		return StarRocks(), nil
+	case "doris":
+		return Doris(), nil
 	default:
 		return nil, fmt.Errorf("unknown dialect %q", name)
 	}

@@ -88,3 +88,7 @@ func DistributedByProperty(args Args) Expression { return newNode(KindDistribute
 func GenerateDateArray(args Args) Expression { return newNode(KindGenerateDateArray, args) }
 
 func RowNumber(args Args) Expression { return newNode(KindRowNumber, args) }
+
+func BuildProperty(args Args) Expression        { return newNode(KindBuildProperty, args) }
+func DuplicateKeyProperty(args Args) Expression { return newNode(KindDuplicateKeyProperty, args) }
+func StringToArray(args Args) Expression        { return newNode(KindStringToArray, args) }

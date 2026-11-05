@@ -80,6 +80,7 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindSettingsProperty: propertyLocationPostSchema,
 	// generator.py:705/756.
 	expressions.KindDistributedByProperty:  propertyLocationPostSchema,
+	expressions.KindDuplicateKeyProperty:   propertyLocationPostSchema,
 	expressions.KindRefreshTriggerProperty: propertyLocationPostSchema,
 }
 

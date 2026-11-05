@@ -982,10 +982,13 @@ func init() {
 			return p.expression(exp.SampleProperty(exp.Args{"this": this}), nil, nil)
 		},
 		"DISTRIBUTED": func(p *Parser, _ bool) exp.Expression { return p.parseDistributedProperty() },
-		"LAYOUT":      func(p *Parser, _ bool) exp.Expression { return p.parseDictProperty("LAYOUT") },
-		"SOURCE":      func(p *Parser, _ bool) exp.Expression { return p.parseDictProperty("SOURCE") },
-		"RANGE":       func(p *Parser, _ bool) exp.Expression { return p.parseDictRange("RANGE") },
-		"LIFETIME":    func(p *Parser, _ bool) exp.Expression { return p.parseDictRange("LIFETIME") },
+		"DUPLICATE": func(p *Parser, _ bool) exp.Expression {
+			return p.parseCompositeKeyProperty(exp.KindDuplicateKeyProperty)
+		},
+		"LAYOUT":   func(p *Parser, _ bool) exp.Expression { return p.parseDictProperty("LAYOUT") },
+		"SOURCE":   func(p *Parser, _ bool) exp.Expression { return p.parseDictProperty("SOURCE") },
+		"RANGE":    func(p *Parser, _ bool) exp.Expression { return p.parseDictRange("RANGE") },
+		"LIFETIME": func(p *Parser, _ bool) exp.Expression { return p.parseDictRange("LIFETIME") },
 		"STRICT": func(p *Parser, _ bool) exp.Expression {
 			return p.expression(exp.StrictProperty(nil), nil, nil)
 		},
