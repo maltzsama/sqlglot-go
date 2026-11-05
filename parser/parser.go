@@ -3875,10 +3875,12 @@ func (p *Parser) parseFunctionCall(functions map[string]func([]exp.Expression) e
 				return p.expression(subqueryPredicate(exp.Args{"this": expr}), nil, comments)
 			}
 		}
+		var function func([]exp.Expression) exp.Expression
 		if functions == nil {
-			functions = mergedDialectFunctions(p.dialect)
+			function = dialectFunction(p.dialect, upper)
+		} else {
+			function = functions[upper]
 		}
-		function := functions[upper]
 		knownFunction := function != nil && !anonymous && !opaque
 		alias := !knownFunction
 		args := p.parseFunctionArgs(alias)

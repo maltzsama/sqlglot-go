@@ -117,21 +117,22 @@ func New(k Kind, args Args) Expression {
 }
 
 func newNode(k Kind, args Args) *Node {
-	if args == nil {
-		args = Args{}
+	specs := argTypesFor(k)
+	n := &Node{
+		kind:     k,
+		args:     make(map[string]any, len(args)),
+		argOrder: make([]string, 0, len(args)),
+		index:    -1,
 	}
-	n := &Node{kind: k, args: map[string]any{}, index: -1}
-	seen := map[string]bool{}
-	for _, spec := range argTypesFor(k) {
+	for _, spec := range specs {
 		if value, ok := args[spec.Key]; ok {
 			n.args[spec.Key] = value
 			n.argOrder = append(n.argOrder, spec.Key)
-			seen[spec.Key] = true
 		}
 	}
 	var extras []string
 	for key := range args {
-		if !seen[key] {
+		if !argSpecHasKey(specs, key) {
 			extras = append(extras, key)
 		}
 	}
@@ -157,6 +158,18 @@ func argTypesFor(k Kind) []argSpec {
 		return specs
 	}
 	return defaultArgTypes
+}
+
+// argSpecHasKey reports whether key is one of the node's declared arg keys. The specs list is
+// tiny (a handful of entries), so a linear scan beats allocating a lookup map per node — this
+// runs for every constructed node in newNode and every parsed expression in ErrorMessages.
+func argSpecHasKey(specs []argSpec, key string) bool {
+	for _, spec := range specs {
+		if spec.Key == key {
+			return true
+		}
+	}
+	return false
 }
 
 func (n *Node) Kind() Kind { return n.kind }
@@ -817,17 +830,13 @@ func (n *Node) SQL(opts GenerateOptions) (string, error) {
 func (n *Node) ToS() string { return toS(n, false, 0, false) }
 
 func (n *Node) ErrorMessages(args []any) []string {
-	allowed := map[string]bool{}
-	for _, spec := range argTypesFor(n.kind) {
-		allowed[spec.Key] = true
-	}
+	argTypes := argTypesFor(n.kind)
 	for _, key := range n.argOrder {
-		if !allowed[key] {
+		if !argSpecHasKey(argTypes, key) {
 			panic(&ArgError{Msg: fmt.Sprintf("Unexpected keyword: '%s' for %s", key, className[n.kind])})
 		}
 	}
 	var messages []string
-	argTypes := argTypesFor(n.kind)
 	for _, spec := range argTypes {
 		if !spec.Required {
 			continue

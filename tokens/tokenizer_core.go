@@ -120,6 +120,11 @@ func (c *TokenizerCore) Tokenize(sql string) (tokens []Token, err error) {
 	c.reset()
 	c.sql = []rune(sql)
 	c.size = len(c.sql)
+	// Tokens average a few runes each; sizing the slice up front avoids repeated growth.
+	// The heuristic is intentionally loose — a short input still gets a small slice.
+	if capacity := c.size/4 + 8; capacity > 0 {
+		c.tokens = make([]Token, 0, capacity)
+	}
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -135,6 +140,10 @@ func (c *TokenizerCore) Tokenize(sql string) (tokens []Token, err error) {
 	}()
 
 	c.scan(false)
+	if len(c.tokens) == 0 {
+		// Keep the empty result nil even though the slice may have been preallocated.
+		return nil, nil
+	}
 	return c.tokens, nil
 }
 

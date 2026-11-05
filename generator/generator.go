@@ -687,13 +687,19 @@ func stringValue(value any) string {
 }
 
 func joinNonEmpty(sep string, values ...string) string {
-	parts := make([]string, 0, len(values))
+	var b strings.Builder
+	wrote := false
 	for _, value := range values {
-		if value != "" {
-			parts = append(parts, value)
+		if value == "" {
+			continue
 		}
+		if wrote {
+			b.WriteString(sep)
+		}
+		b.WriteString(value)
+		wrote = true
 	}
-	return strings.Join(parts, sep)
+	return b.String()
 }
 
 func asExpression(value any) expressions.Expression {
