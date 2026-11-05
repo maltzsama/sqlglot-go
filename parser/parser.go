@@ -3547,10 +3547,17 @@ func (p *Parser) parseWith(skipWithToken bool) exp.Expression {
 	recursive := p.match(tokens.RECURSIVE)
 	var lastComments []string
 	expressions := []exp.Expression{}
+	udfs := []exp.Expression{}
 	for {
 		cte := p.parseCTE()
-		if cte != nil && cte.Kind() == exp.KindCTE {
-			expressions = append(expressions, cte)
+		if cte != nil {
+			// parsers/trino.py:4179-4188: a FunctionSpecification is an inline UDF, kept
+			// separate from the CTE list so the generator renders `WITH FUNCTION ...` first.
+			if cte.Kind() == exp.KindFunctionSpecification {
+				udfs = append(udfs, cte)
+			} else {
+				expressions = append(expressions, cte)
+			}
 			if len(lastComments) > 0 {
 				cte.AddComments(lastComments, false)
 			}
@@ -3567,10 +3574,20 @@ func (p *Parser) parseWith(skipWithToken bool) exp.Expression {
 	if recursive {
 		args["recursive"] = true
 	}
+	if len(udfs) > 0 {
+		args["udfs"] = udfs
+	}
 	return p.expression(exp.With(args), nil, comments)
 }
 
 func (p *Parser) parseCTE() exp.Expression {
+	// parsers/trino.py:74-79: a WITH entry starting `FUNCTION <name>` is an inline SQL UDF
+	// specification, as opposed to a CTE that happens to be named "function"
+	// (`WITH function AS (SELECT 1)`).
+	if p.dialect.Name == "trino" && p.curr.TokenType == tokens.FUNCTION && idVarTokens[p.next.TokenType] {
+		p.advance()
+		return p.parseFunctionSpecification()
+	}
 	// parsers/clickhouse.py:658-669 _parse_cte: try the ordinary CTE grammar first, then
 	// fall back to `WITH <expression> AS <identifier>` (scalar=True).
 	if p.dialect.Name == "clickhouse" {

@@ -42,6 +42,16 @@ func init() {
 			}
 			return "NOT DETERMINISTIC"
 		},
+		// Inline SQL UDFs (generators/trino.py:55-125).
+		exp.KindFunctionSpecification: (*Generator).trinoFunctionSpecificationSQL,
+		exp.KindBlock:                 (*Generator).trinoBlockSQL,
+		exp.KindIfBlock:               (*Generator).trinoIfBlockSQL,
+		exp.KindCaseStatement:         (*Generator).trinoCaseStatementSQL,
+		exp.KindWhileBlock:            (*Generator).trinoWhileBlockSQL,
+		exp.KindLoopBlock:             (*Generator).trinoLoopBlockSQL,
+		exp.KindRepeatBlock:           (*Generator).trinoRepeatBlockSQL,
+		exp.KindLeave:                 (*Generator).trinoLeaveSQL,
+		exp.KindIterate:               (*Generator).trinoIterateSQL,
 	})
 	registerDialectPropertyLocations("trino", map[exp.Kind]propertyLocation{exp.KindLocationProperty: propertyLocationPostWith})
 }
@@ -96,4 +106,101 @@ func (g *Generator) trinoJSONExtractSQL(e exp.Expression) string {
 		}
 	}
 	return g.funcCall("JSON_QUERY", []any{e.Arg("this"), path}, "(", ")", true)
+}
+
+// trinoFunctionSpecificationSQL ports functionspecification_sql (generators/trino.py:55-65).
+func (g *Generator) trinoFunctionSpecificationSQL(e exp.Expression) string {
+	characteristics := asExpression(e.Arg("characteristics"))
+	characteristicsSQL := ""
+	if characteristics != nil {
+		// generator.py:2075-2086 properties(): a blank prefix contributes no separator.
+		characteristicsSQL = g.renderProperties(characteristics, " ", " ", "", false)
+	}
+	propertiesSQL := ""
+	if properties := asExpression(e.Arg("properties")); properties != nil {
+		propertiesSQL = " " + g.withPropertiesSQL(properties)
+	}
+	return "FUNCTION " + g.sqlKey(e, "this") + characteristicsSQL + propertiesSQL + " " + g.sqlKey(e, "expression")
+}
+
+// trinoBlockSQL ports block_sql (generator.py:6301-6304): `BEGIN ` when begin is set, with the
+// statements joined by `; `. The trailing EndStatement child renders the closing END.
+func (g *Generator) trinoBlockSQL(e exp.Expression) string {
+	sql := g.expressions(exprsOptions{expression: e, sep: "; ", flat: true})
+	if boolValue(e.Arg("begin")) {
+		return "BEGIN " + sql
+	}
+	return sql
+}
+
+// trinoIfBlockSQL ports ifblock_sql (generators/trino.py:67-83). ELSEIF chains are nested into
+// `false` at parse time, so this flattens them back out.
+func (g *Generator) trinoIfBlockSQL(e exp.Expression) string {
+	branches := []string{}
+	node := e
+	for node != nil && node.Kind() == exp.KindIfBlock {
+		keyword := "IF"
+		if len(branches) > 0 {
+			keyword = "ELSEIF"
+		}
+		branches = append(branches, keyword+" "+g.sqlKey(node, "this")+" THEN "+g.sqlKey(node, "true")+";")
+		node = asExpression(node.Arg("false"))
+	}
+	if node != nil {
+		branches = append(branches, "ELSE "+g.gen(node)+";")
+	}
+	return strings.Join(branches, " ") + " END IF"
+}
+
+// trinoCaseStatementSQL ports casestatement_sql (generators/trino.py:85-99).
+func (g *Generator) trinoCaseStatementSQL(e exp.Expression) string {
+	branches := []string{"CASE"}
+	if this := g.sqlKey(e, "this"); this != "" {
+		branches[0] = "CASE " + this
+	}
+	for _, item := range listFromValue(e.Arg("ifs")) {
+		node := asExpression(item)
+		if node == nil {
+			continue
+		}
+		branches = append(branches, "WHEN "+g.sqlKey(node, "this")+" THEN "+g.sqlKey(node, "true")+";")
+	}
+	if dflt := asExpression(e.Arg("default")); dflt != nil {
+		branches = append(branches, "ELSE "+g.gen(dflt)+";")
+	}
+	branches = append(branches, "END CASE")
+	return strings.Join(branches, " ")
+}
+
+// trinoLabelSQL renders the optional `label: ` prefix shared by the loop blocks.
+func (g *Generator) trinoLabelSQL(e exp.Expression) string {
+	if label := asExpression(e.Arg("label")); label != nil {
+		return g.gen(label) + ": "
+	}
+	return ""
+}
+
+// trinoWhileBlockSQL ports whileblock_sql (generators/trino.py:101-106).
+func (g *Generator) trinoWhileBlockSQL(e exp.Expression) string {
+	return g.trinoLabelSQL(e) + "WHILE " + g.sqlKey(e, "this") + " DO " + g.sqlKey(e, "body") + "; END WHILE"
+}
+
+// trinoLoopBlockSQL ports loopblock_sql (generators/trino.py:108-112).
+func (g *Generator) trinoLoopBlockSQL(e exp.Expression) string {
+	return g.trinoLabelSQL(e) + "LOOP " + g.sqlKey(e, "body") + "; END LOOP"
+}
+
+// trinoRepeatBlockSQL ports repeatblock_sql (generators/trino.py:114-119).
+func (g *Generator) trinoRepeatBlockSQL(e exp.Expression) string {
+	return g.trinoLabelSQL(e) + "REPEAT " + g.sqlKey(e, "body") + "; UNTIL " + g.sqlKey(e, "until") + " END REPEAT"
+}
+
+// trinoLeaveSQL ports leave_sql (generators/trino.py:121-122).
+func (g *Generator) trinoLeaveSQL(e exp.Expression) string {
+	return "LEAVE " + g.sqlKey(e, "this")
+}
+
+// trinoIterateSQL ports iterate_sql (generators/trino.py:124-125).
+func (g *Generator) trinoIterateSQL(e exp.Expression) string {
+	return "ITERATE " + g.sqlKey(e, "this")
 }

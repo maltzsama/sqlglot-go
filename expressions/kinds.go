@@ -709,6 +709,13 @@ const (
 	KindLoopBlock
 	KindRepeatBlock
 	KindCaseBlock
+	// KindCaseStatement/KindLeave/KindIterate port exp.CaseStatement/Leave/Iterate
+	// (query.py:2126-2148), the remaining routine statements of Trino's inline SQL UDFs
+	// (parsers/trino.py:214-268). CaseStatement carries an optional operand `this`, `ifs`
+	// branches built from exp.If, and an optional `default` Block.
+	KindCaseStatement
+	KindLeave
+	KindIterate
 	// KindDeclare/KindDeclareItem port exp.Declare/DeclareItem (ddl.py:164-170): MySQL
 	// `DECLARE <name> <type> [DEFAULT <expr>]` local variables (also T-SQL upstream).
 	KindDeclare
@@ -964,20 +971,23 @@ var argTypes = map[Kind][]argSpec{
 	KindLimit:               {{"this", false}, {"expression", true}, {"offset", false}, {"limit_options", false}, {"expressions", false}},
 	KindOffset:              {{"this", false}, {"expression", true}, {"expressions", false}},
 	KindHint:                {{"expressions", true}},
-	KindBlock:               {{"expressions", true}, {"label", false}},
+	KindBlock:               {{"expressions", true}, {"begin", false}, {"label", false}},
 	KindWhileBlock:          {{"this", true}, {"body", true}, {"label", false}},
 	KindEndStatement:        {},
 	KindHeredoc:             {{"this", true}, {"tag", false}},
 	KindSemicolon:           {},
 	KindIfBlock:             {{"this", true}, {"true", true}, {"false", false}},
-	KindLoopBlock:           {{"expressions", true}, {"label", false}},
-	KindRepeatBlock:         {{"expressions", true}, {"until", true}, {"label", false}},
+	KindCaseStatement:       {{"this", false}, {"ifs", true}, {"default", false}},
+	KindLeave:               {{"this", true}},
+	KindIterate:             {{"this", true}},
+	KindLoopBlock:           {{"expressions", false}, {"body", false}, {"label", false}},
+	KindRepeatBlock:         {{"expressions", false}, {"body", false}, {"until", true}, {"label", false}},
 	KindCaseBlock:           {{"this", false}, {"whens", true}, {"else_", false}},
 	KindDeclare:             {{"expressions", true}, {"replace", false}},
 	KindDeclareItem:         {{"this", true}, {"kind", false}, {"default", false}},
 	KindPlaceholder:         {{"this", false}, {"kind", false}, {"widget", false}, {"jdbc", false}},
 	KindTuple:               {{"expressions", false}},
-	KindWith:                {{"expressions", true}, {"recursive", false}, {"search", false}},
+	KindWith:                {{"expressions", false}, {"recursive", false}, {"search", false}, {"udfs", false}},
 	KindCTE:                 {{"this", true}, {"alias", true}, {"scalar", false}, {"materialized", false}, {"key_expressions", false}},
 	KindRecursiveWithSearch: {{"kind", true}, {"this", true}, {"expression", true}, {"using", false}},
 	KindUnion:               withQueryModifiers(argSpec{"with_", false}, argSpec{"this", true}, argSpec{"expression", true}, argSpec{"distinct", false}, argSpec{"by_name", false}, argSpec{"side", false}, argSpec{"kind", false}, argSpec{"on", false}),
@@ -2033,6 +2043,9 @@ var className = map[Kind]string{
 	KindHeredoc:                             "Heredoc",
 	KindSemicolon:                           "Semicolon",
 	KindIfBlock:                             "IfBlock",
+	KindCaseStatement:                       "CaseStatement",
+	KindLeave:                               "Leave",
+	KindIterate:                             "Iterate",
 	KindLoopBlock:                           "LoopBlock",
 	KindRepeatBlock:                         "RepeatBlock",
 	KindCaseBlock:                           "CaseBlock",

@@ -236,7 +236,7 @@ const (
 	minPassMySQL      = 428
 	minPassPostgres   = 468
 	minPassAthena     = 51
-	minPassTrino      = 67
+	minPassTrino      = 115
 	minPassPresto     = 170
 	minPassHive       = 141
 	minPassTSQL       = 613

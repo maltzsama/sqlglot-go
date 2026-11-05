@@ -248,14 +248,15 @@ athena/trino/presto/hive wired into `corpus_test.go` with monotonic floors. The 
   (`generator/dialect_dispatch.go` seam: per-dialect dispatch/type-mapping/property-location
   overlays walked through `trino → presto`, `athena-trino → trino`, `athena-hive → hive`).
   Corpus (validate_identity + same-dialect validate_all writes): athena 51/51, presto 170/170,
-  hive 141/141, trino 67/115; every remaining gap is parser-side
-  (MATCH_RECOGNIZE, `FOR TIMESTAMP|VERSION AS OF`, Trino inline `WITH FUNCTION` routines, Hive
-  `INSERT OVERWRITE DIRECTORY`).
+  hive 141/141, trino 115/115; every remaining parser gap is closed and
+  `testdata/parity_gaps.txt` is empty.
 - **D — DONE.** Parser drift vs v30.17: `FOR TIMESTAMP|VERSION AS OF` (Version node),
   MATCH_RECOGNIZE, `U&'…' UESCAPE`, Presto formatted-time/regexp/`LOCALTIME[STAMP]`/`JSON '…'`
   functions, Hive `${a:b}` parameters, brace structs, `DISTRIBUTE BY`/`SORT BY` windows, strict time
   tokens, `INSERT … DIRECTORY … STORED AS`, Trino `DECLARE`/`SQL SECURITY`. The only remaining
-  corpus gap is Trino inline `WITH FUNCTION` routines (48 rows), deferred: Athena rejects them.
+  Trino inline `WITH FUNCTION` routines also landed (48 cases): `With.udfs`,
+  `FunctionSpecification`, and the DECLARE/SET/IF/CASE/WHILE/LOOP/REPEAT/LEAVE/ITERATE routine
+  statements, with `trino_udf_test.go` ported from `test_trino.py`.
 
 ## Athena support (Presto/Trino/Hive parser chain), scoped to lineage — DONE
 

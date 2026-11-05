@@ -1144,6 +1144,13 @@ func (g *Generator) setOperationsSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) withSQL(e expressions.Expression) string {
+	// generator.py:1538-1553: inline UDFs render in their own leading `WITH FUNCTION` clause,
+	// before the ordinary CTEs and each later WITH clause.
+	udfs := g.expressions(exprsOptions{expression: e, key: "udfs", flat: true})
+	if udfs != "" {
+		udfs = "WITH " + udfs
+	}
+
 	sql := g.expressions(exprsOptions{expression: e, flat: true})
 	recursive := ""
 	if boolValue(e.Arg("recursive")) && g.dialect.CteRecursiveKeywordRequired {
@@ -1153,7 +1160,13 @@ func (g *Generator) withSQL(e expressions.Expression) string {
 	if search != "" {
 		search = " " + search
 	}
-	return "WITH " + recursive + sql + search
+	if sql != "" {
+		sql = "WITH " + recursive + sql + search
+	}
+	if udfs != "" && sql != "" {
+		return udfs + " " + sql
+	}
+	return udfs + sql
 }
 
 func (g *Generator) cteSQL(e expressions.Expression) string {
