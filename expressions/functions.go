@@ -125,9 +125,10 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	},
 	// Base dialect maps COALESCE/IFNULL/NVL to the same builder with is_nvl unset
 	// (parser.py:329); only Oracle-family dialects set is_nvl=True (deferred).
-	"COALESCE": coalesceFunction(),
-	"IFNULL":   coalesceFunction(),
-	"NVL":      coalesceFunction(),
+	"COALESCE":            coalesceFunction(),
+	"IFNULL":              coalesceFunction(),
+	"NVL":                 coalesceFunction(),
+	"GENERATE_DATE_ARRAY": FromArgListFunc(KindGenerateDateArray),
 	"GREATEST": func(args []Expression) Expression {
 		m := Args{"ignore_nulls": true}
 		if len(args) > 0 {

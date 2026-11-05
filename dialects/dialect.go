@@ -397,6 +397,16 @@ type Dialect struct {
 	EscapedSequences map[byte]string
 	// ExtraIdVarTokens ports ID_VAR_TOKENS additions (parsers/clickhouse.py:340-343 adds LIKE).
 	ExtraIdVarTokens map[tokens.TokenType]bool
+	// WithPropertiesPrefix ports generator.py:558 WITH_PROPERTIES_PREFIX (default "WITH";
+	// StarRocks uses "PROPERTIES").
+	WithPropertiesPrefix string
+	// InsertOverwrite ports generator.py:471 INSERT_OVERWRITE (default " OVERWRITE TABLE";
+	// StarRocks uses " OVERWRITE").
+	InsertOverwrite string
+	// IsBoolAllowed ports generator.py:376 IS_BOOL_ALLOWED (StarRocks disables it).
+	IsBoolAllowed bool
+	// UpdateStatementSupportsFrom ports generator.py:625 UPDATE_STATEMENT_SUPPORTS_FROM.
+	UpdateStatementSupportsFrom bool
 }
 
 func Base() *Dialect {
@@ -548,6 +558,11 @@ func Base() *Dialect {
 		OptionalAliasTokenCTE: true,
 		// generator.py:679 STRUCT_DELIMITER defaults to ("<", ">").
 		StructDelimiter: [2]string{"<", ">"},
+		// generator.py:558/471/376/625 generator flag defaults.
+		WithPropertiesPrefix:        "WITH",
+		InsertOverwrite:             " OVERWRITE TABLE",
+		IsBoolAllowed:               true,
+		UpdateStatementSupportsFrom: true,
 	}
 }
 
@@ -684,6 +699,8 @@ func dialectByName(name string) (*Dialect, error) {
 		return TSQL(), nil
 	case "clickhouse":
 		return Clickhouse(), nil
+	case "starrocks":
+		return StarRocks(), nil
 	default:
 		return nil, fmt.Errorf("unknown dialect %q", name)
 	}

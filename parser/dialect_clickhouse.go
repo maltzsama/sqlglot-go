@@ -806,3 +806,24 @@ func (p *Parser) parseClickhouseExtract() exp.Expression {
 		"expressions": []exp.Expression{this, p.parseBitwise()},
 	}), nil, nil)
 }
+
+// parseDistributedProperty ports _parse_distributed_property (parser.py:3076-3090).
+func (p *Parser) parseDistributedProperty() exp.Expression {
+	kind := "HASH"
+	var expressions []exp.Expression
+	if p.matchTextSeq("BY", "HASH") {
+		expressions = p.parseWrappedCsv(func() exp.Expression { return p.parseIdVar(false, nil) })
+	} else if p.matchTextSeq("BY", "RANDOM") {
+		kind = "RANDOM"
+	}
+	var buckets exp.Expression
+	if p.matchTextSeq("BUCKETS") && !p.matchTextSeq("AUTO") {
+		buckets = p.parseNumber()
+	}
+	return p.expression(exp.DistributedByProperty(exp.Args{
+		"expressions": expressions,
+		"kind":        kind,
+		"buckets":     buckets,
+		"order":       p.parseOrder(nil, false),
+	}), nil, nil)
+}

@@ -14,6 +14,9 @@ func (p *Parser) parseCreate() exp.Expression {
 	// the body at IMMEDIATE error level so a partial parse retreats without leaving stale
 	// errors that would later poison checkErrors.
 	if structured := p.tryParse(func() exp.Expression { return p.parseCreateStructured(start) }, false); structured != nil {
+		if p.dialectIs("starrocks") {
+			return p.moveStarRocksPrimaryKey(structured)
+		}
 		return structured
 	}
 	// Grammar extension: MySQL CREATE {USER|ROLE} — structure as a Create root carrying the object
@@ -978,10 +981,11 @@ func init() {
 			}
 			return p.expression(exp.SampleProperty(exp.Args{"this": this}), nil, nil)
 		},
-		"LAYOUT":   func(p *Parser, _ bool) exp.Expression { return p.parseDictProperty("LAYOUT") },
-		"SOURCE":   func(p *Parser, _ bool) exp.Expression { return p.parseDictProperty("SOURCE") },
-		"RANGE":    func(p *Parser, _ bool) exp.Expression { return p.parseDictRange("RANGE") },
-		"LIFETIME": func(p *Parser, _ bool) exp.Expression { return p.parseDictRange("LIFETIME") },
+		"DISTRIBUTED": func(p *Parser, _ bool) exp.Expression { return p.parseDistributedProperty() },
+		"LAYOUT":      func(p *Parser, _ bool) exp.Expression { return p.parseDictProperty("LAYOUT") },
+		"SOURCE":      func(p *Parser, _ bool) exp.Expression { return p.parseDictProperty("SOURCE") },
+		"RANGE":       func(p *Parser, _ bool) exp.Expression { return p.parseDictRange("RANGE") },
+		"LIFETIME":    func(p *Parser, _ bool) exp.Expression { return p.parseDictRange("LIFETIME") },
 		"STRICT": func(p *Parser, _ bool) exp.Expression {
 			return p.expression(exp.StrictProperty(nil), nil, nil)
 		},

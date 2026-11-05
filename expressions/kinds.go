@@ -826,6 +826,19 @@ const (
 	KindUtcTimestamp
 	KindWithFill
 	KindSkipJSONColumn
+	// StarRocks cluster (parsers/starrocks.py, generators/starrocks.py): primary-key /
+	// rollup / refresh properties, dynamic partition ranges, and the ARRAY helpers.
+	KindUniqueKeyProperty
+	KindRollupProperty
+	KindRollupIndex
+	KindRefreshTriggerProperty
+	KindPartitionByRangePropertyDynamic
+	KindClusterProperty
+	KindFlatten
+	KindArrayToString
+	KindDistributedByProperty
+	KindGenerateDateArray
+	KindRowNumber
 )
 
 type Trait uint32
@@ -1532,6 +1545,19 @@ var argTypes = map[Kind][]argSpec{
 	KindUtcTimestamp:             {{"this", false}},
 	KindWithFill:                 {{"from_", false}, {"to", false}, {"step", false}, {"interpolate", false}},
 	KindSkipJSONColumn:           {{"expression", true}, {"regexp", false}},
+
+	// StarRocks cluster.
+	KindUniqueKeyProperty:               {{"expressions", true}},
+	KindRollupProperty:                  {{"expressions", true}},
+	KindRollupIndex:                     {{"this", true}, {"expressions", true}, {"from_index", false}, {"properties", false}},
+	KindRefreshTriggerProperty:          {{"method", false}, {"kind", false}, {"every", false}, {"unit", false}, {"starts", false}},
+	KindPartitionByRangePropertyDynamic: {{"this", false}, {"start", true}, {"end", true}, {"every", true}},
+	KindClusterProperty:                 {{"this", false}, {"expressions", false}},
+	KindFlatten:                         {{"this", true}},
+	KindArrayToString:                   {{"this", true}, {"expression", true}, {"null", false}, {"null_is_empty", false}, {"null_delim_is_null", false}},
+	KindDistributedByProperty:           {{"expressions", false}, {"kind", false}, {"buckets", false}, {"order", false}},
+	KindGenerateDateArray:               {{"start", true}, {"end", true}, {"step", false}},
+	KindRowNumber:                       {{"this", false}},
 }
 
 var traitsOf = map[Kind]Trait{
@@ -1885,6 +1911,11 @@ var traitsOf = map[Kind]Trait{
 	KindArrayExcept:              TraitCondition | TraitFunc,
 	KindSubstringIndex:           TraitCondition | TraitFunc,
 	KindUtcTimestamp:             TraitCondition | TraitFunc,
+
+	// StarRocks cluster.
+	KindFlatten:       TraitCondition | TraitFunc,
+	KindArrayToString: TraitCondition | TraitFunc,
+	KindRowNumber:     TraitCondition | TraitFunc,
 }
 
 var primitive = map[Kind]bool{
@@ -2470,6 +2501,19 @@ var className = map[Kind]string{
 	KindUtcTimestamp:             "UtcTimestamp",
 	KindWithFill:                 "WithFill",
 	KindSkipJSONColumn:           "SkipJSONColumn",
+
+	// StarRocks cluster.
+	KindUniqueKeyProperty:               "UniqueKeyProperty",
+	KindRollupProperty:                  "RollupProperty",
+	KindRollupIndex:                     "RollupIndex",
+	KindRefreshTriggerProperty:          "RefreshTriggerProperty",
+	KindPartitionByRangePropertyDynamic: "PartitionByRangePropertyDynamic",
+	KindClusterProperty:                 "ClusterProperty",
+	KindFlatten:                         "Flatten",
+	KindArrayToString:                   "ArrayToString",
+	KindDistributedByProperty:           "DistributedByProperty",
+	KindGenerateDateArray:               "GenerateDateArray",
+	KindRowNumber:                       "RowNumber",
 }
 
 // varLenArgs is the authoritative is_var_len_args=True set (mirroring the upstream Func

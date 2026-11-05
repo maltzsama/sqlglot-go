@@ -81,8 +81,8 @@ func clickhouseBuildCountIf(args []exp.Expression) exp.Expression {
 	return exp.CombinedAggFunc(exp.Args{"this": "countIf", "expressions": args})
 }
 
-// clickhouseBuildVarMap ports parser.build_var_map (parser.py): alternating key/value args.
-func clickhouseBuildVarMap(args []exp.Expression) exp.Expression {
+// buildVarMap ports parser.build_var_map (parser.py): alternating key/value args.
+func buildVarMap(args []exp.Expression) exp.Expression {
 	keys := make([]exp.Expression, 0, len(args)/2+1)
 	values := make([]exp.Expression, 0, len(args)/2+1)
 	for i := 0; i < len(args); i += 2 {
@@ -179,7 +179,7 @@ func clickhouseFunctions() map[string]func([]exp.Expression) exp.Expression {
 		"LIKE":                  clickhouseBuildLike(exp.KindLike, false),
 		"NOTLIKE":               clickhouseBuildLike(exp.KindLike, true),
 		"L2Distance":            clickhouseFromArgList(exp.KindEuclideanDistance),
-		"MAP":                   clickhouseBuildVarMap,
+		"MAP":                   buildVarMap,
 		"MATCH":                 clickhouseFromArgList(exp.KindRegexpLike),
 		"RANDCANONICAL":         clickhouseFromArgList(exp.KindRand),
 		"SUBSTRINGINDEX":        clickhouseFromArgList(exp.KindSubstringIndex),

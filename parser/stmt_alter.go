@@ -85,12 +85,12 @@ func init() {
 }
 
 func (p *Parser) alterParsers() map[string]func(*Parser) []exp.Expression {
-	switch p.dialect.Name {
-	case "mysql":
+	switch {
+	case p.dialectIs("mysql"):
 		return mysqlAlterParsers
-	case "hive":
+	case p.dialectIs("hive"):
 		return hiveAlterParsers
-	case "clickhouse":
+	case p.dialectIs("clickhouse"):
 		return clickhouseAlterParsers
 	}
 	return alterParsers
