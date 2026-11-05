@@ -1112,6 +1112,8 @@ func buildUpdateAliasTokens() map[tokens.TokenType]bool {
 	return m
 }
 
+// buildFuncTokens ports FUNC_TOKENS (parser.py:890-903). DECLARE is an explicit upstream
+// entry: Trino allows `SELECT DECLARE()` while `DECLARE ...` stays a statement when it leads one.
 func buildFuncTokens() map[tokens.TokenType]bool {
 	m := map[tokens.TokenType]bool{
 		tokens.COLLATE:           true,
@@ -1123,6 +1125,7 @@ func buildFuncTokens() map[tokens.TokenType]bool {
 		tokens.CURRENT_TIME:      true,
 		tokens.CURRENT_USER:      true,
 		tokens.CURRENT_CATALOG:   true,
+		tokens.DECLARE:           true,
 		tokens.FILTER:            true,
 		tokens.FIRST:             true,
 		tokens.FORMAT:            true,

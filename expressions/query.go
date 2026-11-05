@@ -19,6 +19,9 @@ func Semicolon(args Args) Expression           { return newNode(KindSemicolon, a
 func IfBlock(args Args) Expression             { return newNode(KindIfBlock, args) }
 func LoopBlock(args Args) Expression           { return newNode(KindLoopBlock, args) }
 func RepeatBlock(args Args) Expression         { return newNode(KindRepeatBlock, args) }
+func CaseStatement(args Args) Expression       { return newNode(KindCaseStatement, args) }
+func Leave(args Args) Expression               { return newNode(KindLeave, args) }
+func Iterate(args Args) Expression             { return newNode(KindIterate, args) }
 func CaseBlock(args Args) Expression           { return newNode(KindCaseBlock, args) }
 func Declare(args Args) Expression             { return newNode(KindDeclare, args) }
 func DeclareItem(args Args) Expression         { return newNode(KindDeclareItem, args) }
