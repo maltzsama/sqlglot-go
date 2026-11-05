@@ -390,11 +390,9 @@ func starRocksEliminateDistinctOn(g *Generator, expression exp.Expression) exp.E
 
 	taken := map[string]bool{rowName: true}
 	outerSelects := make([]exp.Expression, 0, len(projections))
-	starBreak := false
 	for i, projection := range projections {
 		if projection.IsStar() {
 			outerSelects = []exp.Expression{exp.Star(nil)}
-			starBreak = true
 			break
 		}
 		if projection.Kind() != exp.KindAlias {
@@ -414,7 +412,6 @@ func starRocksEliminateDistinctOn(g *Generator, expression exp.Expression) exp.E
 		taken[projection.Name()] = true
 		outerSelects = append(outerSelects, exp.ToIdentifier(projection.Name()))
 	}
-	_ = starBreak
 
 	expression.Set("expressions", newProjections)
 	expression.Set("distinct", nil)

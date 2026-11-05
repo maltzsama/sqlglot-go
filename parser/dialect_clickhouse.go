@@ -162,7 +162,8 @@ func (p *Parser) applyClickhouseAggResolution(expr exp.Expression) exp.Expressio
 	}
 	name := func_.Arg("this")
 	nameText, _ := name.(string)
-	parts, suffixes, ok := resolveClickhouseAgg(nameText)
+	// The base name is not needed: upstream keeps the as-written anon_func.this.
+	_, suffixes, ok := resolveClickhouseAgg(nameText)
 	if !ok {
 		return expr
 	}
@@ -186,7 +187,6 @@ func (p *Parser) applyClickhouseAggResolution(expr exp.Expression) exp.Expressio
 	default:
 		instance = p.expression(exp.AnonymousAggFunc(arg), nil, nil)
 	}
-	_ = parts
 
 	if expr.Kind() == exp.KindWindow {
 		expr.Set("this", instance)

@@ -1177,6 +1177,8 @@ func hashString(s string) uint64 {
 	return h.Sum64()
 }
 
+// hashCombine mixes values into a stable hash. hash.Hash.Write never returns an error, so the
+// discarded results below are intentional.
 func hashCombine(seed uint64, parts ...any) uint64 {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(strconv.FormatUint(seed, 10)))

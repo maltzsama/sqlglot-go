@@ -464,9 +464,6 @@ func (g *Generator) tsqlCTAS(e exp.Expression, ctas exp.Expression) (string, boo
 		ctas = exp.Subquery(exp.Args{"this": ctas})
 	}
 	isTemp := false
-	if props, ok := e.Arg("properties").([]exp.Expression); ok {
-		_ = props
-	}
 	if props := asExpression(e.Arg("properties")); props != nil {
 		for _, p := range props.Expressions() {
 			if p.Kind() == exp.KindTemporaryProperty {
