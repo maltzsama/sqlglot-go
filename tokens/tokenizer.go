@@ -586,7 +586,7 @@ func (t *Tokenizer) Tokens() []Token {
 
 func (t *Tokenizer) SQL() string {
 	if t.tokenizeFunc == nil {
-		return string(t.core.sql)
+		return t.core.input.slice(0, t.core.size)
 	}
 	return string(t.sql)
 }
