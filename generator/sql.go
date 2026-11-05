@@ -487,9 +487,19 @@ func (g *Generator) nullSafeNEQSQL(e expressions.Expression) string {
 }
 func (g *Generator) isSQL(e expressions.Expression) string {
 	// is_sql (generator.py:4514-4519, v30.17.0): Is(negate=True) renders `IS NOT`
-	// (postgres NOTNULL keeps this shape; NORMALIZE_NOT_NULL=False). The IS_BOOL_ALLOWED
-	// branch is presto-family-only and out of scope here.
-	if boolValue(e.Arg("negate")) {
+	// (postgres NOTNULL keeps this shape; NORMALIZE_NOT_NULL=False). When IS_BOOL_ALLOWED
+	// is false (StarRocks), `x IS TRUE` / `x IS NOT FALSE` become the bare operand or its NOT.
+	negate := boolValue(e.Arg("negate"))
+	if !g.dialect.IsBoolAllowed {
+		if boolArg := asExpression(e.Arg("expression")); boolArg != nil && boolArg.Kind() == expressions.KindBoolean {
+			positive := boolValue(boolArg.Arg("this")) != negate
+			if positive {
+				return g.sqlKey(e, "this")
+			}
+			return "NOT " + g.sqlKey(e, "this")
+		}
+	}
+	if negate {
 		return g.binary(e, "IS NOT")
 	}
 	return g.binary(e, "IS")
@@ -1397,14 +1407,13 @@ func (g *Generator) insertSQL(e expressions.Expression) string {
 	hint := g.sqlKey(e, "hint")
 	thisKeyword := " INTO"
 	if boolValue(e.Arg("overwrite")) {
-		// A Directory target (Hive/Spark INSERT OVERWRITE [LOCAL] DIRECTORY ...)
-		// renders " OVERWRITE" without the TABLE keyword (generator.py insert_sql's
-		// isinstance(this, exp.Directory) special-case); an ordinary table target
-		// keeps " OVERWRITE TABLE".
+		// generator.py:2294: the dialect's INSERT_OVERWRITE keyword; a Directory target
+		// (Hive/Spark INSERT OVERWRITE [LOCAL] DIRECTORY ...) renders " OVERWRITE" without
+		// the TABLE keyword.
 		if this := asExpression(e.Arg("this")); this != nil && this.Kind() == expressions.KindDirectory {
 			thisKeyword = " OVERWRITE"
 		} else {
-			thisKeyword = " OVERWRITE TABLE"
+			thisKeyword = g.dialect.InsertOverwrite
 		}
 	}
 	stored := g.sqlKey(e, "stored")
@@ -2460,10 +2469,10 @@ func (g *Generator) initcapSQL(e expressions.Expression) string {
 // still matches upstream byte-for-byte, without requiring the parser-side flattening
 // (out of this part's scope: dialect FUNCTIONS registries belong to a sibling part).
 func (g *Generator) dateAddSQL(e expressions.Expression) string {
-	switch g.dialect.Name {
-	case "mysql":
+	switch {
+	case g.isDialect("mysql"):
 		return g.mysqlDateAddSQL("ADD", e)
-	case "postgres":
+	case g.dialect.Name == "postgres":
 		return g.postgresDateAddSQL("+", e)
 	}
 	return g.funcCall("DATE_ADD", []any{e.Arg("this"), e.Arg("expression"), unitToStr(e)}, "(", ")", true)

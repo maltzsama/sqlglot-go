@@ -213,7 +213,7 @@ func (g *Generator) alterRenameSQL(e expressions.Expression) string {
 	}
 	this := g.sqlKey(e, "this")
 	toKW := " TO"
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		toKW = ""
 	}
 	return "RENAME" + toKW + " " + this

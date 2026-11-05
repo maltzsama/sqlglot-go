@@ -21,6 +21,7 @@ var (
 	dialectRemovedTypeMappings = map[string]map[expressions.DType]bool{}
 	dialectPropertyLocations   = map[string]map[expressions.Kind]propertyLocation{}
 	dialectParents             = map[string]string{
+		"starrocks":    "mysql",
 		"trino":        "presto",
 		"athena-trino": "trino",
 		"athena-hive":  "hive",

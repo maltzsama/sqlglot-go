@@ -70,3 +70,21 @@ func UtcTimestamp(args Args) Expression   { return newNode(KindUtcTimestamp, arg
 
 func WithFill(args Args) Expression       { return newNode(KindWithFill, args) }
 func SkipJSONColumn(args Args) Expression { return newNode(KindSkipJSONColumn, args) }
+
+// StarRocks nodes.
+func UniqueKeyProperty(args Args) Expression      { return newNode(KindUniqueKeyProperty, args) }
+func RollupProperty(args Args) Expression         { return newNode(KindRollupProperty, args) }
+func RollupIndex(args Args) Expression            { return newNode(KindRollupIndex, args) }
+func RefreshTriggerProperty(args Args) Expression { return newNode(KindRefreshTriggerProperty, args) }
+func PartitionByRangePropertyDynamic(args Args) Expression {
+	return newNode(KindPartitionByRangePropertyDynamic, args)
+}
+func ClusterProperty(args Args) Expression { return newNode(KindClusterProperty, args) }
+func Flatten(args Args) Expression         { return newNode(KindFlatten, args) }
+func ArrayToString(args Args) Expression   { return newNode(KindArrayToString, args) }
+
+func DistributedByProperty(args Args) Expression { return newNode(KindDistributedByProperty, args) }
+
+func GenerateDateArray(args Args) Expression { return newNode(KindGenerateDateArray, args) }
+
+func RowNumber(args Args) Expression { return newNode(KindRowNumber, args) }

@@ -431,6 +431,10 @@ func (p *Parser) parsePartitionedOf() exp.Expression {
 
 // parsePartitionedBy ports _parse_partitioned_by (parser.py:3310-3316).
 func (p *Parser) parsePartitionedBy() exp.Expression {
+	// parsers/starrocks.py:97-104: the key is a Schema of assignments.
+	if p.dialectIs("starrocks") {
+		return p.parseStarRocksPartitionedBy()
+	}
 	// parsers/clickhouse.py:989-992: a custom expression partition key.
 	if p.dialect.Name == "clickhouse" {
 		return p.expression(exp.PartitionedByProperty(exp.Args{"this": p.parseAssignment()}), nil, nil)

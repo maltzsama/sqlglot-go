@@ -653,3 +653,26 @@ heredoc escape handling, per-dialect `ESCAPED_SEQUENCES`, and the `{**default, *
 UNESCAPED_SEQUENCES merge. Regression tests: `clickhouse_test.go`
 (`TestClickhouseIdentity`, `TestClickhouseASTShapes`, `TestClickhouseDialectFlags`,
 `TestClickhouseQualifyAndScope`).
+
+## StarRocks dialect — DONE (issue #3)
+
+Ported 1:1 from `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/starrocks.py`.
+StarRocks extends MySQL upstream, so `dialects.StarRocks()` starts from `MySQL()` and applies the
+deltas: the parser-override registry now has a parent chain (`starrocks` → `mysql`) and the
+generator dispatch reuses the existing `dialectParents` chain; `INDEX_OFFSET=1`; the tokenizer
+adds `LARGEINT`/`REFRESH`; the generator flags `PROPERTIES` prefixes, `INSERT OVERWRITE`, the
+reserved keyword list, `IS_BOOL_ALLOWED=false`, and `RENAME_TABLE_WITH_DB=false`.
+
+Parsed end to end: `CREATE TABLE` with `PRIMARY KEY`/`UNIQUE KEY`/`ROLLUP`/`DISTRIBUTED BY`/
+`PARTITION BY RANGE|LIST` (including the dynamic `START/END/EVERY` form)/`PROPERTIES`,
+materialized views with the full `REFRESH [DEFERRED|IMMEDIATE] [ASYNC|MANUAL] [START] [EVERY]`
+clause, `REFRESH EXTERNAL TABLE`, `UNNEST` default aliases, `LEFT SEMI/ANTI JOIN`, and the
+MySQL-inherited grammar.
+
+Generator preprocess steps ported from `transforms.py`: `DELETE ... BETWEEN` expansion,
+`SELECT DISTINCT ON` elimination into a `ROW_NUMBER()` subquery, and `UNNEST(GENERATE_DATE_ARRAY)`
+rewriting into a recursive CTE.
+
+Corpus: 145 `validate_identity` cases from `tests/dialects/test_starrocks.py`
+(`scripts/extract_dialect_corpus.py --dialects starrocks`), at **145/145**, with no StarRocks rows
+in `testdata/parity_gaps.txt`. Regression tests: `starrocks_test.go`.

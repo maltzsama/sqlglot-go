@@ -6,7 +6,7 @@ import "github.com/ridi-oss/sqlglot-go/expressions"
 // `SUBPARTITION(...)`, plus MySQL's CREATE TABLE partition-property override
 // (generators/mysql.py:812-816).
 func (g *Generator) partitionSQL(e expressions.Expression) string {
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		if parent := e.Parent(); parent != nil && (parent.Kind() == expressions.KindPartitionByRangeProperty || parent.Kind() == expressions.KindPartitionByListProperty) {
 			return g.expressions(exprsOptions{expression: e, flat: true})
 		}

@@ -78,6 +78,9 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindPrimaryKey:       propertyLocationPostSchema,
 	expressions.KindSampleProperty:   propertyLocationPostSchema,
 	expressions.KindSettingsProperty: propertyLocationPostSchema,
+	// generator.py:705/756.
+	expressions.KindDistributedByProperty:  propertyLocationPostSchema,
+	expressions.KindRefreshTriggerProperty: propertyLocationPostSchema,
 }
 
 // propertyNames is the worklist-scoped port of Properties.PROPERTY_TO_NAME. Kinds with
@@ -206,7 +209,7 @@ func (g *Generator) renderProperties(properties expressions.Expression, prefix, 
 // withPropertiesSQL ports with_properties (generator.py:2064-2065). Base, MySQL, and
 // Postgres all use the base WITH_PROPERTIES_PREFIX of "WITH".
 func (g *Generator) withPropertiesSQL(properties expressions.Expression) string {
-	return g.renderProperties(properties, g.seg("WITH", ""), ", ", "", true)
+	return g.renderProperties(properties, g.seg(g.dialect.WithPropertiesPrefix, ""), ", ", "", true)
 }
 
 // propertyName ports property_name (generator.py:2078-2081).

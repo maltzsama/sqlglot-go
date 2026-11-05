@@ -242,34 +242,34 @@ func funcMapKeys(m map[string]func(*Parser) exp.Expression) map[string]bool {
 }
 
 func (p *Parser) constraintParsers() map[string]func(*Parser) exp.Expression {
-	switch p.dialect.Name {
-	case "mysql":
+	switch {
+	case p.dialectIs("mysql"):
 		return mysqlConstraintParsers
-	case "tsql":
+	case p.dialectIs("tsql"):
 		return tsqlConstraintParsers
-	case "clickhouse":
+	case p.dialectIs("clickhouse"):
 		return clickhouseConstraintParsers
 	}
 	return constraintParsers
 }
 
 func (p *Parser) constraintParserKeys() map[string]bool {
-	switch p.dialect.Name {
-	case "mysql":
+	switch {
+	case p.dialectIs("mysql"):
 		return mysqlConstraintParserKeySet
-	case "tsql":
+	case p.dialectIs("tsql"):
 		return tsqlConstraintParserKeySet
-	case "clickhouse":
+	case p.dialectIs("clickhouse"):
 		return clickhouseConstraintParserKeySet
 	}
 	return constraintParserKeySet
 }
 
 func (p *Parser) schemaUnnamedConstraints() map[string]bool {
-	switch p.dialect.Name {
-	case "mysql":
+	switch {
+	case p.dialectIs("mysql"):
 		return mysqlSchemaUnnamedConstraints
-	case "clickhouse":
+	case p.dialectIs("clickhouse"):
 		return clickhouseSchemaUnnamedConstraints
 	}
 	return schemaUnnamedConstraints
@@ -621,7 +621,7 @@ func (p *Parser) parsePrimaryKey(wrappedOptional bool, inProps bool) exp.Express
 	if p.dialect.Name == "clickhouse" {
 		wrappedOptional = wrappedOptional || inProps
 	}
-	namedPrimaryKey := p.dialect.Name == "mysql"
+	namedPrimaryKey := p.dialectIs("mysql")
 
 	var desc any
 	if p.matchSet(map[tokens.TokenType]bool{tokens.ASC: true, tokens.DESC: true}) {

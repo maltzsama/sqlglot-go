@@ -100,7 +100,21 @@ func (p *Parser) parseUnnest(withAlias bool) exp.Expression {
 			offset = exp.ToIdentifier("offset", false)
 		}
 	}
-	return p.expression(exp.Unnest(exp.Args{"expressions": expressions, "alias": alias, "offset": offset}), nil, nil)
+	result := p.expression(exp.Unnest(exp.Args{"expressions": expressions, "alias": alias, "offset": offset}), nil, nil)
+	// parsers/starrocks.py:78-95: UNNEST defaults its table alias/column to "unnest".
+	if p.dialectIs("starrocks") {
+		unnestID := func() exp.Expression { return exp.ToIdentifier("unnest") }
+		aliasExpr := asExpr(result.Arg("alias"))
+		if aliasExpr == nil {
+			result.Set("alias", exp.TableAlias(exp.Args{
+				"this":    unnestID(),
+				"columns": []exp.Expression{unnestID()},
+			}))
+		} else if cols, _ := aliasExpr.Arg("columns").([]exp.Expression); len(cols) == 0 {
+			aliasExpr.Set("columns", []exp.Expression{unnestID()})
+		}
+	}
+	return result
 }
 
 func (p *Parser) parseDerivedTableValues() exp.Expression {
