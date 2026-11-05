@@ -1,6 +1,7 @@
 package tokens
 
 import (
+	"maps"
 	"strings"
 
 	"github.com/ridi-oss/sqlglot-go/trie"
@@ -464,8 +465,16 @@ var defaultUnescapedSequences = map[string]string{
 }
 
 func compileConfig(cfg TokenizerConfig) TokenizerConfig {
+	// Clone the maps this function mutates so CompileConfig stays pure with respect to its
+	// input: cached dialect templates share these maps with every resolved copy, and a
+	// mutation here would both corrupt the template and race with concurrent resolutions.
 	if cfg.FormatStrings == nil {
 		cfg.FormatStrings = map[string]FormatString{}
+	}
+	cfg.FormatStrings = maps.Clone(cfg.FormatStrings)
+	cfg.Comments = maps.Clone(cfg.Comments)
+	if cfg.UnescapedSequences != nil {
+		cfg.UnescapedSequences = maps.Clone(cfg.UnescapedSequences)
 	}
 	// Ports the Dialect metaclass hook (dialects/dialect.py:297-306): a dialect whose
 	// regular strings or byte strings support backslash escapes (StringEscapes['\\'] /

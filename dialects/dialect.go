@@ -3,6 +3,7 @@ package dialects
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	exp "github.com/ridi-oss/sqlglot-go/expressions"
 	"github.com/ridi-oss/sqlglot-go/tokens"
@@ -689,8 +690,29 @@ func validIntervalUnits(mapping map[string]string) map[string]bool {
 	return out
 }
 
-// dialectByName constructs a fresh dialect from its bare name (no settings).
+// dialectTemplates caches fully constructed dialects. A Dialect is treated as immutable
+// after construction (the parser and generator only read it), so callers receive a shallow
+// copy of the template: field writes are isolated, and the expensive tokenizer config
+// (keyword maps + trie) and date-part tables are shared read-only.
+var dialectTemplates sync.Map
+
+// dialectByName constructs a dialect from its bare name (no settings).
 func dialectByName(name string) (*Dialect, error) {
+	key := strings.ToLower(strings.TrimSpace(name))
+	if cached, ok := dialectTemplates.Load(key); ok {
+		d := *(cached.(*Dialect))
+		return &d, nil
+	}
+	d, err := buildDialectByName(key)
+	if err != nil {
+		return nil, err
+	}
+	dialectTemplates.Store(key, d)
+	copy := *d
+	return &copy, nil
+}
+
+func buildDialectByName(name string) (*Dialect, error) {
 	switch strings.ToLower(strings.TrimSpace(name)) {
 	case "", "base":
 		return Base(), nil
@@ -841,10 +863,13 @@ func CanonicalString(dialect DialectType) (string, error) {
 // GetOrRaise resolves a DialectType-style value to a *Dialect, mirroring upstream sqlglot's
 // Dialect.get_or_raise(DialectType): it accepts nil (base), a string (bare name or the
 // comma-separated settings form, e.g. "mysql, normalization_strategy=mysql_case_insensitive"),
-// or an already-built *Dialect (returned as-is). Each string resolution returns a fresh
-// *Dialect, so a per-call setting override cannot leak across callers. The supported string
-// settings are normalization_strategy and mysql_version (upstream also has "version", not
-// modeled here).
+// or an already-built *Dialect (returned as-is). The supported string settings are
+// normalization_strategy and mysql_version (upstream also has "version", not modeled here).
+//
+// A name is served from a cached template as a shallow copy: field writes are isolated per
+// call, so a per-call setting override cannot leak, but the tokenizer config and mapping
+// tables are shared read-only. Callers must not mutate the maps reached through the returned
+// Dialect; pass a *Dialect you built yourself for a fully private instance.
 func GetOrRaise(dialect DialectType) (*Dialect, error) {
 	switch v := dialect.(type) {
 	case nil:
