@@ -478,12 +478,9 @@ func (p *Parser) parseMatchAgainst() exp.Expression {
 }
 
 // init registers this file's base FUNCTION_PARSERS/NO_PAREN_FUNCTION_PARSERS entries by plain
-// key assignment into the shared functionParsers/noParenFunctionParsers package vars (see the
-// package-var doc comments on statementParsers/dispatch for why this is safe regardless of
-// init() run order across files: parser.go's own init() only ever does a full map-literal
-// REASSIGNMENT of these two vars, and Go runs same-package init() funcs in lexical filename
-// order - "parser.go" sorts before "parser_functions.go" - so that reassignment always
-// completes before this file's key assignments run).
+// key assignment into the shared functionParsers/noParenFunctionParsers package vars. parser.go's
+// init() merges its own literal into those same maps rather than reassigning them, so the
+// registrations are order-independent regardless of how the compiler orders the files.
 func init() {
 	// OVERLAY is a base FUNCTION_PARSERS entry (parser.py:1511) - not dialect-gated.
 	functionParsers["OVERLAY"] = (*Parser).parseOverlay
