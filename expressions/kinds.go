@@ -842,6 +842,17 @@ const (
 	KindBuildProperty
 	KindDuplicateKeyProperty
 	KindStringToArray
+	KindConvertToCharset
+	KindToChar
+	KindToNumber
+	KindSystimestamp
+	KindUnicode
+	KindJSONArray
+	KindJSONExists
+	KindForceProperty
+	KindMultitableInserts
+	KindConditionalInsert
+	KindConnectByRoot
 )
 
 type Trait uint32
@@ -1564,6 +1575,17 @@ var argTypes = map[Kind][]argSpec{
 	KindBuildProperty:                   {{"this", true}},
 	KindDuplicateKeyProperty:            {{"expressions", true}},
 	KindStringToArray:                   {{"this", true}, {"expression", false}, {"null", false}},
+	KindConvertToCharset:                {{"this", true}, {"dest", true}, {"source", false}},
+	KindToChar:                          {{"this", true}, {"format", false}, {"nlsparam", false}, {"is_numeric", false}},
+	KindToNumber:                        {{"this", true}, {"format", false}, {"nlsparam", false}, {"precision", false}, {"scale", false}, {"safe", false}, {"safe_name", false}, {"default", false}},
+	KindSystimestamp:                    {{"this", false}},
+	KindUnicode:                         {{"this", true}, {"empty_is_zero", false}},
+	KindJSONArray:                       {{"expressions", false}, {"null_handling", false}, {"return_type", false}, {"strict", false}},
+	KindJSONExists:                      {{"this", true}, {"path", true}, {"passing", false}, {"on_condition", false}, {"from_dcolonqmark", false}},
+	KindForceProperty:                   {{"this", false}},
+	KindMultitableInserts:               {{"expressions", true}, {"kind", true}, {"source", true}},
+	KindConditionalInsert:               {{"this", true}, {"expression", false}, {"else_", false}},
+	KindConnectByRoot:                   {{"this", true}},
 }
 
 var traitsOf = map[Kind]Trait{
@@ -1919,10 +1941,17 @@ var traitsOf = map[Kind]Trait{
 	KindUtcTimestamp:             TraitCondition | TraitFunc,
 
 	// StarRocks cluster.
-	KindFlatten:       TraitCondition | TraitFunc,
-	KindArrayToString: TraitCondition | TraitFunc,
-	KindRowNumber:     TraitCondition | TraitFunc,
-	KindStringToArray: TraitCondition | TraitFunc,
+	KindFlatten:          TraitCondition | TraitFunc,
+	KindArrayToString:    TraitCondition | TraitFunc,
+	KindRowNumber:        TraitCondition | TraitFunc,
+	KindStringToArray:    TraitCondition | TraitFunc,
+	KindConvertToCharset: TraitCondition | TraitFunc,
+	KindToChar:           TraitCondition | TraitFunc,
+	KindToNumber:         TraitCondition | TraitFunc,
+	KindSystimestamp:     TraitCondition | TraitFunc,
+	KindUnicode:          TraitCondition | TraitFunc,
+	KindJSONArray:        TraitCondition | TraitFunc,
+	KindJSONExists:       TraitCondition | TraitFunc,
 }
 
 var primitive = map[Kind]bool{
@@ -2524,6 +2553,17 @@ var className = map[Kind]string{
 	KindBuildProperty:                   "BuildProperty",
 	KindDuplicateKeyProperty:            "DuplicateKeyProperty",
 	KindStringToArray:                   "StringToArray",
+	KindConvertToCharset:                "ConvertToCharset",
+	KindToChar:                          "ToChar",
+	KindToNumber:                        "ToNumber",
+	KindSystimestamp:                    "Systimestamp",
+	KindUnicode:                         "Unicode",
+	KindJSONArray:                       "JSONArray",
+	KindJSONExists:                      "JSONExists",
+	KindForceProperty:                   "ForceProperty",
+	KindMultitableInserts:               "MultitableInserts",
+	KindConditionalInsert:               "ConditionalInsert",
+	KindConnectByRoot:                   "ConnectByRoot",
 }
 
 // varLenArgs is the authoritative is_var_len_args=True set (mirroring the upstream Func

@@ -68,7 +68,11 @@ func (p *Parser) parseHintBody() exp.Expression {
 			}
 		}()
 		parseHintItem := func() exp.Expression {
-			if call := p.parseHintFunctionCall(); call != nil {
+			if p.dialect.Name == "oracle" {
+				if call := p.parseOracleHintFunctionCall(); call != nil {
+					return call
+				}
+			} else if call := p.parseHintFunctionCall(); call != nil {
 				return call
 			}
 			return p.parseVar(false, nil, true)

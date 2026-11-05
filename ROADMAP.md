@@ -698,3 +698,29 @@ UPDATE/DELETE table alias without `AS`, and the function renames (`MONTHS_ADD`, 
 Corpus: 56 `validate_identity` cases from `tests/dialects/test_doris.py`
 (`scripts/extract_dialect_corpus.py --dialects doris`), at **56/56**, with no Doris rows in
 `testdata/parity_gaps.txt`. Regression tests: `doris_test.go`.
+
+## Oracle dialect — DONE (issue #3)
+
+Ported 1:1 from `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/oracle.py`.
+Oracle extends the base dialect (not MySQL), with UPPERCASE normalization,
+`SUPPORTS_COLUMN_JOIN_MARKS` derived from the `(+)` keyword, the Oracle tokenizer (`MINUS` ->
+EXCEPT, `START` -> BEGIN, `VARCHAR2`/`NVARCHAR2`, `U+...'` strings, `@`/`$`/`#` vars,
+`ORDER SIBLINGS BY`, `SAMPLE`), the Oracle `TIME_MAPPING`/`INVERSE_TIME_MAPPING` format
+conversion, and pseudocolumns (`ROWNUM`/`ROWID`/`LEVEL`/...).
+
+Parsed end to end: `DATE`/`TIMESTAMP` typed literals, `SYSDATE`/`SYSTIMESTAMP`, `NVL`,
+`TO_DATE`/`TO_TIMESTAMP`/`TO_CHAR`/`TO_NUMBER`, the overloaded `TRUNC` with its default `DD`
+unit, `LISTAGG ... ON OVERFLOW`, `KEEP (DENSE_RANK ...)`, `CONNECT BY`/`START WITH`/`PRIOR`,
+`CONNECT_BY_ROOT`, `(+)` outer-join marks, `SELECT UNIQUE`, `BULK COLLECT INTO`,
+`INSERT ALL/FIRST` with `WHEN`/`ELSE` branches, `PIVOT`/`UNPIVOT` with Oracle alias rules,
+`SAMPLE`, `JSON_EXISTS`/`JSON_ARRAY`/`JSON_ARRAYAGG`, `CREATE OR REPLACE FORCE VIEW`, and the
+`ALTER TABLE ... ADD (...)` form without the COLUMNS keyword.
+
+Generator details: the Oracle type mappings, `TZ_TO_WITH_TIME_ZONE`, the `TO_CHAR`/`TO_DATE`/
+`TO_TIMESTAMP` format conversion, `SYSDATE`/`SYSTIMESTAMP`, `INSTR`, `SUBSTR`, `MOD`,
+`L2_DISTANCE`, `DBMS_RANDOM.VALUE`, hint re-rendering with `QUERY_HINT_SEP`, the UPDATE/DELETE
+table alias without `AS`, and the PIVOT/UNPIVOT alias rules.
+
+Corpus: 249 `validate_identity` cases from `tests/dialects/test_oracle.py`
+(`scripts/extract_dialect_corpus.py --dialects oracle`), at **249/249**, with no Oracle rows in
+`testdata/parity_gaps.txt`. Regression tests: `oracle_test.go`.

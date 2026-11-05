@@ -890,7 +890,7 @@ func (p *Parser) parseSelect(opts ...bool) exp.Expression {
 		matchedDistinct := false
 		if p.next.IsValid() && p.next.TokenType != tokens.DOT {
 			all = p.match(tokens.ALL)
-			matchedDistinct = p.matchSet(distinctTokens)
+			matchedDistinct = p.matchSet(distinctTokens) || (p.dialect.Name == "oracle" && p.match(tokens.UNIQUE))
 		}
 		var distinct exp.Expression
 		if matchedDistinct {
@@ -927,7 +927,7 @@ func (p *Parser) parseSelect(opts ...bool) exp.Expression {
 		if len(comments) > 0 {
 			this.AddComments(comments, true)
 		}
-		if into := p.parseInto(); into != nil {
+		if into := p.parseIntoStatement(); into != nil {
 			this.Set("into", into)
 		}
 		if from := p.parseFrom(false, false, false); from != nil {
@@ -1751,6 +1751,10 @@ func (p *Parser) parseJoinBase(skipJoinToken bool, parseBracket bool, aliasToken
 			}
 		}
 	}
+	// parser.py:4716: pivots attach to the join, after ON/USING.
+	if pivots := p.parsePivots(); pivots != nil {
+		kwargs["pivots"] = pivots
+	}
 	joinKind, _ := kwargs["kind"].(string)
 	if p.dialect.AddJoinOnTrue && kwargs["on"] == nil && kwargs["using"] == nil && kwargs["method"] == nil &&
 		(joinKind == "" || joinKind == "INNER" || joinKind == "OUTER") {
@@ -2508,6 +2512,19 @@ func (p *Parser) parseType(parseInterval, fallbackToIdentifier bool) exp.Express
 			if exp.DataTypeIsType(dataType, false, exp.DTypeJSON) {
 				return p.expression(exp.ParseJSON(exp.Args{"this": this}), nil, nil)
 			}
+			// parsers/oracle.py:101-107 TYPE_LITERAL_PARSERS: DATE/TIMESTAMP literals become
+			// the Oracle TO_DATE / TO_TIMESTAMP forms.
+			if p.dialect.Name == "oracle" {
+				if exp.DataTypeIsType(dataType, false, exp.DTypeDate) {
+					return p.expression(exp.DateStrToDate(exp.Args{"this": this}), nil, nil)
+				}
+				if exp.DataTypeIsType(dataType, false, exp.DTypeTimestamp) {
+					return p.expression(exp.StrToTime(exp.Args{
+						"this":   this,
+						"format": exp.LiteralString("%Y-%m-%d %H:%M:%S.%f"),
+					}), nil, nil)
+				}
+			}
 			// ZONE_AWARE_TIMESTAMP_CONSTRUCTOR (parser.py:6186-6191) promotes
 			// `TIMESTAMP '<zoned literal>'` -> TIMESTAMPTZ, gated on the Presto-only dialect
 			// flag; base/mysql/postgres leave it false, so this branch is a no-op for them.
@@ -2695,6 +2712,10 @@ func (p *Parser) parseColumn() exp.Expression {
 			return nil
 		}
 		column = p.parseColumnOps(this)
+	}
+	// parser.py:6821-6823: Oracle's `(+)` outer-join marker.
+	if column != nil && p.dialect.SupportsColumnJoinMarks && p.match(tokens.JOIN_MARKER) {
+		column.Set("join_mark", true)
 	}
 	return column
 }
@@ -2901,6 +2922,16 @@ func (p *Parser) parseColumnOps(this exp.Expression) exp.Expression {
 			this.AddComments(field.PopComments(), false)
 		}
 		this = p.parseBracket(this)
+	}
+	// parsers/oracle.py:237-248: `(a - b) DAY TO SECOND` interval spans.
+	if p.dialect.Name == "oracle" {
+		index := p.index
+		if span := p.tryParse(func() exp.Expression { return p.parseIntervalSpan(this) }, false); span != nil {
+			if unit := asExpr(span.Arg("unit")); unit != nil && unit.Kind() == exp.KindIntervalSpan {
+				return span
+			}
+		}
+		p.retreat(index)
 	}
 	return this
 }
@@ -4344,7 +4375,7 @@ func (p *Parser) parseWindow(this exp.Expression, alias bool) exp.Expression {
 	var over any
 	if alias {
 		p.match(tokens.ALIAS)
-	} else if !p.match(tokens.OVER) {
+	} else if !p.match(tokens.OVER) && !(p.dialect.Name == "oracle" && p.match(tokens.KEEP)) {
 		return this
 	} else {
 		over = stringsUpper(p.prev.Text)
@@ -4612,6 +4643,10 @@ func init() {
 	statementParsers[tokens.PRAGMA] = (*Parser).parsePragma
 
 	noParenFunctionParsers = map[string]func(*Parser) exp.Expression{
+		// NO_PAREN_FUNCTION_PARSERS["CONNECT_BY_ROOT"] (parser.py:1543-1545).
+		"CONNECT_BY_ROOT": func(p *Parser) exp.Expression {
+			return p.expression(exp.ConnectByRoot(exp.Args{"this": p.parseColumn()}), nil, nil)
+		},
 		"ANY": func(p *Parser) exp.Expression {
 			return p.expression(exp.Any(exp.Args{"this": p.parseBitwise()}), nil, nil)
 		},

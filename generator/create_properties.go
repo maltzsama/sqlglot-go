@@ -81,6 +81,7 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	// generator.py:705/756.
 	expressions.KindDistributedByProperty:  propertyLocationPostSchema,
 	expressions.KindDuplicateKeyProperty:   propertyLocationPostSchema,
+	expressions.KindForceProperty:          propertyLocationPostCreate,
 	expressions.KindRefreshTriggerProperty: propertyLocationPostSchema,
 }
 

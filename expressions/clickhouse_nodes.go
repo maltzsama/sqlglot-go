@@ -92,3 +92,16 @@ func RowNumber(args Args) Expression { return newNode(KindRowNumber, args) }
 func BuildProperty(args Args) Expression        { return newNode(KindBuildProperty, args) }
 func DuplicateKeyProperty(args Args) Expression { return newNode(KindDuplicateKeyProperty, args) }
 func StringToArray(args Args) Expression        { return newNode(KindStringToArray, args) }
+
+func ConvertToCharset(args Args) Expression { return newNode(KindConvertToCharset, args) }
+func ToChar(args Args) Expression           { return newNode(KindToChar, args) }
+func ToNumber(args Args) Expression         { return newNode(KindToNumber, args) }
+func Systimestamp(args Args) Expression     { return newNode(KindSystimestamp, args) }
+func Unicode(args Args) Expression          { return newNode(KindUnicode, args) }
+func JSONArray(args Args) Expression        { return newNode(KindJSONArray, args) }
+func JSONExists(args Args) Expression       { return newNode(KindJSONExists, args) }
+
+func MultitableInserts(args Args) Expression { return newNode(KindMultitableInserts, args) }
+func ConditionalInsert(args Args) Expression { return newNode(KindConditionalInsert, args) }
+
+func ConnectByRoot(args Args) Expression { return newNode(KindConnectByRoot, args) }

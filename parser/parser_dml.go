@@ -33,6 +33,11 @@ func (p *Parser) parseInsert() exp.Expression {
 				alternative = p.prev.Text
 			}
 		}
+		// parser.py:3602-3604: Oracle multi-table INSERT ALL/FIRST.
+		if p.match(tokens.FIRST) || p.match(tokens.ALL) {
+			comments = append(comments, p.prevComments...)
+			return p.parseMultitableInserts(comments)
+		}
 		p.match(tokens.INTO)
 		comments = p.prevComments
 		// mysql-insert-set/mysql-replace divergence from parser.py:3511-3514: when TABLE is
@@ -57,6 +62,8 @@ func (p *Parser) parseInsert() exp.Expression {
 			this = p.parseSchema(p.expression(exp.Table(exp.Args{"this": name}), nil, nil))
 		} else if isFunction {
 			this = p.parseFunction(nil, false, true, false)
+		} else if p.dialect.Name == "oracle" {
+			this = p.parseOracleInsertTable()
 		} else {
 			this = p.parseInsertTable()
 		}
@@ -490,4 +497,44 @@ func (p *Parser) parseTableHints() []exp.Expression {
 		hints = append(hints, p.expression(exp.IndexTableHint(args), nil, nil))
 	}
 	return hints
+}
+
+// parseMultitableInserts ports _parse_multitable_inserts (parser.py:3545-3582).
+func (p *Parser) parseMultitableInserts(comments []string) exp.Expression {
+	kind := stringsUpper(p.prev.Text)
+	var expressions []exp.Expression
+	for {
+		conditional := p.parseConditionalInsert()
+		if conditional == nil {
+			break
+		}
+		expressions = append(expressions, conditional)
+	}
+	return p.expression(exp.MultitableInserts(exp.Args{
+		"kind":        kind,
+		"expressions": expressions,
+		"source":      p.parseTable(false, false, nil, false, false, false, false),
+	}), nil, comments)
+}
+
+// parseConditionalInsert parses one WHEN/ELSE INTO branch of a multi-table INSERT.
+func (p *Parser) parseConditionalInsert() exp.Expression {
+	var condition exp.Expression
+	if p.match(tokens.WHEN) {
+		condition = p.parseDisjunction()
+		p.match(tokens.THEN)
+	}
+	elseBranch := p.match(tokens.ELSE)
+	if !p.match(tokens.INTO) {
+		return nil
+	}
+	insert := p.expression(exp.Insert(exp.Args{
+		"this":       p.parseTable(true, false, nil, false, false, false, false),
+		"expression": p.parseDerivedTableValues(),
+	}), nil, nil)
+	return p.expression(exp.ConditionalInsert(exp.Args{
+		"this":       insert,
+		"expression": condition,
+		"else_":      elseBranch,
+	}), nil, nil)
 }

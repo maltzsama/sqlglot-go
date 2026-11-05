@@ -295,6 +295,23 @@ func (p *Parser) parseStringAgg() exp.Expression {
 	} else {
 		args = p.parseCsv(p.parseDisjunction)
 	}
+	// parser.py:8194-8206: LISTAGG/STRING_AGG's ON OVERFLOW clause.
+	var onOverflow exp.Expression
+	if p.matchTextSeq("ON", "OVERFLOW") {
+		if p.matchTextSeq("ERROR") {
+			onOverflow = exp.Var(exp.Args{"this": "ERROR"})
+		} else {
+			p.matchTextSeq("TRUNCATE")
+			// Python evaluates the args left to right: the string is parsed BEFORE the
+			// WITH/WITHOUT COUNT check.
+			this := p.parseString()
+			withCount := p.matchTextSeq("WITH", "COUNT") || !p.matchTextSeq("WITHOUT", "COUNT")
+			onOverflow = p.expression(exp.OverflowTruncateBehavior(exp.Args{
+				"this":       this,
+				"with_count": withCount,
+			}), nil, nil)
+		}
+	}
 	index := p.index
 	if !p.match(tokens.R_PAREN) && len(args) > 0 {
 		if p.dialect.OpaqueFunctions {
@@ -307,7 +324,7 @@ func (p *Parser) parseStringAgg() exp.Expression {
 		}
 		ordered := p.parseOrder(seqGet(args, 0), false)
 		args[0] = p.parseLimit(ordered, false, false)
-		return p.expression(exp.GroupConcat(exp.Args{"this": args[0], "separator": seqGet(args, 1)}), nil, nil)
+		return p.expression(exp.GroupConcat(exp.Args{"this": args[0], "separator": seqGet(args, 1), "on_overflow": onOverflow}), nil, nil)
 	}
 	if !p.matchTextSeq("WITHIN", "GROUP") {
 		p.retreat(index)
@@ -316,10 +333,17 @@ func (p *Parser) parseStringAgg() exp.Expression {
 			// through search_path) — opaque. WITHIN GROUP below is keyword grammar and stays.
 			return p.opaqueAnonymous(opaqueName, args)
 		}
-		return p.validateExpression(exp.FromArgList(exp.KindGroupConcat, args), exprArgs(args))
+		gc := exp.FromArgList(exp.KindGroupConcat, args)
+		if onOverflow != nil {
+			gc.Set("on_overflow", onOverflow)
+		}
+		return p.validateExpression(gc, exprArgs(args))
 	}
 	p.matchLParen(nil)
 	withinArgs := exp.Args{"this": p.parseOrder(seqGet(args, 0), false), "separator": seqGet(args, 1)}
+	if onOverflow != nil {
+		withinArgs["on_overflow"] = onOverflow
+	}
 	if p.dialect.OpaqueFunctions {
 		// Record the source form so the WITHIN GROUP keyword grammar regenerates verbatim
 		// instead of the in-paren ORDER BY canonicalization.

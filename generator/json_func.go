@@ -7,6 +7,8 @@ func init() {
 	dispatch[expressions.KindJSONObjectAgg] = (*Generator).jsonObjectSQL
 	dispatch[expressions.KindJSONKeyValue] = (*Generator).jsonKeyValueSQL
 	dispatch[expressions.KindOnCondition] = (*Generator).onConditionSQL
+	dispatch[expressions.KindJSONArray] = (*Generator).jsonArraySQL
+	dispatch[expressions.KindJSONExists] = (*Generator).jsonExistsSQL
 	dispatch[expressions.KindJSONValue] = (*Generator).jsonValueSQL
 }
 
@@ -74,8 +76,14 @@ func (g *Generator) onConditionSQL(e expressions.Expression) string {
 	// so when both are set, EMPTY always precedes ERROR here (unlike upstream's
 	// dialect-conditional order).
 	if error_ != "" && empty != "" {
-		error_ = empty + " " + error_
-		empty = ""
+		if g.dialect.OnConditionEmptyBeforeError {
+			error_ = empty + " " + error_
+			empty = ""
+		} else {
+			// scripts/oracle.py sets ON_CONDITION_EMPTY_BEFORE_ERROR = False.
+			empty = error_ + " " + empty
+			error_ = ""
+		}
 	}
 
 	null := g.sqlKey(e, "null")
@@ -103,4 +111,34 @@ func (g *Generator) jsonValueSQL(e expressions.Expression) string {
 		onCondition = " " + onCondition
 	}
 	return g.funcCall("JSON_VALUE", []any{e.Arg("this"), path + returning + onCondition}, "(", ")", true)
+}
+
+// jsonArraySQL ports jsonarray_sql (generator.py:3860-3872).
+func (g *Generator) jsonArraySQL(e expressions.Expression) string {
+	nullHandling := ""
+	if v := g.sqlKey(e, "null_handling"); v != "" {
+		nullHandling = " " + v
+	}
+	returnType := ""
+	if v := g.sqlKey(e, "return_type"); v != "" {
+		returnType = " RETURNING " + v
+	}
+	strict := ""
+	if boolValue(e.Arg("strict")) {
+		strict = " STRICT"
+	}
+	return g.funcCall("JSON_ARRAY", exprAnySlice(e.Expressions()), "(", nullHandling+returnType+strict+")", true)
+}
+
+// jsonExistsSQL ports jsonexists_sql (generator.py:5693-5703).
+func (g *Generator) jsonExistsSQL(e expressions.Expression) string {
+	this := g.sqlKey(e, "this")
+	path := g.sqlKey(e, "path")
+	if passing := g.expressions(exprsOptions{expression: e, key: "passing"}); passing != "" {
+		path += " PASSING " + passing
+	}
+	if onCondition := g.sqlKey(e, "on_condition"); onCondition != "" {
+		path += " " + onCondition
+	}
+	return g.funcCall("JSON_EXISTS", []any{this, path}, "(", ")", true)
 }

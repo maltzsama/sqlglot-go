@@ -242,7 +242,8 @@ const (
 	minPassTSQL       = 613
 	minPassClickhouse = 468
 	minPassStarrocks  = 145
-	minPassDoris      = 0
+	minPassDoris      = 56
+	minPassOracle     = 0
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
@@ -258,6 +259,7 @@ const (
 	minTotalClickhouse = 468
 	minTotalStarrocks  = 145
 	minTotalDoris      = 56
+	minTotalOracle     = 249
 )
 
 // TestCorpus is the single round-trip harness for both the base-dialect
@@ -315,6 +317,7 @@ func TestCorpus(t *testing.T) {
 		{"clickhouse", minPassClickhouse, minTotalClickhouse},
 		{"starrocks", minPassStarrocks, minTotalStarrocks},
 		{"doris", minPassDoris, minTotalDoris},
+		{"oracle", minPassOracle, minTotalOracle},
 	}
 	var counts []string
 	for _, floor := range floors {

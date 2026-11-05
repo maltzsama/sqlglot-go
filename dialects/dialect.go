@@ -407,6 +407,14 @@ type Dialect struct {
 	IsBoolAllowed bool
 	// UpdateStatementSupportsFrom ports generator.py:625 UPDATE_STATEMENT_SUPPORTS_FROM.
 	UpdateStatementSupportsFrom bool
+	// OnConditionEmptyBeforeError ports dialect.py:654 ON_CONDITION_EMPTY_BEFORE_ERROR:
+	// MySQL parses `X ON EMPTY Y ON ERROR`, Oracle the opposite (parser.py:8333-8341).
+	OnConditionEmptyBeforeError bool
+	// PivotAliasWithAs ports generator.py PIVOT_ALIAS_WITH_AS (Oracle disables it).
+	PivotAliasWithAs bool
+	// UnpivotAliasesAreIdentifiers ports generator.py UNPIVOT_ALIASES_ARE_IDENTIFIERS
+	// (Oracle disables it, keeping string/number aliases as literals).
+	UnpivotAliasesAreIdentifiers bool
 }
 
 func Base() *Dialect {
@@ -559,10 +567,13 @@ func Base() *Dialect {
 		// generator.py:679 STRUCT_DELIMITER defaults to ("<", ">").
 		StructDelimiter: [2]string{"<", ">"},
 		// generator.py:558/471/376/625 generator flag defaults.
-		WithPropertiesPrefix:        "WITH",
-		InsertOverwrite:             " OVERWRITE TABLE",
-		IsBoolAllowed:               true,
-		UpdateStatementSupportsFrom: true,
+		WithPropertiesPrefix:         "WITH",
+		InsertOverwrite:              " OVERWRITE TABLE",
+		IsBoolAllowed:                true,
+		UpdateStatementSupportsFrom:  true,
+		OnConditionEmptyBeforeError:  true,
+		PivotAliasWithAs:             true,
+		UnpivotAliasesAreIdentifiers: true,
 	}
 }
 
@@ -703,6 +714,8 @@ func dialectByName(name string) (*Dialect, error) {
 		return StarRocks(), nil
 	case "doris":
 		return Doris(), nil
+	case "oracle":
+		return Oracle(), nil
 	default:
 		return nil, fmt.Errorf("unknown dialect %q", name)
 	}
@@ -1222,3 +1235,5 @@ func (d *Dialect) GenerateValuesAliases(values exp.Expression) []exp.Expression 
 	}
 	return aliases
 }
+
+// (helper kept in the dialects package for the Oracle builders)
