@@ -33,30 +33,22 @@ func (p *Parser) opaqueAnonymous(name string, args []exp.Expression) exp.Express
 	return p.expression(exp.Anonymous(exp.Args{"this": name, "expressions": args}), nil, nil)
 }
 
-// mergedDialectFunctions is the parseFunctionCall functions==nil default: exp.FunctionByName
-// overlaid with the current dialect's own Functions additions/overrides (dialects.Dialect.
-// Functions, e.g. mysql's CURDATE/DAY_OF_MONTH/LCASE/... cluster in dialects/mysql.go, or
-// postgres's CHAR_LENGTH/CHARACTER_LENGTH in dialects/postgres.go). Mirrors upstream's
-// per-dialect `FUNCTIONS = {**parser.Parser.FUNCTIONS, ...}` class-attribute pattern, just
-// merged on demand instead of once at class-definition time, since this port has one shared
-// exp.FunctionByName base map rather than a per-dialect-class copy. A dialect with no
-// Functions overlay (the common case) skips the merge entirely and returns the base map
-// as-is.
-func mergedDialectFunctions(d *dialects.Dialect) map[string]func([]exp.Expression) exp.Expression {
-	if len(d.Functions) == 0 {
-		return exp.FunctionByName
+// dialectFunction is the parseFunctionCall functions==nil lookup: exp.FunctionByName overlaid
+// with the current dialect's own Functions additions/overrides (dialects.Dialect.Functions,
+// e.g. mysql's CURDATE/DAY_OF_MONTH/LCASE/... cluster in dialects/mysql.go, or postgres's
+// CHAR_LENGTH/CHARACTER_LENGTH in dialects/postgres.go). Mirrors upstream's per-dialect
+// `FUNCTIONS = {**parser.Parser.FUNCTIONS, ...}` class attribute (parser.py:1511), but resolves
+// the three layers on lookup instead of materializing a merged map per call: the dialect
+// overlay wins, RemovedFunctions hides a base entry, then the shared base table applies. A
+// dialect with no overlay (the common case) reaches the base map after two map hits.
+func dialectFunction(d *dialects.Dialect, name string) func([]exp.Expression) exp.Expression {
+	if fn, ok := d.Functions[name]; ok {
+		return fn
 	}
-	merged := make(map[string]func([]exp.Expression) exp.Expression, len(exp.FunctionByName)+len(d.Functions))
-	for name, builder := range exp.FunctionByName {
-		if d.RemovedFunctions[name] {
-			continue
-		}
-		merged[name] = builder
+	if d.RemovedFunctions[name] {
+		return nil
 	}
-	for name, builder := range d.Functions {
-		merged[name] = builder
-	}
-	return merged
+	return exp.FunctionByName[name]
 }
 
 func (p *Parser) parseConvert(strict bool, safe any) exp.Expression {
@@ -486,12 +478,9 @@ func (p *Parser) parseMatchAgainst() exp.Expression {
 }
 
 // init registers this file's base FUNCTION_PARSERS/NO_PAREN_FUNCTION_PARSERS entries by plain
-// key assignment into the shared functionParsers/noParenFunctionParsers package vars (see the
-// package-var doc comments on statementParsers/dispatch for why this is safe regardless of
-// init() run order across files: parser.go's own init() only ever does a full map-literal
-// REASSIGNMENT of these two vars, and Go runs same-package init() funcs in lexical filename
-// order - "parser.go" sorts before "parser_functions.go" - so that reassignment always
-// completes before this file's key assignments run).
+// key assignment into the shared functionParsers/noParenFunctionParsers package vars. parser.go's
+// init() merges its own literal into those same maps rather than reassigning them, so the
+// registrations are order-independent regardless of how the compiler orders the files.
 func init() {
 	// OVERLAY is a base FUNCTION_PARSERS entry (parser.py:1511) - not dialect-gated.
 	functionParsers["OVERLAY"] = (*Parser).parseOverlay

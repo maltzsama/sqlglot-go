@@ -2,7 +2,6 @@ package generator
 
 import (
 	"strconv"
-	"strings"
 
 	exp "github.com/ridi-oss/sqlglot-go/expressions"
 )
@@ -327,8 +326,6 @@ func starRocksCastIfNeeded(g *Generator, expression exp.Expression, dtype exp.DT
 	}
 	return exp.Cast(exp.Args{"this": expression, "to": dtype.IntoExpr(nil)})
 }
-
-var _ = strings.TrimSpace
 
 // starRocksProperty ports dialect.py's property_sql helper
 // (dialects/dialect.py:1317-1318): the key is always rendered as a string literal.

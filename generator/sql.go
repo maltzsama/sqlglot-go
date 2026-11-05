@@ -609,7 +609,8 @@ func (g *Generator) queryModifiers(e expressions.Expression, sqls ...string) str
 		limit = expressions.Limit(expressions.Args{"expression": limit.Arg("count")})
 	}
 	fetch := limit != nil && limit.Kind() == expressions.KindFetch
-	parts := append([]string{}, sqls...)
+	parts := make([]string, 0, len(sqls)+12)
+	parts = append(parts, sqls...)
 	for _, join := range listFromValue(e.Arg("joins")) {
 		parts = append(parts, g.gen(join))
 	}

@@ -3875,10 +3875,12 @@ func (p *Parser) parseFunctionCall(functions map[string]func([]exp.Expression) e
 				return p.expression(subqueryPredicate(exp.Args{"this": expr}), nil, comments)
 			}
 		}
+		var function func([]exp.Expression) exp.Expression
 		if functions == nil {
-			functions = mergedDialectFunctions(p.dialect)
+			function = dialectFunction(p.dialect, upper)
+		} else {
+			function = functions[upper]
 		}
-		function := functions[upper]
 		knownFunction := function != nil && !anonymous && !opaque
 		alias := !knownFunction
 		args := p.parseFunctionArgs(alias)
@@ -4578,7 +4580,7 @@ func (p *Parser) parseWindowSpec() map[string]any {
 	return map[string]any{"value": value, "side": side}
 }
 
-var noParenFunctionParsers map[string]func(*Parser) exp.Expression
+var noParenFunctionParsers = map[string]func(*Parser) exp.Expression{}
 
 // noParenFunctions ports the base NO_PAREN_FUNCTIONS (parser.py:431-438): keyword tokens that,
 // when not followed by "(", build a zero-arg function node. This is the full base set of six.
@@ -4642,7 +4644,10 @@ func init() {
 	// statement forms now that dialects/mysql.py:154's tokenizer Command behavior is removed.
 	statementParsers[tokens.PRAGMA] = (*Parser).parsePragma
 
-	noParenFunctionParsers = map[string]func(*Parser) exp.Expression{
+	// Fill the shared registry instead of reassigning it: parser_functions.go's init also adds
+	// entries, and Go only recommends (does not guarantee) lexical file order for init funcs.
+	// Merging makes the registration order-independent.
+	for name, parser := range map[string]func(*Parser) exp.Expression{
 		// NO_PAREN_FUNCTION_PARSERS["CONNECT_BY_ROOT"] (parser.py:1543-1545).
 		"CONNECT_BY_ROOT": func(p *Parser) exp.Expression {
 			return p.expression(exp.ConnectByRoot(exp.Args{"this": p.parseColumn()}), nil, nil)
@@ -4658,8 +4663,10 @@ func init() {
 			return p.expression(exp.Prior(exp.Args{"this": p.parseBitwise()}), nil, nil)
 		},
 		"IF": func(p *Parser) exp.Expression { return p.parseIf() },
+	} {
+		noParenFunctionParsers[name] = parser
 	}
-	functionParsers = map[string]func(*Parser) exp.Expression{
+	for name, parser := range map[string]func(*Parser) exp.Expression{
 		"CAST":        func(p *Parser) exp.Expression { return p.parseCast(p.strictCast, nil) },
 		"TRY_CAST":    func(p *Parser) exp.Expression { return p.parseCast(false, true) },
 		"SAFE_CAST":   func(p *Parser) exp.Expression { return p.parseCast(false, true) },
@@ -4697,6 +4704,8 @@ func init() {
 		"VALUES": func(p *Parser) exp.Expression {
 			return p.expression(exp.Anonymous(exp.Args{"this": "VALUES", "expressions": []exp.Expression{p.parseIdVar(true, nil)}}), nil, nil)
 		},
+	} {
+		functionParsers[name] = parser
 	}
 	queryModifierParsers = map[tokens.TokenType]func(*Parser) (string, any){
 		tokens.MATCH_RECOGNIZE: func(p *Parser) (string, any) { return "match", p.parseMatchRecognize() },

@@ -17,7 +17,7 @@ var digitChars = map[rune]bool{
 
 type TokenizerCore struct {
 	config TokenizerConfig
-	sql    []rune
+	input  runeView
 	size   int
 	tokens []Token
 
@@ -102,7 +102,7 @@ func NewTokenizerCore(cfg TokenizerConfig) *TokenizerCore {
 }
 
 func (c *TokenizerCore) reset() {
-	c.sql = nil
+	c.input = runeView{}
 	c.size = 0
 	c.tokens = nil
 	c.start = 0
@@ -118,8 +118,13 @@ func (c *TokenizerCore) reset() {
 
 func (c *TokenizerCore) Tokenize(sql string) (tokens []Token, err error) {
 	c.reset()
-	c.sql = []rune(sql)
-	c.size = len(c.sql)
+	c.input = newRuneView(sql)
+	c.size = c.input.len()
+	// Tokens average a few runes each; sizing the slice up front avoids repeated growth.
+	// The heuristic is intentionally loose — a short input still gets a small slice.
+	if capacity := c.size/4 + 8; capacity > 0 {
+		c.tokens = make([]Token, 0, capacity)
+	}
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -127,7 +132,7 @@ func (c *TokenizerCore) Tokenize(sql string) (tokens []Token, err error) {
 			end := minInt(c.current+50, c.size-1)
 			context := ""
 			if end > start {
-				context = string(c.sql[start:end])
+				context = c.input.slice(start, end)
 			}
 			err = &sqlerrors.TokenError{Msg: fmt.Sprintf("Error tokenizing '%s'", context)}
 			tokens = nil
@@ -135,6 +140,10 @@ func (c *TokenizerCore) Tokenize(sql string) (tokens []Token, err error) {
 	}()
 
 	c.scan(false)
+	if len(c.tokens) == 0 {
+		// Keep the empty result nil even though the slice may have been preallocated.
+		return nil, nil
+	}
 	return c.tokens, nil
 }
 
@@ -142,7 +151,7 @@ func (c *TokenizerCore) scan(checkSemicolon bool) {
 	for c.size > 0 && !c.end {
 		current := c.current
 		for current < c.size {
-			char := c.sql[current]
+			char := c.input.at(current)
 			if char == ' ' || char == '\t' {
 				current++
 			} else {
@@ -190,7 +199,7 @@ func (c *TokenizerCore) chars(size int) string {
 	if start < 0 || end > c.size {
 		return ""
 	}
-	return string(c.sql[start:end])
+	return c.input.slice(start, end)
 }
 
 func (c *TokenizerCore) advance(i int, alnum bool) {
@@ -207,11 +216,11 @@ func (c *TokenizerCore) advance(i int, alnum bool) {
 
 	c.current += i
 	c.end = c.current >= c.size
-	c.char = c.sql[c.current-1]
+	c.char = c.input.at(c.current - 1)
 	if c.end {
 		c.peek = 0
 	} else {
-		c.peek = c.sql[c.current]
+		c.peek = c.input.at(c.current)
 	}
 
 	if alnum && isAlnum(c.char) {
@@ -227,7 +236,7 @@ func (c *TokenizerCore) advance(i int, alnum bool) {
 			if _end {
 				_peek = 0
 			} else {
-				_peek = c.sql[_current]
+				_peek = c.input.at(_current)
 			}
 		}
 
@@ -235,12 +244,12 @@ func (c *TokenizerCore) advance(i int, alnum bool) {
 		c.current = _current
 		c.end = _end
 		c.peek = _peek
-		c.char = c.sql[_current-1]
+		c.char = c.input.at(_current - 1)
 	}
 }
 
 func (c *TokenizerCore) text() string {
-	return string(c.sql[c.start:c.current])
+	return c.input.slice(c.start, c.current)
 }
 
 func (c *TokenizerCore) add(tokenType TokenType, text ...string) {
@@ -267,7 +276,7 @@ func (c *TokenizerCore) add(tokenType TokenType, text ...string) {
 		tokenCount := len(c.tokens)
 		c.scan(true)
 		c.tokens = c.tokens[:tokenCount]
-		text := strings.TrimSpace(string(c.sql[start:c.current]))
+		text := strings.TrimSpace(c.input.slice(start, c.current))
 		if text != "" {
 			c.add(STRING, text)
 		}
@@ -300,7 +309,7 @@ func (c *TokenizerCore) scanKeywords() {
 		size++
 
 		if end < c.size {
-			char = c.sql[end]
+			char = c.input.at(end)
 			if c.singleTokens[char] != 0 {
 				singleToken = true
 			}
@@ -366,7 +375,7 @@ func (c *TokenizerCore) lineCommentSuppressed(commentStart string) bool {
 	if after >= c.size {
 		return false // EOF right after the marker — a valid (empty) comment (verified vs MySQL 8.4).
 	}
-	next := c.sql[after]
+	next := c.input.at(after)
 	// MySQL honors only ASCII whitespace/control after `--`; a non-ASCII space such as NBSP
 	// (U+00A0) does NOT start a comment (verified vs MySQL 8.4: `SELECT 1--<NBSP>2` errors,
 	// it is not `SELECT 1`). Restrict the comment trigger to ASCII, so a non-ASCII byte
@@ -396,7 +405,7 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 			if c.current+5 <= c.size {
 				gate = 0
 				for i := 0; i < 5; i++ {
-					digit := c.sql[c.current+i]
+					digit := c.input.at(c.current + i)
 					if digit < '0' || digit > '9' {
 						gate = -1
 						break
@@ -437,7 +446,7 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 
 		if activeMySQLComment {
 			bodyEnd := c.current - 1
-			bodyTokens, err := NewTokenizerCore(c.config).Tokenize(string(c.sql[bodyStart:bodyEnd]))
+			bodyTokens, err := NewTokenizerCore(c.config).Tokenize(c.input.slice(bodyStart, bodyEnd))
 			if err != nil {
 				panic(err)
 			}
@@ -528,7 +537,7 @@ func (c *TokenizerCore) scanNumber() {
 	for {
 		if digitChars[c.peek] {
 			end := c.current + 1
-			for end < c.size && digitChars[c.sql[end]] {
+			for end < c.size && digitChars[c.input.at(end)] {
 				end++
 			}
 			c.advance(end-c.current, false)
@@ -539,7 +548,7 @@ func (c *TokenizerCore) scanNumber() {
 			decimal = true
 			c.advance(1, false)
 		} else if (c.peek == '-' || c.peek == '+') && scientific == 1 {
-			if c.current+1 < c.size && digitChars[c.sql[c.current+1]] {
+			if c.current+1 < c.size && digitChars[c.input.at(c.current+1)] {
 				scientific++
 				c.advance(1, false)
 			} else {
@@ -752,25 +761,25 @@ func (c *TokenizerCore) extractString(delimiter string, escapes map[rune]bool, r
 
 	if delimSize == 1 {
 		pos := c.current - 1
-		end := indexRuneFrom(c.sql, delimRunes[0], pos)
-		if end != -1 && (end+1 >= c.size || c.sql[end+1] != delimRunes[0] || !escapes[delimRunes[0]]) && (!(len(c.unescapedSequences) > 0 || escapes['\\']) || indexRuneFrom(c.sql[:end], '\\', pos) == -1) {
-			newlines := countRune(c.sql[pos:end], '\n')
+		end := indexRuneFrom(c.input, delimRunes[0], pos, c.size)
+		if end != -1 && (end+1 >= c.size || c.input.at(end+1) != delimRunes[0] || !escapes[delimRunes[0]]) && (!(len(c.unescapedSequences) > 0 || escapes['\\']) || indexRuneFrom(c.input, '\\', pos, end) == -1) {
+			newlines := countRune(c.input, '\n', pos, end)
 			if newlines > 0 {
 				c.line += newlines
-				lastNewline := lastIndexRune(c.sql[pos:end], '\n')
-				c.col = end - (pos + lastNewline)
+				lastNewline := lastIndexRune(c.input, '\n', pos, end)
+				c.col = end - lastNewline
 			} else {
 				c.col += end - pos
 			}
 			c.current = end + 1
 			c.end = c.current >= c.size
-			c.char = c.sql[end]
+			c.char = c.input.at(end)
 			if c.end {
 				c.peek = 0
 			} else {
-				c.peek = c.sql[c.current]
+				c.peek = c.input.at(c.current)
 			}
-			return string(c.sql[pos:end])
+			return c.input.slice(pos, end)
 		}
 	}
 
@@ -816,7 +825,7 @@ func (c *TokenizerCore) extractString(delimiter string, escapes map[rune]bool, r
 
 			current := c.current - 1
 			c.advance(1, true)
-			text += string(c.sql[current : c.current-1])
+			text += c.input.slice(current, c.current-1)
 		}
 	}
 
@@ -849,37 +858,6 @@ func copyRuneSet(in map[rune]bool) map[rune]bool {
 		out[k] = v
 	}
 	return out
-}
-
-func indexRuneFrom(haystack []rune, needle rune, start int) int {
-	if start < 0 {
-		start = 0
-	}
-	for i := start; i < len(haystack); i++ {
-		if haystack[i] == needle {
-			return i
-		}
-	}
-	return -1
-}
-
-func countRune(values []rune, needle rune) int {
-	count := 0
-	for _, value := range values {
-		if value == needle {
-			count++
-		}
-	}
-	return count
-}
-
-func lastIndexRune(values []rune, needle rune) int {
-	for i := len(values) - 1; i >= 0; i-- {
-		if values[i] == needle {
-			return i
-		}
-	}
-	return -1
 }
 
 // ParseIntPython parses value exactly the way CPython's int(value, base) does, for the bases
