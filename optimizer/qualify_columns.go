@@ -117,6 +117,9 @@ func qualifyColumns(expression exp.Expression, schemaArg schema.SchemaType, expa
 	return expression
 }
 
+// ValidateQualifyColumns validates the qualify-columns pass over expression. sql is the
+// original statement text; it is accepted for upstream's error highlighting, which this port
+// does not implement yet.
 func ValidateQualifyColumns(expression exp.Expression, sql string) exp.Expression {
 	var allUnqualifiedColumns []exp.Expression
 	for _, scope := range traverseScopeForOptimizer(expression) {
@@ -140,7 +143,7 @@ func ValidateQualifyColumns(expression exp.Expression, sql string) exp.Expressio
 		// TODO(slice 4c): error-position highlighting once Node has meta.
 		panic(&sqlerrors.OptimizeError{Msg: fmt.Sprintf("Ambiguous column '%s'", firstColumn.Name())})
 	}
-	_ = sql
+	_ = sql // reserved for error-position highlighting (slice 4c)
 	return expression
 }
 
@@ -772,12 +775,7 @@ func expandStarsInScope(scope *Scope, resolver *Resolver, usingColumnTables map[
 	coalescedColumns := map[string]bool{}
 	dialect := resolver.dialect
 
-	pivots := scope.Pivots()
-	var pivot exp.Expression
-	if len(pivots) > 0 {
-		pivot = pivots[0]
-	}
-	_ = pivot
+	// TODO(slice 4c): PIVOT star expansion (scope.Pivots()) is not ported yet.
 
 	if dialect.SupportsStructStarExpansion {
 		for _, col := range scope.Stars() {

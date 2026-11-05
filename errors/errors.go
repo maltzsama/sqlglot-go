@@ -110,6 +110,9 @@ type Position struct {
 	End   int
 }
 
+// HighlightSQL underlines the given byte positions in sql and returns the surrounding context.
+// It panics when positions is empty: every caller derives the positions from a parsed error, so
+// an empty list is a programming error rather than bad user input.
 func HighlightSQL(sql string, positions [][2]int, ctxLen int) (formatted, startContext, highlight, endContext string) {
 	if len(positions) == 0 {
 		panic("positions must contain at least one (start, end) tuple")
@@ -157,7 +160,13 @@ func HighlightSQL(sql string, positions [][2]int, ctxLen int) (formatted, startC
 	return formatted, startContext, highlight, endContext
 }
 
+// ConcatMessages joins up to maximum errors with blank lines and appends an "... and N more"
+// summary. A negative maximum is treated as zero: the value is a count, and a negative bound
+// previously made the slice expression invalid.
 func ConcatMessages(errs []error, maximum int) string {
+	if maximum < 0 {
+		maximum = 0
+	}
 	limit := minInt(len(errs), maximum)
 	messages := make([]string, 0, limit+1)
 	for _, err := range errs[:limit] {

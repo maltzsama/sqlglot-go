@@ -253,7 +253,9 @@ func (p *Parser) parseTSQLFor() exp.Expression {
 }
 
 // parseTSQLConvert ports _parse_convert (parsers/tsql.py:652-658): CONVERT(type, expr[, style]).
-func (p *Parser) parseTSQLConvert(strict bool, safe any) exp.Expression {
+// strict is accepted for signature parity with the base parser; TSQL's override ignores it,
+// exactly like the reference.
+func (p *Parser) parseTSQLConvert(_ bool, safe any) exp.Expression {
 	this := p.parseTypes(false, false, true, false)
 	p.match(tokens.COMMA)
 	args := []exp.Expression{this}
@@ -264,7 +266,6 @@ func (p *Parser) parseTSQLConvert(strict bool, safe any) exp.Expression {
 		"style":      seqGetExpr(args, 2),
 		"safe":       safe,
 	})
-	_ = strict
 	return convert
 }
 
