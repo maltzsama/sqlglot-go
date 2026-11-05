@@ -30,6 +30,12 @@ func init() {
 	dispatch[expressions.KindTriggerExecute] = (*Generator).triggerExecuteSQL
 	dispatch[expressions.KindTriggerEvent] = (*Generator).triggerEventSQL
 	dispatch[expressions.KindTriggerReferencing] = (*Generator).triggerReferencingSQL
+	// distributedbyproperty_sql (generator.py:4931-4939).
+	dispatch[expressions.KindDistributedByProperty] = (*Generator).distributedByPropertySQL
+	// duplicatekeyproperty_sql (generator.py:4920-4923).
+	dispatch[expressions.KindDuplicateKeyProperty] = func(g *Generator, e expressions.Expression) string {
+		return "DUPLICATE KEY (" + g.expressions(exprsOptions{expression: e, flat: true}) + ")"
+	}
 }
 
 // propertiesSQL ports properties_sql (generator.py:2019-2042). CREATE first buckets the
@@ -249,4 +255,17 @@ func (g *Generator) triggerReferencingSQL(e expressions.Expression) string {
 		parts = append(parts, "NEW TABLE AS "+new)
 	}
 	return "REFERENCING " + strings.Join(parts, " ")
+}
+
+// distributedByPropertySQL ports distributedbyproperty_sql (generator.py:4931-4939).
+func (g *Generator) distributedByPropertySQL(e expressions.Expression) string {
+	expressionsSQL := g.expressions(exprsOptions{expression: e, flat: true})
+	if expressionsSQL != "" {
+		expressionsSQL = " (" + expressionsSQL + ")"
+	}
+	buckets := g.sqlKey(e, "buckets")
+	if buckets != "" {
+		buckets = " BUCKETS " + buckets
+	}
+	return "DISTRIBUTED BY " + g.sqlKey(e, "kind") + expressionsSQL + buckets + g.sqlKey(e, "order")
 }

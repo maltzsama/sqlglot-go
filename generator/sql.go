@@ -2851,7 +2851,10 @@ func (g *Generator) tableParts(e expressions.Expression) string {
 
 func (g *Generator) tableColumnSQL(e expressions.Expression) string { return g.sqlKey(e, "this") }
 
-func (g *Generator) tableSQL(e expressions.Expression) string {
+func (g *Generator) tableSQL(e expressions.Expression) string { return g.tableSQLSep(e, " AS ") }
+
+// tableSQLSep is tableSQL with an explicit alias separator (generators/doris.py:614-619).
+func (g *Generator) tableSQLSep(e expressions.Expression, sep string) string {
 	table := g.tableParts(e)
 	only := ""
 	if boolValue(e.Arg("only")) {
@@ -2867,7 +2870,7 @@ func (g *Generator) tableSQL(e expressions.Expression) string {
 	}
 	alias := g.sqlKey(e, "alias")
 	if alias != "" {
-		alias = " AS " + alias
+		alias = sep + alias
 	}
 	sample := g.sqlKey(e, "sample")
 	postAlias := ""

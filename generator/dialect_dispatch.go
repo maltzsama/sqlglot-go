@@ -22,6 +22,7 @@ var (
 	dialectPropertyLocations   = map[string]map[expressions.Kind]propertyLocation{}
 	dialectParents             = map[string]string{
 		"starrocks":    "mysql",
+		"doris":        "mysql",
 		"trino":        "presto",
 		"athena-trino": "trino",
 		"athena-hive":  "hive",

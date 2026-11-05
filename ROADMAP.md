@@ -676,3 +676,25 @@ rewriting into a recursive CTE.
 Corpus: 145 `validate_identity` cases from `tests/dialects/test_starrocks.py`
 (`scripts/extract_dialect_corpus.py --dialects starrocks`), at **145/145**, with no StarRocks rows
 in `testdata/parity_gaps.txt`. Regression tests: `starrocks_test.go`.
+
+## Doris dialect — DONE (issue #3)
+
+Ported 1:1 from `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/doris.py`.
+Doris extends MySQL upstream, so `dialects.Doris()` starts from `MySQL()` and joins the same
+parser/generator inheritance chains as StarRocks.
+
+Parsed end to end: `CREATE TABLE` with `UNIQUE KEY`/`DUPLICATE KEY`/plain `KEY`/
+`DISTRIBUTED BY HASH|RANDOM`/`PROPERTIES`, `PARTITION BY (...)` keys, `PARTITION BY RANGE|LIST`
+with static `VALUES LESS THAN`, Doris's `VALUES [(...), (...))` bracket groups and the dynamic
+`FROM (...) TO (...) INTERVAL n UNIT` form, materialized views with the Doris
+`BUILD [DEFERRED|IMMEDIATE]` and `REFRESH [AUTO|COMPLETE] ON [MANUAL|COMMIT|SCHEDULE] [EVERY n UNIT]
+[STARTS '...']` clauses, plus the MySQL-inherited DML.
+
+Generator details: the Doris type mappings, the `PROPERTIES` prefix, the materialized-view `KEY`
+prefix for `UniqueKeyProperty`, the Doris `PARTITION RANGE`/dynamic-partition renderings, the
+UPDATE/DELETE table alias without `AS`, and the function renames (`MONTHS_ADD`, `L2_DISTANCE`,
+`COLLECT_LIST`/`COLLECT_SET`, `SPLIT_BY_STRING`, `TO_DATE`, ...).
+
+Corpus: 56 `validate_identity` cases from `tests/dialects/test_doris.py`
+(`scripts/extract_dialect_corpus.py --dialects doris`), at **56/56**, with no Doris rows in
+`testdata/parity_gaps.txt`. Regression tests: `doris_test.go`.

@@ -839,6 +839,9 @@ const (
 	KindDistributedByProperty
 	KindGenerateDateArray
 	KindRowNumber
+	KindBuildProperty
+	KindDuplicateKeyProperty
+	KindStringToArray
 )
 
 type Trait uint32
@@ -1558,6 +1561,9 @@ var argTypes = map[Kind][]argSpec{
 	KindDistributedByProperty:           {{"expressions", false}, {"kind", false}, {"buckets", false}, {"order", false}},
 	KindGenerateDateArray:               {{"start", true}, {"end", true}, {"step", false}},
 	KindRowNumber:                       {{"this", false}},
+	KindBuildProperty:                   {{"this", true}},
+	KindDuplicateKeyProperty:            {{"expressions", true}},
+	KindStringToArray:                   {{"this", true}, {"expression", false}, {"null", false}},
 }
 
 var traitsOf = map[Kind]Trait{
@@ -1916,6 +1922,7 @@ var traitsOf = map[Kind]Trait{
 	KindFlatten:       TraitCondition | TraitFunc,
 	KindArrayToString: TraitCondition | TraitFunc,
 	KindRowNumber:     TraitCondition | TraitFunc,
+	KindStringToArray: TraitCondition | TraitFunc,
 }
 
 var primitive = map[Kind]bool{
@@ -2514,6 +2521,9 @@ var className = map[Kind]string{
 	KindDistributedByProperty:           "DistributedByProperty",
 	KindGenerateDateArray:               "GenerateDateArray",
 	KindRowNumber:                       "RowNumber",
+	KindBuildProperty:                   "BuildProperty",
+	KindDuplicateKeyProperty:            "DuplicateKeyProperty",
+	KindStringToArray:                   "StringToArray",
 }
 
 // varLenArgs is the authoritative is_var_len_args=True set (mirroring the upstream Func

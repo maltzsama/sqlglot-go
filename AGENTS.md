@@ -5,7 +5,7 @@ parser, generator, and optimizer). It ports the **parse → AST → generate** c
 parser, generator, schema) plus the `qualify` and `scope` optimizer passes that column qualification
 and **lineage** build on. It is **not** a full port of sqlglot: the rest of the optimizer (simplify,
 normalize, pushdown/eliminate/merge/unnest passes, the `optimize()` orchestrator), cross-dialect
-transpilation, and dialects beyond the ones `dialects.GetOrRaise` registers (base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks) are out of scope for now. This repo is
+transpilation, and dialects beyond the ones `dialects.GetOrRaise` registers (base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris) are out of scope for now. This repo is
 the SQL engine only; it has no application-specific code.
 
 ## Source of truth (READ THIS FIRST, always)
@@ -54,7 +54,7 @@ correctness rationale (matches the DB) or an explicit, tracked feature decision 
 MySQL + Postgres — **1847/1847** identity-corpus cases (base 955/955, MySQL 424/424, Postgres 468/468),
 enforced by a monotonic corpus floor (`corpus_test.go` + `testdata/parity_gaps.txt`, now empty). AST
 fidelity is enforced too: no statement fakes a round-trip via a raw-text `exp.Command` where upstream
-builds a structured node (`fidelity_test.go` + `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, and StarRocks: the
+builds a structured node (`fidelity_test.go` + `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, and Doris: the
 tokenizer, the AST + node model, the parser, the generator (`Expression → SQL`),
 `schema.MappingSchema` + `DataType.build`, the `qualify` pass (qualify_tables → normalize_identifiers →
 qualify_columns → quote_identifiers → validate), and `traverse_scope` + the full `Scope` API.
