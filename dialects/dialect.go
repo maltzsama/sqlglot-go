@@ -371,6 +371,32 @@ type Dialect struct {
 	// SetOpModifiers ports parser.py:1867 SET_OP_MODIFIERS: which query modifiers attach to
 	// the UNION node rather than its right operand. TSQL keeps only OFFSET there.
 	SetOpModifiers map[string]bool
+	// OptionalAliasTokenCTE ports parser.py:1899 OPTIONAL_ALIAS_TOKEN_CTE: when false
+	// (ClickHouse, parsers/clickhouse.py:246), a CTE requires the explicit AS keyword
+	// (parser.py:4218).
+	OptionalAliasTokenCTE bool
+	// PreserveOriginalNames ports dialect.py:405 PRESERVE_ORIGINAL_NAMES: a function parsed
+	// through a known builder records its original spelling in meta["name"], and the
+	// function fallback renders that name instead of the class's canonical name
+	// (parser.py:7283-7284, generator.py:4680-4681).
+	PreserveOriginalNames bool
+	// StructDelimiter ports generator.py:679 STRUCT_DELIMITER: the delimiters around a
+	// nested DataType's parameter list (default `<...>`; ClickHouse uses `(...)`).
+	StructDelimiter [2]string
+	// AutoRefreshBareIntervals ports generator.py:340 AUTO_REFRESH_BARE_INTERVALS: a
+	// REFRESH schedule interval renders without the INTERVAL keyword (ClickHouse).
+	AutoRefreshBareIntervals bool
+	// ExtraFuncTokens ports a dialect's FUNC_TOKENS additions (parsers/clickhouse.py:330-336
+	// adds AND/FILE/OR/SET): a keyword token in this set starts a function call.
+	ExtraFuncTokens map[tokens.TokenType]bool
+	// RemovedFunctions names base FUNCTIONS entries a dialect drops
+	// (parsers/clickhouse.py:250-254 removes TRANSFORM and APPROX_TOP_SUM).
+	RemovedFunctions map[string]bool
+	// EscapedSequences ports a dialect's ESCAPED_SEQUENCES table (dialect.py:66-90, derived
+	// from UNESCAPED_SEQUENCES): nil keeps the default control-character set.
+	EscapedSequences map[byte]string
+	// ExtraIdVarTokens ports ID_VAR_TOKENS additions (parsers/clickhouse.py:340-343 adds LIKE).
+	ExtraIdVarTokens map[tokens.TokenType]bool
 }
 
 func Base() *Dialect {
@@ -518,6 +544,10 @@ func Base() *Dialect {
 		ReturningEnd: true,
 		// parser.py:1867 SET_OP_MODIFIERS defaults to order/limit/offset.
 		SetOpModifiers: map[string]bool{"order": true, "limit": true, "offset": true},
+		// parser.py:1899 OPTIONAL_ALIAS_TOKEN_CTE defaults to True.
+		OptionalAliasTokenCTE: true,
+		// generator.py:679 STRUCT_DELIMITER defaults to ("<", ">").
+		StructDelimiter: [2]string{"<", ">"},
 	}
 }
 
@@ -652,6 +682,8 @@ func dialectByName(name string) (*Dialect, error) {
 		return Athena(), nil
 	case "tsql":
 		return TSQL(), nil
+	case "clickhouse":
+		return Clickhouse(), nil
 	default:
 		return nil, fmt.Errorf("unknown dialect %q", name)
 	}

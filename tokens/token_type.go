@@ -449,6 +449,9 @@ const (
 	NAMESPACE
 	EXPORT
 	HIVE_TOKEN_STREAM
+	// ClickHouse cluster (dialects/clickhouse.py:110): the PROJECTION keyword opening a
+	// CREATE TABLE projection definition.
+	PROJECTION
 	SENTINEL
 )
 
@@ -897,6 +900,7 @@ var tokenTypeNames = map[TokenType]string{
 	NAMESPACE:               "NAMESPACE",
 	EXPORT:                  "EXPORT",
 	HIVE_TOKEN_STREAM:       "HIVE_TOKEN_STREAM",
+	PROJECTION:              "PROJECTION",
 	SENTINEL:                "SENTINEL",
 }
 

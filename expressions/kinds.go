@@ -750,6 +750,71 @@ const (
 	KindNextValueFor
 	KindClusteredColumnConstraint
 	KindNonClusteredColumnConstraint
+
+	// ClickHouse cluster (parsers/clickhouse.py, generators/clickhouse.py): aggregate
+	// combinators, array helpers, JSON path parts, and ClickHouse-only DDL nodes.
+	KindArrayDistinct
+	KindArrayConcat
+	KindArrayFilter
+	KindArrayRemove
+	KindArrayReverse
+	KindArraySum
+	KindArrayMax
+	KindArrayMin
+	KindArgMax
+	KindArgMin
+	KindCityHash64
+	KindCurrentDatabase
+	KindCurrentSchemas
+	KindCosineDistance
+	KindDateSub
+	KindExplode
+	KindFarmFingerprint
+	KindIsNan
+	KindJarowinklerSimilarity
+	KindJSONPathKey
+	KindJSONPathRoot
+	KindJSONPathSubscript
+	KindMap
+	KindMedian
+	KindNullif
+	KindRand
+	KindStartsWith
+	KindEndsWith
+	KindEuclideanDistance
+	KindTimestampSub
+	KindTypeof
+	KindParseDatetime
+	KindDetach
+	KindOnCluster
+	KindPartitionId
+	KindReplacePartition
+	KindProjectionDef
+	KindNestedJSONSelect
+	KindAutoRefreshProperty
+	KindUuidProperty
+	KindApply
+	KindColumns
+	KindAssumeColumnConstraint
+	KindAlterModifySqlSecurity
+	KindCombinedAggFunc
+	KindParameterizedAgg
+	KindAnonymousAggFunc
+	KindCombinedParameterizedAgg
+	KindFunctionSpecification
+	KindSettingsProperty
+	KindMergeTreeTTL
+	KindMergeTreeTTLAction
+	KindDictProperty
+	KindDictSubProperty
+	KindDictRange
+	KindSampleProperty
+	KindArrayCompact
+	KindArrayExcept
+	KindSubstringIndex
+	KindUtcTimestamp
+	KindWithFill
+	KindSkipJSONColumn
 )
 
 type Trait uint32
@@ -1386,6 +1451,70 @@ var argTypes = map[Kind][]argSpec{
 	KindNextValueFor:                 {{"this", true}, {"order", false}},
 	KindClusteredColumnConstraint:    defaultArgTypes,
 	KindNonClusteredColumnConstraint: defaultArgTypes,
+
+	// ClickHouse cluster.
+	KindArrayDistinct:            {{"this", true}, {"check_null", false}},
+	KindArrayConcat:              {{"this", true}, {"expressions", false}, {"null_propagation", false}},
+	KindArrayFilter:              {{"this", true}, {"expression", true}},
+	KindArrayRemove:              {{"this", true}, {"expression", true}, {"null_propagation", false}},
+	KindArrayReverse:             {{"this", true}},
+	KindArraySum:                 {{"this", true}, {"expression", false}},
+	KindArrayMax:                 {{"this", true}},
+	KindArrayMin:                 {{"this", true}},
+	KindArgMax:                   {{"this", true}, {"expression", true}, {"count", false}},
+	KindArgMin:                   {{"this", true}, {"expression", true}, {"count", false}},
+	KindCityHash64:               {{"expressions", false}},
+	KindCurrentDatabase:          {},
+	KindCurrentSchemas:           {{"this", false}},
+	KindCosineDistance:           {{"this", true}, {"expression", true}},
+	KindDateSub:                  {{"this", true}, {"expression", true}, {"unit", false}},
+	KindExplode:                  {{"this", true}, {"expressions", false}},
+	KindFarmFingerprint:          {{"expressions", true}},
+	KindIsNan:                    {{"this", true}},
+	KindJarowinklerSimilarity:    {{"this", true}, {"expression", true}, {"case_insensitive", false}, {"integer_scale", false}},
+	KindJSONPathKey:              {{"this", true}, {"quoted", false}},
+	KindJSONPathRoot:             {},
+	KindJSONPathSubscript:        {{"this", true}},
+	KindMap:                      {{"keys", false}, {"values", false}},
+	KindMedian:                   {{"this", true}},
+	KindNullif:                   {{"this", true}, {"expression", true}},
+	KindRand:                     {{"this", false}, {"lower", false}, {"upper", false}},
+	KindStartsWith:               {{"this", true}, {"expression", true}},
+	KindEndsWith:                 {{"this", true}, {"expression", true}},
+	KindEuclideanDistance:        {{"this", true}, {"expression", true}},
+	KindTimestampSub:             {{"this", true}, {"expression", true}, {"unit", false}},
+	KindTypeof:                   {{"this", true}},
+	KindParseDatetime:            {{"this", true}, {"format", false}, {"zone", false}, {"default_year", false}},
+	KindDetach:                   {{"this", true}, {"kind", false}, {"exists", false}, {"cluster", false}, {"permanent", false}, {"sync", false}},
+	KindOnCluster:                {{"this", true}},
+	KindPartitionId:              {{"this", true}},
+	KindReplacePartition:         {{"expression", true}, {"source", true}},
+	KindProjectionDef:            {{"this", true}, {"expression", true}},
+	KindNestedJSONSelect:         {{"this", true}, {"expression", true}},
+	KindAutoRefreshProperty:      {{"this", false}, {"cadence", false}, {"offset", false}, {"randomize", false}, {"expressions", false}, {"settings", false}, {"append", false}},
+	KindUuidProperty:             {{"this", true}},
+	KindApply:                    {{"this", true}, {"expression", true}},
+	KindColumns:                  {{"this", true}, {"unpack", false}},
+	KindAssumeColumnConstraint:   {{"this", true}},
+	KindAlterModifySqlSecurity:   {{"expressions", true}},
+	KindCombinedAggFunc:          {{"this", true}, {"expressions", false}},
+	KindParameterizedAgg:         {{"this", true}, {"expressions", true}, {"params", true}},
+	KindAnonymousAggFunc:         {{"this", true}, {"expressions", false}},
+	KindCombinedParameterizedAgg: {{"this", true}, {"expressions", true}, {"params", true}},
+	KindFunctionSpecification:    {{"this", true}, {"characteristics", false}, {"properties", false}, {"expression", true}},
+	KindSettingsProperty:         {{"expressions", true}},
+	KindMergeTreeTTL:             {{"expressions", true}, {"where", false}, {"group", false}, {"aggregates", false}},
+	KindMergeTreeTTLAction:       {{"this", true}, {"delete", false}, {"recompress", false}, {"to_disk", false}, {"to_volume", false}},
+	KindDictProperty:             {{"this", true}, {"kind", true}, {"settings", false}},
+	KindDictSubProperty:          {{"this", true}, {"value", true}},
+	KindDictRange:                {{"this", true}, {"min", true}, {"max", true}},
+	KindSampleProperty:           {{"this", true}},
+	KindArrayCompact:             {{"this", true}},
+	KindArrayExcept:              {{"this", true}, {"expression", true}, {"is_multiset", false}},
+	KindSubstringIndex:           {{"this", true}, {"delimiter", true}, {"count", true}},
+	KindUtcTimestamp:             {{"this", false}},
+	KindWithFill:                 {{"from_", false}, {"to", false}, {"step", false}, {"interpolate", false}},
+	KindSkipJSONColumn:           {{"expression", true}, {"regexp", false}},
 }
 
 var traitsOf = map[Kind]Trait{
@@ -1691,6 +1820,53 @@ var traitsOf = map[Kind]Trait{
 	KindNumberToStr:         TraitCondition | TraitFunc,
 	KindIsAscii:             TraitCondition | TraitFunc,
 	KindNextValueFor:        TraitCondition | TraitFunc,
+
+	// ClickHouse cluster.
+	KindArrayDistinct:            TraitCondition | TraitFunc,
+	KindArrayConcat:              TraitCondition | TraitFunc,
+	KindArrayFilter:              TraitCondition | TraitFunc,
+	KindArrayRemove:              TraitCondition | TraitFunc,
+	KindArrayReverse:             TraitCondition | TraitFunc,
+	KindArraySum:                 TraitCondition | TraitFunc,
+	KindArrayMax:                 TraitCondition | TraitFunc,
+	KindArrayMin:                 TraitCondition | TraitFunc,
+	KindArgMax:                   TraitCondition | TraitFunc | TraitAggFunc,
+	KindArgMin:                   TraitCondition | TraitFunc | TraitAggFunc,
+	KindCityHash64:               TraitCondition | TraitFunc,
+	KindCurrentDatabase:          TraitCondition | TraitFunc,
+	KindCurrentSchemas:           TraitCondition | TraitFunc,
+	KindCosineDistance:           TraitCondition | TraitFunc,
+	KindDateSub:                  TraitCondition | TraitFunc,
+	KindExplode:                  TraitCondition | TraitFunc | TraitUDTF | TraitDerivedTable,
+	KindFarmFingerprint:          TraitCondition | TraitFunc,
+	KindIsNan:                    TraitCondition | TraitFunc,
+	KindJarowinklerSimilarity:    TraitCondition | TraitFunc,
+	KindMap:                      TraitCondition | TraitFunc,
+	KindMedian:                   TraitCondition | TraitFunc | TraitAggFunc,
+	KindNullif:                   TraitCondition | TraitFunc,
+	KindRand:                     TraitCondition | TraitFunc,
+	KindStartsWith:               TraitCondition | TraitFunc,
+	KindEndsWith:                 TraitCondition | TraitFunc,
+	KindEuclideanDistance:        TraitCondition | TraitFunc,
+	KindTimestampSub:             TraitCondition | TraitFunc,
+	KindTypeof:                   TraitCondition | TraitFunc,
+	KindParseDatetime:            TraitCondition | TraitFunc,
+	KindDetach:                   TraitDDL,
+	KindPartitionId:              TraitDDL,
+	KindReplacePartition:         TraitDDL,
+	KindProjectionDef:            TraitDDL,
+	KindNestedJSONSelect:         TraitCondition | TraitBinary,
+	KindApply:                    TraitCondition | TraitFunc,
+	KindColumns:                  TraitCondition | TraitFunc,
+	KindAlterModifySqlSecurity:   TraitDDL,
+	KindCombinedAggFunc:          TraitCondition | TraitFunc | TraitAggFunc,
+	KindParameterizedAgg:         TraitCondition | TraitFunc | TraitAggFunc,
+	KindAnonymousAggFunc:         TraitCondition | TraitFunc | TraitAggFunc,
+	KindCombinedParameterizedAgg: TraitCondition | TraitFunc | TraitAggFunc,
+	KindArrayCompact:             TraitCondition | TraitFunc,
+	KindArrayExcept:              TraitCondition | TraitFunc,
+	KindSubstringIndex:           TraitCondition | TraitFunc,
+	KindUtcTimestamp:             TraitCondition | TraitFunc,
 }
 
 var primitive = map[Kind]bool{
@@ -2206,6 +2382,70 @@ var className = map[Kind]string{
 	KindNextValueFor:                 "NextValueFor",
 	KindClusteredColumnConstraint:    "ClusteredColumnConstraint",
 	KindNonClusteredColumnConstraint: "NonClusteredColumnConstraint",
+
+	// ClickHouse cluster.
+	KindArrayDistinct:            "ArrayDistinct",
+	KindArrayConcat:              "ArrayConcat",
+	KindArrayFilter:              "ArrayFilter",
+	KindArrayRemove:              "ArrayRemove",
+	KindArrayReverse:             "ArrayReverse",
+	KindArraySum:                 "ArraySum",
+	KindArrayMax:                 "ArrayMax",
+	KindArrayMin:                 "ArrayMin",
+	KindArgMax:                   "ArgMax",
+	KindArgMin:                   "ArgMin",
+	KindCityHash64:               "CityHash64",
+	KindCurrentDatabase:          "CurrentDatabase",
+	KindCurrentSchemas:           "CurrentSchemas",
+	KindCosineDistance:           "CosineDistance",
+	KindDateSub:                  "DateSub",
+	KindExplode:                  "Explode",
+	KindFarmFingerprint:          "FarmFingerprint",
+	KindIsNan:                    "IsNan",
+	KindJarowinklerSimilarity:    "JarowinklerSimilarity",
+	KindJSONPathKey:              "JSONPathKey",
+	KindJSONPathRoot:             "JSONPathRoot",
+	KindJSONPathSubscript:        "JSONPathSubscript",
+	KindMap:                      "Map",
+	KindMedian:                   "Median",
+	KindNullif:                   "Nullif",
+	KindRand:                     "Rand",
+	KindStartsWith:               "StartsWith",
+	KindEndsWith:                 "EndsWith",
+	KindEuclideanDistance:        "EuclideanDistance",
+	KindTimestampSub:             "TimestampSub",
+	KindTypeof:                   "Typeof",
+	KindParseDatetime:            "ParseDatetime",
+	KindDetach:                   "Detach",
+	KindOnCluster:                "OnCluster",
+	KindPartitionId:              "PartitionId",
+	KindReplacePartition:         "ReplacePartition",
+	KindProjectionDef:            "ProjectionDef",
+	KindNestedJSONSelect:         "NestedJSONSelect",
+	KindAutoRefreshProperty:      "AutoRefreshProperty",
+	KindUuidProperty:             "UuidProperty",
+	KindApply:                    "Apply",
+	KindColumns:                  "Columns",
+	KindAssumeColumnConstraint:   "AssumeColumnConstraint",
+	KindAlterModifySqlSecurity:   "AlterModifySqlSecurity",
+	KindCombinedAggFunc:          "CombinedAggFunc",
+	KindParameterizedAgg:         "ParameterizedAgg",
+	KindAnonymousAggFunc:         "AnonymousAggFunc",
+	KindCombinedParameterizedAgg: "CombinedParameterizedAgg",
+	KindFunctionSpecification:    "FunctionSpecification",
+	KindSettingsProperty:         "SettingsProperty",
+	KindMergeTreeTTL:             "MergeTreeTTL",
+	KindMergeTreeTTLAction:       "MergeTreeTTLAction",
+	KindDictProperty:             "DictProperty",
+	KindDictSubProperty:          "DictSubProperty",
+	KindDictRange:                "DictRange",
+	KindSampleProperty:           "SampleProperty",
+	KindArrayCompact:             "ArrayCompact",
+	KindArrayExcept:              "ArrayExcept",
+	KindSubstringIndex:           "SubstringIndex",
+	KindUtcTimestamp:             "UtcTimestamp",
+	KindWithFill:                 "WithFill",
+	KindSkipJSONColumn:           "SkipJSONColumn",
 }
 
 // varLenArgs is the authoritative is_var_len_args=True set (mirroring the upstream Func
@@ -2233,6 +2473,14 @@ var varLenArgs = map[Kind]bool{
 	KindMD5Digest: true,
 	// hive cluster: VarMap is_var_len_args=True (array.py:339-341).
 	KindVarMap: true,
+
+	// ClickHouse cluster: is_var_len_args = True.
+	KindArrayConcat:      true,
+	KindCityHash64:       true,
+	KindFarmFingerprint:  true,
+	KindExplode:          true,
+	KindCombinedAggFunc:  true,
+	KindAnonymousAggFunc: true,
 }
 
 // ArgKeys returns the arg keys of a Kind in class-declaration order (mirrors

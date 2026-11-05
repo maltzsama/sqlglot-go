@@ -540,6 +540,11 @@ func listFromValue(value any) []any {
 
 func (g *Generator) opExpressions(op string, e expressions.Expression, flat ...bool) string {
 	isFlat := len(flat) > 0 && flat[0]
+	// generator.py:4781: an expression nested directly in a Properties node renders flat, so
+	// `ORDER BY ...` properties do not carry their own leading separator.
+	if !isFlat && e.Parent() != nil && e.Parent().Kind() == expressions.KindProperties {
+		isFlat = true
+	}
 	expressionsSQL := g.expressions(exprsOptions{expression: e, flat: isFlat})
 	if isFlat {
 		return op + " " + expressionsSQL
@@ -610,7 +615,14 @@ func (g *Generator) normalizeFunc(name string) string {
 }
 
 func (g *Generator) functionFallbackSQL(e expressions.Expression) string {
-	return g.funcCall(g.sqlName(e.Kind()), g.fallbackArgs(e), "(", ")", true)
+	name := g.sqlName(e.Kind())
+	// generator.py:4680-4681: PRESERVE_ORIGINAL_NAMES renders the parsed spelling.
+	if g.dialect.PreserveOriginalNames {
+		if original, ok := e.MetaGet("name").(string); ok && original != "" {
+			name = original
+		}
+	}
+	return g.funcCall(name, g.fallbackArgs(e), "(", ")", true)
 }
 
 // fallbackArgs gathers an expression's argument values in ArgKeys (declared) order,

@@ -86,6 +86,14 @@ func (p *Parser) parseInsert() exp.Expression {
 			replaceUsing = p.parseUsingIdentifiers()
 		}
 	}
+	// parser.py:3659-3666: PARTITION BY / SETTINGS clauses before the source.
+	var partition, settings exp.Expression
+	if p.match(tokens.PARTITION_BY) {
+		partition = p.parsePartitionedBy()
+	}
+	if p.matchTextSeq("SETTINGS") {
+		settings = p.parseSettingsProperty()
+	}
 	default_ := p.matchTextSeq("DEFAULT", "VALUES")
 	expression := setValues
 	if expression == nil {
@@ -113,6 +121,8 @@ func (p *Parser) parseInsert() exp.Expression {
 		"where":       where,
 		"using":       replaceUsing,
 		"default":     default_,
+		"partition":   partition,
+		"settings":    settings,
 		"expression":  expression,
 		"conflict":    conflict,
 	}
@@ -174,6 +184,11 @@ func (p *Parser) parseDelete() exp.Expression {
 	if p.match(tokens.FROM) {
 		this = p.parseTable(false, true, nil, false, false, false, false)
 	}
+	// parsers/clickhouse.py:2411 (via the shared _parse_delete): ON CLUSTER.
+	var cluster exp.Expression
+	if p.match(tokens.ON) {
+		cluster = p.parseOnProperty()
+	}
 	var using []exp.Expression
 	if p.match(tokens.USING) {
 		using = p.parseCsv(tableWithJoins)
@@ -187,6 +202,7 @@ func (p *Parser) parseDelete() exp.Expression {
 		"tables":    tables,
 		"this":      this,
 		"using":     using,
+		"cluster":   cluster,
 		"where":     where,
 		"returning": returning,
 		"order":     order,

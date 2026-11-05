@@ -615,3 +615,36 @@ in `corpus_test.go` are **600/613**, and the remaining 13 rows are the burndown 
 MERGE nested in a derived table, temporal `PERIOD FOR SYSTEM_TIME` / `SYSTEM_VERSIONING` DDL,
 `ALTER TABLE ... SET` option lists with interval values, `CREATE TABLE ... ON <filegroup>`,
 nested COPY parameter spacing, and one pretty-print case.
+
+## ClickHouse dialect — DONE (issue #3)
+
+Ported 1:1 from `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/clickhouse.py`.
+`dialects.GetOrRaise("clickhouse")` returns a real dialect: CASE_SENSITIVE normalization,
+`NORMALIZE_FUNCTIONS=False` (original function spelling preserved through
+`PRESERVE_ORIGINAL_NAMES`), `NULL_ORDERING=nulls_are_last`, `INDEX_OFFSET=1`,
+`NUMBERS_CAN_BE_UNDERSCORE_SEPARATED`, `IDENTIFIERS_CAN_START_WITH_DIGIT`, `0b`/`0x` literals,
+`$tag$...$tag$` heredocs, `#`/`#!` comments, `FLOAT32`/`FLOAT64`/`UINT*`/`DATE32`/`DATETIME64`/
+`ENUM8/16`/`LowCardinality`/`Map`/`Nested`/`Tuple` types, `.^`/`.:` column operators, `SAMPLE`,
+`PREWHERE`, `FINAL`, `GLOBAL IN`, `ON CLUSTER`, `SETTINGS`/`FORMAT` query modifiers, the
+aggregate-combinator resolver (`sumIf`/`sumMergeState`/`quantiles(0.5)(x)`), `COLUMNS(...) APPLY`
+chains, brace query parameters, JSON type arguments (`SKIP`, `max_dynamic_paths`), and the
+`FUNCTIONS` overlay (TOSTARTOF*/TOMONDAY, DATE_ADD/DATE_DIFF/DATE_SUB, splitBy*, map, has, uniq,
+countIf, ...).
+
+Parsed end to end: `SELECT ... PREWHERE ... FINAL`, `ARRAY JOIN`, `GLOBAL ANY LEFT JOIN`,
+`ORDER BY ... WITH FILL [FROM/TO/STEP/INTERPOLATE]`, `GROUP BY ... WITH TOTALS`,
+`INSERT INTO FUNCTION ... PARTITION BY ... SETTINGS ... SELECT`, `DETACH`/`ATTACH`/`EXCHANGE`,
+`CREATE TABLE` with `ENGINE`/`ORDER BY`/`PARTITION BY`/`TTL`/`SETTINGS`/`SAMPLE BY`/`CODEC`/
+`ASSUME`/`PROJECTION`, `CREATE DICTIONARY` (`SOURCE`/`LAYOUT`/`LIFETIME`/`RANGE`), `ALTER TABLE
+... MODIFY COLUMN|TTL|SQL SECURITY`, `DROP ... ON CLUSTER`, `DELETE ... ON CLUSTER`, and
+`CREATE FUNCTION ... AS lambda`.
+
+Corpus: `testdata/dialect_identity.jsonl` carries the 468 `validate_identity` cases extracted from
+`tests/dialects/test_clickhouse.py` (`scripts/extract_dialect_corpus.py --dialects clickhouse`,
+now part of the extractor's dialect list). The dialect is at **468/468**, with no ClickHouse rows
+in `testdata/parity_gaps.txt`. Shared fixes made while closing it: `opExpressions` renders flat
+when the node is a Properties child, join `global_`, `IN [..]` bracket lists, multi-character
+heredoc escape handling, per-dialect `ESCAPED_SEQUENCES`, and the `{**default, **override}`
+UNESCAPED_SEQUENCES merge. Regression tests: `clickhouse_test.go`
+(`TestClickhouseIdentity`, `TestClickhouseASTShapes`, `TestClickhouseDialectFlags`,
+`TestClickhouseQualifyAndScope`).

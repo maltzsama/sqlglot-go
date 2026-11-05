@@ -49,17 +49,22 @@ func (p *Parser) parseDrop() exp.Expression {
 
 	var cluster exp.Expression
 	if p.match(tokens.ON) {
-		// `DROP INDEX <idx> ON <table>` (MySQL): the ON-clause target is an OnProperty carrying the
-		// table (upstream Drop.cluster, parser.py:2325). divergence: upstream's shared _parse_on_property
-		// parses only a single id (_parse_schema(_parse_id_var), parser.py:3345), so it rejects the
-		// db-qualified `ON db.tbl` that real MySQL 8.0.46 accepts. Parse the full table parts here —
-		// scoped to DROP so CREATE/ALTER keep upstream's ON handling — so the qualifier survives. The
-		// missing-name case fails closed via parseTableParts' own raiseError. See DEVIATIONS §1.
-		target := p.parseTableParts(false, false, false, false)
-		if target.Arg("pivots") != nil {
-			p.raiseError("Invalid expression / Unexpected token")
+		if p.dialect.Name == "clickhouse" {
+			// ClickHouse `DROP ... ON CLUSTER <name>`.
+			cluster = p.parseOnProperty()
+		} else {
+			// `DROP INDEX <idx> ON <table>` (MySQL): the ON-clause target is an OnProperty carrying the
+			// table (upstream Drop.cluster, parser.py:2325). divergence: upstream's shared _parse_on_property
+			// parses only a single id (_parse_schema(_parse_id_var), parser.py:3345), so it rejects the
+			// db-qualified `ON db.tbl` that real MySQL 8.0.46 accepts. Parse the full table parts here —
+			// scoped to DROP so CREATE/ALTER keep upstream's ON handling — so the qualifier survives. The
+			// missing-name case fails closed via parseTableParts' own raiseError. See DEVIATIONS §1.
+			target := p.parseTableParts(false, false, false, false)
+			if target.Arg("pivots") != nil {
+				p.raiseError("Invalid expression / Unexpected token")
+			}
+			cluster = p.expression(exp.OnProperty(exp.Args{"this": target}), nil, nil)
 		}
-		cluster = p.expression(exp.OnProperty(exp.Args{"this": target}), nil, nil)
 	}
 
 	var expressions []exp.Expression

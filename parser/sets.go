@@ -788,6 +788,7 @@ var windowSides = map[string]bool{"FOLLOWING": true, "PRECEDING": true}
 var columnFastBailTokens = map[tokens.TokenType]bool{
 	tokens.DOT:         true,
 	tokens.DOTCOLON:    true,
+	tokens.DOTCARET:    true,
 	tokens.DCOLON:      true,
 	tokens.ARROW:       true,
 	tokens.DARROW:      true,

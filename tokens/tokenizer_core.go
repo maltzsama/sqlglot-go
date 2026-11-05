@@ -785,8 +785,8 @@ func (c *TokenizerCore) extractString(delimiter string, escapes map[rune]bool, r
 		}
 
 		isValidCustomEscape := len(c.escapeFollowChars) > 0 && c.char == '\\' && !c.escapeFollowChars[c.peek]
-		if (c.stringEscapesAllowedInRawStrings || !rawString) && escapes[c.char] && (c.peek == delimRunes[0] || escapes[c.peek] || isValidCustomEscape) && (!c.isQuote(c.char) || c.char == c.peek) {
-			if c.peek == delimRunes[0] {
+		if (c.stringEscapesAllowedInRawStrings || !rawString) && escapes[c.char] && (string(c.peek) == delimiter || escapes[c.peek] || isValidCustomEscape) && (!c.isQuote(c.char) || c.char == c.peek) {
+			if string(c.peek) == delimiter {
 				text += string(c.peek)
 			} else if isValidCustomEscape && c.char != c.peek {
 				text += string(c.peek)

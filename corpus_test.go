@@ -232,26 +232,28 @@ func writeGaps(fails map[gapKey]string) error {
 // Presto, and Hive, and TSQL. Their gaps in testdata/parity_gaps.txt are the generator-port
 // burndown list. Pass and total floors are monotonic: raise them, never lower them.
 const (
-	minPassBase     = 980
-	minPassMySQL    = 428
-	minPassPostgres = 468
-	minPassAthena   = 51
-	minPassTrino    = 67
-	minPassPresto   = 170
-	minPassHive     = 141
-	minPassTSQL     = 600
+	minPassBase       = 980
+	minPassMySQL      = 428
+	minPassPostgres   = 468
+	minPassAthena     = 51
+	minPassTrino      = 67
+	minPassPresto     = 170
+	minPassHive       = 141
+	minPassTSQL       = 600
+	minPassClickhouse = 468
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
 const (
-	minTotalBase     = 980
-	minTotalMySQL    = 428
-	minTotalPostgres = 468
-	minTotalAthena   = 51
-	minTotalTrino    = 115
-	minTotalPresto   = 170
-	minTotalHive     = 141
-	minTotalTSQL     = 613
+	minTotalBase       = 980
+	minTotalMySQL      = 428
+	minTotalPostgres   = 468
+	minTotalAthena     = 51
+	minTotalTrino      = 115
+	minTotalPresto     = 170
+	minTotalHive       = 141
+	minTotalTSQL       = 613
+	minTotalClickhouse = 468
 )
 
 // TestCorpus is the single round-trip harness for both the base-dialect
@@ -306,6 +308,7 @@ func TestCorpus(t *testing.T) {
 		{"presto", minPassPresto, minTotalPresto},
 		{"hive", minPassHive, minTotalHive},
 		{"tsql", minPassTSQL, minTotalTSQL},
+		{"clickhouse", minPassClickhouse, minTotalClickhouse},
 	}
 	var counts []string
 	for _, floor := range floors {

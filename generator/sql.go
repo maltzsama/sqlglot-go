@@ -325,6 +325,16 @@ func (g *Generator) escapeStrOpts(text string, opts escapeStrOptions) string {
 		// No target dialect here overrides UNESCAPED_SEQUENCES (only clickhouse/snowflake
 		// do, out of scope), so the table is hardcoded rather than threading a new
 		// per-dialect field just for this.
+		table := escapedSequences
+		if len(g.dialect.EscapedSequences) > 0 {
+			table = make(map[byte]string, len(escapedSequences)+len(g.dialect.EscapedSequences))
+			for k, v := range escapedSequences {
+				table[k] = v
+			}
+			for k, v := range g.dialect.EscapedSequences {
+				table[k] = v
+			}
+		}
 		var b strings.Builder
 		for i := 0; i < len(text); i++ {
 			c := text[i]
@@ -332,7 +342,7 @@ func (g *Generator) escapeStrOpts(text string, opts escapeStrOptions) string {
 				b.WriteByte(c)
 				continue
 			}
-			if esc, ok := escapedSequences[c]; ok {
+			if esc, ok := table[c]; ok {
 				b.WriteString(esc)
 			} else {
 				b.WriteByte(c)
@@ -610,7 +620,18 @@ func (g *Generator) afterLimitModifiers(e expressions.Expression) []string {
 	if locks != "" {
 		locks = " " + locks
 	}
-	return []string{locks, g.sqlKey(e, "sample")}
+	parts := []string{locks, g.sqlKey(e, "sample")}
+	// after_limit_modifiers override (generators/clickhouse.py:564-576): SETTINGS and
+	// FORMAT trail every other query modifier.
+	if g.isDialect("clickhouse") {
+		if truthy(e.Arg("settings")) {
+			parts = append(parts, g.seg("SETTINGS ")+g.expressions(exprsOptions{expression: e, key: "settings", flat: true}))
+		}
+		if truthy(e.Arg("format")) {
+			parts = append(parts, g.seg("FORMAT ")+g.sqlKey(e, "format"))
+		}
+	}
+	return parts
 }
 
 func (g *Generator) optionsModifier(e expressions.Expression) string {
@@ -804,7 +825,7 @@ func (g *Generator) groupSQL(e expressions.Expression) string {
 	)
 	if len(listFromValue(e.Arg("expressions"))) > 0 && groupings != "" {
 		trimmed := strings.TrimSpace(groupings)
-		if trimmed != "WITH CUBE" && trimmed != "WITH ROLLUP" {
+		if !strings.HasPrefix(trimmed, "WITH ") {
 			groupBy += ","
 		}
 	}
@@ -943,12 +964,11 @@ func (g *Generator) limitOptionsSQL(e expressions.Expression) string {
 func (g *Generator) joinSQL(e expressions.Expression) string {
 	side := e.Text("side")
 	kind := e.Text("kind")
-	opSQL := joinNonEmpty(" ", e.Text("method"), func() string {
-		if boolValue(e.Arg("global_")) {
-			return "GLOBAL"
-		}
-		return ""
-	}(), side, kind, e.Text("hint"))
+	globalSQL := ""
+	if global := e.Text("global_"); global != "" {
+		globalSQL = strings.ToUpper(global)
+	}
+	opSQL := joinNonEmpty(" ", e.Text("method"), globalSQL, side, kind, e.Text("hint"))
 	matchCond := g.sqlKey(e, "match_condition")
 	if matchCond != "" {
 		matchCond = " MATCH_CONDITION (" + matchCond + ")"
@@ -1720,6 +1740,13 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 		propertyLocations = g.locateProperties(properties)
 	}
 	this := g.sqlKey(e, "this")
+	// createable_sql override (generators/clickhouse.py:607-623): ClickHouse places
+	// ON CLUSTER / UUID / REFRESH right after the object name, before the schema columns.
+	if g.isDialect("clickhouse") && clickhouseOnClusterTargets[kind] {
+		if postName := propertyLocations[propertyLocationPostName]; len(postName) > 0 {
+			this = g.clickhouseCreateable(e, postName)
+		}
+	}
 
 	propertiesSQL := ""
 	postSchema := propertyLocations[propertyLocationPostSchema]
@@ -1996,7 +2023,11 @@ func (g *Generator) dataTypeSQL(e expressions.Expression) string {
 	}
 	if interior != "" {
 		if exprNested {
-			nested = "<" + interior + ">"
+			delims := g.dialect.StructDelimiter
+			if delims[0] == "" {
+				delims = [2]string{"<", ">"}
+			}
+			nested = delims[0] + interior + delims[1]
 			if e.Arg("values") != nil {
 				delims := [2]string{"(", ")"}
 				if typeValue == expressions.DTypeArray {
@@ -2511,10 +2542,17 @@ func (g *Generator) lateralSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) valuesSQL(e expressions.Expression) string {
+	return g.valuesSQLAsTable(e, g.dialect.ValuesAsTable)
+}
+
+// valuesSQLAsTable is valuesSQL with an explicit VALUES_AS_TABLE decision, so a dialect
+// whose choice depends on the node (ClickHouse, generators/clickhouse.py:701-712) can
+// override per call.
+func (g *Generator) valuesSQLAsTable(e expressions.Expression, valuesAsTable bool) string {
 	// generator.py:2676-2718 values_sql. A VALUES node stays a table constructor when the
 	// dialect sets VALUES_AS_TABLE, or when it is an INSERT source (not under FROM/JOIN);
 	// otherwise (MySQL, generators/mysql.py:139) it is rewritten into SELECT unions.
-	if g.dialect.ValuesAsTable || e.FindAncestor(expressions.KindFrom, expressions.KindJoin) == nil {
+	if valuesAsTable || e.FindAncestor(expressions.KindFrom, expressions.KindJoin) == nil {
 		args := g.expressions(exprsOptions{expression: e})
 		alias := g.sqlKey(e, "alias")
 		values := "VALUES" + g.seg("") + args
@@ -2651,6 +2689,18 @@ func (g *Generator) intervalSQL(e expressions.Expression) string {
 	}
 	if unit != "" {
 		unit = " " + unit
+	}
+
+	// generator.py:3956-3967: ClickHouse renders a REFRESH schedule interval without the
+	// INTERVAL keyword and without quoting a string literal value.
+	if g.dialect.AutoRefreshBareIntervals {
+		if ancestor := e.FindAncestor(expressions.KindAutoRefreshProperty, expressions.KindSelect); ancestor != nil && ancestor.Kind() == expressions.KindAutoRefreshProperty {
+			this := ""
+			if thisExpr := asExpression(e.Arg("this")); thisExpr != nil {
+				this = thisExpr.Name()
+			}
+			return strings.TrimSpace(this + unit)
+		}
 	}
 
 	if g.singleStringInterval {
