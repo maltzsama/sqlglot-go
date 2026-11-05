@@ -78,5 +78,3 @@ func starRocksReservedKeywords() map[string]bool {
 	}
 	return out
 }
-
-var _ = exp.KindFlatten

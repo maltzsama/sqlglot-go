@@ -221,10 +221,16 @@ func oracleInterval(g *Generator, e exp.Expression) string {
 func oracleToNumber(g *Generator, e exp.Expression) string {
 	this := g.sqlKey(e, "this")
 	if def := g.sqlKey(e, "default"); def != "" {
-		this = this + " DEFAULT " + def + " ON CONVERSION ERROR"
+		this += " DEFAULT " + def + " ON CONVERSION ERROR"
 	}
-	return clickhouseCall(g, "TO_NUMBER", exp.Var(exp.Args{"this": this}),
-		asExpression(e.Arg("format")), asExpression(e.Arg("nlsparam")))
+	args := []string{this}
+	if format := g.sqlKey(e, "format"); format != "" {
+		args = append(args, format)
+	}
+	if nlsparam := g.sqlKey(e, "nlsparam"); nlsparam != "" {
+		args = append(args, nlsparam)
+	}
+	return "TO_NUMBER(" + strings.Join(args, ", ") + ")"
 }
 
 // oracleStrToTime ports the StrToTime transform (generators/oracle.py:90).

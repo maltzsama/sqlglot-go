@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
 	"github.com/ridi-oss/sqlglot-go/tokens"
 )
 
@@ -184,5 +183,3 @@ func OracleTimeFormat(format string) string {
 	}
 	return b.String()
 }
-
-var _ = exp.KindToChar
