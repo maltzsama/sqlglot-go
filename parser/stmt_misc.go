@@ -165,8 +165,12 @@ func (p *Parser) parseDescribeStructured() exp.Expression {
 			// (critically) a parenthesized subquery smuggling a full SELECT (with its own table
 			// reads) behind this=Table, which a consumer classifying by this.Kind() would not
 			// scope. parseIdVar consumes exactly one identifier token; a non-name token (`(`, a
-			// number) or an unquoted reserved word (NULL, ORDER, ...) — all of which real MySQL
-			// rejects at this position — is left for the leftover-token guard to fail closed.
+			// number) or an unquoted reserved word that no property parser absorbs (NULL,
+			// SELECT, ...) — all of which real MySQL rejects at this position — is left for
+			// the leftover-token guard to fail closed. A CREATE_SEQUENCE property word such as
+			// ORDER instead falls through to parseProperties below and is absorbed as
+			// SequenceProperties, exactly like upstream's _parse_property (see the
+			// CREATE_SEQUENCE subtest in mysql_describe_column_test.go).
 			if id := p.parseIdVar(false, nil); id != nil {
 				column = exp.Column(exp.Args{"this": id})
 			}

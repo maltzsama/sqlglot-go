@@ -482,6 +482,13 @@ func (p *Parser) parseAlterTableRename() exp.Expression {
 // ALTER TABLE ... SET (KEY=value, ...): ON/OFF are reserved keywords in the base parser, so
 // they are consumed as Vars here, and an `ON(...)` option list is parsed recursively.
 func (p *Parser) parseTSQLAlterSetItem() exp.Expression {
+	// Named T-SQL properties have their own nodes (no-space `KEY=value` rendering).
+	if p.matchTexts(map[string]bool{"SYSTEM_VERSIONING": true}) {
+		return p.parseSystemVersioningProperty(false)
+	}
+	if p.matchTexts(map[string]bool{"DATA_DELETION": true}) {
+		return p.parseDataDeletionProperty()
+	}
 	this := p.parsePrimaryOrVar()
 	if this == nil {
 		this = p.parseVar(true, nil, false)

@@ -106,5 +106,26 @@ func NonClusteredColumnConstraint(args Args) Expression {
 	return newNode(KindNonClusteredColumnConstraint, args)
 }
 
+// OpenJSON ports exp.OpenJSON (expressions/json.py:235).
+func OpenJSON(args Args) Expression { return newNode(KindOpenJSON, args) }
+
+// OpenJSONColumnDef ports exp.OpenJSONColumnDef (expressions/query.py:2070).
+func OpenJSONColumnDef(args Args) Expression { return newNode(KindOpenJSONColumnDef, args) }
+
+// PeriodForSystemTimeConstraint ports exp.PeriodForSystemTimeConstraint
+// (expressions/constraints.py:44).
+func PeriodForSystemTimeConstraint(args Args) Expression {
+	return newNode(KindPeriodForSystemTimeConstraint, args)
+}
+
+// WithSystemVersioningProperty ports exp.WithSystemVersioningProperty
+// (expressions/properties.py:572).
+func WithSystemVersioningProperty(args Args) Expression {
+	return newNode(KindWithSystemVersioningProperty, args)
+}
+
+// DataDeletionProperty ports exp.DataDeletionProperty (expressions/properties.py:544).
+func DataDeletionProperty(args Args) Expression { return newNode(KindDataDeletionProperty, args) }
+
 // VolatileProperty ports exp.VolatileProperty (expressions/properties.py:556).
 func VolatileProperty(args Args) Expression { return newNode(KindVolatileProperty, args) }
