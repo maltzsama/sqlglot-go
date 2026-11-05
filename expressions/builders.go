@@ -19,7 +19,12 @@ func IsSafeIdentifier(name string) bool { return safeIdentifierRE.MatchString(na
 // documentation; the two are the same type and fully interchangeable.
 type DialectType = any
 
+// MaybeParseFunc and ParseIntoFunc are the parser hooks the root sqlglot package installs at
+// init, breaking the expressions -> parser import cycle. They are written once during package
+// initialization and only read afterwards, so concurrent parsing is safe; do not reassign them
+// at runtime.
 var MaybeParseFunc func(sql string, dialect DialectType) (Expression, error)
+
 var ParseIntoFunc func(sql string, dialect DialectType, into Kind, ignoreErrors bool) (Expression, error)
 
 func ToIdentifier(name any, quoted ...bool) Expression {
