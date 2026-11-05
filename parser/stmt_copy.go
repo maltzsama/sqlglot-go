@@ -82,12 +82,10 @@ func (p *Parser) parseCopy() exp.Expression {
 	}), nil, nil)
 }
 
-// parseCopyParameters ports _parse_copy_parameters (parser.py:9551-9588). The generic
-// branch plus the `FORMAT AS AVRO|JSON` branch (parser.py:9573-9579) are ported; that
-// branch is NOT dialect-gated, so postgres reaches it too. The COPY_INTO_VARLEN_OPTIONS
-// and FILE_FORMAT branches (parser.py:9565-9572) are Snowflake/T-SQL-only and unreachable
-// from this port's target dialects; any input needing one of them falls through to
-// parseCopy's trailing-token Command fallback.
+// parseCopyParameters ports _parse_copy_parameters (parser.py:9844-9878): the generic
+// branch, the COPY_INTO_VARLEN_OPTIONS `= (...)` branch, the T-SQL FILE_FORMAT branch,
+// and the `FORMAT AS AVRO|JSON` branch (parser.py:9867-9872) — the latter is NOT
+// dialect-gated, so postgres reaches it too.
 func (p *Parser) parseCopyParameters() []exp.Expression {
 	sep := p.dialect.CopyParamsAreCsv
 
@@ -103,8 +101,15 @@ func (p *Parser) parseCopyParameters() []exp.Expression {
 
 		param := p.expression(exp.CopyParameter(exp.Args{"this": option}), nil, nil)
 
-		if prev == "FORMAT" && matchedAlias && p.matchTexts(map[string]bool{"AVRO": true, "JSON": true}) {
-			// parser.py:9573-9579: `FORMAT AS AVRO|JSON`. Fold the keyword into `this` as
+		if copyIntoVarlenOptions[prev] && p.match(tokens.L_PAREN, false) {
+			// Snowflake FILE_FORMAT case, Databricks COPY & FORMAT options
+			// (parser.py:9861-9862): the parenthesized option list is a property list.
+			param.Set("expressions", p.parseWrappedOptions())
+		} else if prev == "FILE_FORMAT" {
+			// T-SQL's external file format case (parser.py:9863-9864).
+			param.Set("expression", p.parseField(false, nil, false))
+		} else if prev == "FORMAT" && matchedAlias && p.matchTexts(map[string]bool{"AVRO": true, "JSON": true}) {
+			// parser.py:9867-9872: `FORMAT AS AVRO|JSON`. Fold the keyword into `this` as
 			// the var "FORMAT AS <fmt>" and take the following field (if any) as the value,
 			// so it round-trips as `FORMAT AS JSON` / `FORMAT AS JSON 'x'` rather than the
 			// lossy `FORMAT JSON` / `FORMAT JSON, x` the generic branch would produce.
@@ -168,14 +173,14 @@ func (p *Parser) parseCredentials() exp.Expression {
 		// Snowflake case: CREDENTIALS = (...), Redshift case: CREDENTIALS <string>.
 		var credentials any
 		if p.match(tokens.EQ) {
-			credentials = p.parseCopyWrappedOptions()
+			credentials = p.parseWrappedOptions()
 		} else {
 			credentials = p.parseField(false, nil, false)
 		}
 		expr.Set("credentials", credentials)
 	}
 	if p.matchTextSeq("ENCRYPTION") {
-		expr.Set("encryption", p.parseCopyWrappedOptions())
+		expr.Set("encryption", p.parseWrappedOptions())
 	}
 	if p.matchTextSeq("IAM_ROLE") {
 		if p.match(tokens.DEFAULT) {
@@ -191,37 +196,55 @@ func (p *Parser) parseCredentials() exp.Expression {
 	return expr
 }
 
-// parseCopyWrappedOptions is a scoped-down port of _parse_wrapped_options
-// (parser.py:9530-9548), covering only the option shapes reachable from Credentials'
-// CREDENTIALS=(...)/ENCRYPTION(...) sub-clauses. Upstream's version falls back to
-// _parse_property for each option, which isn't ported in this slice (it's a large,
-// separate DDL-properties grammar); this instead captures each option generically as a
-// bare var or `var = value` pair, which is sufficient for the unreachable-in-corpus paths
-// this feeds (base/mysql/postgres never exercise Credentials' EQ sub-clauses).
-func (p *Parser) parseCopyWrappedOptions() []exp.Expression {
+// copyIntoVarlenOptions mirrors COPY_INTO_VARLEN_OPTIONS (parser.py:1781-1785): the
+// COPY parameter keys whose value can be a parenthesized option list.
+var copyIntoVarlenOptions = map[string]bool{
+	"FILE_FORMAT":    true,
+	"COPY_OPTIONS":   true,
+	"FORMAT_OPTIONS": true,
+	"CREDENTIAL":     true,
+}
+
+// parseWrappedOptions ports _parse_wrapped_options (parser.py:9823-9842): an optional
+// `=` / `(` opener, then one property per iteration until the closing `)` — with
+// FORMAT_NAME special-cased to _parse_format_name. It feeds the COPY_INTO_VARLEN_OPTIONS
+// branch of parseCopyParameters above and Credentials' CREDENTIALS=(...) / ENCRYPTION(...)
+// sub-clauses; the upstream-faithful `Unable to parse option` error on an unparseable
+// option replaces the earlier scoped-down var-or-pair capture this port used before
+// parseProperty existed.
+func (p *Parser) parseWrappedOptions() []exp.Expression {
 	p.match(tokens.EQ)
 	p.match(tokens.L_PAREN)
 
 	var opts []exp.Expression
 	for p.curr.IsValid() && !p.match(tokens.R_PAREN) {
-		option := p.parseVar(true, nil, false)
+		var option exp.Expression
+		if p.matchTextSeq("FORMAT_NAME", "=") {
+			// The FORMAT_NAME can be set to an identifier for Snowflake and T-SQL.
+			option = p.parseFormatName()
+		} else {
+			option = p.parseProperty()
+		}
 		if option == nil {
-			// Mirror _parse_wrapped_options' `if option is None: break` (parser.py:9545-9547).
-			// This port lacks the full _parse_property grammar, so any option shape it can't
-			// capture as a bare var / `var = value` pair — e.g. a comma separator inside a
-			// Snowflake/Redshift credential list — stops the loop rather than spinning forever
-			// on a token parseVar can't consume. The unconsumed tokens then reach parseCopy's
-			// trailing-token Command fallback (degrade-to-Command, exactly as upstream does for
-			// shapes it can't model). This guarantees termination.
+			p.raiseError("Unable to parse option")
 			break
 		}
-		if p.match(tokens.EQ) {
-			value := p.parseUnquotedField()
-			opts = append(opts, p.expression(exp.EQ(exp.Args{"this": option, "expression": value}), nil, nil))
-		} else {
-			opts = append(opts, option)
-		}
+		opts = append(opts, option)
 	}
 
 	return opts
+}
+
+// parseFormatName ports _parse_format_name (parser.py:10100-10107): although not
+// specified in the docs, Snowflake/T-SQL accept a string or identifier for
+// FORMAT_NAME = <format_name>.
+func (p *Parser) parseFormatName() exp.Expression {
+	value := p.parseString()
+	if value == nil {
+		value = p.parseTableParts(false, false, false, false)
+	}
+	return p.expression(exp.Property(exp.Args{
+		"this":  exp.Var(exp.Args{"this": "FORMAT_NAME"}),
+		"value": value,
+	}), nil, nil)
 }

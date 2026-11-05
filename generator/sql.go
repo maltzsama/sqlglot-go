@@ -546,6 +546,17 @@ func (g *Generator) connectorSQL(e expressions.Expression, op string, stack *[]a
 			ops[emitted] = true
 		} else {
 			sql := g.gen(node)
+			// TSQL's ENSURE_BOOLS (generators/tsql.py:137) is an AST preprocess upstream
+			// (transforms.ensure_bools -> canonicalize.ensure_bools:149-163, scoped to
+			// Connector operands, Not/If, and Where/Having). This port renders without
+			// rewriting the tree, so connector leaves get the same ensure-bool wrap here —
+			// exactly the nodes upstream's walk replaces — while tsqlAndSQL/tsqlOrSQL
+			// delegate to this renderer for the flatten + pretty too_wide breaks.
+			if g.dialect.Name == "tsql" {
+				if expr, ok := node.(expressions.Expression); ok && !isNilExpression(expr) {
+					sql = g.ensureBoolOperand(expr)
+				}
+			}
 			if len(sqls) > 0 && ops[sqls[len(sqls)-1]] {
 				sqls[len(sqls)-1] += " " + sql
 			} else {
@@ -2128,6 +2139,95 @@ func (g *Generator) jsonArrayAggSQL(e expressions.Expression) string {
 		strict = " STRICT"
 	}
 	return "JSON_ARRAYAGG(" + this + order + nullHandling + returnType + strict + ")"
+}
+
+// openJSONSQL ports openjson_sql (generator.py:3924-3934).
+func (g *Generator) openJSONSQL(e expressions.Expression) string {
+	this := g.sqlKey(e, "this")
+	path := g.sqlKey(e, "path")
+	if path != "" {
+		path = ", " + path
+	}
+	expressionsSQL := g.expressions(exprsOptions{expression: e})
+	with := ""
+	if expressionsSQL != "" {
+		with = " WITH (" + g.seg(g.indent(expressionsSQL, 0, nil, false, false), "") + g.seg(")", "")
+	}
+	return "OPENJSON(" + this + path + ")" + with
+}
+
+// openJSONColumnDefSQL ports openjsoncolumndef_sql (generator.py:3916-3922).
+func (g *Generator) openJSONColumnDefSQL(e expressions.Expression) string {
+	this := g.sqlKey(e, "this")
+	kind := g.sqlKey(e, "kind")
+	path := g.sqlKey(e, "path")
+	if path != "" {
+		path = " " + path
+	}
+	asJSON := ""
+	if truthy(e.Arg("as_json")) {
+		asJSON = " AS JSON"
+	}
+	return this + " " + kind + path + asJSON
+}
+
+// periodForSystemTimeConstraintSQL ports periodforsystemtimeconstraint_sql
+// (generator.py:1269-1272).
+func (g *Generator) periodForSystemTimeConstraintSQL(e expressions.Expression) string {
+	return "PERIOD FOR SYSTEM_TIME (" + g.sqlKey(e, "this") + ", " + g.sqlKey(e, "expression") + ")"
+}
+
+// withSystemVersioningPropertySQL ports withsystemversioningproperty_sql
+// (generator.py:2266-2288).
+func (g *Generator) withSystemVersioningPropertySQL(e expressions.Expression) string {
+	this := g.sqlKey(e, "this")
+	if this != "" {
+		this = "HISTORY_TABLE=" + this
+	}
+	// Upstream passes None (not "") for absent optional args (generator.py:2276-2281), so
+	// formatArgs drops them; an empty Go string would render as an empty slot and emit ", ,".
+	var dataConsistency any
+	if v := g.sqlKey(e, "data_consistency"); v != "" {
+		dataConsistency = "DATA_CONSISTENCY_CHECK=" + v
+	}
+	var retention any
+	if v := g.sqlKey(e, "retention_period"); v != "" {
+		retention = "HISTORY_RETENTION_PERIOD=" + v
+	}
+	onSQL := "OFF"
+	if truthy(e.Arg("on")) {
+		onSQL = "ON"
+	}
+	if this != "" {
+		onSQL = g.funcCall("ON", []any{this, dataConsistency, retention}, "(", ")", false)
+	}
+	sql := "SYSTEM_VERSIONING=" + onSQL
+	if truthy(e.Arg("with_")) {
+		return "WITH(" + sql + ")"
+	}
+	return sql
+}
+
+// dataDeletionPropertySQL ports datadeletionproperty_sql (generator.py:5508-5518).
+func (g *Generator) dataDeletionPropertySQL(e expressions.Expression) string {
+	onSQL := "OFF"
+	if truthy(e.Arg("on")) {
+		onSQL = "ON"
+	}
+	// Same None-not-"" rule as withSystemVersioningPropertySQL above: absent optional
+	// args must be nil so formatArgs drops them (generator.py:5512-5515).
+	var filterColumn any
+	if v := g.sqlKey(e, "filter_column"); v != "" {
+		filterColumn = "FILTER_COLUMN=" + v
+	}
+	var retention any
+	if v := g.sqlKey(e, "retention_period"); v != "" {
+		retention = "RETENTION_PERIOD=" + v
+	}
+	if filterColumn != nil || retention != nil {
+		onSQL = g.funcCall("ON", []any{filterColumn, retention}, "(", ")", false)
+	}
+	return "DATA_DELETION=" + onSQL
 }
 
 func (g *Generator) jsonColumnDefSQL(e expressions.Expression) string {

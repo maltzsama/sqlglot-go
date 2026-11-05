@@ -119,6 +119,12 @@ func init() {
 	dispatch[expressions.KindValues] = (*Generator).valuesSQL
 	dispatch[expressions.KindColumnDef] = (*Generator).columnDefSQL
 	dispatch[expressions.KindJSONArrayAgg] = (*Generator).jsonArrayAggSQL
+	dispatch[expressions.KindOpenJSON] = (*Generator).openJSONSQL
+	dispatch[expressions.KindOpenJSONColumnDef] = (*Generator).openJSONColumnDefSQL
+	dispatch[expressions.KindPeriodForSystemTimeConstraint] = (*Generator).periodForSystemTimeConstraintSQL
+	dispatch[expressions.KindWithSystemVersioningProperty] = (*Generator).withSystemVersioningPropertySQL
+	dispatch[expressions.KindDataDeletionProperty] = (*Generator).dataDeletionPropertySQL
+	dispatch[expressions.KindSequenceProperties] = (*Generator).sequencePropertiesSQL
 	dispatch[expressions.KindDataType] = (*Generator).dataTypeSQL
 	dispatch[expressions.KindDataTypeParam] = (*Generator).dataTypeParamSQL
 	dispatch[expressions.KindCast] = (*Generator).castSQL

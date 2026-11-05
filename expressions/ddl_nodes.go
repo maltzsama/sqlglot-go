@@ -38,7 +38,10 @@ func Opclass(args Args) Expression { return newNode(KindOpclass, args) }
 
 // TriggerProperties/TriggerExecute/TriggerEvent/TriggerReferencing back CREATE TRIGGER
 // (ddl.py:76-101).
-func TriggerProperties(args Args) Expression  { return newNode(KindTriggerProperties, args) }
+func TriggerProperties(args Args) Expression { return newNode(KindTriggerProperties, args) }
+
+// SequenceProperties ports exp.SequenceProperties (expressions/ddl.py:64-73).
+func SequenceProperties(args Args) Expression { return newNode(KindSequenceProperties, args) }
 func TriggerExecute(args Args) Expression     { return newNode(KindTriggerExecute, args) }
 func TriggerEvent(args Args) Expression       { return newNode(KindTriggerEvent, args) }
 func TriggerReferencing(args Args) Expression { return newNode(KindTriggerReferencing, args) }

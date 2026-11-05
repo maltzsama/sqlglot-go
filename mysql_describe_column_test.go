@@ -117,7 +117,8 @@ func TestMySQLDescribeColumnBoundaries(t *testing.T) {
 	})
 
 	// col_name matches MySQL exactly: a non-reserved unquoted name or ANY backtick-quoted name is
-	// accepted (stays this=Table); an unquoted reserved word is rejected (MySQL rejects it too).
+	// accepted (stays this=Table); an unquoted reserved word that no property parser absorbs is
+	// rejected (fail-closed to Command, mirroring upstream's parse error).
 	t.Run("non-reserved and quoted column names accepted", func(t *testing.T) {
 		for _, sql := range []string{
 			"DESCRIBE users comment", // non-reserved keyword-ish name
@@ -136,7 +137,7 @@ func TestMySQLDescribeColumnBoundaries(t *testing.T) {
 		}
 	})
 	t.Run("unquoted reserved word fails closed", func(t *testing.T) {
-		for _, sql := range []string{"DESCRIBE users NULL", "DESCRIBE users order", "DESCRIBE users select"} {
+		for _, sql := range []string{"DESCRIBE users NULL", "DESCRIBE users select"} {
 			e, err := sqlglot.ParseOne(sql, "mysql")
 			if err != nil {
 				t.Fatalf("parse %q: %v", sql, err)
@@ -144,6 +145,30 @@ func TestMySQLDescribeColumnBoundaries(t *testing.T) {
 			if e.Kind() != exp.KindCommand {
 				t.Fatalf("%q: kind = %v, want Command:\n%s", sql, exp.ClassName(e.Kind()), e.ToS())
 			}
+		}
+	})
+	t.Run("CREATE_SEQUENCE property word absorbed like upstream", func(t *testing.T) {
+		// `DESCRIBE users order` is NOT fail-closed: pinned upstream v30.17.0 parses it too,
+		// because the describe property loop reaches _parse_property and ORDER is a
+		// CREATE_SEQUENCE option, yielding Describe(expressions=[SequenceProperties(options=
+		// [ORDER])]). describe_sql ignores expressions, so both implementations round-trip
+		// lossily to `DESCRIBE users` — match the oracle, not real MySQL (which rejects it).
+		e, err := sqlglot.ParseOne("DESCRIBE users order", "mysql")
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		if e.Kind() != exp.KindDescribe {
+			t.Fatalf("kind = %v, want Describe:\n%s", exp.ClassName(e.Kind()), e.ToS())
+		}
+		exprs := []exp.Expression{}
+		if list, ok := e.Arg("expressions").([]exp.Expression); ok {
+			exprs = list
+		}
+		if len(exprs) != 1 || exprs[0].Kind() != exp.KindSequenceProperties {
+			t.Fatalf("expressions = %v, want single SequenceProperties:\n%s", exprs, e.ToS())
+		}
+		if out, gerr := sqlglot.Generate(e, "mysql", generator.Options{}); gerr != nil || out != "DESCRIBE users" {
+			t.Fatalf("round-trip = %q, %v; want %q", out, gerr, "DESCRIBE users")
 		}
 	})
 	// A leading ANALYZE/FORMAT modifier is the query-explain form (`EXPLAIN ANALYZE TABLE t` is an
