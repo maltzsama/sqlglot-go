@@ -69,3 +69,43 @@ func TestDialectTemplatesAreSharedButCopied(t *testing.T) {
 		t.Fatal("field write leaked between resolved copies")
 	}
 }
+
+// TestGetOrRaiseSharedReusesTemplate pins the read-only resolution used by the parse and
+// generate entry points: bare names return the cached pointer, while settings variants still
+// get an isolated copy because they mutate fields.
+func TestGetOrRaiseSharedReusesTemplate(t *testing.T) {
+	first, err := dialects.GetOrRaiseShared("postgres")
+	if err != nil {
+		t.Fatalf("GetOrRaiseShared: %v", err)
+	}
+	second, err := dialects.GetOrRaiseShared("postgres")
+	if err != nil {
+		t.Fatalf("GetOrRaiseShared: %v", err)
+	}
+	if first != second {
+		t.Fatal("GetOrRaiseShared should return the shared template pointer")
+	}
+	if plain, err := dialects.GetOrRaise("postgres"); err != nil {
+		t.Fatalf("GetOrRaise: %v", err)
+	} else if plain == first {
+		t.Fatal("GetOrRaise must keep returning an isolated copy")
+	}
+
+	sharedVariant, err := dialects.GetOrRaiseShared("mysql, mysql_ansi_quotes=true")
+	if err != nil {
+		t.Fatalf("GetOrRaiseShared settings variant: %v", err)
+	}
+	sharedPlain, err := dialects.GetOrRaiseShared("mysql")
+	if err != nil {
+		t.Fatalf("GetOrRaiseShared plain: %v", err)
+	}
+	if sharedVariant == sharedPlain {
+		t.Fatal("settings variant must not share the bare template")
+	}
+	if sharedVariant.MySQLAnsiQuotes == nil || !*sharedVariant.MySQLAnsiQuotes {
+		t.Fatal("settings variant did not set MySQLAnsiQuotes")
+	}
+	if sharedPlain.MySQLAnsiQuotes != nil {
+		t.Fatal("plain mysql inherited MySQLAnsiQuotes from the settings variant")
+	}
+}

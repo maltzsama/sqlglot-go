@@ -696,20 +696,31 @@ func validIntervalUnits(mapping map[string]string) map[string]bool {
 // (keyword maps + trie) and date-part tables are shared read-only.
 var dialectTemplates sync.Map
 
-// dialectByName constructs a dialect from its bare name (no settings).
+// dialectByName constructs a dialect from its bare name (no settings), returning an isolated
+// copy so a caller can mutate fields without disturbing the cached template.
 func dialectByName(name string) (*Dialect, error) {
-	key := strings.ToLower(strings.TrimSpace(name))
+	d, err := cachedDialect(strings.ToLower(strings.TrimSpace(name)))
+	if err != nil {
+		return nil, err
+	}
+	copy := *d
+	return &copy, nil
+}
+
+// cachedDialect returns the shared cached template for a bare name, building and storing it on
+// first use. The returned value must be treated as immutable.
+func cachedDialect(key string) (*Dialect, error) {
 	if cached, ok := dialectTemplates.Load(key); ok {
-		d := *(cached.(*Dialect))
-		return &d, nil
+		return cached.(*Dialect), nil
 	}
 	d, err := buildDialectByName(key)
 	if err != nil {
 		return nil, err
 	}
-	dialectTemplates.Store(key, d)
-	copy := *d
-	return &copy, nil
+	// Store only the winner of a concurrent first resolution: both builders are equivalent,
+	// but keeping one pointer keeps the cache canonical.
+	actual, _ := dialectTemplates.LoadOrStore(key, d)
+	return actual.(*Dialect), nil
 }
 
 func buildDialectByName(name string) (*Dialect, error) {
@@ -886,6 +897,38 @@ func GetOrRaise(dialect DialectType) (*Dialect, error) {
 	default:
 		return nil, fmt.Errorf("invalid dialect %T (want string or *dialects.Dialect)", dialect)
 	}
+}
+
+// GetOrRaiseShared resolves a dialect for read-only use: a bare name returns the shared cached
+// template instead of the defensive copy GetOrRaise makes, so it allocates nothing per call.
+// The parse and generate entry points use it because they only read the dialect. The returned
+// value must never be mutated; settings variants and callers that need to change a field must
+// go through GetOrRaise.
+func GetOrRaiseShared(dialect DialectType) (*Dialect, error) {
+	switch v := dialect.(type) {
+	case nil:
+		return sharedDialect("")
+	case string:
+		return sharedDialect(v)
+	case *Dialect:
+		if v == nil {
+			return sharedDialect("")
+		}
+		return v, nil
+	case Dialect:
+		return &v, nil
+	default:
+		return nil, fmt.Errorf("invalid dialect %T (want string or *dialects.Dialect)", dialect)
+	}
+}
+
+func sharedDialect(name string) (*Dialect, error) {
+	base, _, hasSettings := strings.Cut(name, ",")
+	if hasSettings {
+		// A settings variant mutates fields, so it needs the isolated copy path.
+		return getOrRaiseString(name)
+	}
+	return cachedDialect(strings.ToLower(strings.TrimSpace(base)))
 }
 
 func getOrRaiseString(name string) (*Dialect, error) {

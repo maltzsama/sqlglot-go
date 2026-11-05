@@ -19,7 +19,7 @@ import (
 // token's Comments (not emitted as stream tokens). For the byte-exact source lexeme of a token,
 // slice the source by its Start/End offsets rather than reading Token.Text (see tokens.Token).
 func Tokenize(sql string, dialect dialects.DialectType) ([]tokens.Token, error) {
-	d, err := dialects.GetOrRaise(dialect)
+	d, err := dialects.GetOrRaiseShared(dialect)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func Tokenize(sql string, dialect dialects.DialectType) ([]tokens.Token, error) 
 // Parse tokenizes and parses sql under dialect (see dialects.DialectType for the accepted
 // forms: nil | string | *dialects.Dialect), returning one Expression per statement.
 func Parse(sql string, dialect dialects.DialectType) ([]expressions.Expression, error) {
-	d, err := dialects.GetOrRaise(dialect)
+	d, err := dialects.GetOrRaiseShared(dialect)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func ParseInto(sql string, dialect dialects.DialectType, into expressions.Kind) 
 }
 
 func parseInto(sql string, dialect dialects.DialectType, into expressions.Kind, ignoreErrors bool) (expressions.Expression, error) {
-	d, err := dialects.GetOrRaise(dialect)
+	d, err := dialects.GetOrRaiseShared(dialect)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func parseInto(sql string, dialect dialects.DialectType, into expressions.Kind, 
 
 // Generate renders e to SQL under dialect (see dialects.DialectType for the accepted forms).
 func Generate(e expressions.Expression, dialect dialects.DialectType, opts generator.Options) (string, error) {
-	d, err := dialects.GetOrRaise(dialect)
+	d, err := dialects.GetOrRaiseShared(dialect)
 	if err != nil {
 		return "", err
 	}
