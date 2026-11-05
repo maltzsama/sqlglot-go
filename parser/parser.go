@@ -3959,14 +3959,13 @@ func (p *Parser) parseLambda(alias bool) exp.Expression {
 
 	if p.match(tokens.L_PAREN) {
 		params := p.parseCsv(p.parseLambdaArg)
-		if !p.match(tokens.R_PAREN) {
-			p.retreat(index)
-		} else if builder, ok := lambdas[p.curr.TokenType]; ok {
-			p.advance()
-			return builder(p, params)
-		} else {
-			p.retreat(index)
+		if p.match(tokens.R_PAREN) {
+			if builder, ok := lambdas[p.curr.TokenType]; ok {
+				p.advance()
+				return builder(p, params)
+			}
 		}
+		p.retreat(index)
 	} else if _, ok := lambdas[p.next.TokenType]; ok {
 		// TYPED_LAMBDA_ARGS (Snowflake/Materialize's `x INT -> ...`) is always false for the
 		// dialects in this part's scope, so the upstream `self.TYPED_LAMBDA_ARGS or` half of
@@ -4394,9 +4393,10 @@ func (p *Parser) parseWindow(this exp.Expression, alias bool) exp.Expression {
 	var over any
 	if alias {
 		p.match(tokens.ALIAS)
-	} else if !p.match(tokens.OVER) && !(p.dialect.Name == "oracle" && p.match(tokens.KEEP)) {
-		return this
 	} else {
+		if !p.match(tokens.OVER) && !(p.dialect.Name == "oracle" && p.match(tokens.KEEP)) {
+			return this
+		}
 		over = stringsUpper(p.prev.Text)
 	}
 	if funcExpr != nil && len(comments) > 0 {

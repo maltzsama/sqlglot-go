@@ -517,7 +517,8 @@ func (c *TokenizerCore) scanNumber() {
 				c.add(NUMBER)
 			}
 			return
-		} else if peek == 'X' {
+		}
+		if peek == 'X' {
 			if c.hasHexStrings {
 				c.scanHex()
 			} else {
@@ -534,33 +535,34 @@ func (c *TokenizerCore) scanNumber() {
 	numericLiteral := ""
 	var numericType TokenType
 
+number:
 	for {
-		if digitChars[c.peek] {
+		switch {
+		case digitChars[c.peek]:
 			end := c.current + 1
 			for end < c.size && digitChars[c.input.at(end)] {
 				end++
 			}
 			c.advance(end-c.current, false)
-		} else if c.peek == '.' && !decimal {
+		case c.peek == '.' && !decimal:
 			if (len(c.tokens) > 0 && c.tokens[len(c.tokens)-1].TokenType == PARAMETER) || !c.numbersCanHaveDecimals {
-				break
+				break number
 			}
 			decimal = true
 			c.advance(1, false)
-		} else if (c.peek == '-' || c.peek == '+') && scientific == 1 {
-			if c.current+1 < c.size && digitChars[c.input.at(c.current+1)] {
-				scientific++
-				c.advance(1, false)
-			} else {
-				break
+		case (c.peek == '-' || c.peek == '+') && scientific == 1:
+			if c.current+1 >= c.size || !digitChars[c.input.at(c.current+1)] {
+				break number
 			}
-		} else if upperASCII(c.peek) == 'E' && scientific == 0 {
 			scientific++
 			c.advance(1, false)
-		} else if c.peek == '_' && c.numbersCanBeUnderscoreSeparated {
+		case upperASCII(c.peek) == 'E' && scientific == 0:
+			scientific++
+			c.advance(1, false)
+		case c.peek == '_' && c.numbersCanBeUnderscoreSeparated:
 			isUnderscoreSeparated = true
 			c.advance(1, false)
-		} else if isIdentifierChar(c.peek) {
+		case isIdentifierChar(c.peek):
 			numberText = c.text()
 			for c.peek != 0 && !unicode.IsSpace(c.peek) && c.singleTokens[c.peek] == 0 {
 				numericLiteral += string(c.peek)
@@ -570,15 +572,16 @@ func (c *TokenizerCore) scanNumber() {
 				numericType = c.keywords[literal]
 			}
 			if numericType != 0 {
-				break
-			} else if c.identifiersCanStartWithDigit {
+				break number
+			}
+			if c.identifiersCanStartWithDigit {
 				c.add(VAR)
 				return
 			}
 			c.advance(-len([]rune(numericLiteral)), false)
-			break
-		} else {
-			break
+			break number
+		default:
+			break number
 		}
 	}
 

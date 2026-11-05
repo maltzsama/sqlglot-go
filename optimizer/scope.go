@@ -241,30 +241,33 @@ func _traverseScope(scope *Scope, out *[]*Scope, mode scopeTraversalMode) {
 		return
 	}
 
-	if expression.Kind() == exp.KindSelect {
+	// Select, Subquery, Table and UDTF scopes are emitted after their children; the other
+	// shapes either emit through their own traversal or stop here.
+	switch {
+	case expression.Kind() == exp.KindSelect:
 		_traverseSelect(scope, out, mode)
-	} else if expression.Is(exp.TraitSetOperation) {
+	case expression.Is(exp.TraitSetOperation):
 		_traverseCtes(scope, out, mode)
 		_traverseUnion(scope, out, mode)
 		return
-	} else if expression.Kind() == exp.KindSubquery {
+	case expression.Kind() == exp.KindSubquery:
 		if scope.IsRoot() {
 			_traverseSelect(scope, out, mode)
 		} else {
 			_traverseSubqueries(scope, out, mode)
 		}
-	} else if expression.Kind() == exp.KindTable {
+	case expression.Kind() == exp.KindTable:
 		_traverseTables(scope, out, mode)
-	} else if expression.Is(exp.TraitUDTF) {
+	case expression.Is(exp.TraitUDTF):
 		_traverseUdtfs(scope, out, mode)
-	} else if expression.Is(exp.TraitDDL) {
+	case expression.Is(exp.TraitDDL):
 		ddlExpression := asExpression(expression.Arg("expression"))
 		if ddlExpression != nil && ddlExpression.Is(exp.TraitQuery) {
 			_traverseCtes(scope, out, mode)
 			_traverseScope(newScope(ddlExpression, scopeOptions{cteSources: scope.CTESources}), out, mode)
 		}
 		return
-	} else if expression.Is(exp.TraitDML) {
+	case expression.Is(exp.TraitDML):
 		_traverseCtes(scope, out, mode)
 		if mode == scopeTraversalAnalysis && isDMLRootKind(expression.Kind()) {
 			_traverseDML(scope, out, mode)
@@ -272,7 +275,7 @@ func _traverseScope(scope *Scope, out *[]*Scope, mode scopeTraversalMode) {
 		}
 		_traverseDMLQueries(scope, out, mode)
 		return
-	} else {
+	default:
 		logWarning("Cannot traverse scope %s with type '%s'", expression.ToS(), exp.ClassName(expression.Kind()))
 		return
 	}

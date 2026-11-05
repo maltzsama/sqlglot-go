@@ -263,11 +263,13 @@ func (g *Generator) indent(sql string, level int, pad *int, skipFirst bool, skip
 
 func (g *Generator) wrap(v any) string {
 	var thisSQL string
-	if e, ok := v.(expressions.Expression); ok && !isNilExpression(e) && isUnwrappedQuery(e.Kind()) {
+	e, ok := v.(expressions.Expression)
+	switch {
+	case ok && !isNilExpression(e) && isUnwrappedQuery(e.Kind()):
 		thisSQL = g.gen(e)
-	} else if e, ok := v.(expressions.Expression); ok && !isNilExpression(e) {
+	case ok && !isNilExpression(e):
 		thisSQL = g.sqlKey(e, "this")
-	} else {
+	default:
 		thisSQL = g.gen(v)
 	}
 	if thisSQL == "" {
