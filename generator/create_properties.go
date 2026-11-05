@@ -19,6 +19,9 @@ const (
 	propertyLocationPostAlias
 	propertyLocationPostExpression
 	propertyLocationPostIndex
+	// propertyLocationPostName places a property immediately after the object name, as
+	// ClickHouse's ON CLUSTER / UUID / REFRESH do (generators/clickhouse.py:389-398).
+	propertyLocationPostName
 )
 
 // propertyLocations is the worklist-scoped port of Generator.PROPERTIES_LOCATION
@@ -66,6 +69,15 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindSequenceProperties:           propertyLocationPostExpression,
 	expressions.KindTriggerProperties:            propertyLocationPostExpression,
 	expressions.KindWithDataProperty:             propertyLocationPostExpression,
+	// upstream generator.py:711-788: the POST_SCHEMA property set used by ClickHouse's
+	// CREATE TABLE / CREATE DICTIONARY.
+	expressions.KindDictProperty:     propertyLocationPostSchema,
+	expressions.KindDictRange:        propertyLocationPostSchema,
+	expressions.KindMergeTreeTTL:     propertyLocationPostSchema,
+	expressions.KindOrder:            propertyLocationPostSchema,
+	expressions.KindPrimaryKey:       propertyLocationPostSchema,
+	expressions.KindSampleProperty:   propertyLocationPostSchema,
+	expressions.KindSettingsProperty: propertyLocationPostSchema,
 }
 
 // propertyNames is the worklist-scoped port of Properties.PROPERTY_TO_NAME. Kinds with

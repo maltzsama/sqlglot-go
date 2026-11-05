@@ -48,6 +48,9 @@ func mergedDialectFunctions(d *dialects.Dialect) map[string]func([]exp.Expressio
 	}
 	merged := make(map[string]func([]exp.Expression) exp.Expression, len(exp.FunctionByName)+len(d.Functions))
 	for name, builder := range exp.FunctionByName {
+		if d.RemovedFunctions[name] {
+			continue
+		}
 		merged[name] = builder
 	}
 	for name, builder := range d.Functions {
@@ -122,7 +125,7 @@ func (p *Parser) parseCeilFloor(kind exp.Kind) exp.Expression {
 	return p.expression(exp.New(kind, exp.Args{"this": this, "decimals": decimals, "to": to}), nil, nil)
 }
 
-func (p *Parser) parseExtract() exp.Expression {
+func (p *Parser) parseExtractBase() exp.Expression {
 	opaqueName := p.captureOpaqueName()
 	// Mirror upstream `self._parse_function() or self._parse_var_or_string(...)`:
 	// short-circuit so the second alternative never runs (and never advances past
@@ -161,6 +164,14 @@ func (p *Parser) parseDatePart() exp.Expression {
 func (p *Parser) parsePosition() exp.Expression {
 	opaqueName := p.captureOpaqueName()
 	args := p.parseCsv(p.parseBitwise)
+	if p.dialect.Name == "clickhouse" && !p.match(tokens.IN, false) && !p.dialect.OpaqueFunctions {
+		// parsers/clickhouse.py:655-656 calls the base parser with haystack_first=True.
+		return p.expression(exp.StrPosition(exp.Args{
+			"this":     seqGet(args, 0),
+			"substr":   seqGet(args, 1),
+			"position": seqGet(args, 2),
+		}), nil, nil)
+	}
 	if p.match(tokens.IN) {
 		return p.expression(exp.StrPosition(exp.Args{"this": p.parseBitwise(), "substr": seqGet(args, 0)}), nil, nil)
 	}

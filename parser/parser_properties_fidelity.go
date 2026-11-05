@@ -273,6 +273,14 @@ func (p *Parser) parseClusteredBy() exp.Expression {
 
 // parseDefiner ports _parse_definer (parser.py:3058-3069): DEFINER[=]user@host.
 func (p *Parser) parseDefiner() exp.Expression {
+	if p.dialect.Name == "clickhouse" {
+		// parsers/clickhouse.py:925-929: DEFINER [=] {CURRENT_USER | <string>}.
+		p.match(tokens.EQ)
+		if p.match(tokens.CURRENT_USER) {
+			return exp.DefinerProperty(exp.Args{"this": exp.Var(exp.Args{"this": stringsUpper(p.prev.Text)})})
+		}
+		return exp.DefinerProperty(exp.Args{"this": p.parseString()})
+	}
 	p.match(tokens.EQ)
 	user := p.parseIdVar(true, nil)
 	p.match(tokens.PARAMETER)
@@ -423,6 +431,10 @@ func (p *Parser) parsePartitionedOf() exp.Expression {
 
 // parsePartitionedBy ports _parse_partitioned_by (parser.py:3310-3316).
 func (p *Parser) parsePartitionedBy() exp.Expression {
+	// parsers/clickhouse.py:989-992: a custom expression partition key.
+	if p.dialect.Name == "clickhouse" {
+		return p.expression(exp.PartitionedByProperty(exp.Args{"this": p.parseAssignment()}), nil, nil)
+	}
 	p.match(tokens.EQ)
 	this := p.parseSchema(nil)
 	if this == nil {
@@ -469,6 +481,20 @@ func (p *Parser) parseNoProperty() exp.Expression {
 // parseOnProperty ports _parse_on_property (parser.py:3443-3448): ON COMMIT ... ROWS, else
 // the generic OnProperty over `ON <id> [<schema>]` (e.g. T-SQL filetable `ON b (c)`).
 func (p *Parser) parseOnProperty() exp.Expression {
+	// parsers/clickhouse.py:809-817: `ON CLUSTER <name>`.
+	if p.dialect.Name == "clickhouse" {
+		index := p.index
+		if p.matchTextSeq("CLUSTER") {
+			this := p.parseString()
+			if this == nil {
+				this = p.parseIdVar(false, nil)
+			}
+			if this != nil {
+				return p.expression(exp.OnCluster(exp.Args{"this": this}), nil, nil)
+			}
+			p.retreat(index)
+		}
+	}
 	if p.matchTextSeq("COMMIT", "PRESERVE", "ROWS") {
 		return exp.OnCommitProperty(nil)
 	}

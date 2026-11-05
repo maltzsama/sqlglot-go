@@ -308,6 +308,9 @@ func (p *Parser) parseTypesBase(checkFunc, schema, allowIdentifiers, withCollati
 			}
 		} else if enumTypeTokens[typeToken] || (p.dialect.Name == "mysql" && typeToken == tokens.SET) {
 			expressions = p.parseCsv(p.parseEquality)
+		} else if typeToken == tokens.JSON {
+			// parser.py:6552-6556: ClickHouse's JSON type takes a column/parameter list.
+			expressions = p.parseCsv(p.parseJSONTypeArg)
 		} else if isAggregate {
 			funcOrIdent := p.parseFunction(nil, true, true, false)
 			if funcOrIdent == nil {
@@ -324,7 +327,7 @@ func (p *Parser) parseTypesBase(checkFunc, schema, allowIdentifiers, withCollati
 				})...)
 			}
 		} else {
-			// TODO(1d): ClickHouse JSON type args and VECTOR expression normalization.
+			// TODO(1d): VECTOR expression normalization.
 			expressions = p.parseCsv(p.parseTypeSize)
 		}
 
@@ -625,6 +628,15 @@ func (p *Parser) parseVarOrString(upper bool) exp.Expression {
 }
 
 func (p *Parser) parseBracket(this exp.Expression) exp.Expression {
+	// parsers/clickhouse.py:584-615 _parse_bracket: `x[]` JSON-array casts and brace-keyed
+	// map literals.
+	if p.dialect.Name == "clickhouse" {
+		return p.parseClickhouseBracket(this)
+	}
+	return p.parseBracketBase(this)
+}
+
+func (p *Parser) parseBracketBase(this exp.Expression) exp.Expression {
 	if !p.matchSet(map[tokens.TokenType]bool{tokens.L_BRACKET: true, tokens.L_BRACE: true}) {
 		return this
 	}
@@ -723,4 +735,29 @@ func (p *Parser) parseSlice(this exp.Expression) exp.Expression {
 		step = p.parseUnary()
 	}
 	return p.expression(exp.Slice(exp.Args{"this": this, "expression": end, "step": step}), nil, nil)
+}
+
+// parseJSONTypeArg ports _parse_json_type_arg (parser.py:6725-6746).
+func (p *Parser) parseJSONTypeArg() exp.Expression {
+	if p.matchTextSeq("SKIP") {
+		regexp := p.match(tokens.RLIKE)
+		arg := p.parseColumn()
+		if arg != nil && arg.Kind() == exp.KindColumn {
+			arg = columnToDot(arg, arg.Parts())
+		}
+		return p.expression(exp.SkipJSONColumn(exp.Args{"regexp": regexp, "expression": arg}), nil, nil)
+	}
+
+	paramOrCol := p.parseColumn()
+	if paramOrCol == nil || paramOrCol.Kind() != exp.KindColumn {
+		return nil
+	}
+	if len(paramOrCol.Parts()) == 1 && p.match(tokens.EQ) {
+		value := p.parsePrimary()
+		return p.expression(exp.EQ(exp.Args{
+			"this":       exp.Var(exp.Args{"this": paramOrCol.Name()}),
+			"expression": value,
+		}), nil, nil)
+	}
+	return p.expression(exp.ColumnDef(exp.Args{"this": columnToDot(paramOrCol, paramOrCol.Parts()), "kind": p.parseTypes(false, false, false, false)}), nil, nil)
 }

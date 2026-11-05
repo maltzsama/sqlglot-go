@@ -32,6 +32,10 @@ var (
 	tsqlConstraintParsers      map[string]func(*Parser) exp.Expression
 	tsqlConstraintParserKeySet map[string]bool
 
+	clickhouseConstraintParsers        map[string]func(*Parser) exp.Expression
+	clickhouseConstraintParserKeySet   map[string]bool
+	clickhouseSchemaUnnamedConstraints map[string]bool
+
 	// schemaUnnamedConstraints/mysqlSchemaUnnamedConstraints port the base subset of
 	// SCHEMA_UNNAMED_CONSTRAINTS (parser.py:1528-1536) that this port has parsers for
 	// (CHECK/EXCLUDE/FOREIGN KEY/LIKE/PERIOD/PRIMARY KEY/UNIQUE), plus mysql's FULLTEXT/
@@ -128,6 +132,11 @@ func init() {
 		"PERIOD":      func(p *Parser) exp.Expression { return p.parsePeriodForSystemTime() },
 		"PRIMARY KEY": func(p *Parser) exp.Expression { return p.parsePrimaryKey(false, false) },
 		"REFERENCES":  func(p *Parser) exp.Expression { return p.parseReferences(false) },
+		"TTL": func(p *Parser) exp.Expression {
+			return p.expression(exp.MergeTreeTTL(exp.Args{
+				"expressions": []exp.Expression{p.parseBitwise()},
+			}), nil, nil)
+		},
 		"TITLE": func(p *Parser) exp.Expression {
 			return p.expression(exp.TitleColumnConstraint(exp.Args{"this": p.parseVarOrString(false)}), nil, nil)
 		},
@@ -195,6 +204,31 @@ func init() {
 	mysqlSchemaUnnamedConstraints["INDEX"] = true
 	mysqlSchemaUnnamedConstraints["KEY"] = true
 	mysqlSchemaUnnamedConstraints["SPATIAL"] = true
+
+	// clickhouseConstraintParsers ports parsers/clickhouse.py:453-458: the base set plus
+	// INDEX/CODEC/ASSUME, with the virtual _parse_check_constraint override applied.
+	clickhouseConstraintParsers = make(map[string]func(*Parser) exp.Expression, len(constraintParsers)+3)
+	for k, v := range constraintParsers {
+		clickhouseConstraintParsers[k] = v
+	}
+	clickhouseConstraintParsers["CHECK"] = (*Parser).parseClickhouseCheckConstraint
+	clickhouseConstraintParsers["INDEX"] = func(p *Parser) exp.Expression {
+		return p.parseClickhouseIndexConstraint("")
+	}
+	clickhouseConstraintParsers["CODEC"] = func(p *Parser) exp.Expression {
+		return p.parseCompress()
+	}
+	clickhouseConstraintParsers["ASSUME"] = (*Parser).parseClickhouseAssumeConstraint
+	clickhouseConstraintParserKeySet = funcMapKeys(clickhouseConstraintParsers)
+
+	// clickhouseSchemaUnnamedConstraints ports parsers/clickhouse.py:466-469:
+	// SCHEMA_UNNAMED_CONSTRAINTS + INDEX - CHECK.
+	clickhouseSchemaUnnamedConstraints = make(map[string]bool, len(schemaUnnamedConstraints)+1)
+	for k, v := range schemaUnnamedConstraints {
+		clickhouseSchemaUnnamedConstraints[k] = v
+	}
+	clickhouseSchemaUnnamedConstraints["INDEX"] = true
+	delete(clickhouseSchemaUnnamedConstraints, "CHECK")
 }
 
 // funcMapKeys materializes a map[string]func(*Parser) exp.Expression's keys as a bool set,
@@ -213,6 +247,8 @@ func (p *Parser) constraintParsers() map[string]func(*Parser) exp.Expression {
 		return mysqlConstraintParsers
 	case "tsql":
 		return tsqlConstraintParsers
+	case "clickhouse":
+		return clickhouseConstraintParsers
 	}
 	return constraintParsers
 }
@@ -223,13 +259,18 @@ func (p *Parser) constraintParserKeys() map[string]bool {
 		return mysqlConstraintParserKeySet
 	case "tsql":
 		return tsqlConstraintParserKeySet
+	case "clickhouse":
+		return clickhouseConstraintParserKeySet
 	}
 	return constraintParserKeySet
 }
 
 func (p *Parser) schemaUnnamedConstraints() map[string]bool {
-	if p.dialect.Name == "mysql" {
+	switch p.dialect.Name {
+	case "mysql":
 		return mysqlSchemaUnnamedConstraints
+	case "clickhouse":
+		return clickhouseSchemaUnnamedConstraints
 	}
 	return schemaUnnamedConstraints
 }
@@ -576,6 +617,10 @@ func (p *Parser) parsePrimaryKeyPart() exp.Expression {
 // derived from the dialect rather than accepted as a parameter, mirroring mysql's override
 // (parsers/mysql.py:630-638) which always forces it true regardless of the caller.
 func (p *Parser) parsePrimaryKey(wrappedOptional bool, inProps bool) exp.Expression {
+	// parsers/clickhouse.py:797-807: PRIMARY KEY inside CREATE properties is wrapped.
+	if p.dialect.Name == "clickhouse" {
+		wrappedOptional = wrappedOptional || inProps
+	}
 	namedPrimaryKey := p.dialect.Name == "mysql"
 
 	var desc any

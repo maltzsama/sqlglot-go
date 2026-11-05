@@ -25,13 +25,24 @@ type dialectParserOverrideSet struct {
 	DisabledFunctionParsers map[string]bool
 	StatementParsers        map[tokens.TokenType]parserOverrideFunc
 	NoParenFunctionParsers  map[string]parserOverrideFunc
-	NoParenFunctions        map[tokens.TokenType]func(exp.Args) exp.Expression
+	// DisabledNoParenFunctionParsers removes base NO_PAREN_FUNCTION_PARSERS entries
+	// (parsers/clickhouse.py:397-399).
+	DisabledNoParenFunctionParsers map[string]bool
+	NoParenFunctions               map[tokens.TokenType]func(exp.Args) exp.Expression
 	// DisabledNoParenFunctions removes base NO_PAREN_FUNCTIONS entries (parsers/hive.py:126-128).
 	DisabledNoParenFunctions map[tokens.TokenType]bool
 	// AliasTokens adds to TABLE_ALIAS_TOKENS (parsers/presto.py:69-72).
-	AliasTokens     map[tokens.TokenType]bool
-	PropertyParsers map[string]propertyParserFunc
-	TypeParser      typeParserOverrideFunc
+	AliasTokens map[tokens.TokenType]bool
+	// RemovedTableAliasTokens subtracts from TABLE_ALIAS_TOKENS
+	// (parsers/clickhouse.py:427-435).
+	RemovedTableAliasTokens map[tokens.TokenType]bool
+	// RemovedAliasTokens subtracts from ALIAS_TOKENS (parsers/clickhouse.py:437-440).
+	RemovedAliasTokens map[tokens.TokenType]bool
+	PropertyParsers    map[string]propertyParserFunc
+	// DisabledPropertyParsers removes base PROPERTY_PARSERS entries
+	// (parsers/clickhouse.py:390-395).
+	DisabledPropertyParsers map[string]bool
+	TypeParser              typeParserOverrideFunc
 	// QueryModifiers overrides QUERY_MODIFIER_PARSERS entries (parsers/tsql.py:333-337:
 	// OPTION and FOR).
 	QueryModifiers map[tokens.TokenType]func(*Parser) (string, any)
@@ -132,8 +143,12 @@ func (p *Parser) statementParser(tokenType tokens.TokenType) parserOverrideFunc 
 // while the shared PROPERTY_PARSERS singleton remains the fallback for every dialect.
 func (p *Parser) propertyParser(name string) propertyParserFunc {
 	name = strings.ToUpper(name)
-	if parser := dialectParserOverrides[p.parserOverrideKey()].PropertyParsers[name]; parser != nil {
+	overrides := dialectParserOverrides[p.parserOverrideKey()]
+	if parser := overrides.PropertyParsers[name]; parser != nil {
 		return parser
+	}
+	if overrides.DisabledPropertyParsers[name] {
+		return nil
 	}
 	return propertyParsers[name]
 }
@@ -141,10 +156,13 @@ func (p *Parser) propertyParser(name string) propertyParserFunc {
 // propertyParserKeys returns a fresh union because matchTexts needs every overlay key even when the
 // same dialect continues to inherit the rest of the shared registry.
 func (p *Parser) propertyParserKeys() map[string]bool {
-	overlay := dialectParserOverrides[p.parserOverrideKey()].PropertyParsers
+	overrides := dialectParserOverrides[p.parserOverrideKey()]
+	overlay := overrides.PropertyParsers
 	keys := make(map[string]bool, len(propertyParsers)+len(overlay))
 	for name := range propertyParsers {
-		keys[name] = true
+		if !overrides.DisabledPropertyParsers[name] {
+			keys[name] = true
+		}
 	}
 	for name := range overlay {
 		keys[name] = true
@@ -179,6 +197,9 @@ func (p *Parser) noParenFunctionParserFor(name string) parserOverrideFunc {
 		return parser
 	}
 
+	if dialectParserOverrides[p.parserOverrideKey()].DisabledNoParenFunctionParsers[name] {
+		return nil
+	}
 	parser := noParenFunctionParsers[name]
 	if parser == nil || (name == "VARIADIC" && strings.ToLower(p.dialect.Name) != "postgres") ||
 		(name == "PRIOR" && p.connectPriorDepth == 0) {
@@ -200,15 +221,31 @@ func (p *Parser) noParenFunctionFor(tokenType tokens.TokenType) func(exp.Args) e
 
 // tableAliasTokensFor is TABLE_ALIAS_TOKENS plus the dialect overlay's additions.
 func (p *Parser) tableAliasTokensFor() map[tokens.TokenType]bool {
-	extra := dialectParserOverrides[p.parserOverrideKey()].AliasTokens
-	if len(extra) == 0 {
+	overrides := dialectParserOverrides[p.parserOverrideKey()]
+	if len(overrides.AliasTokens) == 0 && len(overrides.RemovedTableAliasTokens) == 0 {
 		return tableAliasTokens
 	}
-	merged := make(map[tokens.TokenType]bool, len(tableAliasTokens)+len(extra))
-	for tt := range tableAliasTokens {
-		merged[tt] = true
+	return mergeTokenSet(tableAliasTokens, overrides.AliasTokens, overrides.RemovedTableAliasTokens)
+}
+
+// aliasTokensFor is ALIAS_TOKENS with the dialect overlay's removals applied
+// (parsers/clickhouse.py:437-440).
+func (p *Parser) aliasTokensFor() map[tokens.TokenType]bool {
+	removed := dialectParserOverrides[p.parserOverrideKey()].RemovedAliasTokens
+	if len(removed) == 0 {
+		return aliasTokens
 	}
-	for tt := range extra {
+	return mergeTokenSet(aliasTokens, nil, removed)
+}
+
+func mergeTokenSet(base, added, removed map[tokens.TokenType]bool) map[tokens.TokenType]bool {
+	merged := make(map[tokens.TokenType]bool, len(base)+len(added))
+	for tt := range base {
+		if !removed[tt] {
+			merged[tt] = true
+		}
+	}
+	for tt := range added {
 		merged[tt] = true
 	}
 	return merged

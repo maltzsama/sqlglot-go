@@ -472,17 +472,16 @@ func compileConfig(cfg TokenizerConfig) TokenizerConfig {
 	// ByteStringEscapes['\\'] - the Go analogues of STRINGS_SUPPORT_ESCAPED_SEQUENCES /
 	// BYTE_STRINGS_SUPPORT_ESCAPED_SEQUENCES) gets the default UNESCAPED_SEQUENCES table
 	// merged in, so e.g. mysql's `\\` collapses to one backslash and postgres's `e'\n'`
-	// scans to an actual newline. No dialect here (base/mysql/postgres) sets its own
-	// UnescapedSequences, so a plain copy (guarded by len==0, since this can run twice -
-	// once inside BaseConfig, again via the per-dialect CompileConfig call) suffices;
-	// a real per-dialect override table would need the same `{**default, **override}`
-	// merge dialect.py does, deferred until a dialect needs it.
-	if (cfg.StringEscapes['\\'] || cfg.ByteStringEscapes['\\']) && len(cfg.UnescapedSequences) == 0 {
+	// scans to an actual newline. dialect.py:333-336 merges the default table UNDER the
+	// dialect's own entries, so a per-dialect override (ClickHouse's `\\0`) keeps the defaults.
+	if cfg.StringEscapes['\\'] || cfg.ByteStringEscapes['\\'] {
 		if cfg.UnescapedSequences == nil {
 			cfg.UnescapedSequences = map[string]string{}
 		}
 		for k, v := range defaultUnescapedSequences {
-			cfg.UnescapedSequences[k] = v
+			if _, exists := cfg.UnescapedSequences[k]; !exists {
+				cfg.UnescapedSequences[k] = v
+			}
 		}
 	}
 	for start, end := range cfg.Quotes {

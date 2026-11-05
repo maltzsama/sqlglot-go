@@ -24,7 +24,11 @@ var (
 	// alterAlterParsers/mysqlAlterAlterParsers port ALTER_ALTER_PARSERS (parser.py:1451-
 	// 1456): base's four entries (DISTKEY/DISTSTYLE/SORTKEY/COMPOUND) are Redshift-only and
 	// out of scope, so the base table is empty; mysql adds INDEX (parsers/mysql.py:260-263).
-	alterAlterParsers         = map[string]func(*Parser) exp.Expression{}
+	alterAlterParsers = map[string]func(*Parser) exp.Expression{}
+
+	// clickhouseAlterParsers ports parsers/clickhouse.py:460-464: base ALTER_PARSERS
+	// plus MODIFY (ALTER COLUMN) and REPLACE (REPLACE PARTITION).
+	clickhouseAlterParsers    map[string]func(*Parser) []exp.Expression
 	alterAlterParserKeys      = map[string]bool{}
 	mysqlAlterAlterParsers    map[string]func(*Parser) exp.Expression
 	mysqlAlterAlterParserKeys map[string]bool
@@ -63,6 +67,17 @@ func init() {
 		}))
 	}
 
+	clickhouseAlterParsers = make(map[string]func(*Parser) []exp.Expression, len(alterParsers)+2)
+	for k, v := range alterParsers {
+		clickhouseAlterParsers[k] = v
+	}
+	clickhouseAlterParsers["MODIFY"] = func(p *Parser) []exp.Expression {
+		return ensureListExpr(p.parseAlterTableAlter())
+	}
+	clickhouseAlterParsers["REPLACE"] = func(p *Parser) []exp.Expression {
+		return ensureListExpr(p.parseClickhouseAlterTableReplace())
+	}
+
 	mysqlAlterAlterParsers = map[string]func(*Parser) exp.Expression{
 		"INDEX": func(p *Parser) exp.Expression { return p.parseAlterTableAlterIndex() },
 	}
@@ -75,6 +90,8 @@ func (p *Parser) alterParsers() map[string]func(*Parser) []exp.Expression {
 		return mysqlAlterParsers
 	case "hive":
 		return hiveAlterParsers
+	case "clickhouse":
+		return clickhouseAlterParsers
 	}
 	return alterParsers
 }
@@ -290,6 +307,27 @@ func (p *Parser) parseAlterTableAdd() []exp.Expression {
 
 // parseAlterTableAlter ports _parse_alter_table_alter (parser.py:8791-8825).
 func (p *Parser) parseAlterTableAlter() exp.Expression {
+	// parsers/clickhouse.py:911-923 _parse_alter_table_alter: MODIFY outside ALTER COLUMN
+	// parses as a property list wrapped in AlterModifySqlSecurity, and a trailing
+	// unconsumed token declines the whole action.
+	if p.dialect.Name == "clickhouse" {
+		if stringsUpper(p.prev.Text) == "MODIFY" && !p.match(tokens.COLUMN, false) {
+			if properties := p.parseProperties(); properties != nil {
+				exprs, _ := properties.Arg("expressions").([]exp.Expression)
+				return p.expression(exp.AlterModifySqlSecurity(exp.Args{"expressions": exprs}), nil, nil)
+			}
+			return nil
+		}
+		alter := p.parseAlterTableAlterBase()
+		if p.curr.IsValid() {
+			return nil
+		}
+		return alter
+	}
+	return p.parseAlterTableAlterBase()
+}
+
+func (p *Parser) parseAlterTableAlterBase() exp.Expression {
 	parsers, keys := p.alterAlterParsers()
 	if p.matchTexts(keys) {
 		return parsers[stringsUpper(p.prev.Text)](p)

@@ -408,6 +408,9 @@ func (p *Parser) parseCreateFunction(ctt tokens.TokenType) (this, expression exp
 		// exp.Properties.Location.POST_SCHEMA (parser.py:2458): generic properties parsed
 		// after a string-literal body.
 		extendProperties(p.parseProperties())
+	} else if ctt == tokens.FUNCTION && p.dialect.Name == "clickhouse" {
+		// parsers/clickhouse.py:502-504: a ClickHouse CREATE FUNCTION body is a lambda.
+		expression = p.parseLambda(true)
 	} else if ctt == tokens.FUNCTION && begin != true && begin != "ATOMIC" &&
 		(p.dialect.Name != "mysql" || returnMatched) {
 		// _parse_user_defined_function_expression (parser.py:7108-7109) is just
@@ -654,6 +657,11 @@ func (p *Parser) parseFieldDef() exp.Expression {
 }
 
 func (p *Parser) parseColumnDef(this exp.Expression) exp.Expression {
+	// parsers/clickhouse.py:789-795: a leading dot inside a column definition builds
+	// Dot(this, identifier) - ClickHouse nested-column access in a DDL type position.
+	if p.dialect.Name == "clickhouse" && p.match(tokens.DOT) {
+		return p.expression(exp.Dot(exp.Args{"this": this, "expression": p.parseIdVar(false, nil)}), nil, nil)
+	}
 	if this != nil && this.Kind() == exp.KindColumn {
 		this = this.This()
 	}
@@ -737,7 +745,12 @@ func (p *Parser) parseColumnDef(this exp.Expression) exp.Expression {
 // KEY/UNIQUE, +mysql's FULLTEXT/INDEX/KEY/SPATIAL).
 func (p *Parser) parseConstraint() exp.Expression {
 	if !p.match(tokens.CONSTRAINT) {
-		return p.parseUnnamedConstraint(p.schemaUnnamedConstraints())
+		constraint := p.parseUnnamedConstraint(p.schemaUnnamedConstraints())
+		// parsers/clickhouse.py:941-942: fall back to a PROJECTION definition.
+		if constraint == nil && p.dialect.Name == "clickhouse" {
+			return p.parseClickhouseProjectionDef()
+		}
+		return constraint
 	}
 	return p.expression(exp.Constraint(exp.Args{
 		"this":        p.parseIdVar(true, nil),
@@ -954,6 +967,21 @@ func init() {
 		"SECURITY":     func(p *Parser, _ bool) exp.Expression { return p.parseSQLSecurity() },
 		"SQL SECURITY": func(p *Parser, _ bool) exp.Expression { return p.parseSQLSecurity() },
 		"STABLE":       func(p *Parser, _ bool) exp.Expression { return p.parseStabilityProperty("STABLE") },
+		"TTL":          func(p *Parser, _ bool) exp.Expression { return p.parseMergeTreeTTL() },
+		"SETTINGS":     func(p *Parser, _ bool) exp.Expression { return p.parseSettingsProperty() },
+		"ORDER BY":     func(p *Parser, _ bool) exp.Expression { return p.parseOrder(nil, true) },
+		"PRIMARY KEY":  func(p *Parser, _ bool) exp.Expression { return p.parsePrimaryKey(false, true) },
+		"SAMPLE": func(p *Parser, _ bool) exp.Expression {
+			var this exp.Expression
+			if p.matchTextSeq("BY") {
+				this = p.parseBitwise()
+			}
+			return p.expression(exp.SampleProperty(exp.Args{"this": this}), nil, nil)
+		},
+		"LAYOUT":   func(p *Parser, _ bool) exp.Expression { return p.parseDictProperty("LAYOUT") },
+		"SOURCE":   func(p *Parser, _ bool) exp.Expression { return p.parseDictProperty("SOURCE") },
+		"RANGE":    func(p *Parser, _ bool) exp.Expression { return p.parseDictRange("RANGE") },
+		"LIFETIME": func(p *Parser, _ bool) exp.Expression { return p.parseDictRange("LIFETIME") },
 		"STRICT": func(p *Parser, _ bool) exp.Expression {
 			return p.expression(exp.StrictProperty(nil), nil, nil)
 		},
