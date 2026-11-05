@@ -40,8 +40,14 @@ func (p *Parser) parseJSONKeyValue() exp.Expression {
 // that flag is true for base/mysql/postgres alike (dialect.py:654), so EMPTY always comes
 // first here.
 func (p *Parser) parseOnCondition() exp.Expression {
-	onEmpty := p.parseOnHandling("EMPTY", onConditionTokens...)
-	onError := p.parseOnHandling("ERROR", onConditionTokens...)
+	var onEmpty, onError any
+	if p.dialect.OnConditionEmptyBeforeError {
+		onEmpty = p.parseOnHandling("EMPTY", onConditionTokens...)
+		onError = p.parseOnHandling("ERROR", onConditionTokens...)
+	} else {
+		onError = p.parseOnHandling("ERROR", onConditionTokens...)
+		onEmpty = p.parseOnHandling("EMPTY", onConditionTokens...)
+	}
 	onNull := p.parseOnHandling("NULL", onConditionTokens...)
 
 	if onEmpty == nil && onError == nil && onNull == nil {

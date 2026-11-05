@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ridi-oss/sqlglot-go/dialects"
 	exp "github.com/ridi-oss/sqlglot-go/expressions"
 	"github.com/ridi-oss/sqlglot-go/tokens"
 )
@@ -541,7 +542,28 @@ func (p *Parser) parseCast(strict bool, safe any) exp.Expression {
 		default_ = p.parseBitwise()
 		p.matchTextSeq("ON", "CONVERSION", "ERROR")
 	}
-	if to == nil {
+	// parser.py:8141-8164: CAST(x AS <type> ..., <format>) folds a temporal CAST into
+	// StrToDate/StrToTime with the dialect-mapped format.
+	if p.match(tokens.FORMAT) || p.match(tokens.COMMA) {
+		fmtString := p.parseWrapped(p.parseString, true)
+		if to == nil {
+			to = exp.DTypeUnknown.IntoExpr(nil)
+		}
+		if dt, ok := to.Arg("this").(exp.DType); ok && temporalCastDType(dt) {
+			format := ""
+			if fmtString != nil {
+				format = dialects.OracleFormatTime(fmtString.Name())
+			}
+			kind := exp.KindStrToTime
+			if dt == exp.DTypeDate {
+				kind = exp.KindStrToDate
+			}
+			return p.expression(exp.New(kind, exp.Args{
+				"this":   this,
+				"format": exp.LiteralString(format),
+			}), nil, nil)
+		}
+	} else if to == nil {
 		p.raiseError("Expected TYPE after CAST")
 	} else if exp.IsType(to, exp.DTypeChar) && (p.match(tokens.CHARACTER_SET) || p.matchTextSeq("CHARACTER", "SET")) {
 		// parser.py:7900-7901 (elif branch): CAST(x AS CHAR CHARACTER SET <cs>) captures the
@@ -760,4 +782,15 @@ func (p *Parser) parseJSONTypeArg() exp.Expression {
 		}), nil, nil)
 	}
 	return p.expression(exp.ColumnDef(exp.Args{"this": columnToDot(paramOrCol, paramOrCol.Parts()), "kind": p.parseTypes(false, false, false, false)}), nil, nil)
+}
+
+// temporalCastDType mirrors exp.DataType.TEMPORAL_TYPES for the CAST-format branch.
+func temporalCastDType(dt exp.DType) bool {
+	switch dt {
+	case exp.DTypeDate, exp.DTypeDatetime, exp.DTypeDatetime2, exp.DTypeDatetime64,
+		exp.DTypeTimestamp, exp.DTypeTimestampTz, exp.DTypeTimestampNtz, exp.DTypeTimestampLtz,
+		exp.DTypeSmallDatetime, exp.DTypeTime, exp.DTypeTimeTz:
+		return true
+	}
+	return false
 }

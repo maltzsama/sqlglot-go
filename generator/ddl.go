@@ -352,6 +352,10 @@ func (g *Generator) alterSQL(e expressions.Expression) string {
 
 // addColumnSQL ports add_column_sql (generator.py:4299-4308).
 func (g *Generator) addColumnSQL(e expressions.Expression) string {
+	// generators/oracle.py:124-125 drops the COLUMNS/COLUMN keyword entirely.
+	if g.dialect.Name == "oracle" {
+		return "ADD " + g.gen(e)
+	}
 	sql := g.gen(e)
 	columnText := ""
 	switch e.Kind() {

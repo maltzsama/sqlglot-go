@@ -435,7 +435,8 @@ func (g *Generator) pivotAliasSQL(e expressions.Expression) string {
 	if parent != nil {
 		pivot = parent.Parent()
 	}
-	if pivot != nil && pivot.Kind() == expressions.KindPivot && boolValue(pivot.Arg("unpivot")) && alias != nil {
+	if pivot != nil && pivot.Kind() == expressions.KindPivot && boolValue(pivot.Arg("unpivot")) && alias != nil &&
+		g.dialect.UnpivotAliasesAreIdentifiers {
 		if alias.Kind() != expressions.KindIdentifier && alias.Kind() == expressions.KindLiteral {
 			alias.Replace(expressions.ToIdentifier(alias.OutputName()))
 		}
@@ -1190,10 +1191,13 @@ func (g *Generator) recursiveWithSearchSQL(e expressions.Expression) string {
 	return kindSQL + " " + this + " SET " + set + using
 }
 
-func (g *Generator) subquerySQL(e expressions.Expression) string {
+func (g *Generator) subquerySQL(e expressions.Expression) string { return g.subquerySQLSep(e, " AS ") }
+
+// subquerySQLSep is subquerySQL with an explicit alias separator (generators/oracle.py:92).
+func (g *Generator) subquerySQLSep(e expressions.Expression, sep string) string {
 	alias := g.sqlKey(e, "alias")
 	if alias != "" {
-		alias = " AS " + alias
+		alias = sep + alias
 	}
 	sample := g.sqlKey(e, "sample")
 	if g.dialect.AliasPostTablesample && sample != "" {
@@ -2076,7 +2080,11 @@ func (g *Generator) dataTypeSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) dataTypeParamSQL(e expressions.Expression) string {
-	return g.sqlKey(e, "this")
+	this := g.sqlKey(e, "this")
+	if suffix := g.sqlKey(e, "expression"); suffix != "" {
+		return this + " " + suffix
+	}
+	return this
 }
 
 // pseudoTypeSQL/objectIdentifierSQL port generator.py:2316-2320 pseudotype_sql/
@@ -2590,7 +2598,11 @@ func (g *Generator) pivotSQL(e expressions.Expression) string {
 	}
 	alias := g.sqlKey(e, "alias")
 	if alias != "" {
-		alias = " AS " + alias
+		if g.dialect.PivotAliasWithAs {
+			alias = " AS " + alias
+		} else {
+			alias = " " + alias
+		}
 	}
 	fields := g.expressions(exprsOptions{expression: e, key: "fields", sep: " ", dynamic: true, newLine: true, skipFirst: true, skipLast: true})
 	nulls := ""

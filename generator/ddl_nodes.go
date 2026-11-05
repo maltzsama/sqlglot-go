@@ -32,6 +32,11 @@ func init() {
 	dispatch[expressions.KindTriggerReferencing] = (*Generator).triggerReferencingSQL
 	// distributedbyproperty_sql (generator.py:4931-4939).
 	dispatch[expressions.KindDistributedByProperty] = (*Generator).distributedByPropertySQL
+	dispatch[expressions.KindMultitableInserts] = (*Generator).multitableInsertsSQL
+	dispatch[expressions.KindConnectByRoot] = func(g *Generator, e expressions.Expression) string {
+		return "CONNECT_BY_ROOT " + g.sqlKey(e, "this")
+	}
+	dispatch[expressions.KindConditionalInsert] = (*Generator).conditionalInsertSQL
 	// duplicatekeyproperty_sql (generator.py:4920-4923).
 	dispatch[expressions.KindDuplicateKeyProperty] = func(g *Generator, e expressions.Expression) string {
 		return "DUPLICATE KEY (" + g.expressions(exprsOptions{expression: e, flat: true}) + ")"
@@ -268,4 +273,27 @@ func (g *Generator) distributedByPropertySQL(e expressions.Expression) string {
 		buckets = " BUCKETS " + buckets
 	}
 	return "DISTRIBUTED BY " + g.sqlKey(e, "kind") + expressionsSQL + buckets + g.sqlKey(e, "order")
+}
+
+// multitableInsertsSQL ports multitableinserts_sql (generator.py:5655-5659).
+func (g *Generator) multitableInsertsSQL(e expressions.Expression) string {
+	kind := g.sqlKey(e, "kind")
+	expressionsSQL := g.seg(g.expressions(exprsOptions{expression: e, sep: " "}))
+	return "INSERT " + kind + expressionsSQL + g.seg(g.sqlKey(e, "source"))
+}
+
+// conditionalInsertSQL ports conditionalinsert_sql (generator.py:5648-5653).
+func (g *Generator) conditionalInsertSQL(e expressions.Expression) string {
+	elseSQL := ""
+	if boolValue(e.Arg("else_")) {
+		elseSQL = "ELSE "
+	}
+	condition := g.sqlKey(e, "expression")
+	prefix := elseSQL
+	if condition != "" {
+		prefix = "WHEN " + condition + " THEN "
+	}
+	insert := g.sqlKey(e, "this")
+	insert = strings.TrimSpace(strings.TrimPrefix(insert, "INSERT"))
+	return prefix + insert
 }

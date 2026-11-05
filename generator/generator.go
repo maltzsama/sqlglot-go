@@ -403,7 +403,7 @@ func withSeparatedComments(k expressions.Kind) bool {
 		expressions.KindDrop, expressions.KindFrom, expressions.KindJoin, expressions.KindOrder, expressions.KindGroup,
 		expressions.KindHaving, expressions.KindSelect, expressions.KindUnion, expressions.KindExcept,
 		expressions.KindIntersect, expressions.KindUpdate, expressions.KindWhere, expressions.KindWith,
-		expressions.KindInsert:
+		expressions.KindInsert, expressions.KindMultitableInserts:
 		return true
 	}
 	return false
