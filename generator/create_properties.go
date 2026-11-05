@@ -28,42 +28,47 @@ const (
 // (generator.py:672-787). PartitionedByProperty is dialect-dependent: Postgres uses
 // PARTITION BY after the schema, while base uses PARTITIONED_BY= inside WITH (...).
 var propertyLocations = map[expressions.Kind]propertyLocation{
-	expressions.KindAlgorithmProperty:          propertyLocationPostCreate,
-	expressions.KindDefinerProperty:            propertyLocationPostCreate,
-	expressions.KindMaterializedProperty:       propertyLocationPostCreate,
-	expressions.KindTemporaryProperty:          propertyLocationPostCreate,
-	expressions.KindUnloggedProperty:           propertyLocationPostCreate,
-	expressions.KindAutoIncrementProperty:      propertyLocationPostSchema,
-	expressions.KindCalledOnNullInputProperty:  propertyLocationPostSchema,
-	expressions.KindCharacterSetProperty:       propertyLocationPostSchema,
-	expressions.KindCollateProperty:            propertyLocationPostSchema,
-	expressions.KindEngineProperty:             propertyLocationPostSchema,
-	expressions.KindInheritsProperty:           propertyLocationPostSchema,
-	expressions.KindLanguageProperty:           propertyLocationPostSchema,
-	expressions.KindLikeProperty:               propertyLocationPostSchema,
-	expressions.KindLockProperty:               propertyLocationPostSchema,
-	expressions.KindPartitionByListProperty:    propertyLocationPostSchema,
-	expressions.KindPartitionByRangeProperty:   propertyLocationPostSchema,
-	expressions.KindPartitionedOfProperty:      propertyLocationPostSchema,
-	expressions.KindReturnsProperty:            propertyLocationPostSchema,
-	expressions.KindRowFormatDelimitedProperty: propertyLocationPostSchema,
-	expressions.KindRowFormatProperty:          propertyLocationPostSchema,
-	expressions.KindRowFormatSerdeProperty:     propertyLocationPostSchema,
-	expressions.KindSchemaCommentProperty:      propertyLocationPostSchema,
-	expressions.KindSerdeProperties:            propertyLocationPostSchema,
-	expressions.KindSetConfigProperty:          propertyLocationPostSchema,
-	expressions.KindSqlReadWriteProperty:       propertyLocationPostSchema,
-	expressions.KindSqlSecurityProperty:        propertyLocationPostSchema,
-	expressions.KindStabilityProperty:          propertyLocationPostSchema,
-	expressions.KindStrictProperty:             propertyLocationPostSchema,
-	expressions.KindFileFormatProperty:         propertyLocationPostWith,
-	expressions.KindProperty:                   propertyLocationPostWith,
-	expressions.KindLockingProperty:            propertyLocationPostAlias,
-	expressions.KindNoPrimaryIndexProperty:     propertyLocationPostExpression,
-	expressions.KindOnCommitProperty:           propertyLocationPostExpression,
-	expressions.KindOnProperty:                 propertyLocationPostSchema,
-	expressions.KindTriggerProperties:          propertyLocationPostExpression,
-	expressions.KindWithDataProperty:           propertyLocationPostExpression,
+	expressions.KindAlgorithmProperty:         propertyLocationPostCreate,
+	expressions.KindDefinerProperty:           propertyLocationPostCreate,
+	expressions.KindMaterializedProperty:      propertyLocationPostCreate,
+	expressions.KindTemporaryProperty:         propertyLocationPostCreate,
+	expressions.KindUnloggedProperty:          propertyLocationPostCreate,
+	expressions.KindAutoIncrementProperty:     propertyLocationPostSchema,
+	expressions.KindCalledOnNullInputProperty: propertyLocationPostSchema,
+	// generator.py:709/799 — the WITH(...) wrapper is rendered by the property itself
+	// (withsystemversioningproperty_sql, when with_ is set), not by the container.
+	expressions.KindDataDeletionProperty:         propertyLocationPostSchema,
+	expressions.KindWithSystemVersioningProperty: propertyLocationPostSchema,
+	expressions.KindCharacterSetProperty:         propertyLocationPostSchema,
+	expressions.KindCollateProperty:              propertyLocationPostSchema,
+	expressions.KindEngineProperty:               propertyLocationPostSchema,
+	expressions.KindInheritsProperty:             propertyLocationPostSchema,
+	expressions.KindLanguageProperty:             propertyLocationPostSchema,
+	expressions.KindLikeProperty:                 propertyLocationPostSchema,
+	expressions.KindLockProperty:                 propertyLocationPostSchema,
+	expressions.KindPartitionByListProperty:      propertyLocationPostSchema,
+	expressions.KindPartitionByRangeProperty:     propertyLocationPostSchema,
+	expressions.KindPartitionedOfProperty:        propertyLocationPostSchema,
+	expressions.KindReturnsProperty:              propertyLocationPostSchema,
+	expressions.KindRowFormatDelimitedProperty:   propertyLocationPostSchema,
+	expressions.KindRowFormatProperty:            propertyLocationPostSchema,
+	expressions.KindRowFormatSerdeProperty:       propertyLocationPostSchema,
+	expressions.KindSchemaCommentProperty:        propertyLocationPostSchema,
+	expressions.KindSerdeProperties:              propertyLocationPostSchema,
+	expressions.KindSetConfigProperty:            propertyLocationPostSchema,
+	expressions.KindSqlReadWriteProperty:         propertyLocationPostSchema,
+	expressions.KindSqlSecurityProperty:          propertyLocationPostSchema,
+	expressions.KindStabilityProperty:            propertyLocationPostSchema,
+	expressions.KindStrictProperty:               propertyLocationPostSchema,
+	expressions.KindFileFormatProperty:           propertyLocationPostWith,
+	expressions.KindProperty:                     propertyLocationPostWith,
+	expressions.KindLockingProperty:              propertyLocationPostAlias,
+	expressions.KindNoPrimaryIndexProperty:       propertyLocationPostExpression,
+	expressions.KindOnCommitProperty:             propertyLocationPostExpression,
+	expressions.KindOnProperty:                   propertyLocationPostSchema,
+	expressions.KindSequenceProperties:           propertyLocationPostExpression,
+	expressions.KindTriggerProperties:            propertyLocationPostExpression,
+	expressions.KindWithDataProperty:             propertyLocationPostExpression,
 	// upstream generator.py:711-788: the POST_SCHEMA property set used by ClickHouse's
 	// CREATE TABLE / CREATE DICTIONARY.
 	expressions.KindDictProperty:     propertyLocationPostSchema,
@@ -278,6 +283,50 @@ func (g *Generator) onCommitPropertySQL(e expressions.Expression) string {
 // MySQL `DROP INDEX <idx> ON <table>` (carried in Drop.cluster) and the CREATE `ON <cluster>` property.
 func (g *Generator) onPropertySQL(e expressions.Expression) string {
 	return "ON " + g.sqlKey(e, "this")
+}
+
+// sequencePropertiesSQL ports sequenceproperties_sql (generator.py:1439-1464). An empty
+// node (the comma-splitter shape parseSequenceProperties can produce) renders "" and is
+// skipped by flat expressions().
+func (g *Generator) sequencePropertiesSQL(e expressions.Expression) string {
+	start := g.sqlKey(e, "start")
+	if start != "" {
+		start = "START WITH " + start
+	}
+	increment := g.sqlKey(e, "increment")
+	if increment != "" {
+		increment = " INCREMENT BY " + increment
+	}
+	minvalue := g.sqlKey(e, "minvalue")
+	if minvalue != "" {
+		minvalue = " MINVALUE " + minvalue
+	}
+	maxvalue := g.sqlKey(e, "maxvalue")
+	if maxvalue != "" {
+		maxvalue = " MAXVALUE " + maxvalue
+	}
+	owned := g.sqlKey(e, "owned")
+	if owned != "" {
+		owned = " OWNED BY " + owned
+	}
+
+	var cacheStr string
+	switch cache := e.Arg("cache"); {
+	case cache == nil:
+	case cache == true:
+		cacheStr = " CACHE"
+	default:
+		// `self._parse_number() or True` (parser.py:2751) never stores False, so the
+		// upstream `f" CACHE {cache}"` branch only ever sees an expression here.
+		cacheStr = " CACHE " + g.gen(asExpression(cache))
+	}
+
+	options := g.expressions(exprsOptions{expression: e, key: "options", flat: true, sep: " "})
+	if options != "" {
+		options = " " + options
+	}
+
+	return strings.TrimLeft(start+increment+minvalue+maxvalue+cacheStr+options+owned, " ")
 }
 
 func (g *Generator) sqlReadWritePropertySQL(e expressions.Expression) string { return e.Name() }

@@ -403,11 +403,17 @@ var boolExpressionKinds = map[exp.Kind]bool{
 }
 
 func (g *Generator) tsqlAndSQL(e exp.Expression) string {
-	return g.ensureBoolOperand(e.This()) + " AND " + g.ensureBoolOperand(asExpression(e.Arg("expression")))
+	// generators/tsql.py:137 sets ENSURE_BOOLS; upstream applies it as an AST preprocess
+	// (transforms.ensure_bools) and then renders through the base and_sql -> connector_sql.
+	// This port renders without the rewrite, so the ensure-bool wrap lives at the
+	// connectorSQL leaves (see there) and this delegates to connector_sql for the same
+	// flatten + pretty too_wide line breaking (generator.py:4073-4099).
+	return g.connectorSQL(e, "AND", nil)
 }
 
 func (g *Generator) tsqlOrSQL(e exp.Expression) string {
-	return g.ensureBoolOperand(e.This()) + " OR " + g.ensureBoolOperand(asExpression(e.Arg("expression")))
+	// See tsqlAndSQL: OR is the same connector path with its own operator.
+	return g.connectorSQL(e, "OR", nil)
 }
 
 func (g *Generator) tsqlNotSQL(e exp.Expression) string {
@@ -415,11 +421,16 @@ func (g *Generator) tsqlNotSQL(e exp.Expression) string {
 }
 
 func (g *Generator) tsqlWhereSQL(e exp.Expression) string {
-	return g.seg("WHERE") + g.sep() + g.ensureBoolOperand(e.This())
+	// Base where_sql applies self.indent(...) to the condition (generator.py:3508-3510);
+	// keep that around the ensure-bool rewrite so pretty output stays aligned.
+	this := g.indent(g.ensureBoolOperand(e.This()), 0, nil, false, false)
+	return g.seg("WHERE") + g.sep() + this
 }
 
 func (g *Generator) tsqlHavingSQL(e exp.Expression) string {
-	return g.seg("HAVING") + g.sep() + g.ensureBoolOperand(e.This())
+	// Same indent as base having_sql (generator.py:2826-2828).
+	this := g.indent(g.ensureBoolOperand(e.This()), 0, nil, false, false)
+	return g.seg("HAVING") + g.sep() + this
 }
 
 func (g *Generator) tsqlJoinSQL(e exp.Expression) string {

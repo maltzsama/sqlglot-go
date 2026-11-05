@@ -48,12 +48,13 @@ func (g *Generator) propertiesSQL(e expressions.Expression) string {
 	return rootSQL + withSQL
 }
 
-// userdefinedfunction_sql (generator.py:4715-4721). no_identify is not ported (this port has
-// no identify-suppression context; Identify defaults to false in every corpus case that
-// reaches this method, so the two are behaviorally identical here).
+// userdefinedfunction_sql (generator.py:4799-4807): expressions are generated non-flat so
+// the parameter list carries its own indent, which wrap's level=1/pad=0 indent then adds
+// to. no_identify is not ported (it only forces identify=False around the expressions
+// call; this port has no identify-suppression context, so the two are identical here).
 func (g *Generator) userDefinedFunctionSQL(e expressions.Expression) string {
 	this := g.sqlKey(e, "this")
-	exprs := g.expressions(exprsOptions{expression: e, flat: true})
+	exprs := g.expressions(exprsOptions{expression: e})
 	if boolValue(e.Arg("wrapped")) {
 		exprs = g.wrap(exprs)
 	} else if exprs != "" {

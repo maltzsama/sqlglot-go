@@ -76,7 +76,104 @@ func (p *Parser) parseProperty() exp.Expression {
 			p.curr.TokenType == tokens.CASE) {
 		return nil
 	}
+
+	// _parse_property (parser.py:2907-2912): the sequence-properties grammar is attempted
+	// before the generic key=value fallback; on a miss the position is restored so
+	// parseKeyValueProperty starts from the same token.
+	index := p.index
+	if seqProps := p.parseSequenceProperties(); seqProps != nil {
+		return seqProps
+	}
+	p.retreat(index)
 	return p.parseKeyValueProperty(nil)
+}
+
+// createSequence mirrors the CREATE_SEQUENCE optionsType (parser.py:1670-1688): the
+// value lists are the optional continuation keywords per leading option, and an empty
+// list (dict.fromkeys(..., tuple())) means the option stands alone.
+var createSequence = optionsType{
+	"SCALE":      {{"EXTEND"}, {"NOEXTEND"}},
+	"SHARD":      {{"EXTEND"}, {"NOEXTEND"}},
+	"NO":         {{"CYCLE"}, {"CACHE"}, {"MAXVALUE"}, {"MINVALUE"}},
+	"SESSION":    nil,
+	"GLOBAL":     nil,
+	"KEEP":       nil,
+	"NOKEEP":     nil,
+	"ORDER":      nil,
+	"NOORDER":    nil,
+	"NOCACHE":    nil,
+	"CYCLE":      nil,
+	"NOCYCLE":    nil,
+	"NOMINVALUE": nil,
+	"NOMAXVALUE": nil,
+	"NOSCALE":    nil,
+	"NOSHARD":    nil,
+}
+
+// parseSequenceProperties ports _parse_sequence_properties (parser.py:2733-2766): a
+// comma-separated run of sequence options (INCREMENT [BY [=]] <term>, MINVALUE,
+// MAXVALUE, START [WITH [=]] <term>, CACHE [<num>], OWNED BY <col|NONE>) plus any bare
+// CREATE_SEQUENCE option captured as a Var. Like upstream, it returns nil when nothing
+// net was consumed — which is what makes the attempt safe to embed in parseProperty.
+// The comma match lives INSIDE the loop, so a consumed comma with no matching sequence
+// key yields a non-nil (empty) SequenceProperties: upstream relies on that to split
+// e.g. T-SQL COPY's `CREDENTIAL = (IDENTITY='x', SECRET='y')` properties, and the
+// generator renders the empty node as "" (flat expressions() skips it).
+func (p *Parser) parseSequenceProperties() exp.Expression {
+	seq := exp.SequenceProperties(exp.Args{})
+
+	var options []exp.Expression
+	index := p.index
+
+loop:
+	for p.curr.IsValid() {
+		p.match(tokens.COMMA)
+		switch {
+		case p.matchTextSeq("INCREMENT"):
+			p.matchTextSeq("BY")
+			p.matchTextSeq("=")
+			seq.Set("increment", p.parseTerm())
+		case p.matchTextSeq("MINVALUE"):
+			seq.Set("minvalue", p.parseTerm())
+		case p.matchTextSeq("MAXVALUE"):
+			seq.Set("maxvalue", p.parseTerm())
+		case p.matchTextSeq("START"):
+			p.matchTextSeq("WITH")
+			p.matchTextSeq("=")
+			seq.Set("start", p.parseTerm())
+		case p.matchTextSeq("CACHE"):
+			// T-SQL allows an empty CACHE which is initialized dynamically.
+			if num := p.parseNumber(); num != nil {
+				seq.Set("cache", num)
+			} else {
+				seq.Set("cache", true)
+			}
+		case p.matchTextSeq("OWNED", "BY"):
+			// "OWNED BY NONE" is the default.
+			if p.matchTextSeq("NONE") {
+				seq.Set("owned", nil)
+			} else {
+				seq.Set("owned", p.parseColumn())
+			}
+		default:
+			opt := p.parseVarFromOptions(createSequence, false)
+			if opt == nil {
+				break loop
+			}
+			options = append(options, opt)
+		}
+	}
+
+	// Upstream sets "options" to `options or None` — an empty list must stay nil so
+	// sequenceproperties_sql renders no options clause.
+	if len(options) > 0 {
+		seq.Set("options", options)
+	}
+
+	if p.index == index {
+		return nil
+	}
+	return seq
 }
 
 // parseKeyValueProperty ports _parse_key_value_property (parser.py:2817-2841), including
@@ -213,6 +310,12 @@ func propertyIdentifierText(identifier exp.Expression) string {
 // (parser.py:3002-3043): WITH (...), WITH DATA, and WITH NO DATA. The wrapped branch uses a
 // temporary Properties node because propertyParserFunc returns one expression.
 func (p *Parser) parseWithProperty() exp.Expression {
+	// parser.py:3100-3104: WITH (SYSTEM_VERSIONING ...).
+	if p.dialect.Name == "tsql" && p.matchTextSeq("(", "SYSTEM_VERSIONING") {
+		prop := p.parseSystemVersioningProperty(true)
+		p.matchRParen(prop)
+		return prop
+	}
 	if p.match(tokens.L_PAREN, false) {
 		return p.expression(exp.Properties(exp.Args{"expressions": p.parseWrappedProperties()}), nil, nil)
 	}
@@ -375,9 +478,8 @@ func (p *Parser) parseNoProperty() exp.Expression {
 	return nil
 }
 
-// parseOnProperty ports the ON COMMIT branches of _parse_on_property
-// (parser.py:3345-3350). The generic OnProperty branch is outside the AST worklist and is
-// left unconsumed by returning nil, so its enclosing statement fails closed.
+// parseOnProperty ports _parse_on_property (parser.py:3443-3448): ON COMMIT ... ROWS, else
+// the generic OnProperty over `ON <id> [<schema>]` (e.g. T-SQL filetable `ON b (c)`).
 func (p *Parser) parseOnProperty() exp.Expression {
 	// parsers/clickhouse.py:809-817: `ON CLUSTER <name>`.
 	if p.dialect.Name == "clickhouse" {
@@ -399,11 +501,68 @@ func (p *Parser) parseOnProperty() exp.Expression {
 	if p.matchTextSeq("COMMIT", "DELETE", "ROWS") {
 		return exp.OnCommitProperty(exp.Args{"delete": true})
 	}
-	// The bare `ON <id>` → exp.OnProperty half of _parse_on_property (parser.py:3345) is the
-	// ClickHouse `ON CLUSTER` form for CREATE/ALTER, which is out of this port's dialect scope; the
-	// only supported OnProperty use is MySQL `DROP INDEX … ON <table>`, built directly in parseDrop
-	// (with a full table target so it accepts the db-qualified form). So this stays nil here.
-	return nil
+	return exp.OnProperty(exp.Args{"this": p.parseSchema(p.parseIdVar(false, nil))})
+}
+
+// parseSystemVersioningProperty ports _parse_system_versioning_property
+// (parser.py:3036-3058). The SYSTEM_VERSIONING keyword is already consumed.
+func (p *Parser) parseSystemVersioningProperty(with bool) exp.Expression {
+	p.match(tokens.EQ)
+	prop := exp.WithSystemVersioningProperty(exp.Args{"on": true, "with_": with})
+	if p.matchTextSeq("OFF") {
+		prop.Set("on", false)
+		return p.expression(prop, nil, nil)
+	}
+	p.match(tokens.ON)
+	if p.match(tokens.L_PAREN) {
+		for p.curr.IsValid() && !p.match(tokens.R_PAREN) {
+			switch {
+			case p.matchTextSeq("HISTORY_TABLE", "="):
+				prop.Set("this", p.parseTableParts(false, false, false, false))
+			case p.matchTextSeq("DATA_CONSISTENCY_CHECK", "="):
+				if tok := p.advanceAny(true); tok != nil {
+					prop.Set("data_consistency", stringsUpper(tok.Text))
+				}
+			case p.matchTextSeq("HISTORY_RETENTION_PERIOD", "="):
+				prop.Set("retention_period", p.parseRetentionPeriod())
+			}
+			p.match(tokens.COMMA)
+		}
+	}
+	return p.expression(prop, nil, nil)
+}
+
+// parseRetentionPeriod ports _parse_retention_period (parser.py:3029-3034).
+func (p *Parser) parseRetentionPeriod() exp.Expression {
+	number := p.parseNumber()
+	prefix := ""
+	if number != nil {
+		prefix = number.Name() + " "
+	}
+	unit := p.parseVar(true, nil, false)
+	if unit == nil {
+		return exp.Var(exp.Args{"this": prefix})
+	}
+	return exp.Var(exp.Args{"this": prefix + unit.Name()})
+}
+
+// parseDataDeletionProperty ports _parse_data_deletion_property (parser.py:3060-3074).
+func (p *Parser) parseDataDeletionProperty() exp.Expression {
+	p.match(tokens.EQ)
+	on := p.matchTextSeq("ON") || !p.matchTextSeq("OFF")
+	prop := exp.DataDeletionProperty(exp.Args{"on": on})
+	if p.match(tokens.L_PAREN) {
+		for p.curr.IsValid() && !p.match(tokens.R_PAREN) {
+			switch {
+			case p.matchTextSeq("FILTER_COLUMN", "="):
+				prop.Set("filter_column", p.parseColumn())
+			case p.matchTextSeq("RETENTION_PERIOD", "="):
+				prop.Set("retention_period", p.parseRetentionPeriod())
+			}
+			p.match(tokens.COMMA)
+		}
+	}
+	return p.expression(prop, nil, nil)
 }
 
 func (p *Parser) parseReadsProperty() exp.Expression {

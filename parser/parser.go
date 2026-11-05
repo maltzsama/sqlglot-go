@@ -2076,6 +2076,23 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 			} else {
 				matched = false
 			}
+		case tokens.DCOLON:
+			// parsers/tsql.py:417-423: T-SQL RANGE_PARSERS[DCOLON] wraps the result of
+			// _parse_function() or _parse_var(any_token=True) in ScopeResolution; `this` may
+			// be nil for a statement-leading `::FOO(...)`, matching upstream reaching the
+			// range loop with this=None after _parse_bitwise returns nothing. Postfix `x::y`
+			// is consumed earlier by parseColumnOps, so this arm only sees the leading form.
+			// Every other dialect leaves DCOLON to the column-operator/cast path.
+			if p.dialect.Name == "tsql" {
+				p.advance()
+				expr := p.parseFunction(nil, false, false, false)
+				if expr == nil {
+					expr = p.parseVar(true, nil, false)
+				}
+				this = p.expression(exp.ScopeResolution(exp.Args{"this": this, "expression": expr}), nil, nil)
+			} else {
+				matched = false
+			}
 		case tokens.DAT:
 			// parsers/postgres.py RANGE_PARSERS[TokenType.DAT]: postgres `x @@ y` full-text
 			// match, built as exp.MatchAgainst(this=<rhs>, expressions=[<lhs>]) - not a
@@ -3672,6 +3689,17 @@ func (p *Parser) parseValueExpression() exp.Expression {
 }
 
 func (p *Parser) parseWrappedSelect(table bool) exp.Expression {
+	// parsers/tsql.py:500-506: T-SQL allows a MERGE statement inside a wrapped select
+	// (`INSERT ... FROM (MERGE INTO ...) AS changes(...)`). It returns before the base
+	// set-operation/query-modifier tail, so no tail is applied here either.
+	if p.dialect.Name == "tsql" && p.match(tokens.MERGE) {
+		comments := p.prevComments
+		merge := p.parseMerge()
+		if merge != nil && len(comments) > 0 {
+			merge.AddComments(comments, true)
+		}
+		return merge
+	}
 	var this exp.Expression
 	if table {
 		this = p.parseTable(false, false, nil, false, false, false, true)

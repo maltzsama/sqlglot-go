@@ -608,14 +608,19 @@ Parsed end to end: `SELECT TOP n [PERCENT] [WITH TIES]`, `OFFSET ... FETCH`, `CR
 transactions, `NEXT VALUE FOR`, `#temp`/`##global` tables, `IDENTITY`, `CLUSTERED`/`NONCLUSTERED`
 constraints, `x::y` scope resolution, and the TSQL DDL/DML forms exercised by the corpus.
 
-Corpus: `testdata/dialect_identity.jsonl` now carries the 613 `validate_identity` cases extracted
-from `tests/dialects/test_tsql.py` (`scripts/extract_dialect_corpus.py --dialects tsql`); the floors
-in `corpus_test.go` are **600/613**, and the remaining 13 rows are the burndown list in
-`testdata/parity_gaps.txt`: CREATE TRIGGER bodies, `OPENJSON ... WITH` column definitions,
-MERGE nested in a derived table, temporal `PERIOD FOR SYSTEM_TIME` / `SYSTEM_VERSIONING` DDL,
-`ALTER TABLE ... SET` option lists with interval values, `CREATE TABLE ... ON <filegroup>`,
-nested COPY parameter spacing, and one pretty-print case.
-
+Corpus: `testdata/dialect_identity.jsonl` carries the 613 `validate_identity` cases extracted
+from `tests/dialects/test_tsql.py` (`scripts/extract_dialect_corpus.py --dialects tsql`), and the
+dialect is at **613/613** — floors in `corpus_test.go` raised to 613 and no TSQL rows remain in
+`testdata/parity_gaps.txt`. The final burndown (fork issue `maltzsama/sqlglot-go#3`) closed the
+last 13 rows: CREATE TRIGGER bodies, `OPENJSON ... WITH` column definitions, MERGE nested in a
+derived table (`_parse_wrapped_select` override), temporal `PERIOD FOR SYSTEM_TIME` /
+`SYSTEM_VERSIONING` / `DATA_DELETION` DDL (base `PERIOD` constraint registry, the
+`PROPERTIES_LOCATION` entries, and the None-not-`""` optional-arg rendering), `ALTER TABLE ... SET`
+interval option lists, `CREATE TABLE ... ON <filegroup>`, COPY `CREDENTIAL = (...)` paren option
+lists (with the `SequenceProperties` comma-splitter), statement-leading `::FOO(...)` range-parser
+scope resolution, the TSQL ensure-bools render-time rewrite (incl. width-aware `connector_sql`
+breaking), and the pretty UDF parameter-list indent. Regression tests:
+`TestTSQLParserGeneratorGaps` in `tsql_test.go`.
 ## ClickHouse dialect — DONE (issue #3)
 
 Ported 1:1 from `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/clickhouse.py`.

@@ -21,7 +21,7 @@ var (
 	// + parsers/mysql.py:243-251. The base registry includes the column/schema constraints
 	// needed by the fidelity corpus, including COMPRESS/EXCLUDE/FORMAT/INLINE/LIKE/TITLE/
 	// UPPERCASE; mysql extends it with FULLTEXT/INDEX/KEY/SPATIAL/ZEROFILL/INVISIBLE.
-	// The remaining upstream base keys (CLUSTERED/NONCLUSTERED/ENCODE/EPHEMERAL/PERIOD/TTL/
+	// The remaining upstream base keys (CLUSTERED/NONCLUSTERED/ENCODE/EPHEMERAL/TTL/
 	// WITH/BUCKET/TRUNCATE) stay deferred.
 	constraintParsers      map[string]func(*Parser) exp.Expression
 	constraintParserKeySet map[string]bool
@@ -37,9 +37,9 @@ var (
 	clickhouseSchemaUnnamedConstraints map[string]bool
 
 	// schemaUnnamedConstraints/mysqlSchemaUnnamedConstraints port the base subset of
-	// SCHEMA_UNNAMED_CONSTRAINTS (parser.py:1458-1468) that this port has parsers for
-	// (CHECK/EXCLUDE/FOREIGN KEY/LIKE/PRIMARY KEY/UNIQUE), plus mysql's FULLTEXT/INDEX/
-	// KEY/SPATIAL (parsers/mysql.py:265-271). PERIOD/BUCKET/TRUNCATE stay deferred.
+	// SCHEMA_UNNAMED_CONSTRAINTS (parser.py:1528-1536) that this port has parsers for
+	// (CHECK/EXCLUDE/FOREIGN KEY/LIKE/PERIOD/PRIMARY KEY/UNIQUE), plus mysql's FULLTEXT/
+	// INDEX/KEY/SPATIAL (parsers/mysql.py:265-271). BUCKET/TRUNCATE stay deferred.
 	schemaUnnamedConstraints      map[string]bool
 	mysqlSchemaUnnamedConstraints map[string]bool
 )
@@ -129,6 +129,7 @@ func init() {
 		"PATH": func(p *Parser) exp.Expression {
 			return p.expression(exp.PathColumnConstraint(exp.Args{"this": p.parseString()}), nil, nil)
 		},
+		"PERIOD":      func(p *Parser) exp.Expression { return p.parsePeriodForSystemTime() },
 		"PRIMARY KEY": func(p *Parser) exp.Expression { return p.parsePrimaryKey(false, false) },
 		"REFERENCES":  func(p *Parser) exp.Expression { return p.parseReferences(false) },
 		"TTL": func(p *Parser) exp.Expression {
@@ -151,6 +152,7 @@ func init() {
 		"EXCLUDE":     true,
 		"FOREIGN KEY": true,
 		"LIKE":        true,
+		"PERIOD":      true,
 		"PRIMARY KEY": true,
 		"UNIQUE":      true,
 	}
@@ -574,6 +576,21 @@ func (p *Parser) parseForeignKey() exp.Expression {
 	}
 	args["options"] = p.parseKeyConstraintOptions()
 	return p.expression(exp.ForeignKey(args), nil, nil)
+}
+
+// parsePeriodForSystemTime ports _parse_period_for_system_time (parser.py:7873-7883): the
+// PERIOD keyword is already consumed. `FOR SYSTEM_TIME` missing (e.g. a column literally
+// named `period`) declines with a retreat so the caller re-parses it as a field.
+func (p *Parser) parsePeriodForSystemTime() exp.Expression {
+	if !p.matchTextSeq("FOR", "SYSTEM_TIME") {
+		p.retreat(p.index - 1)
+		return nil
+	}
+	idVars := p.parseWrappedIdVars()
+	return p.expression(exp.PeriodForSystemTimeConstraint(exp.Args{
+		"this":       seqGet(idVars, 0),
+		"expression": seqGet(idVars, 1),
+	}), nil, nil)
 }
 
 // parsePrimaryKeyPart ports the base _parse_primary_key_part (parser.py:7599-7600),

@@ -239,7 +239,7 @@ const (
 	minPassTrino      = 67
 	minPassPresto     = 170
 	minPassHive       = 141
-	minPassTSQL       = 600
+	minPassTSQL       = 613
 	minPassClickhouse = 468
 )
 

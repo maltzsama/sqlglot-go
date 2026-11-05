@@ -18,6 +18,7 @@ func init() {
 		FunctionParsers: map[string]parserOverrideFunc{
 			"DATEPART":      (*Parser).parseTSQLDatepart,
 			"JSON_ARRAYAGG": (*Parser).parseTSQLJSONArrayAgg,
+			"OPENJSON":      (*Parser).parseOpenJSON,
 			"CONVERT": func(p *Parser) exp.Expression {
 				return p.parseTSQLConvert(p.strictCast, nil)
 			},
@@ -34,6 +35,14 @@ func init() {
 		},
 		NoParenFunctionParsers: map[string]parserOverrideFunc{
 			"NEXT": (*Parser).parseTSQLNextValueFor,
+		},
+		PropertyParsers: map[string]propertyParserFunc{
+			"SYSTEM_VERSIONING": func(p *Parser, _ bool) exp.Expression {
+				return p.parseSystemVersioningProperty(false)
+			},
+			"DATA_DELETION": func(p *Parser, _ bool) exp.Expression {
+				return p.parseDataDeletionProperty()
+			},
 		},
 	})
 }
@@ -145,6 +154,30 @@ func (p *Parser) parseTSQLDatepart() exp.Expression {
 	}
 	name := mapDatePart(this, p.dialect.DatePartMapping)
 	return p.expression(exp.Extract(exp.Args{"this": name, "expression": expression}), nil, nil)
+}
+
+// parseOpenJSON ports _parse_open_json (parser.py:8485-8504).
+func (p *Parser) parseOpenJSON() exp.Expression {
+	this := p.parseBitwise()
+	var path exp.Expression
+	if p.match(tokens.COMMA) {
+		path = p.parseString()
+	}
+	parseColumnDef := func() exp.Expression {
+		column := p.parseField(true, nil, false)
+		kind := p.parseTypes(false, false, true, false)
+		path := p.parseString()
+		asJSON := p.matchPair(tokens.ALIAS, tokens.JSON, true)
+		return p.expression(exp.OpenJSONColumnDef(exp.Args{
+			"this": column, "kind": kind, "path": path, "as_json": asJSON,
+		}), nil, nil)
+	}
+	var expressions []exp.Expression
+	if p.matchPair(tokens.R_PAREN, tokens.WITH, true) {
+		p.matchLParen(nil)
+		expressions = p.parseCsv(parseColumnDef)
+	}
+	return p.expression(exp.OpenJSON(exp.Args{"this": this, "path": path, "expressions": expressions}), nil, nil)
 }
 
 // parseTSQLJSONArrayAgg ports the TSQL FUNCTION_PARSERS["JSON_ARRAYAGG"] entry
