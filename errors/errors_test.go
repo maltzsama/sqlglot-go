@@ -4,7 +4,7 @@ import (
 	stderrors "errors"
 	"testing"
 
-	sqlerrors "github.com/ridi-oss/sqlglot-go/errors"
+	sqlerrors "github.com/maltzsama/sqlglot-go/errors"
 )
 
 func TestConcatMessagesBounds(t *testing.T) {

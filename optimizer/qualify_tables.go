@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ridi-oss/sqlglot-go/dialects"
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
-	"github.com/ridi-oss/sqlglot-go/schema"
+	"github.com/maltzsama/sqlglot-go/dialects"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/schema"
 )
 
 // normalizeRelationIdentifier folds a bare relation name (a schema/catalog arg or a search-path entry)

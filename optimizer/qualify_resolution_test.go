@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
-	"github.com/ridi-oss/sqlglot-go/generator"
-	"github.com/ridi-oss/sqlglot-go/optimizer"
-	"github.com/ridi-oss/sqlglot-go/schema"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/generator"
+	"github.com/maltzsama/sqlglot-go/optimizer"
+	"github.com/maltzsama/sqlglot-go/schema"
 )
 
 func TestQualifyResolutionReport(t *testing.T) {

@@ -3,12 +3,12 @@ package parser_test
 import (
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	"github.com/ridi-oss/sqlglot-go/dialects"
-	sqlerrors "github.com/ridi-oss/sqlglot-go/errors"
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
-	parserpkg "github.com/ridi-oss/sqlglot-go/parser"
-	"github.com/ridi-oss/sqlglot-go/tokens"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	"github.com/maltzsama/sqlglot-go/dialects"
+	sqlerrors "github.com/maltzsama/sqlglot-go/errors"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
+	parserpkg "github.com/maltzsama/sqlglot-go/parser"
+	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 func TestAthenaRoutesExternalDDLToHive(t *testing.T) {

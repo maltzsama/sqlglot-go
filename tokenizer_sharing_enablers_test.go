@@ -3,8 +3,8 @@ package sqlglot_test
 import (
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	"github.com/ridi-oss/sqlglot-go/dialects"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	"github.com/maltzsama/sqlglot-go/dialects"
 )
 
 // TestTokenizeErrorsOnUnterminated (V1): Tokenize must return an error — never a silently

@@ -3,8 +3,8 @@ package parser
 import (
 	"strings"
 
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
-	"github.com/ridi-oss/sqlglot-go/tokens"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 // pgConfigSpecialParams are Postgres's special multi-word run-time-parameter spellings that SHOW and

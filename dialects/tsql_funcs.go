@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // tsql_funcs.go ports the FUNCTIONS overlay in

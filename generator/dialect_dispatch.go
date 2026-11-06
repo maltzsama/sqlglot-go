@@ -3,8 +3,8 @@ package generator
 import (
 	"strings"
 
-	"github.com/ridi-oss/sqlglot-go/dialects"
-	"github.com/ridi-oss/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/dialects"
+	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // Per-dialect generator overrides — the port of upstream's per-class TRANSFORMS, TYPE_MAPPING

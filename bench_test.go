@@ -6,8 +6,8 @@ package sqlglot_test
 import (
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	"github.com/ridi-oss/sqlglot-go/generator"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	"github.com/maltzsama/sqlglot-go/generator"
 )
 
 const benchBase = "SELECT a, b, COUNT(*) FROM t1 JOIN t2 ON t1.id = t2.id WHERE a > 1 AND b <> 'x' GROUP BY a, b ORDER BY 1 LIMIT 10"

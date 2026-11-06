@@ -7,8 +7,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/ridi-oss/sqlglot-go/dialects"
-	"github.com/ridi-oss/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/dialects"
+	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // Hive overrides follow generators/hive.py:260-393 and 474-642.

@@ -3,7 +3,7 @@ package generator
 import (
 	"strings"
 
-	"github.com/ridi-oss/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // Renderers for the MySQL compound-statement grammar extension (parser/mysql_compound.go,

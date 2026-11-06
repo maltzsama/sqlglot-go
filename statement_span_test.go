@@ -3,9 +3,9 @@ package sqlglot_test
 import (
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
-	"github.com/ridi-oss/sqlglot-go/generator"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/generator"
 )
 
 // Statement-level source spans (Go-only, DEVIATIONS §6.2): every expression Parse returns is

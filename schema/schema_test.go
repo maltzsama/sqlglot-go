@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	sqlerrors "github.com/ridi-oss/sqlglot-go/errors"
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
-	"github.com/ridi-oss/sqlglot-go/schema"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	sqlerrors "github.com/maltzsama/sqlglot-go/errors"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/schema"
 )
 
 func mustSchema(t *testing.T, mapping *schema.Mapping) *schema.MappingSchema {

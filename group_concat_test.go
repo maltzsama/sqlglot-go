@@ -3,8 +3,8 @@ package sqlglot_test
 import (
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	"github.com/ridi-oss/sqlglot-go/generator"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	"github.com/maltzsama/sqlglot-go/generator"
 )
 
 // TestGroupConcat ports the MySQL GROUP_CONCAT cases from upstream

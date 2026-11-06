@@ -4,12 +4,12 @@ import (
 	"strings"
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	"github.com/ridi-oss/sqlglot-go/dialects"
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
-	"github.com/ridi-oss/sqlglot-go/generator"
-	"github.com/ridi-oss/sqlglot-go/optimizer"
-	"github.com/ridi-oss/sqlglot-go/schema"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	"github.com/maltzsama/sqlglot-go/dialects"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/generator"
+	"github.com/maltzsama/sqlglot-go/optimizer"
+	"github.com/maltzsama/sqlglot-go/schema"
 )
 
 // TestClickhouseIdentity is the same-dialect round-trip oracle for ClickHouse, ported from

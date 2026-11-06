@@ -1,8 +1,8 @@
 package generator
 
 import (
-	"github.com/ridi-oss/sqlglot-go/dialects"
-	"github.com/ridi-oss/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/dialects"
+	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // athenaGeneratesAsHive ports _generate_as_hive (generators/athena.py:47-69): DDL renders with

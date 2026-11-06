@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ridi-oss/sqlglot-go/tokens"
+	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 // Oracle ports the Oracle dialect class from

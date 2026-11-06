@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ridi-oss/sqlglot-go/dialects"
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/dialects"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // TSQL generator overrides, ported from

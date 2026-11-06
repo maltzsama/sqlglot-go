@@ -3,7 +3,7 @@ package dialects
 import (
 	"maps"
 
-	"github.com/ridi-oss/sqlglot-go/tokens"
+	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 // TSQL ports the T-SQL (Microsoft SQL Server) dialect class from

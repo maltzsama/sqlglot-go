@@ -3,8 +3,8 @@ package parser_test
 import (
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // TestStringAliasesFlag pins the per-dialect STRING_ALIASES port (parser.py:1780;

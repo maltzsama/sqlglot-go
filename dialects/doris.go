@@ -1,7 +1,7 @@
 package dialects
 
 import (
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // Doris ports the Apache Doris dialect class from

@@ -1,7 +1,7 @@
 package dialects
 
 import (
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // doris_funcs.go ports the FUNCTIONS overlay in

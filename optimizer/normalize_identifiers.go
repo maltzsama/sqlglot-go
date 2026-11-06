@@ -1,8 +1,8 @@
 package optimizer
 
 import (
-	"github.com/ridi-oss/sqlglot-go/dialects"
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/dialects"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // NormalizeIdentifiers folds unquoted identifiers per the dialect's normalization strategy,

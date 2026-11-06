@@ -3,7 +3,7 @@ package dialects_test
 import (
 	"testing"
 
-	"github.com/ridi-oss/sqlglot-go/dialects"
+	"github.com/maltzsama/sqlglot-go/dialects"
 )
 
 // TestDialectResolutionIsIsolated pins the dialect-template cache contract: resolving a

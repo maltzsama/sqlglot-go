@@ -3,8 +3,8 @@ package generator_test
 import (
 	"testing"
 
-	"github.com/ridi-oss/sqlglot-go/dialects"
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/dialects"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
 func TestMySQLCreateTablePartitionsSQL(t *testing.T) {

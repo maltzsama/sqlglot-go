@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ridi-oss/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
 var safeIdentifierRE = regexp.MustCompile(`^[_a-zA-Z]\w*$`)
