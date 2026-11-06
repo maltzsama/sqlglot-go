@@ -127,6 +127,10 @@ type Dialect struct {
 	SupportsStructStarExpansion        bool
 	ExcludesPseudocolumnsFromStar      bool
 	QueryResultsAreStructs             bool
+	// PromoteToInferredDatetimeType ports PROMOTE_TO_INFERRED_DATETIME_TYPE
+	// (dialects/dialect.py:700): canonicalize compares a temporal value with a date-like string
+	// at the type the string looks like. False by default, true for MySQL.
+	PromoteToInferredDatetimeType bool
 	// SafeToEliminateDoubleNegation ports SAFE_TO_ELIMINATE_DOUBLE_NEGATION
 	// (dialects/dialect.py:754): simplify may rewrite NOT NOT x to a BOOLEAN x. True by default.
 	SafeToEliminateDoubleNegation bool

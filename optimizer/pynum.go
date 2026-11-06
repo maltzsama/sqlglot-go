@@ -292,4 +292,5 @@ func (n pyNum) String() string {
 
 func itoa(i int) string { return big.NewInt(int64(i)).String() }
 
-func bigOne() *big.Int { return big.NewInt(1) }
+func bigOne() *big.Int  { return big.NewInt(1) }
+func bigZero() *big.Int { return big.NewInt(0) }

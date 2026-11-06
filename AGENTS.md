@@ -3,8 +3,8 @@
 A Go port of **[tobymao/sqlglot](https://github.com/tobymao/sqlglot) v30.17.0** (a pure-Python SQL
 parser, generator, and optimizer). It ports the **parse → AST → generate** core ~1:1 (tokenizer, AST,
 parser, generator, schema) plus the `qualify` and `scope` optimizer passes that column qualification
-and **lineage** build on. It is **not** a full port of sqlglot: the rest of the optimizer (simplify,
-normalize, pushdown/eliminate/merge/unnest passes, the `optimize()` orchestrator), cross-dialect
+and **lineage** build on, and most of the other optimizer rules. It is **not** a full port of
+sqlglot: the `optimize()` orchestrator, cross-dialect
 transpilation, and dialects beyond the ones `dialects.GetOrRaise` registers (base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris, Oracle) are out of scope for now. This repo is
 the SQL engine only; it has no application-specific code.
 
@@ -69,7 +69,7 @@ table qualification (`QualifyOpts.SearchPath`), top-level `UPDATE`/`DELETE`/`MER
 structural PG `EXPLAIN`, MySQL `REPLACE`, and the `FoldIdentifierName`/`IsReservedKeyword`
 helpers. See **[CHANGELOG.md](./CHANGELOG.md)** for the per-version history.
 
-**Remaining work** (see `ROADMAP.md`): the rest of sqlglot's optimizer — `canonicalize` and the
+**Remaining work** (see `ROADMAP.md`): the rest of sqlglot's optimizer — the
 top-level `optimize()` orchestrator;
 the function nodes `annotate_types` can't type yet (#44); verified cross-dialect transpilation; and dialects beyond base/MySQL/Postgres.
 The parse/generate round-trip itself is done — a construct upstream parses that this port doesn't is a

@@ -75,6 +75,7 @@ func MySQL() *Dialect {
 	d.Name = "mysql"
 	// dialects/mysql.py:31 SAFE_TO_ELIMINATE_DOUBLE_NEGATION = False.
 	d.SafeToEliminateDoubleNegation = false
+	d.PromoteToInferredDatetimeType = true
 	// generators/mysql.py:118 SUPPORTS_ALTER_COLUMN_NULLABILITY = True.
 	d.SupportsAlterColumnNullability = true
 	d.QuoteStart = "'"
