@@ -333,7 +333,7 @@ func mergeable(outerScope, innerScope *Scope, leaveTablesIsolated bool, fromOrJo
 		!windowProjectionBlocksMerge(windowAliases) &&
 		!literalGroupUnmergeable(numberLiteralAliases) &&
 		!literalInOrderBy(numberLiteralAliases) &&
-		!(innerScope.IsCTE() && isRecursive())
+		(!innerScope.IsCTE() || !isRecursive())
 }
 
 // renameInnerSources ports _rename_inner_sources (optimizer/merge_subqueries.py:338-366): it

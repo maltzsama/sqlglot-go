@@ -413,7 +413,7 @@ func decorrelate(sel, parentSelect exp.Expression, externalColumns []exp.Express
 				exp.ArrayAny(exp.Args{"this": alias, "expression": lambdaX(body)}))
 		}
 	default:
-		var replacement exp.Expression = alias
+		replacement := alias
 		if isSubqueryProjection && sel.Parent().Alias() != "" {
 			replacement = exp.AliasExpr(alias, sel.Parent().Alias(), false)
 		}

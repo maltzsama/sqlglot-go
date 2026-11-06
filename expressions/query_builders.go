@@ -252,7 +252,7 @@ func (n *Node) Transform(fun func(Expression) Expression, copyValue bool) Expres
 
 // binop ports Expression._binop (expressions/core.py:1399-1409).
 func (n *Node) binop(kind Kind, other any) Expression {
-	var this Expression = n.Copy()
+	this := n.Copy()
 	otherExpr := Convert(other, true)
 	if this.Kind() != kind && otherExpr.Kind() != kind {
 		this = wrap(this, TraitBinary)
