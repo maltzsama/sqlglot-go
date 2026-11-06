@@ -38,12 +38,14 @@ targeted slice of the optimizer:
 - **`simplify`** — boolean, arithmetic, string and date simplification, folding constants with
   upstream's value semantics; the same `Anonymous` gap leaves some function folds undone (#44).
 - **`normalize`** and **`eliminate_joins`** — CNF/DNF conversion and unused-join removal.
+- **`pushdown_predicates`** and **`pushdown_projections`** — predicate pushdown and unused
+  projection pruning.
 - **`scope` / `traverse_scope` + the full `Scope` API** — sources, columns, unions, CTEs, subqueries:
   the foundation for **column lineage**.
 
 **Not ported (yet):**
-- The rest of sqlglot's **optimizer**: `pushdown_predicates`, `pushdown_projections`,
-  `canonicalize`, and the top-level `optimize()` rule orchestrator.
+- The rest of sqlglot's **optimizer**: `canonicalize` and the top-level `optimize()` rule
+  orchestrator.
 - **Cross-dialect transpilation** — the generator can target a dialect, but only **same-dialect**
   round-trip is a goal and is tested; reading one dialect and writing another is not verified.
 - **Dialects beyond the ones listed under [Dialects](#dialects)** (upstream ships 30+).
