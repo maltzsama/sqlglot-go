@@ -30,14 +30,15 @@ targeted slice of the optimizer:
 - **Schema** — `MappingSchema`, `DataType.build`, type-category sets.
 - **`qualify` optimizer pass** — qualify_tables → normalize_identifiers → qualify_columns →
   quote_identifiers → validate.
+- **Rewrite passes** — `eliminate_ctes` (with the mutation `Journal`), `eliminate_subqueries` and
+  `optimize_joins`, each checked against its upstream fixture file.
 - **`scope` / `traverse_scope` + the full `Scope` API** — sources, columns, unions, CTEs, subqueries:
   the foundation for **column lineage**.
 
 **Not ported (yet):**
 - The rest of sqlglot's **optimizer**: `simplify` (full), `normalize`, `pushdown_predicates`,
-  `pushdown_projections`, `eliminate_ctes` / `eliminate_joins` / `eliminate_subqueries`,
-  `merge_subqueries`, `unnest_subqueries`, `optimize_joins`, `canonicalize`, and the top-level
-  `optimize()` rule orchestrator. (`annotate_types` and `simplify` are only partially present.)
+  `pushdown_projections`, `eliminate_joins`, `merge_subqueries`, `unnest_subqueries`,
+  `canonicalize`, and the top-level `optimize()` rule orchestrator. (`annotate_types` and `simplify` are only partially present.)
 - **Cross-dialect transpilation** — the generator can target a dialect, but only **same-dialect**
   round-trip is a goal and is tested; reading one dialect and writing another is not verified.
 - **Dialects beyond the ones listed under [Dialects](#dialects)** (upstream ships 30+).
@@ -66,6 +67,7 @@ case-folding, to match real engines).
 | Generate (AST → SQL) | `generator` | **100% round-trip** on the upstream identity corpus for base (980/980) and every registered dialect (see [Dialects](#dialects)) |
 | Schema | `schema` | `MappingSchema`, `DataType.build`, type-category sets |
 | Qualify | `optimizer` | `qualify` (qualify_tables, normalize_identifiers, qualify_columns, quote_identifiers, validate) |
+| Rewrite passes | `optimizer` | `EliminateCTEs`, `EliminateSubqueries`, `OptimizeJoins` |
 | Scope / lineage | `optimizer` | `traverse_scope` + full `Scope` API (sources, columns, unions, CTEs) |
 | Dialects | `dialects` | see [Dialects](#dialects) (tokenizer, normalization, quoting, per-dialect functions/flags) |
 
