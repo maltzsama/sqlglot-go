@@ -80,6 +80,14 @@ func pyStr(v any) string {
 	return fmt.Sprint(v)
 }
 
+// anonymousThisError is upstream's ValueError for an Anonymous whose this is neither a str nor an
+// Identifier; the message, period included, is upstream's.
+type anonymousThisError struct{ got string }
+
+func (e anonymousThisError) Error() string {
+	return "Anonymous.this expects a str or an Identifier, got '" + e.got + "'."
+}
+
 // pyTypeName is type(v).__name__ for a scalar arg value.
 func pyTypeName(v any) string {
 	switch v.(type) {
@@ -229,8 +237,11 @@ func genNode(e exp.Expression, stack []any) []any {
 		case string:
 			name = strings.ToUpper(this)
 		case exp.Expression:
-			if this == nil || this.Kind() != exp.KindIdentifier {
-				panic(fmt.Errorf("Anonymous.this expects a str or an Identifier, got '%s'.", exp.ClassName(this.Kind())))
+			if this == nil {
+				panic(anonymousThisError{"NoneType"})
+			}
+			if this.Kind() != exp.KindIdentifier {
+				panic(anonymousThisError{exp.ClassName(this.Kind())})
 			}
 			name = this.Text("this")
 			if truthyArg(this.Arg("quoted")) {
@@ -239,7 +250,7 @@ func genNode(e exp.Expression, stack []any) []any {
 				name = strings.ToUpper(name)
 			}
 		default:
-			panic(fmt.Errorf("Anonymous.this expects a str or an Identifier, got '%s'.", pyTypeName(this)))
+			panic(anonymousThisError{pyTypeName(this)})
 		}
 		return append(stack, genSep(")"), argValue(e, "expressions"), genSep("("), genSep(name))
 	case exp.KindBetween:

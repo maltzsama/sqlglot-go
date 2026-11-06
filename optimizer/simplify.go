@@ -282,7 +282,7 @@ func (s *Simplifier) simplifyNode(expression exp.Expression, constantPropagation
 		post = append(post, postFrame{node, parent})
 	}
 
-	var node exp.Expression = expression
+	node := expression
 	for len(post) > 0 {
 		frame := post[len(post)-1]
 		post = post[:len(post)-1]
@@ -381,13 +381,13 @@ func SimplifyParens(expression exp.Expression, dialect *dialects.Dialect) exp.Ex
 
 	// Unary operators that bind tighter than the predicate, unlike NOT.
 	tightUnary := parent != nil && (parent.Kind() == exp.KindNeg || isClass(parent, "BitwiseNot"))
-	if this != nil && this.Is(exp.TraitPredicate) &&
-		!(parentIsPredicate || tightUnary || (parent != nil && parent.Is(exp.TraitBinary) && !parent.Is(exp.TraitConnector))) {
+	if this != nil && this.Is(exp.TraitPredicate) && !parentIsPredicate && !tightUnary &&
+		(parent == nil || !parent.Is(exp.TraitBinary) || parent.Is(exp.TraitConnector)) {
 		return this
 	}
 
 	if parent == nil || (!parent.Is(exp.TraitCondition) && !parent.Is(exp.TraitBinary)) || parent.Kind() == exp.KindParen ||
-		(this != nil && !this.Is(exp.TraitBinary) && !((this.Kind() == exp.KindNot || this.Kind() == exp.KindIs) && parentIsPredicate)) ||
+		(this != nil && !this.Is(exp.TraitBinary) && ((this.Kind() != exp.KindNot && this.Kind() != exp.KindIs) || !parentIsPredicate)) ||
 		(this != nil && this.Kind() == exp.KindAdd && parent.Kind() == exp.KindAdd) ||
 		(this != nil && this.Kind() == exp.KindMul && parent.Kind() == exp.KindMul) ||
 		(this != nil && this.Kind() == exp.KindMul && (parent.Kind() == exp.KindAdd || parent.Kind() == exp.KindSub)) {
@@ -412,7 +412,7 @@ func isSubqueryPredicate(expression exp.Expression) bool {
 // propagateConstants ports propagate_constants (simplify.py:180-216): in a DNF conjunction,
 // a column equal to a literal is replaced by the literal elsewhere.
 func propagateConstants(expression exp.Expression, root bool) exp.Expression {
-	if expression.Kind() != exp.KindAnd || !(root || !expression.SameParent()) || !normalized(expression, true) {
+	if expression.Kind() != exp.KindAnd || (!root && expression.SameParent()) || !normalized(expression, true) {
 		return expression
 	}
 	type constant struct {
@@ -934,10 +934,7 @@ func (s *Simplifier) simplifyConnectors(expression exp.Expression, root bool) ex
 	//
 	//   A AND (((B)))  -- safe to keep, it will be part of another connector
 	if !out.Is(exp.TraitConnector) && out.Kind() != exp.KindBoolean && !out.IsType(exp.DTypeBoolean) {
-		for {
-			if originalParent != nil && originalParent.Is(exp.TraitConnector) {
-				break
-			}
+		for originalParent == nil || !originalParent.Is(exp.TraitConnector) {
 			if originalParent == nil || originalParent.Kind() != exp.KindParen {
 				out = combine(exp.KindAnd, out, booleanLiteral(true))
 				break
