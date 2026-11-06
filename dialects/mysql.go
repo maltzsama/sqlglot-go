@@ -73,6 +73,8 @@ func parseMySQLVersion(value string) (int, error) {
 func MySQL() *Dialect {
 	d := Base()
 	d.Name = "mysql"
+	// dialects/mysql.py:31 SAFE_TO_ELIMINATE_DOUBLE_NEGATION = False.
+	d.SafeToEliminateDoubleNegation = false
 	// generators/mysql.py:118 SUPPORTS_ALTER_COLUMN_NULLABILITY = True.
 	d.SupportsAlterColumnNullability = true
 	d.QuoteStart = "'"

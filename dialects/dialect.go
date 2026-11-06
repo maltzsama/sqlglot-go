@@ -127,6 +127,15 @@ type Dialect struct {
 	SupportsStructStarExpansion        bool
 	ExcludesPseudocolumnsFromStar      bool
 	QueryResultsAreStructs             bool
+	// SafeToEliminateDoubleNegation ports SAFE_TO_ELIMINATE_DOUBLE_NEGATION
+	// (dialects/dialect.py:754): simplify may rewrite NOT NOT x to a BOOLEAN x. True by default.
+	SafeToEliminateDoubleNegation bool
+	// CoalesceComparisonNonStandard ports COALESCE_COMPARISON_NON_STANDARD
+	// (dialects/dialect.py:660): simplify must not rewrite comparisons with COALESCE.
+	CoalesceComparisonNonStandard bool
+	// WeekOffset ports WEEK_OFFSET (dialects/dialect.py:363): the first day of the week for week
+	// truncation, 0 for Monday and -1 for Sunday.
+	WeekOffset int
 	// UnpivotValueColumnsFirst ports the parser flag UNPIVOT_VALUE_COLUMNS_FIRST (parser.py:1841):
 	// an UNPIVOT emits its value columns ahead of its name column (T-SQL).
 	UnpivotValueColumnsFirst bool
@@ -428,19 +437,21 @@ type Dialect struct {
 func Base() *Dialect {
 	datePartMapping := baseDatePartMapping()
 	return &Dialect{
-		Name:                     "base",
-		QuoteStart:               "'",
-		QuoteEnd:                 "'",
-		IdentifierStart:          "\"",
-		IdentifierEnd:            "\"",
-		TokenizerConfig:          tokens.BaseConfig(),
-		NormalizationStrategy:    Lowercase,
-		DPipeIsStringConcat:      true,
-		NullOrdering:             "nulls_are_small",
-		DatePartMapping:          datePartMapping,
-		ValidIntervalUnits:       validIntervalUnits(datePartMapping),
-		SupportsUserDefinedTypes: true,
-		SupportsFixedSizeArrays:  false,
+		Name: "base",
+		// dialects/dialect.py:754 SAFE_TO_ELIMINATE_DOUBLE_NEGATION = True.
+		SafeToEliminateDoubleNegation: true,
+		QuoteStart:                    "'",
+		QuoteEnd:                      "'",
+		IdentifierStart:               "\"",
+		IdentifierEnd:                 "\"",
+		TokenizerConfig:               tokens.BaseConfig(),
+		NormalizationStrategy:         Lowercase,
+		DPipeIsStringConcat:           true,
+		NullOrdering:                  "nulls_are_small",
+		DatePartMapping:               datePartMapping,
+		ValidIntervalUnits:            validIntervalUnits(datePartMapping),
+		SupportsUserDefinedTypes:      true,
+		SupportsFixedSizeArrays:       false,
 		// Accept a bare string as a table name/alias by default (upstream is unconditional here);
 		// postgres/mysql override to false to match their real engines. See the field doc.
 		StringTableIdentifiers: true,
