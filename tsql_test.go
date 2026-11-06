@@ -10,6 +10,7 @@ import (
 	"github.com/maltzsama/sqlglot-go/generator"
 	"github.com/maltzsama/sqlglot-go/optimizer"
 	"github.com/maltzsama/sqlglot-go/schema"
+	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 // TestTSQLIdentity is the same-dialect round-trip oracle for the T-SQL dialect, ported
@@ -357,5 +358,107 @@ WHERE
 				t.Fatalf("round-trip mismatch\n want: %s\n  got: %s", want, got)
 			}
 		})
+	}
+}
+
+// scriptStatement is one expected top-level statement of a multi-statement script: its root
+// Kind and the verbatim source text its span covers.
+type scriptStatement struct {
+	kind exp.Kind
+	span string
+}
+
+// assertScriptStatements parses sql under dialect and checks the statement boundaries: the
+// statement count, each root Kind, and each statement's verbatim span text.
+func assertScriptStatements(t *testing.T, sql, dialect string, want []scriptStatement) {
+	t.Helper()
+	statements, err := sqlglot.Parse(sql, dialect)
+	if err != nil {
+		t.Fatalf("%q [%s]: parse: %v", sql, dialect, err)
+	}
+	if len(statements) != len(want) {
+		t.Fatalf("%q [%s]: got %d statements, want %d", sql, dialect, len(statements), len(want))
+	}
+	for i, stmt := range statements {
+		if stmt == nil {
+			t.Fatalf("%q [%s] stmt %d: got nil, want %s", sql, dialect, i, exp.ClassName(want[i].kind))
+		}
+		if stmt.Kind() != want[i].kind {
+			t.Errorf("%q [%s] stmt %d: got %s, want %s", sql, dialect, i, exp.ClassName(stmt.Kind()), exp.ClassName(want[i].kind))
+		}
+		if got, ok := stmt.SpanText(); !ok || got != want[i].span {
+			t.Errorf("%q [%s] stmt %d: span %q, want %q", sql, dialect, i, got, want[i].span)
+		}
+	}
+}
+
+// TestTSQLGoBatchSeparator pins the `GO` batch separator (DEVIATIONS §1.22): a line holding
+// only `GO [count]` ends the batch, as sqlcmd/SSMS treat it. Upstream lexes GO as a Command,
+// so it either becomes a column alias, folds the next batch into a Command, or fails.
+func TestTSQLGoBatchSeparator(t *testing.T) {
+	sel := exp.KindSelect
+	cases := []struct {
+		sql  string
+		want []scriptStatement
+	}{
+		// Upstream: one Select aliased GO.
+		{"SELECT 1\nGO", []scriptStatement{{sel, "SELECT 1"}}},
+		// Upstream: Select + Command "GO\nSELECT 2", hiding the second batch.
+		{"SELECT 1;\nGO\nSELECT 2", []scriptStatement{{sel, "SELECT 1"}, {sel, "SELECT 2"}}},
+		// Upstream: parse error.
+		{"SELECT TOP 1 [a] FROM dbo.t\nGO\nSELECT 2",
+			[]scriptStatement{{sel, "SELECT TOP 1 [a] FROM dbo.t"}, {sel, "SELECT 2"}}},
+		{"SELECT 1\nGO\nSELECT 2", []scriptStatement{{sel, "SELECT 1"}, {sel, "SELECT 2"}}},
+		// A repeat count is accepted and not part of either statement.
+		{"SELECT 1\nGO 5\nSELECT 2", []scriptStatement{{sel, "SELECT 1"}, {sel, "SELECT 2"}}},
+		// Case-insensitive, surrounding blanks, CRLF line endings.
+		{"SELECT 1\n  go\t\nSELECT 2", []scriptStatement{{sel, "SELECT 1"}, {sel, "SELECT 2"}}},
+		{"SELECT 1\r\nGO\r\nSELECT 2", []scriptStatement{{sel, "SELECT 1"}, {sel, "SELECT 2"}}},
+		// Leading, repeated, and trailing separators never produce empty statements.
+		{"GO\nSELECT 1\nGO\nGO\n", []scriptStatement{{sel, "SELECT 1"}}},
+		// A Command's packed tail stops at the separator line.
+		{"EXEC sp_who\nGO\nSELECT 2", []scriptStatement{{exp.KindExecute, "EXEC sp_who"}, {sel, "SELECT 2"}}},
+		// A trailing `--` comment on the GO line is allowed; like the comment after a `;`, it
+		// surfaces as the separator's own Semicolon node.
+		{"SELECT 1\nGO -- end of batch\nSELECT 2",
+			[]scriptStatement{{sel, "SELECT 1"}, {exp.KindSemicolon, "GO"}, {sel, "SELECT 2"}}},
+		// Not separators: GO inside a string or a block comment, GO not alone on its line,
+		// and a longer word that starts with GO.
+		{"SELECT 'a\nGO\nb'", []scriptStatement{{sel, "SELECT 'a\nGO\nb'"}}},
+		{"SELECT 1 /* x\nGO\n*/ + 1", []scriptStatement{{sel, "SELECT 1 /* x\nGO\n*/ + 1"}}},
+		{"SELECT a,\nGOTO\nFROM t", []scriptStatement{{sel, "SELECT a,\nGOTO\nFROM t"}}},
+		{"SELECT 1 GO", []scriptStatement{{sel, "SELECT 1 GO"}}},
+		// The upstream identity case: an input holding only `GO` has no batch to separate,
+		// so it stays upstream's Command.
+		{"GO", []scriptStatement{{exp.KindCommand, "GO"}}},
+	}
+	for _, tc := range cases {
+		assertScriptStatements(t, tc.sql, "tsql", tc.want)
+	}
+
+	// Other dialects keep upstream's lexing: GO is an ordinary word.
+	assertScriptStatements(t, "SELECT 1\nGO", "", []scriptStatement{{sel, "SELECT 1\nGO"}})
+}
+
+// TestTSQLGoBatchSeparatorToken pins the token the separator line lexes to: a SEMICOLON
+// whose Text and Start/End cover the separator text (`GO 5`), so token consumers split on it
+// like `;` and can still recover the original line.
+func TestTSQLGoBatchSeparatorToken(t *testing.T) {
+	sql := "SELECT 1\nGO 5\nSELECT 2"
+	toks, err := sqlglot.Tokenize(sql, "tsql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var separators []string
+	for _, tok := range toks {
+		if tok.TokenType == tokens.SEMICOLON {
+			separators = append(separators, tok.Text)
+			if got := string([]rune(sql)[tok.Start : tok.End+1]); got != "GO 5" {
+				t.Errorf("separator source slice = %q, want %q", got, "GO 5")
+			}
+		}
+	}
+	if len(separators) != 1 || separators[0] != "GO 5" {
+		t.Fatalf("separator tokens = %q, want [\"GO 5\"]", separators)
 	}
 }

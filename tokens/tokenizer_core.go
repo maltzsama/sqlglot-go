@@ -61,6 +61,7 @@ type TokenizerCore struct {
 	numbersCanHaveDecimals           bool
 	identifiersCanStartWithDigit     bool
 	unescapedSequences               map[string]string
+	batchSeparator                   BatchSeparator
 }
 
 func NewTokenizerCore(cfg TokenizerConfig) *TokenizerCore {
@@ -96,6 +97,7 @@ func NewTokenizerCore(cfg TokenizerConfig) *TokenizerCore {
 		numbersCanHaveDecimals:           cfg.NumbersCanHaveDecimals,
 		identifiersCanStartWithDigit:     cfg.IdentifiersCanStartWithDigit,
 		unescapedSequences:               cfg.UnescapedSequences,
+		batchSeparator:                   cfg.BatchSeparator,
 		line:                             1,
 		prevTokenLine:                    -1,
 	}
@@ -165,6 +167,20 @@ func (c *TokenizerCore) scan(checkSemicolon bool) {
 			offset = current - c.current
 		}
 
+		if c.batchSeparator != BatchSeparatorNone {
+			if size := c.batchSeparatorAt(current); size > 0 {
+				// A command's packed tail (checkSemicolon) ends before the separator line;
+				// the outer scan then reaches the same line and emits it.
+				if checkSemicolon {
+					break
+				}
+				c.start = current
+				c.advance(current+size-c.current, false)
+				c.addBatchSeparator()
+				continue
+			}
+		}
+
 		c.start = current
 		c.advance(offset, false)
 
@@ -186,6 +202,103 @@ func (c *TokenizerCore) scan(checkSemicolon bool) {
 	if len(c.tokens) > 0 && len(c.comments) > 0 {
 		c.tokens[len(c.tokens)-1].Comments = append(c.tokens[len(c.tokens)-1].Comments, c.comments...)
 	}
+}
+
+// batchSeparatorAt returns the rune length of the batch separator that starts at pos, or 0
+// when there is none. A separator must open its line (only spaces/tabs before it) and be the
+// only thing on it apart from trailing spaces/tabs; the T-SQL form also allows a repeat
+// count and a trailing `--` comment, which is left to the ordinary comment scanner. The
+// returned length covers the separator text only (`GO 5`, not the trailing blanks).
+func (c *TokenizerCore) batchSeparatorAt(pos int) int {
+	switch c.batchSeparator {
+	case BatchSeparatorGo:
+		if pos+2 > c.size ||
+			(c.input.at(pos) != 'G' && c.input.at(pos) != 'g') ||
+			(c.input.at(pos+1) != 'O' && c.input.at(pos+1) != 'o') ||
+			!c.lineStartsAt(pos) {
+			return 0
+		}
+		size := 2
+		blanks := c.blanksAt(pos + size)
+		if blanks > 0 {
+			digits := 0
+			for pos+size+blanks+digits < c.size && digitChars[c.input.at(pos+size+blanks+digits)] {
+				digits++
+			}
+			if digits > 0 {
+				size += blanks + digits
+			}
+		}
+		if c.lineEndsAt(pos+size, true) && !c.onlySeparatorInput(pos+size) {
+			return size
+		}
+	}
+	return 0
+}
+
+// lineStartsAt reports whether only spaces/tabs precede pos on its line.
+func (c *TokenizerCore) lineStartsAt(pos int) bool {
+	for i := pos - 1; i >= 0; i-- {
+		char := c.input.at(i)
+		if char == '\n' || char == '\r' {
+			return true
+		}
+		if char != ' ' && char != '\t' {
+			return false
+		}
+	}
+	return true
+}
+
+// onlySeparatorInput reports whether the input holds nothing but this separator line: no
+// token before it and only whitespace after it. There is no batch to separate then, so the
+// line lexes as upstream does (`GO` alone stays the Command upstream's identity test pins).
+func (c *TokenizerCore) onlySeparatorInput(end int) bool {
+	if len(c.tokens) > 0 || len(c.comments) > 0 {
+		return false
+	}
+	for i := end; i < c.size; i++ {
+		if !unicode.IsSpace(c.input.at(i)) {
+			return false
+		}
+	}
+	return true
+}
+
+// blanksAt counts the spaces/tabs starting at pos.
+func (c *TokenizerCore) blanksAt(pos int) int {
+	n := 0
+	for pos+n < c.size {
+		if char := c.input.at(pos + n); char != ' ' && char != '\t' {
+			break
+		}
+		n++
+	}
+	return n
+}
+
+// lineEndsAt reports whether only spaces/tabs (and, when allowComment, a `--` line comment)
+// remain on the line from pos.
+func (c *TokenizerCore) lineEndsAt(pos int, allowComment bool) bool {
+	pos += c.blanksAt(pos)
+	if pos >= c.size {
+		return true
+	}
+	char := c.input.at(pos)
+	if char == '\n' || char == '\r' {
+		return true
+	}
+	return allowComment && char == '-' && pos+1 < c.size && c.input.at(pos+1) == '-'
+}
+
+// addBatchSeparator emits the separator line just consumed (c.start..c.current) as a
+// SEMICOLON boundary, unless the statement before it is already closed — by a `;`, an
+// earlier separator, or nothing at all — so a separator never opens an empty statement.
+func (c *TokenizerCore) addBatchSeparator() {
+	if len(c.tokens) == 0 || c.tokens[len(c.tokens)-1].TokenType == SEMICOLON {
+		return
+	}
+	c.add(SEMICOLON)
 }
 
 func (c *TokenizerCore) chars(size int) string {

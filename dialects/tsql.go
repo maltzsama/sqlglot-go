@@ -101,6 +101,9 @@ func TSQL() *Dialect {
 	cfg.Commands = maps.Clone(cfg.Commands)
 	cfg.Commands[tokens.END] = true
 	delete(cfg.Commands, tokens.EXECUTE)
+	// divergence (DEVIATIONS §1.22): a `GO [count]` line ends the batch, as sqlcmd/SSMS do;
+	// upstream lexes GO as a Command and folds the next batch into it.
+	cfg.BatchSeparator = tokens.BatchSeparatorGo
 
 	d.TokenizerConfig = tokens.CompileConfig(cfg)
 

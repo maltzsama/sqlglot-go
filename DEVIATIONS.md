@@ -178,6 +178,21 @@ AST cannot tell a parsed `WITH OFFSET` from `WITH ORDINALITY AS u(v, n)`, whose 
 upstream pops into the same `Identifier` offset, so the check is parser-only. Test
 `parser/postgres_unnest_test.go`.
 
+### 1.22 T-SQL `GO` batch separator is a statement boundary
+
+Upstream lexes `GO` as a Command keyword, so `SELECT 1\nGO` aliases the Select as `GO`,
+`SELECT 1;\nGO\nSELECT 2` hides the second batch inside a `Command "GO\nSELECT 2"`, and
+`SELECT 1\nGO\nSELECT 2` fails to parse. sqlcmd and SSMS strip a line holding only `GO [count]` and
+end the batch there, which is what a script splitter has to match. Under `tsql` the tokenizer
+(`TokenizerConfig.BatchSeparator`) lexes such a line, case-insensitive with surrounding spaces/tabs,
+an optional repeat count, and an optional trailing `--` comment, as a `SEMICOLON` token whose
+`Text` is the separator (`GO 5`). Every consumer then splits on it like `;`, and a Command's packed
+tail stops before it. A separator right after a `;`, another separator, or at the start of input is
+dropped, so it never yields an empty statement. The repeat count is not modeled. `GO` inside a
+string, a block comment, or sharing its line with other SQL is unchanged. An input holding nothing
+but the separator line keeps upstream's `Command "GO"`, because there is no batch to separate.
+Tests `TestTSQLGoBatchSeparator`, `TestTSQLGoBatchSeparatorToken` (`tsql_test.go`).
+
 ## Opt-in behavioral extensions beyond upstream
 
 Additive analysis features; default behavior and fixture output unchanged.
