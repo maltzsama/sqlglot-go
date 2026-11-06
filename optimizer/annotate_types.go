@@ -2,7 +2,9 @@ package optimizer
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/maltzsama/sqlglot-go/dialects"
 	exp "github.com/maltzsama/sqlglot-go/expressions"
@@ -14,9 +16,7 @@ import (
 // A "type value" below is what upstream passes around as `exp.DataType | exp.DType`: either an
 // exp.DType or a DataType expression (nil standing for None).
 //
-// Deferred: PIVOT / UNPIVOT output column types (_get_pivot_column_types and
-// _get_unpivot_column_types), which need Pivot.output_columns, not ported yet. A column read
-// through a pivot is annotated UNKNOWN.
+// PIVOT / UNPIVOT column types live in annotate_types_pivot.go.
 
 // bigintExtractDateParts ports BIGINT_EXTRACT_DATE_PARTS (annotate_types.py:37-43): the
 // EXTRACT/DATE_PART specifiers that return BIGINT instead of INT.
@@ -54,36 +54,102 @@ func isDateUnit(expression exp.Expression) bool {
 	return false
 }
 
-// isoDateRE and isoDatetimeRE approximate datetime.date.fromisoformat and
-// datetime.datetime.fromisoformat (helper.py:432-445) for the ISO 8601 shapes they accept:
-// YYYY-MM-DD / YYYYMMDD, optionally followed by T or a space, HH[:MM[:SS[.ffffff]]] and a
-// Z / ±HH[:MM] offset.
-var (
-	isoDateRE     = regexp.MustCompile(`^\d{4}-?\d{2}-?\d{2}$`)
-	isoDatetimeRE = regexp.MustCompile(`^\d{4}-?\d{2}-?\d{2}([T ]\d{2}(:?\d{2}(:?\d{2}([.,]\d{1,6})?)?)?(Z|[+-]\d{2}(:?\d{2})?)?)?$`)
-)
-
-func validISODate(text string) bool {
-	digits := strings.ReplaceAll(text, "-", "")
-	if len(digits) < 8 {
-		return false
-	}
-	month := (digits[4]-'0')*10 + digits[5] - '0'
-	day := (digits[6]-'0')*10 + digits[7] - '0'
-	return month >= 1 && month <= 12 && day >= 1 && day <= 31
+// isISODate ports helper.is_iso_date (helper.py:432-437): whether datetime.date.fromisoformat
+// accepts text (Python 3.11+): YYYY-MM-DD or YYYYMMDD, or an ISO week date YYYY-Www[-D] /
+// YYYYWww[D], naming a real calendar day.
+func isISODate(text string) bool {
+	_, ok := parseISODate(text)
+	return ok
 }
 
-func isISODate(text string) bool { return isoDateRE.MatchString(text) && validISODate(text) }
-
+// isISODatetime ports helper.is_iso_datetime (helper.py:440-445): whether
+// datetime.datetime.fromisoformat accepts text (Python 3.11+): an ISO date, optionally followed
+// by any single separator character and a time HH[:MM[:SS[.fff...]]] (or its basic form
+// HHMMSS), and an optional Z / ±HH[:MM[:SS[.fff...]]] offset.
 func isISODatetime(text string) bool {
-	if !isoDatetimeRE.MatchString(text) {
+	runes := []rune(text)
+	// The date part is 7, 8 or 10 characters long; try each split a separator could follow.
+	for _, n := range []int{10, 8, 7} {
+		if len(runes) < n {
+			continue
+		}
+		if _, ok := parseISODate(string(runes[:n])); !ok {
+			continue
+		}
+		if len(runes) == n {
+			return true
+		}
+		if len(runes) > n+1 && isoTimeRE.MatchString(string(runes[n+1:])) && validISOTime(string(runes[n+1:])) {
+			return true
+		}
+	}
+	return false
+}
+
+var (
+	isoCalendarRE = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})$|^(\d{4})(\d{2})(\d{2})$`)
+	isoWeekRE     = regexp.MustCompile(`^(\d{4})-W(\d{2})(?:-(\d))?$|^(\d{4})W(\d{2})(\d)?$`)
+	isoTimeRE     = regexp.MustCompile(`^(\d{2})(?::?(\d{2})(?::?(\d{2})(?:[.,](\d+))?)?)?(Z|[+-]\d{2}(?::?\d{2}(?::?\d{2}(?:[.,]\d+)?)?)?)?$`)
+)
+
+func parseISODate(text string) (time.Time, bool) {
+	if m := isoCalendarRE.FindStringSubmatch(text); m != nil {
+		y, mo, d := m[1], m[2], m[3]
+		if y == "" {
+			y, mo, d = m[4], m[5], m[6]
+		}
+		year, _ := strconv.Atoi(y)
+		month, _ := strconv.Atoi(mo)
+		day, _ := strconv.Atoi(d)
+		if year < 1 || month < 1 || month > 12 || day < 1 {
+			return time.Time{}, false
+		}
+		t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+		return t, t.Day() == day && int(t.Month()) == month
+	}
+	if m := isoWeekRE.FindStringSubmatch(text); m != nil {
+		y, w, d := m[1], m[2], m[3]
+		if y == "" {
+			y, w, d = m[4], m[5], m[6]
+		}
+		year, _ := strconv.Atoi(y)
+		week, _ := strconv.Atoi(w)
+		day := 1
+		if d != "" {
+			day, _ = strconv.Atoi(d)
+		}
+		if year < 1 || week < 1 || day < 1 || day > 7 {
+			return time.Time{}, false
+		}
+		// Week 53 only exists in years whose last ISO week is 53.
+		if _, last := time.Date(year, 12, 28, 0, 0, 0, 0, time.UTC).ISOWeek(); week > last {
+			return time.Time{}, false
+		}
+		return time.Time{}, true
+	}
+	return time.Time{}, false
+}
+
+func validISOTime(text string) bool {
+	m := isoTimeRE.FindStringSubmatch(text)
+	if m == nil {
 		return false
 	}
-	date := text
-	if i := strings.IndexAny(text, "T "); i >= 0 {
-		date = text[:i]
+	hour, _ := strconv.Atoi(m[1])
+	if hour > 23 {
+		return false
 	}
-	return validISODate(date)
+	if m[2] != "" {
+		if minute, _ := strconv.Atoi(m[2]); minute > 59 {
+			return false
+		}
+	}
+	if m[3] != "" {
+		if second, _ := strconv.Atoi(m[3]); second > 59 {
+			return false
+		}
+	}
+	return true
 }
 
 // coerceDateLiteral ports _coerce_date_literal (annotate_types.py:86-97).
@@ -287,6 +353,15 @@ func NewTypeAnnotator(s schema.Schema) *TypeAnnotator {
 	if d == nil {
 		d = dialects.Base()
 	}
+	if s == nil {
+		// Upstream always receives a Schema (annotate_types calls ensure_schema); an empty
+		// one keeps the schema lookups below safe.
+		empty, err := schema.EnsureSchema(nil, d, true)
+		if err != nil {
+			panic(err)
+		}
+		s = empty
+	}
 	return &TypeAnnotator{
 		schema:             s,
 		dialect:            d,
@@ -372,16 +447,18 @@ func (a *TypeAnnotator) Annotate(expression exp.Expression, annotateScope bool) 
 	return expression
 }
 
-// getScopeSourceSelects ports _get_scope_source_selects (annotate_types.py:297-347). Pivot
-// sources are deferred (see the file comment) and yield no types.
+// getScopeSourceSelects ports _get_scope_source_selects (annotate_types.py:297-347).
 func (a *TypeAnnotator) getScopeSourceSelects(scope *Scope, sourceName string) *typedMap {
 	key := scopeSourceKey{scope, sourceName}
 	if selects, ok := a.scopeSourceSelects[key]; ok {
 		return selects
 	}
 	selects := newTypedMap()
-	if source, ok := scope.Sources[sourceName].(*Scope); ok {
-		selects = a.getSourceScopeSelects(source)
+	source := scope.Sources[sourceName]
+	if sourceScope, ok := source.(*Scope); ok {
+		selects = a.getSourceScopeSelects(sourceScope)
+	} else if pivoted := a.pivotSourceSelects(scope, source, sourceName); pivoted != nil {
+		selects = pivoted
 	}
 	a.scopeSourceSelects[key] = selects
 	return selects
@@ -575,9 +652,15 @@ func (a *TypeAnnotator) annotateQualifiedColumn(expr exp.Expression, scope *Scop
 	switch src := source.(type) {
 	case exp.Expression:
 		if src.Kind() == exp.KindTable {
-			colType, err := a.schema.GetColumnType(src, expr, nil, nil)
-			if err != nil {
-				colType = nil
+			var colType any
+			if t, err := a.schema.GetColumnType(src, expr, nil, nil); err == nil && t != nil {
+				colType = t
+				if t.IsType(exp.DTypeUnknown) && truthyArg(src.Arg("pivots")) {
+					colType = a.getScopeSourceSelects(sourceScope, table).get(expr.Name())
+					if isNilType(colType) {
+						colType = exp.DTypeUnknown
+					}
+				}
 			}
 			a.setType(expr, colType)
 		} else if unnest := src.Expr(); unnest != nil && unnest.Kind() == exp.KindUnnest {
@@ -596,6 +679,12 @@ func (a *TypeAnnotator) annotateQualifiedColumn(expr exp.Expression, scope *Scop
 			a.setType(expr, exp.DTypeUnknown)
 		}
 	default:
+		if source == nil && len(scope.Pivots()) > 0 {
+			if colType := a.getScopeSourceSelects(scope, table).get(expr.Name()); !isNilType(colType) {
+				a.setType(expr, colType)
+				break
+			}
+		}
 		a.setType(expr, exp.DTypeUnknown)
 	}
 
