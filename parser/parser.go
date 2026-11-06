@@ -2,6 +2,8 @@ package parser
 
 import (
 	"fmt"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/ridi-oss/sqlglot-go/dialects"
 	sqlerrors "github.com/ridi-oss/sqlglot-go/errors"
@@ -19,7 +21,9 @@ type Parser struct {
 	parserOverrideName  string
 	strictCast          bool
 	sql                 string
-	sqlRunes            []rune // lazy cache of []rune(sql); findSQL runs once per projection
+	sqlASCII            bool     // rune offsets equal byte offsets; set in parse
+	sqlRunes            []rune   // lazy cache of []rune(sql) for non-ASCII input
+	overrideChainCache  []string // parser override parents, fixed per Parser
 	errors              []*sqlerrors.ParseError
 
 	tokens     []tokens.Token
@@ -77,7 +81,9 @@ func newWithErrorLevelAndOverrideName(d *dialects.Dialect, level sqlerrors.Error
 
 func (p *Parser) Reset() {
 	p.sql = ""
+	p.sqlASCII = false
 	p.sqlRunes = nil
+	p.overrideChainCache = nil
 	p.errors = nil
 	p.tokens = nil
 	p.tokensSize = 0
@@ -243,13 +249,34 @@ func (p *Parser) isConnected() bool {
 }
 
 func (p *Parser) findSQL(start, end tokens.Token) string {
+	if start.Start < 0 || start.Start > end.End {
+		return ""
+	}
+	if p.sqlASCII {
+		// Rune and byte offsets coincide: clone the span straight out of the source, which
+		// keeps the previous copy semantics without materializing []rune(sql).
+		if end.End >= len(p.sql) {
+			return ""
+		}
+		return strings.Clone(p.sql[start.Start : end.End+1])
+	}
 	if p.sqlRunes == nil {
 		p.sqlRunes = []rune(p.sql)
 	}
-	if start.Start < 0 || end.End >= len(p.sqlRunes) || start.Start > end.End {
+	if end.End >= len(p.sqlRunes) {
 		return ""
 	}
 	return string(p.sqlRunes[start.Start : end.End+1])
+}
+
+// isASCII reports whether s contains only ASCII bytes, where rune offsets equal byte offsets.
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= utf8.RuneSelf {
+			return false
+		}
+	}
+	return true
 }
 
 func (p *Parser) raiseError(message string, tok ...tokens.Token) {
@@ -637,6 +664,7 @@ func (p *Parser) parseWhileBlock() exp.Expression {
 func (p *Parser) parse(parseMethod func() exp.Expression, rawTokens []tokens.Token, sql string) []exp.Expression {
 	p.Reset()
 	p.sql = sql
+	p.sqlASCII = isASCII(sql)
 	total := len(rawTokens)
 	chunks := [][]tokens.Token{{}}
 	for i, token := range rawTokens {

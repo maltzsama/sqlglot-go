@@ -121,8 +121,9 @@ func (c *TokenizerCore) Tokenize(sql string) (tokens []Token, err error) {
 	c.input = newRuneView(sql)
 	c.size = c.input.len()
 	// Tokens average a few runes each; sizing the slice up front avoids repeated growth.
-	// The heuristic is intentionally loose — a short input still gets a small slice.
-	if capacity := c.size/4 + 8; capacity > 0 {
+	// The margin covers token-dense inputs, where size/4 alone lands one slot short and
+	// append doubles the whole slice.
+	if capacity := c.size/4 + 12; capacity > 0 {
 		c.tokens = make([]Token, 0, capacity)
 	}
 

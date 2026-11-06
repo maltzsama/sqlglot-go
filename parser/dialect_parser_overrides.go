@@ -103,10 +103,16 @@ var parserOverrideParents = map[string]string{"starrocks": "mysql", "doris": "my
 
 // overrideChain lists the override keys from the parser's own key up through its parents.
 func (p *Parser) overrideChain() []string {
-	var keys []string
+	if p.overrideChainCache != nil {
+		return p.overrideChainCache
+	}
+	// The chain is fixed for a Parser instance: parserOverrideName and dialect are set at
+	// construction. Cache it so each lookup stops rebuilding (and re-lowercasing) it.
+	keys := make([]string, 0, 2)
 	for key := p.parserOverrideKey(); key != ""; key = parserOverrideParents[key] {
 		keys = append(keys, key)
 	}
+	p.overrideChainCache = keys
 	return keys
 }
 
