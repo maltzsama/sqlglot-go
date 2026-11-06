@@ -531,6 +531,9 @@ func (n *Node) iterExpressions(reverse bool) []Expression {
 	return n.appendExpressions(nil, reverse)
 }
 
+// ArgOrder returns the node's arg keys in insertion order, upstream's args dict order.
+func (n *Node) ArgOrder() []string { return append([]string(nil), n.argOrder...) }
+
 // IterExpressions ports Expr.iter_expressions: the node's direct child expressions, in arg
 // order (reversed when reverse is true).
 func (n *Node) IterExpressions(reverse bool) []Expression {

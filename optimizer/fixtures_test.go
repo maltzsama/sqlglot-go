@@ -121,6 +121,7 @@ func dialectInScope(meta map[string]string) bool {
 	}
 }
 
+// optimizerTestSchema mirrors TestOptimizer.setUp's schema (tests/test_optimizer.py:131-176).
 func optimizerTestSchema() *schema.Mapping {
 	return schema.M(
 		"x", schema.M("a", "INT", "b", "INT"),
@@ -133,7 +134,9 @@ func optimizerTestSchema() *schema.Mapping {
 			"nested_0", "STRUCT<a_1 INT, nested_1 STRUCT<a_2 INT, nested_2 STRUCT<a_3 INT>>>",
 			"quoted", "STRUCT<\"foo bar\" INT>",
 		),
-		"t_bool", schema.M("a", "BOOLEAN"),
+		"t_bool", schema.M("a", "BOOLEAN", "b", "BOOLEAN"),
+		"unpivotable", schema.M("id", "INT", "jan", "INT", "feb", "INT", "north", "INT", "south", "INT"),
+		"pivotable", schema.M("id", "INT", "cat", "TEXT", "val", "INT", "kind", "TEXT", "amt", "INT"),
 	)
 }
 
