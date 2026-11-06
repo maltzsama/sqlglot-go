@@ -37,13 +37,13 @@ targeted slice of the optimizer:
   upstream. Functions the port still parses as `Anonymous` annotate as `UNKNOWN` (tracked in #44).
 - **`simplify`** — boolean, arithmetic, string and date simplification, folding constants with
   upstream's value semantics; the same `Anonymous` gap leaves some function folds undone (#44).
+- **`normalize`** and **`eliminate_joins`** — CNF/DNF conversion and unused-join removal.
 - **`scope` / `traverse_scope` + the full `Scope` API** — sources, columns, unions, CTEs, subqueries:
   the foundation for **column lineage**.
 
 **Not ported (yet):**
-- The rest of sqlglot's **optimizer**: `normalize`, `pushdown_predicates`,
-  `pushdown_projections`, `eliminate_joins`, `canonicalize`, and the top-level `optimize()` rule
-  orchestrator.
+- The rest of sqlglot's **optimizer**: `pushdown_predicates`, `pushdown_projections`,
+  `canonicalize`, and the top-level `optimize()` rule orchestrator.
 - **Cross-dialect transpilation** — the generator can target a dialect, but only **same-dialect**
   round-trip is a goal and is tested; reading one dialect and writing another is not verified.
 - **Dialects beyond the ones listed under [Dialects](#dialects)** (upstream ships 30+).
