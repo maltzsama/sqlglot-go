@@ -107,13 +107,12 @@ The parse → generate round-trip is done for the ported corpus (see Status). Th
 mostly the **optimizer** (port 1:1 from `.reference/`, port the matching upstream tests,
 differential-check against the pinned Python):
 
-- THE REST OF THE OPTIMIZER (the big one): `simplify` (full — only `simplify_parens` is present),
-  `normalize` (CNF/DNF), `pushdown_predicates`, `pushdown_projections`, `eliminate_joins`,
+- THE REST OF THE OPTIMIZER (the big one): `normalize` (CNF/DNF), `pushdown_predicates`, `pushdown_projections`, `eliminate_joins`,
   `canonicalize` / `canonicalize_internal_names`, and the top-level `optimize()` rule orchestrator
   that chains them. Ported today: `qualify` + `scope`/`traverse_scope` (+ `isolate_table_selects`),
-  `eliminate_ctes` + `journal`, `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries` and
-  `merge_subqueries`, plus the query builder API they share. Each remaining pass is tracked by a
-  GitHub issue (#27-#32), ordered by upstream import dependencies.
+  `eliminate_ctes` + `journal`, `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries`,
+  `merge_subqueries`, `annotate_types` and `simplify`, plus the query builder API they share. Each
+  remaining pass is tracked by a GitHub issue (#29-#32), ordered by upstream import dependencies.
 - annotate_types is ported (#27). What remains is the function nodes it can't type yet because the
   port parses them as `Anonymous` (#44; `optimizer/testdata/annotate_gaps.txt`).
 - CROSS-DIALECT transpilation: same-dialect round-trip is verified; reading one dialect and writing

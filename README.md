@@ -35,13 +35,15 @@ targeted slice of the optimizer:
   fixture file, on top of a port of upstream's query builder API.
 - **`annotate_types`** — type inference with the per-dialect expression metadata generated from
   upstream. Functions the port still parses as `Anonymous` annotate as `UNKNOWN` (tracked in #44).
+- **`simplify`** — boolean, arithmetic, string and date simplification, folding constants with
+  upstream's value semantics; the same `Anonymous` gap leaves some function folds undone (#44).
 - **`scope` / `traverse_scope` + the full `Scope` API** — sources, columns, unions, CTEs, subqueries:
   the foundation for **column lineage**.
 
 **Not ported (yet):**
-- The rest of sqlglot's **optimizer**: `simplify` (full), `normalize`, `pushdown_predicates`,
+- The rest of sqlglot's **optimizer**: `normalize`, `pushdown_predicates`,
   `pushdown_projections`, `eliminate_joins`, `canonicalize`, and the top-level `optimize()` rule
-  orchestrator. (`simplify` is only partially present.)
+  orchestrator.
 - **Cross-dialect transpilation** — the generator can target a dialect, but only **same-dialect**
   round-trip is a goal and is tested; reading one dialect and writing another is not verified.
 - **Dialects beyond the ones listed under [Dialects](#dialects)** (upstream ships 30+).
