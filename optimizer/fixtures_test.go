@@ -1,12 +1,15 @@
 package optimizer_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	sqlglot "github.com/maltzsama/sqlglot-go"
 	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/generator"
 	"github.com/maltzsama/sqlglot-go/schema"
 )
 
@@ -131,4 +134,34 @@ func optimizerTestSchema() *schema.Mapping {
 		),
 		"t_bool", schema.M("a", "BOOLEAN"),
 	)
+}
+
+// checkPassFixtures ports TestOptimizer.check_file (tests/test_optimizer.py:178-247) for a
+// rule that takes only the parsed expression: each fixture pair is parsed under its dialect,
+// run through rule, and regenerated (pretty when the upstream test passes pretty=True), then
+// compared with the expected SQL and checked for the AST parent/arg-key invariants.
+func checkPassFixtures(t *testing.T, filename string, pretty bool, rule func(exp.Expression) exp.Expression) {
+	t.Helper()
+	for i, pair := range loadSQLFixturePairs(t, filename) {
+		title := pair.Meta["title"]
+		if title == "" {
+			title = fmt.Sprintf("%d, %s", i+1, pair.SQL)
+		}
+		t.Run(title, func(t *testing.T) {
+			dialect := pair.Meta["dialect"]
+			expression, err := sqlglot.ParseOne(pair.SQL, dialect)
+			if err != nil {
+				t.Fatalf("ParseOne: %v", err)
+			}
+			optimized := rule(expression)
+			got, err := sqlglot.Generate(optimized, dialect, generator.Options{Pretty: pretty})
+			if err != nil {
+				t.Fatalf("Generate: %v", err)
+			}
+			if got != pair.Expected {
+				t.Fatalf("got:\n%s\nwant:\n%s", got, pair.Expected)
+			}
+			assertASTInvariants(t, optimized)
+		})
+	}
 }

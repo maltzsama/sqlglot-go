@@ -233,13 +233,15 @@ func TestScope(t *testing.T) {
 		}
 	}
 
-	// Upstream v30.12.0 omits the DML root. R3 contributes exactly one
+	// Upstream omits the DML root. R3 contributes exactly one
 	// successful target-only root while preserving all existing nested scopes.
 	dmlCases := []struct {
 		sql  string
 		want int
 	}{
-		{"UPDATE customers SET total_spent = (SELECT 1 FROM t1) WHERE EXISTS (SELECT 1 FROM t2)", 4},
+		// The SET subquery's root wrapper scopes its inner query as a derived table, as
+		// upstream v30.17.0 _traverse_tables does for a Subquery-rooted scope (scope.py:885-889).
+		{"UPDATE customers SET total_spent = (SELECT 1 FROM t1) WHERE EXISTS (SELECT 1 FROM t2)", 5},
 		{"UPDATE tbl1 SET col = 1 WHERE EXISTS (SELECT 1 FROM tbl2 WHERE tbl1.id = tbl2.id)", 2},
 		{"UPDATE tbl1 SET col = 0", 1},
 	}

@@ -139,7 +139,7 @@ func assertDMLTraversalSurfaces(
 	kind exp.Kind,
 	targetName string,
 	sourceAlias string,
-	optimizerTraversesInner bool,
+	usingSource bool,
 ) {
 	t.Helper()
 	expression := parseDMLDialect(t, sql, dialect)
@@ -169,9 +169,12 @@ func assertDMLTraversalSurfaces(
 		}
 	}
 
-	if optimizerTraversesInner {
-		if len(optimizerScopes) != 2 {
-			t.Fatalf("optimizer scope count = %d, want inner Select plus source Subquery", len(optimizerScopes))
+	// Pinned upstream v30.17.0 (scope.py:716-765): a source Subquery in FROM/JOIN position is
+	// scoped as a root at its wrapper, which scopes the inner query as a derived table; one in
+	// USING position is a value-position query, scoped as a correlatable SUBQUERY branch.
+	if usingSource {
+		if len(optimizerScopes) != 1 {
+			t.Fatalf("optimizer scope count = %d, want only the source inner Select", len(optimizerScopes))
 		}
 		if optimizerScopes[0].Expression != inner || optimizerScopes[0].ScopeType != ScopeTypeSubquery {
 			t.Fatalf("optimizer scope[0] is not the upstream-discovered source inner Select")
@@ -179,17 +182,17 @@ func assertDMLTraversalSurfaces(
 		if !optimizerScopes[0].canBeCorrelated {
 			t.Fatalf("optimizer source inner Select must remain correlatable")
 		}
-		if optimizerScopes[1].Expression != sourceSubquery || !optimizerScopes[1].IsRoot() {
-			t.Fatalf("optimizer scope[1] is not the root source Subquery")
-		}
 		return
 	}
 
-	if len(optimizerScopes) != 1 {
-		t.Fatalf("optimizer scope count = %d, want only the source Subquery wrapper", len(optimizerScopes))
+	if len(optimizerScopes) != 2 {
+		t.Fatalf("optimizer scope count = %d, want inner derived table plus source Subquery wrapper", len(optimizerScopes))
 	}
-	if optimizerScopes[0].Expression != sourceSubquery || !optimizerScopes[0].IsRoot() {
-		t.Fatalf("optimizer traversal newly exposed the UPDATE source inner Select")
+	if optimizerScopes[0].Expression != inner || !optimizerScopes[0].IsDerivedTable() {
+		t.Fatalf("optimizer scope[0] is not the source inner Select as a derived table")
+	}
+	if optimizerScopes[1].Expression != sourceSubquery || !optimizerScopes[1].IsRoot() {
+		t.Fatalf("optimizer scope[1] is not the root source Subquery")
 	}
 }
 
@@ -817,9 +820,11 @@ func TestDMLScopeOptimizerUpdateFromParity(t *testing.T) {
 		"u", schema.M("id", "INT", "x", "INT"),
 	)
 
+	const want = "UPDATE t SET x = s.x FROM (SELECT u.x AS x, u.id AS id FROM u AS u) AS s WHERE t.id = s.id"
+
 	assertDMLTraversalSurfaces(t, sql, "", exp.KindUpdate, "t", "s", false)
-	if got := qualifyDMLSQL(t, sql, "", mapping, false); got != sql {
-		t.Fatalf("Qualify() = %q, want pinned upstream %q", got, sql)
+	if got := qualifyDMLSQL(t, sql, "", mapping, false); got != want {
+		t.Fatalf("Qualify() = %q, want pinned upstream %q", got, want)
 	}
 	assertFreshPublicDMLScopes(t, sql, "", exp.KindUpdate, "t", "s")
 }
@@ -876,9 +881,9 @@ func TestDMLScopeOptimizerIsolateTablesParity(t *testing.T) {
 		kind exp.Kind
 	}{
 		{
-			name: "update source is not newly exposed",
+			name: "update source is qualified through its wrapper scope",
 			sql:  "UPDATE t SET x = s.x FROM (SELECT x, id FROM u) AS s WHERE t.id = s.id",
-			want: "UPDATE t SET x = s.x FROM (SELECT x, id FROM u) AS s WHERE t.id = s.id",
+			want: "UPDATE t SET x = s.x FROM (SELECT u.x AS x, u.id AS id FROM u AS u) AS s WHERE t.id = s.id",
 			kind: exp.KindUpdate,
 		},
 		{

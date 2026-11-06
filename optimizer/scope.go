@@ -215,6 +215,14 @@ func traverseScopeWithMode(expression exp.Expression, mode scopeTraversalMode) [
 
 func BuildScope(expression exp.Expression) *Scope { return buildScope(expression) }
 
+// buildScopeForOptimizer ports build_scope (scope.py:678-686) exactly, over the optimizer
+// compatibility traversal: the last upstream scope. A DML root has no root scope upstream, so
+// for one this is its last child scope, which the transformation passes rely on.
+func buildScopeForOptimizer(expression exp.Expression) *Scope {
+	scope, _ := seqGet(traverseScopeForOptimizer(expression), -1)
+	return scope
+}
+
 func buildScope(expression exp.Expression) *Scope {
 	scopes := traverseScope(expression)
 	scope, ok := seqGet(scopes, -1)
@@ -271,6 +279,10 @@ func _traverseScope(scope *Scope, out *[]*Scope, mode scopeTraversalMode) {
 		_traverseCtes(scope, out, mode)
 		if mode == scopeTraversalAnalysis && isDMLRootKind(expression.Kind()) {
 			_traverseDML(scope, out, mode)
+			return
+		}
+		if mode == scopeTraversalOptimizer {
+			_traverseDMLForOptimizer(scope, out, mode)
 			return
 		}
 		_traverseDMLQueries(scope, out, mode)
@@ -478,6 +490,57 @@ func _traverseDMLQueries(scope *Scope, out *[]*Scope, mode scopeTraversalMode) {
 		parent := query.Parent()
 		if parent == nil || (parent.Kind() != exp.KindCTE && parent.Kind() != exp.KindSubquery) {
 			_traverseScope(newScope(query, scopeOptions{cteSources: scope.CTESources}), out, mode)
+		}
+	}
+}
+
+// _traverseDMLForOptimizer ports the exp.DML branch of _traverse_scope (scope.py:716-765)
+// exactly, for the optimizer compatibility traversal; the caller already traversed the CTEs.
+// No DML root scope is emitted, as upstream.
+func _traverseDMLForOptimizer(scope *Scope, out *[]*Scope, mode scopeTraversalMode) {
+	expression := scope.Expression
+
+	// Bare tables in relation position (e.g. UPDATE ... FROM t, DELETE / MERGE ... USING t)
+	// aren't part of any query, so they're scoped as standalone tables; _traverseTables also
+	// picks up any joins hanging off of them.
+	var relations []exp.Expression
+	if from := asExpression(expression.Arg("from_")); from != nil && from.Kind() == exp.KindFrom {
+		relations = append(relations, from.This())
+	}
+	switch using := expression.Arg("using").(type) {
+	case []exp.Expression:
+		relations = append(relations, using...)
+	case exp.Expression:
+		relations = append(relations, using)
+	}
+	for _, relation := range relations {
+		if relation != nil && relation.Kind() == exp.KindTable {
+			_traverseScope(newScope(relation, scopeOptions{cteSources: scope.CTESources}), out, mode)
+		}
+	}
+
+	for _, query := range findAllInScope(expression, exp.TraitQuery) {
+		// This check ensures we don't yield the CTE/nested queries twice.
+		if parent := query.Parent(); parent != nil && (parent.Kind() == exp.KindCTE || parent.Kind() == exp.KindSubquery) {
+			continue
+		}
+
+		if isFromOrJoin(query) {
+			parent := query.Parent()
+			if parent.Kind() == exp.KindJoin {
+				if grand := parent.Parent(); grand != nil && (grand.Kind() == exp.KindSubquery || grand.Kind() == exp.KindTable) {
+					// Scoped by the FROM-position relation (wrapper or table) it's joined to.
+					continue
+				}
+			}
+			// A query in FROM/JOIN position (e.g. UPDATE ... FROM (SELECT ...) AS s) acts like
+			// a derived table, so its scope stays rooted at the Subquery wrapper to pick up the
+			// wrapper's alias, column list and joins.
+			_traverseScope(newScope(query, scopeOptions{cteSources: scope.CTESources}), out, mode)
+		} else {
+			// Queries in value position (SET, WHERE, USING, ...) are scoped as subqueries,
+			// e.g. so their columns can be correlated to the DML's target table.
+			_traverseScope(scope.branch(query, scopeOptions{scopeType: ScopeTypeSubquery}), out, mode)
 		}
 	}
 }
@@ -824,7 +887,10 @@ func _traverseTables(scope *Scope, out *[]*Scope, mode scopeTraversalMode) {
 	for _, join := range expressionsFor(scope.Expression, "joins") {
 		expressions = append(expressions, join.This())
 	}
-	if scope.Expression.Kind() == exp.KindTable {
+	if kind := scope.Expression.Kind(); kind == exp.KindTable || kind == exp.KindSubquery {
+		// A Subquery-rooted scope, e.g., the FROM clause of a DML statement, a DDL source or
+		// a parenthesized query like (SELECT ...) LIMIT 1, scopes its own inner query as a
+		// derived table (scope.py:885-889).
 		expressions = append(expressions, scope.Expression)
 	}
 	expressions = append(expressions, expressionsFor(scope.Expression, "laterals")...)
@@ -887,13 +953,19 @@ func _traverseTables(scope *Scope, out *[]*Scope, mode scopeTraversalMode) {
 		} else if isDerivedTable(expression) {
 			scopeType = ScopeTypeDerivedTable
 			scopes = &scope.DerivedTableScopes
-			for _, join := range expressionsFor(expression, "joins") {
-				expressions = append(expressions, join.This())
+			if expression != scope.Expression {
+				// The scope expression's own joins were already added above.
+				for _, join := range expressionsFor(expression, "joins") {
+					expressions = append(expressions, join.This())
+				}
 			}
 		} else {
+			// Makes sure we check for possible sources in nested table constructs.
 			expressions = append(expressions, expression.This())
-			for _, join := range expressionsFor(expression, "joins") {
-				expressions = append(expressions, join.This())
+			if expression != scope.Expression {
+				for _, join := range expressionsFor(expression, "joins") {
+					expressions = append(expressions, join.This())
+				}
 			}
 			continue
 		}
