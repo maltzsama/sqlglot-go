@@ -133,6 +133,12 @@ func (n *Node) Where(appendValue, copyValue bool, expressions ...Expression) Exp
 	return applyConjunctionBuilder(n, "where", KindWhere, appendValue, copyValue, conditions)
 }
 
+// Having ports Select.having (expressions/query.py:1461-1500): it ANDs the conditions into the
+// query's HAVING, replacing it when appendValue is false.
+func (n *Node) Having(appendValue, copyValue bool, expressions ...Expression) Expression {
+	return applyConjunctionBuilder(n, "having", KindHaving, appendValue, copyValue, expressions)
+}
+
 // From_ ports Select.from_ (expressions/query.py:1147-1180): it sets the FROM clause, wrapping
 // a source that is not already a From.
 func (n *Node) From_(expression Expression, copyValue bool) Expression {

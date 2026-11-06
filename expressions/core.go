@@ -93,6 +93,7 @@ type Expression interface {
 	// Query builders (query_builders.go).
 	Subquery(alias string, copyValue bool) Expression
 	Where(appendValue, copyValue bool, expressions ...Expression) Expression
+	Having(appendValue, copyValue bool, expressions ...Expression) Expression
 	From_(expression Expression, copyValue bool) Expression
 	GroupBy(appendValue, copyValue bool, expressions ...Expression) Expression
 	SelectExprs(appendValue, copyValue bool, expressions ...Expression) Expression
