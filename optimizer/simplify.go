@@ -446,7 +446,7 @@ func propagateConstants(expression exp.Expression, root bool) exp.Expression {
 			if !c.column.Equal(col) {
 				continue
 			}
-			if col != c.column && !(parent != nil && parent.Kind() == exp.KindIs && parent.Expr() != nil && parent.Expr().Kind() == exp.KindNull) {
+			if col != c.column && (parent == nil || parent.Kind() != exp.KindIs || parent.Expr() == nil || parent.Expr().Kind() != exp.KindNull) {
 				col.Replace(c.value.Copy())
 			}
 			break
@@ -1240,7 +1240,7 @@ func isProperSubset(a, b []exp.Expression) bool {
 //	             A AND (NOT A OR B) -> A AND B;  A OR (NOT A AND B) -> A OR B  (non-NULL A)
 //	elimination: (A AND B) OR (A AND NOT B) -> A;  (A OR B) AND (A OR NOT B) -> A  (non-NULL B)
 func (s *Simplifier) absorbAndEliminate(expression exp.Expression, root bool) exp.Expression {
-	if (expression.Kind() != exp.KindAnd && expression.Kind() != exp.KindOr) || !(root || !expression.SameParent()) {
+	if (expression.Kind() != exp.KindAnd && expression.Kind() != exp.KindOr) || (!root && expression.SameParent()) {
 		return s.onChange(expression, expression)
 	}
 	kind := exp.KindAnd
@@ -1612,7 +1612,7 @@ func (s *Simplifier) simplifyCoalesceInner(expression exp.Expression) exp.Expres
 	// COALESCE(x) -> x; COALESCE is also used as a Spark partitioning hint.
 	if expression.Kind() == exp.KindCoalesce &&
 		(len(expression.Expressions()) == 0 || isNonnullConstant(expression.This())) &&
-		!(expression.Parent() != nil && expression.Parent().Kind() == exp.KindHint) {
+		(expression.Parent() == nil || expression.Parent().Kind() != exp.KindHint) {
 		return expression.This()
 	}
 	if s.dialect.CoalesceComparisonNonStandard || !isComparison(expression.Kind()) {
@@ -1775,7 +1775,7 @@ func (s *Simplifier) simplifyConditionalsInner(expression exp.Expression) exp.Ex
 				}
 			}
 		}
-	case expression.Kind() == exp.KindIf && !(expression.Parent() != nil && expression.Parent().Kind() == exp.KindCase):
+	case expression.Kind() == exp.KindIf && (expression.Parent() == nil || expression.Parent().Kind() != exp.KindCase):
 		if alwaysTrue(expression.This()) {
 			return asExpression(expression.Arg("true"))
 		}
@@ -1828,7 +1828,7 @@ func (s *Simplifier) datetruncBinary(kind exp.Kind, l exp.Expression, dt pyDate,
 	switch kind {
 	case exp.KindLT:
 		target := dt
-		if f := floor(); !(f.cmp(dt) == 0 && f.isDatetime == dt.isDatetime) {
+		if f := floor(); f.cmp(dt) != 0 || f.isDatetime != dt.isDatetime {
 			target = interval(unit, 1).addTo(f)
 		}
 		return binop(exp.KindLT, l, dateLiteral(target, t))
@@ -1998,7 +1998,7 @@ func connectorCombinable(e exp.Expression) bool {
 
 // flatSimplify ports _flat_simplify (simplify.py:1551-1590).
 func (s *Simplifier) flatSimplify(expression exp.Expression, simplifier func(e, a, b exp.Expression) exp.Expression, root bool) exp.Expression {
-	if !(root || !expression.SameParent()) {
+	if !root && expression.SameParent() {
 		return expression
 	}
 	queue := flatten(expression, false)
