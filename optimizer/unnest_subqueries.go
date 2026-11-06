@@ -153,6 +153,12 @@ func unnestSubquery(sel, parentSelect exp.Expression, nextAliasName func() strin
 			on = []exp.Expression{exp.True_()}
 		}
 
+		// divergence (DEVIATIONS §1.26): a set operation was rewrapped above into a new SELECT
+		// with no parent, so there is nothing to replace. Upstream calls select.parent.replace
+		// on None and raises; leave the query unrewritten instead.
+		if sel.Parent() == nil {
+			return
+		}
 		replaceCondition(sel.Parent(), col)
 		parentSelect.Join(sel, exp.JoinOptions{On: on, JoinType: joinType, JoinAlias: alias})
 		return
