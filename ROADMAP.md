@@ -115,8 +115,7 @@ differential-check against the pinned Python):
   `merge_subqueries`, plus the query builder API they share. Each remaining pass is tracked by a
   GitHub issue (#27-#32), ordered by upstream import dependencies.
 - annotate_types is ported (#27). What remains is the function nodes it can't type yet because the
-  port parses them as `Anonymous` (#44; `optimizer/testdata/annotate_gaps.txt`), and PIVOT/UNPIVOT
-  column types, which wait on `Pivot.output_columns`.
+  port parses them as `Anonymous` (#44; `optimizer/testdata/annotate_gaps.txt`).
 - CROSS-DIALECT transpilation: same-dialect round-trip is verified; reading one dialect and writing
   another is not. The per-dialect override tables that make it correct are partial — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
