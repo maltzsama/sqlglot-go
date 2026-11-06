@@ -12,6 +12,10 @@ optimizer passes that column **qualification and lineage** are built on. Ported 
 pinned Python source, as close to 1:1 as Go allows, so upstream tests port across directly. **Zero
 third-party dependencies** (Go stdlib only).
 
+This repository is a maintained, independent continuation of `ridi-oss/sqlglot-go` (forked at its
+v0.38.0 release). It tracks upstream sqlglot **v30.17.0** and extends the original base/MySQL/Postgres
+port with TSQL, ClickHouse, Oracle, StarRocks, Doris, Presto, Trino, Hive, and Athena.
+
 ## Scope — what this is (and isn't)
 
 This is **not** a port of all of sqlglot. It ports the front half of the pipeline in full and a
@@ -20,7 +24,7 @@ targeted slice of the optimizer:
 **Ported (faithful, ~1:1):**
 - **Tokenizer, AST/node model, parser, generator** — the full round-trip. Anything upstream sqlglot
   parses and regenerates for **base + MySQL + Postgres**, this port does identically:
-  **100% round-trip parity — 1847/1847 corpus cases** (base 955/955, MySQL 424/424, Postgres 468/468),
+  **100% round-trip parity — 1876/1876 corpus cases** (base 980/980, MySQL 428/428, Postgres 468/468),
   checked against the ported upstream test suite. No statement fakes a round-trip via a raw-text
   fallback where upstream builds a structured node (guarded by a committed fidelity test).
 - **Schema** — `MappingSchema`, `DataType.build`, type-category sets.
@@ -36,7 +40,7 @@ targeted slice of the optimizer:
   `optimize()` rule orchestrator. (`annotate_types` and `simplify` are only partially present.)
 - **Cross-dialect transpilation** — the generator can target a dialect, but only **same-dialect**
   round-trip is a goal and is tested; reading one dialect and writing another is not verified.
-- **Dialects beyond base / MySQL / Postgres** (upstream ships 30+).
+- **Dialects beyond the ones listed under [Dialects](#dialects)** (upstream ships 30+).
 
 **Beyond upstream — opt-in, additive (default output unchanged):**
 - **Search-path table qualification** — `QualifyOpts.SearchPath` resolves an unqualified table
@@ -57,13 +61,32 @@ case-folding, to match real engines).
 
 | Capability | Package | Notes |
 |---|---|---|
-| Tokenize | `tokens` | base + MySQL + Postgres tokenizers |
+| Tokenize | `tokens` | base tokenizer plus per-dialect overrides for every registered dialect |
 | Parse → AST | `parser`, `expressions` | full: SELECT/set-ops/CTE/subqueries, all query clauses, predicates, functions, DML + DDL (INSERT/UPDATE/DELETE/MERGE/CREATE + properties), CAST/DataType, PIVOT/LATERAL/VALUES/TABLESAMPLE, INTERVAL, JSON/JSONB ops, window functions |
-| Generate (AST → SQL) | `generator` | **100% round-trip** on the upstream identity corpus for base/MySQL/Postgres (1847/1847) |
+| Generate (AST → SQL) | `generator` | **100% round-trip** on the upstream identity corpus for base (980/980) and every registered dialect (see [Dialects](#dialects)) |
 | Schema | `schema` | `MappingSchema`, `DataType.build`, type-category sets |
 | Qualify | `optimizer` | `qualify` (qualify_tables, normalize_identifiers, qualify_columns, quote_identifiers, validate) |
 | Scope / lineage | `optimizer` | `traverse_scope` + full `Scope` API (sources, columns, unions, CTEs) |
-| Dialects | `dialects` | MySQL + Postgres (tokenizer, normalization, quoting, per-dialect functions/flags) |
+| Dialects | `dialects` | see [Dialects](#dialects) (tokenizer, normalization, quoting, per-dialect functions/flags) |
+
+## Dialects
+
+Same-dialect round-trip parity against the ported upstream identity corpus
+(`testdata/dialect_identity.jsonl`), on top of the base corpus:
+
+| Dialect | Name | Corpus cases |
+|---|---|---|
+| MySQL | `mysql` | 428/428 |
+| Postgres | `postgres` | 468/468 |
+| TSQL (SQL Server) | `tsql` | 613/613 |
+| ClickHouse | `clickhouse` | 468/468 |
+| Oracle | `oracle` | 249/249 |
+| Presto | `presto` | 170/170 |
+| StarRocks | `starrocks` | 145/145 |
+| Hive | `hive` | 141/141 |
+| Trino | `trino` | 115/115 |
+| Doris | `doris` | 56/56 |
+| Athena | `athena` | 51/51 |
 
 ## Quick start
 
