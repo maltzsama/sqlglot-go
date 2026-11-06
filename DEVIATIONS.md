@@ -193,6 +193,17 @@ string, a block comment, or sharing its line with other SQL is unchanged. An inp
 but the separator line keeps upstream's `Command "GO"`, because there is no batch to separate.
 Tests `TestTSQLGoBatchSeparator`, `TestTSQLGoBatchSeparatorToken` (`tsql_test.go`).
 
+### 1.23 Oracle `/` terminator line is a statement boundary
+
+SQL*Plus and SQLcl treat a line holding only `/` as "run the buffer", which ends the statement (and
+is the only terminator for a PL/SQL unit). Upstream lexes it as division, so
+`SELECT 1 FROM dual\n/\nSELECT 2 FROM dual` fails to parse and `SELECT 1 FROM dual;\n/` fails with
+`'this' missing for Div`. Under `oracle` the tokenizer lexes such a line (surrounding spaces/tabs
+allowed) as a `SEMICOLON` token with `Text` `/`, through the same `TokenizerConfig.BatchSeparator`
+mechanism as §1.22: it splits like `;`, and after a `;` it is dropped. A `/` that shares its line
+with anything else, including a comment, stays division. Test `TestOracleSlashTerminator`
+(`oracle_test.go`).
+
 ## Opt-in behavioral extensions beyond upstream
 
 Additive analysis features; default behavior and fixture output unchanged.

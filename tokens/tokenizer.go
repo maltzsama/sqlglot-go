@@ -82,6 +82,9 @@ const (
 	// alone on its line apart from spaces/tabs, an optional repeat count, and an optional
 	// trailing `--` comment.
 	BatchSeparatorGo
+	// BatchSeparatorSlash is the Oracle SQL*Plus/SQLcl terminator: a `/` alone on its line
+	// apart from spaces/tabs.
+	BatchSeparatorSlash
 )
 
 func BaseConfig() TokenizerConfig {

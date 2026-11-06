@@ -230,3 +230,42 @@ func TestOracleQualifyAndScope(t *testing.T) {
 		t.Fatalf("scope sources = %v, want T", scopes[0].Sources)
 	}
 }
+
+// TestOracleSlashTerminator pins the SQL*Plus/SQLcl `/` terminator (DEVIATIONS §1.23): a line
+// holding only `/` ends the statement and never parses as division. Upstream lexes it as a
+// division operator and fails.
+func TestOracleSlashTerminator(t *testing.T) {
+	sel := exp.KindSelect
+	cases := []struct {
+		sql  string
+		want []scriptStatement
+	}{
+		// Upstream: "Invalid expression / Unexpected token".
+		{"SELECT 1 FROM dual\n/\nSELECT 2 FROM dual",
+			[]scriptStatement{{sel, "SELECT 1 FROM dual"}, {sel, "SELECT 2 FROM dual"}}},
+		// Upstream: "Required keyword: 'this' missing for Div". After a `;` it is a no-op.
+		{"SELECT 1 FROM dual;\n/", []scriptStatement{{sel, "SELECT 1 FROM dual"}}},
+		// Surrounding blanks, a trailing terminator, and CRLF line endings.
+		{"SELECT 1 FROM dual\n  /  \nSELECT 2 FROM dual\n/",
+			[]scriptStatement{{sel, "SELECT 1 FROM dual"}, {sel, "SELECT 2 FROM dual"}}},
+		{"SELECT 1 FROM dual\r\n/\r\nSELECT 2 FROM dual",
+			[]scriptStatement{{sel, "SELECT 1 FROM dual"}, {sel, "SELECT 2 FROM dual"}}},
+		// Division is untouched when `/` shares its line with an operand.
+		{"SELECT a\n/ b FROM t", []scriptStatement{{sel, "SELECT a\n/ b FROM t"}}},
+		{"SELECT 10 /\n2 FROM dual", []scriptStatement{{sel, "SELECT 10 /\n2 FROM dual"}}},
+	}
+	for _, tc := range cases {
+		assertScriptStatements(t, tc.sql, "oracle", tc.want)
+	}
+
+	// `//` is not a terminator line, so it still parses as (invalid) division.
+	if _, err := sqlglot.Parse("SELECT 1 FROM dual\n//\nSELECT 2 FROM dual", "oracle"); err == nil {
+		t.Error("`//` line: expected a parse error, it is not a terminator")
+	}
+	// A block comment opening a line is not the terminator either.
+	assertScriptStatements(t, "SELECT 1\n/* c */ + 1 FROM dual", "oracle",
+		[]scriptStatement{{sel, "SELECT 1\n/* c */ + 1 FROM dual"}})
+
+	// Other dialects keep upstream's lexing: the line is division.
+	assertScriptStatements(t, "SELECT a\n/\nb", "", []scriptStatement{{sel, "SELECT a\n/\nb"}})
+}

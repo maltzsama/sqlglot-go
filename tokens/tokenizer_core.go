@@ -208,7 +208,8 @@ func (c *TokenizerCore) scan(checkSemicolon bool) {
 // when there is none. A separator must open its line (only spaces/tabs before it) and be the
 // only thing on it apart from trailing spaces/tabs; the T-SQL form also allows a repeat
 // count and a trailing `--` comment, which is left to the ordinary comment scanner. The
-// returned length covers the separator text only (`GO 5`, not the trailing blanks).
+// returned length covers the separator text only (`GO 5`, not the trailing blanks). See
+// DEVIATIONS §1.22 (GO) and §1.23 (`/`).
 func (c *TokenizerCore) batchSeparatorAt(pos int) int {
 	switch c.batchSeparator {
 	case BatchSeparatorGo:
@@ -231,6 +232,10 @@ func (c *TokenizerCore) batchSeparatorAt(pos int) int {
 		}
 		if c.lineEndsAt(pos+size, true) && !c.onlySeparatorInput(pos+size) {
 			return size
+		}
+	case BatchSeparatorSlash:
+		if pos < c.size && c.input.at(pos) == '/' && c.lineStartsAt(pos) && c.lineEndsAt(pos+1, false) {
+			return 1
 		}
 	}
 	return 0
