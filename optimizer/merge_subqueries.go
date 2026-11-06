@@ -365,11 +365,11 @@ func renameInnerSources(outerScope, innerScope *Scope, alias string) {
 
 		switch {
 		case source.Kind() == exp.KindTable && source.Alias() != "":
-			source.Set("alias", exp.TableAlias(exp.Args{"this": newAlias}))
+			renameTableAlias(source, newAlias)
 		case source.Kind() == exp.KindTable:
 			source.Replace(exp.AliasExpr(source.Copy(), newAlias, false))
 		case source.Parent() != nil && source.Parent().Kind() == exp.KindSubquery:
-			source.Parent().Set("alias", exp.TableAlias(exp.Args{"this": newAlias}))
+			renameTableAlias(source.Parent(), newAlias)
 		}
 
 		for _, col := range innerScope.SourceColumns(conflict) {
@@ -379,6 +379,20 @@ func renameInnerSources(outerScope, innerScope *Scope, alias string) {
 		old := conflict
 		innerScope.RenameSource(&old, newName)
 	}
+}
+
+// renameTableAlias gives node's table alias the name newAlias.
+//
+// divergence (DEVIATIONS §1.25): upstream sets a fresh TableAlias(this=new_alias)
+// (optimizer/merge_subqueries.py:353-358), dropping an alias column list: `t1 AS q(x, y)` becomes
+// `t1 AS q_2` while the merged query still reads `q_2.x`, a column t1 doesn't have. Only the
+// alias name is replaced here, so the column list survives.
+func renameTableAlias(node, newAlias exp.Expression) {
+	if existing := asExpression(node.Arg("alias")); existing != nil && existing.Kind() == exp.KindTableAlias {
+		existing.Set("this", newAlias)
+		return
+	}
+	node.Set("alias", exp.TableAlias(exp.Args{"this": newAlias}))
 }
 
 // mergeFrom ports _merge_from (optimizer/merge_subqueries.py:369-389): it merges the FROM

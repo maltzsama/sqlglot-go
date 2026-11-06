@@ -222,6 +222,15 @@ block becomes `Command{this: BEGIN|DECLARE}`. A unit still open at the end of in
 line fails closed with `Unterminated PL/SQL block`. Ledger rows `oracle-plsql-*`; test
 `TestOraclePLSQLUnitBoundaries` (`oracle_test.go`).
 
+### 1.25 `merge_subqueries` keeps an alias column list when it renames a source
+
+When an inner source's alias conflicts with an outer one, upstream `_rename_inner_sources`
+(`optimizer/merge_subqueries.py:353-358`) sets a fresh `TableAlias` with only the new name, dropping
+the alias column list. `SELECT s.x FROM (SELECT q.x FROM t1 AS q(x, y)) AS s JOIN t2 AS q ON ...`
+merges into `... FROM t1 AS q_2 JOIN t2 AS q ON q_2.x = q.a`, which references a column `t1` doesn't
+have. The port renames only the alias name, so the result keeps `t1 AS q_2(x, y)` and stays valid.
+Test `TestMergeSubqueriesKeepsAliasColumns` (`optimizer/merge_subqueries_test.go`).
+
 ## Opt-in behavioral extensions beyond upstream
 
 Additive analysis features; default behavior and fixture output unchanged.
