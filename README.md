@@ -33,13 +33,15 @@ targeted slice of the optimizer:
 - **Rewrite passes** — `eliminate_ctes` (with the mutation `Journal`), `eliminate_subqueries`,
   `optimize_joins`, `unnest_subqueries` and `merge_subqueries`, each checked against its upstream
   fixture file, on top of a port of upstream's query builder API.
+- **`annotate_types`** — type inference with the per-dialect expression metadata generated from
+  upstream. Functions the port still parses as `Anonymous` annotate as `UNKNOWN` (tracked in #44).
 - **`scope` / `traverse_scope` + the full `Scope` API** — sources, columns, unions, CTEs, subqueries:
   the foundation for **column lineage**.
 
 **Not ported (yet):**
 - The rest of sqlglot's **optimizer**: `simplify` (full), `normalize`, `pushdown_predicates`,
   `pushdown_projections`, `eliminate_joins`, `canonicalize`, and the top-level `optimize()` rule
-  orchestrator. (`annotate_types` and `simplify` are only partially present.)
+  orchestrator. (`simplify` is only partially present.)
 - **Cross-dialect transpilation** — the generator can target a dialect, but only **same-dialect**
   round-trip is a goal and is tested; reading one dialect and writing another is not verified.
 - **Dialects beyond the ones listed under [Dialects](#dialects)** (upstream ships 30+).

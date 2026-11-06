@@ -114,8 +114,9 @@ differential-check against the pinned Python):
   `eliminate_ctes` + `journal`, `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries` and
   `merge_subqueries`, plus the query builder API they share. Each remaining pass is tracked by a
   GitHub issue (#27-#32), ordered by upstream import dependencies.
-- FULL annotate_types (coercion tables + per-node type rules) — currently a minimal constructible
-  stub; not yet a faithful port.
+- annotate_types is ported (#27). What remains is the function nodes it can't type yet because the
+  port parses them as `Anonymous` (#44; `optimizer/testdata/annotate_gaps.txt`), and PIVOT/UNPIVOT
+  column types, which wait on `Pivot.output_columns`.
 - CROSS-DIALECT transpilation: same-dialect round-trip is verified; reading one dialect and writing
   another is not. The per-dialect override tables that make it correct are partial — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid

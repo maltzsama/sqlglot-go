@@ -72,7 +72,7 @@ helpers. See **[CHANGELOG.md](./CHANGELOG.md)** for the per-version history.
 **Remaining work** (see `ROADMAP.md`): the rest of sqlglot's optimizer — `simplify` (full),
 `normalize`, `pushdown_predicates`/`pushdown_projections`, `eliminate_joins`, `canonicalize`, and the
 top-level `optimize()` orchestrator;
-full `annotate_types`; verified cross-dialect transpilation; and dialects beyond base/MySQL/Postgres.
+the function nodes `annotate_types` can't type yet (#44); verified cross-dialect transpilation; and dialects beyond base/MySQL/Postgres.
 The parse/generate round-trip itself is done — a construct upstream parses that this port doesn't is a
 regression, not expected.
 
