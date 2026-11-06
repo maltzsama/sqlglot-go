@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/tokens"
 )
@@ -206,11 +208,73 @@ func (p *Parser) parsePivot() exp.Expression {
 			}
 		}
 	}
-	// TODO(slice 2): PIVOT column-name inference needs generator SQL output.
+	if unpivot {
+		pivot.Set("value_columns_first", p.dialect.UnpivotValueColumnsFirst)
+	}
 	if !p.matchSet(map[tokens.TokenType]bool{tokens.PIVOT: true, tokens.UNPIVOT: true}, false) {
 		pivot.Set("alias", p.parseTableAlias(nil))
 	}
+	if !unpivot {
+		p.setPivotColumns(pivot, expressions)
+	}
 	return pivot
+}
+
+// setPivotColumns ports the PIVOT output-column inference of _parse_pivot (parser.py:5463-5505):
+// the product of each field's IN values and the aggregation aliases, joined by "_". No registered
+// dialect sets IDENTIFY_PIVOT_STRINGS or PREFIXED_PIVOT_COLUMNS, so a value is named by its
+// alias_or_name and the aggregation alias goes last; the flags are recorded on the node as
+// upstream does.
+func (p *Parser) setPivotColumns(pivot exp.Expression, aggregations []exp.Expression) {
+	// _pivot_column_names (parser.py:5509-5510).
+	var names []string
+	for _, agg := range aggregations {
+		if alias := agg.Alias(); alias != "" {
+			names = append(names, alias)
+		}
+	}
+
+	var allFields [][]string
+	for _, field := range pivot.(*exp.Node).ExpressionsFor("fields") {
+		fieldExpressions := field.Expressions()
+		// PivotAny is `ANY ORDER BY <column>`; its columns can't be inferred.
+		if len(fieldExpressions) > 0 && fieldExpressions[0].Kind() == exp.KindPivotAny {
+			continue
+		}
+		var parts []string
+		for _, fld := range fieldExpressions {
+			parts = append(parts, fld.AliasOrName())
+		}
+		allFields = append(allFields, parts)
+	}
+
+	columns := []exp.Expression{}
+	if len(allFields) > 0 {
+		if len(names) > 0 {
+			allFields = append(allFields, names)
+		}
+		// Every combination of the pivot columns, e.g. PIVOT(sum(...) AS total FOR year IN
+		// (2000, 2010) FOR country IN ('NL', 'US')) is the product of [[2000, 2010],
+		// ['NL', 'US'], ['total']].
+		combos := [][]string{{}}
+		for _, parts := range allFields {
+			var next [][]string
+			for _, combo := range combos {
+				for _, part := range parts {
+					next = append(next, append(append([]string{}, combo...), part))
+				}
+			}
+			combos = next
+		}
+		for _, combo := range combos {
+			columns = append(columns, exp.ToIdentifier(strings.Join(combo, "_")))
+		}
+	}
+
+	pivot.Set("columns", columns)
+	pivot.Set("identify_pivot_strings", false)
+	pivot.Set("prefixed_pivot_columns", false)
+	pivot.Set("pivot_column_naming", "agg_name_if_aliased")
 }
 
 func (p *Parser) parsePivotAggregation() exp.Expression {

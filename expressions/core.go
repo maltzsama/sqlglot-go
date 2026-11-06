@@ -102,6 +102,13 @@ type Expression interface {
 	Is_(other any) Expression
 	Eq(other any) Expression
 	Not_(copyValue bool) Expression
+
+	IterExpressions(reverse bool) []Expression
+
+	// Annotated types (annotated_type.go).
+	Type() Expression
+	SetType(dtype any)
+	IsType(dtypes ...any) bool
 }
 
 type Target interface{ matches(Expression) bool }
@@ -123,6 +130,8 @@ type Node struct {
 	comments []string
 	meta     map[string]any
 	hash     *uint64
+	// typ is the annotated type (annotated_type.go), upstream's _type.
+	typ Expression
 }
 
 func New(k Kind, args Args) Expression {
@@ -522,6 +531,12 @@ func (n *Node) iterExpressions(reverse bool) []Expression {
 	return n.appendExpressions(nil, reverse)
 }
 
+// IterExpressions ports Expr.iter_expressions: the node's direct child expressions, in arg
+// order (reversed when reverse is true).
+func (n *Node) IterExpressions(reverse bool) []Expression {
+	return n.iterExpressions(reverse)
+}
+
 // appendExpressions appends this node's children to dst, avoiding the intermediate slice
 // iterExpressions would otherwise allocate for every visited node.
 func (n *Node) appendExpressions(dst []Expression, reverse bool) []Expression {
@@ -757,6 +772,10 @@ func (n *Node) Copy() Expression {
 		if node.hash != nil {
 			h := *node.hash
 			copyNode.hash = &h
+		}
+		if node.typ != nil {
+			// Ports copy._type = deepcopy(node._type) (core.py:1011-1012).
+			copyNode.typ = node.typ.Copy()
 		}
 		for _, key := range node.argOrder {
 			value := node.args[key]
@@ -1328,6 +1347,11 @@ func toS(node any, verbose bool, level int, reprStr bool) string {
 				keys = append(keys, key)
 			}
 		}
+		// Upstream also renders a cast's target type as its _type; that pre-existing cosmetic
+		// divergence is kept, so only an annotated type is shown.
+		if expr.typ != nil && !isDataTypeKind(expr.kind) {
+			keys = append(keys, "_type")
+		}
 		if verbose || len(expr.comments) > 0 {
 			keys = append(keys, "_comments")
 		}
@@ -1341,6 +1365,8 @@ func toS(node any, verbose bool, level int, reprStr bool) string {
 			value := any(nil)
 			if key == "_comments" {
 				value = expr.comments
+			} else if key == "_type" {
+				value = expr.typ
 			} else {
 				value = expr.args[key]
 			}

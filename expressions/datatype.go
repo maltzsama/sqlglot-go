@@ -360,6 +360,16 @@ var IntegerTypes = map[DType]bool{
 	DTypeBit:        true,
 }
 
+// BinaryTypes ports DataType.BINARY_TYPES (expressions/datatypes.py:230-237).
+var BinaryTypes = map[DType]bool{
+	DTypeBinary:     true,
+	DTypeVarBinary:  true,
+	DTypeTinyBlob:   true,
+	DTypeBlob:       true,
+	DTypeMediumBlob: true,
+	DTypeLongBlob:   true,
+}
+
 var FloatTypes = map[DType]bool{
 	DTypeDouble: true,
 	DTypeFloat:  true,
