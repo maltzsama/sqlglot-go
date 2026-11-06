@@ -58,7 +58,8 @@ builds a structured node (`fidelity_test.go` + `testdata/fidelity_cases.txt`). W
 tokenizer, the AST + node model, the parser, the generator (`Expression → SQL`),
 `schema.MappingSchema` + `DataType.build`, the `qualify` pass (qualify_tables → normalize_identifiers →
 qualify_columns → quote_identifiers → validate), `traverse_scope` + the full `Scope` API, and the
-`eliminate_ctes` (+ `journal`), `eliminate_subqueries` and `optimize_joins` rewrite passes.
+`eliminate_ctes` (+ `journal`), `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries` and
+`merge_subqueries` rewrite passes.
 
 On top of that faithful core, a set of **opt-in, additive** enabler APIs (all in DEVIATIONS.md, none
 change default same-dialect output) landed for the downstream lineage/gating consumer: search-path
@@ -69,8 +70,8 @@ structural PG `EXPLAIN`, MySQL `REPLACE`, and the `FoldIdentifierName`/`IsReserv
 helpers. See **[CHANGELOG.md](./CHANGELOG.md)** for the per-version history.
 
 **Remaining work** (see `ROADMAP.md`): the rest of sqlglot's optimizer — `simplify` (full),
-`normalize`, `pushdown_predicates`/`pushdown_projections`, `eliminate_joins`, `merge_subqueries`,
-`unnest_subqueries`, `canonicalize`, and the top-level `optimize()` orchestrator;
+`normalize`, `pushdown_predicates`/`pushdown_projections`, `eliminate_joins`, `canonicalize`, and the
+top-level `optimize()` orchestrator;
 full `annotate_types`; verified cross-dialect transpilation; and dialects beyond base/MySQL/Postgres.
 The parse/generate round-trip itself is done — a construct upstream parses that this port doesn't is a
 regression, not expected.

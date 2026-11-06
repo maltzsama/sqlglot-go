@@ -109,11 +109,11 @@ differential-check against the pinned Python):
 
 - THE REST OF THE OPTIMIZER (the big one): `simplify` (full — only `simplify_parens` is present),
   `normalize` (CNF/DNF), `pushdown_predicates`, `pushdown_projections`, `eliminate_joins`,
-  `merge_subqueries`, `unnest_subqueries`, `canonicalize` / `canonicalize_internal_names`, and the
-  top-level `optimize()` rule orchestrator that chains them. Ported today: `qualify` +
-  `scope`/`traverse_scope` (+ `isolate_table_selects`), `eliminate_ctes` + `journal`,
-  `eliminate_subqueries` and `optimize_joins`. Each remaining pass is tracked by a GitHub issue
-  (#26-#32), ordered by upstream import dependencies.
+  `canonicalize` / `canonicalize_internal_names`, and the top-level `optimize()` rule orchestrator
+  that chains them. Ported today: `qualify` + `scope`/`traverse_scope` (+ `isolate_table_selects`),
+  `eliminate_ctes` + `journal`, `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries` and
+  `merge_subqueries`, plus the query builder API they share. Each remaining pass is tracked by a
+  GitHub issue (#27-#32), ordered by upstream import dependencies.
 - FULL annotate_types (coercion tables + per-node type rules) — currently a minimal constructible
   stub; not yet a faithful port.
 - CROSS-DIALECT transpilation: same-dialect round-trip is verified; reading one dialect and writing

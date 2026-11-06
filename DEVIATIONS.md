@@ -222,6 +222,24 @@ block becomes `Command{this: BEGIN|DECLARE}`. A unit still open at the end of in
 line fails closed with `Unterminated PL/SQL block`. Ledger rows `oracle-plsql-*`; test
 `TestOraclePLSQLUnitBoundaries` (`oracle_test.go`).
 
+### 1.25 `merge_subqueries` keeps an alias column list when it renames a source
+
+When an inner source's alias conflicts with an outer one, upstream `_rename_inner_sources`
+(`optimizer/merge_subqueries.py:353-358`) sets a fresh `TableAlias` with only the new name, dropping
+the alias column list. `SELECT s.x FROM (SELECT q.x FROM t1 AS q(x, y)) AS s JOIN t2 AS q ON ...`
+merges into `... FROM t1 AS q_2 JOIN t2 AS q ON q_2.x = q.a`, which references a column `t1` doesn't
+have. The port renames only the alias name, so the result keeps `t1 AS q_2(x, y)` and stays valid.
+Test `TestMergeSubqueriesKeepsAliasColumns` (`optimizer/merge_subqueries_test.go`).
+
+### 1.26 `unnest_subqueries` skips a scalar set-operation subquery it can't place
+
+Upstream `unnest` (`optimizer/unnest_subqueries.py:61-100`) rewraps a set-operation subquery in a
+new `SELECT`, which has no parent. When the scalar path then takes the `MAX` branch (a grouped or
+aggregating outer query, or a `HAVING` predicate), it calls `select.parent.replace` on `None` and
+raises `AttributeError`, e.g. for `SELECT x.a + (SELECT 1 UNION ALL SELECT 2) FROM x GROUP BY x.a`.
+The port returns without rewriting, leaving the query unchanged. Test
+`TestUnnestSubqueriesSetOperationScalar` (`optimizer/unnest_subqueries_test.go`).
+
 ## Opt-in behavioral extensions beyond upstream
 
 Additive analysis features; default behavior and fixture output unchanged.

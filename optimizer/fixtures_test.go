@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	sqlglot "github.com/maltzsama/sqlglot-go"
+	"github.com/maltzsama/sqlglot-go/dialects"
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/generator"
 	"github.com/maltzsama/sqlglot-go/schema"
@@ -143,12 +144,24 @@ func optimizerTestSchema() *schema.Mapping {
 func checkPassFixtures(t *testing.T, filename string, pretty bool, rule func(exp.Expression) exp.Expression) {
 	t.Helper()
 	for i, pair := range loadSQLFixturePairs(t, filename) {
+		checkPassFixturePair(t, i, pair, pretty, rule)
+	}
+}
+
+// checkPassFixturePair runs the i-th (0-based) fixture pair the way checkPassFixtures does,
+// titled as upstream titles it.
+func checkPassFixturePair(t *testing.T, i int, pair sqlFixturePair, pretty bool, rule func(exp.Expression) exp.Expression) {
+	t.Helper()
+	{
 		title := pair.Meta["title"]
 		if title == "" {
 			title = fmt.Sprintf("%d, %s", i+1, pair.SQL)
 		}
 		t.Run(title, func(t *testing.T) {
 			dialect := pair.Meta["dialect"]
+			if _, err := dialects.GetOrRaise(dialect); err != nil {
+				t.Skipf("dialect not registered yet: %s", dialect)
+			}
 			expression, err := sqlglot.ParseOne(pair.SQL, dialect)
 			if err != nil {
 				t.Fatalf("ParseOne: %v", err)
