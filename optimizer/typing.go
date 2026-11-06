@@ -8,11 +8,10 @@ import (
 )
 
 // Ports the expression-type metadata of sqlglot/typing (Dialect.EXPRESSION_METADATA): for each
-// expression class, the type it returns or the annotator that infers it. The tables live in
-// typing_metadata.go: the base table (sqlglot/typing/__init__.py) plus, per dialect, the entries
-// its typing module and dialect class resolve differently (sqlglot/typing/<dialect>.py), with
-// inherited entries spelled out for each dialect. Classes with no Kind in this port yet are
-// skipped, so those expressions annotate as UNKNOWN until their node lands.
+// expression class, the type it returns or the annotator that infers it. The tables themselves
+// are generated into typing_metadata.go by scripts/gen_typing_metadata.py from the pinned
+// upstream, base plus a per-dialect overlay of the entries that differ. Classes with no Kind in
+// this port yet are skipped, so those expressions annotate as UNKNOWN until their node lands.
 
 // typeSpec is one EXPRESSION_METADATA value: {"returns": type} or {"annotator": fn}.
 type typeSpec struct {
