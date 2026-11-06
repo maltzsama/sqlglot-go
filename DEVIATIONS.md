@@ -204,6 +204,24 @@ mechanism as §1.22: it splits like `;`, and after a `;` it is dropped. A `/` th
 with anything else, including a comment, stays division. Test `TestOracleSlashTerminator`
 (`oracle_test.go`).
 
+### 1.24 Oracle PL/SQL units are one statement
+
+Upstream splits every input on `;`, so a PL/SQL unit is cut at the first `;` inside its body:
+`CREATE OR REPLACE FUNCTION f RETURN NUMBER IS BEGIN RETURN 1; END;` becomes a truncated `Command`
+plus a stray `EndStatement`, anonymous `BEGIN ... END;` / `DECLARE ... END;` blocks fail to parse,
+and a `CREATE PROCEDURE` body is mangled (`IS BEGIN NULL; END` regenerates as `AS IS AS BEGIN; END`,
+dropping the body). Oracle compiles the whole unit as one statement. Under `oracle`, the parser's
+`;` chunking (`splitOracleChunks`, `parser/dialect_oracle_plsql.go`) keeps a unit in one chunk: a
+stored `CREATE [OR REPLACE] [EDITIONABLE|NONEDITIONABLE] {PROCEDURE|FUNCTION|PACKAGE [BODY]|TRIGGER|
+TYPE BODY}` or an anonymous block runs until its block nesting closes (`BEGIN`/`DECLARE`, a
+subprogram or package `IS|AS`, a compound trigger, and `CASE`/`IF`/`LOOP` open a level; `END [IF|
+LOOP|CASE] [name]` closes one) and the next `;`, or a `/` line (§1.23), ends it. Strings and quoted
+identifiers never count. The body is not modeled: a stored unit becomes `Create{kind, this:
+Command}` with the verbatim text (`kind` is `PROCEDURE`, `PACKAGE BODY`, ...), and an anonymous
+block becomes `Command{this: BEGIN|DECLARE}`. A unit still open at the end of input or at a `/`
+line fails closed with `Unterminated PL/SQL block`. Ledger rows `oracle-plsql-*`; test
+`TestOraclePLSQLUnitBoundaries` (`oracle_test.go`).
+
 ## Opt-in behavioral extensions beyond upstream
 
 Additive analysis features; default behavior and fixture output unchanged.
@@ -257,6 +275,7 @@ reconciliation note); malformed/engine-invalid forms fail closed to `Command` or
 | ledger id | construct → node |
 |---|---|
 | `mysql-explain-modifier-table`, `pg-explain-table` | `TABLE t` as an EXPLAIN target with modifiers (MySQL manual §15.8.2 explainable_stmt; PG accepts the SELECT-shorthand — both engine-verified). All EXPLAIN forms share the `Describe` node. Discriminators differ per dialect: MySQL → `Describe{kind:"TABLE", this:Table}`; PG → `Describe{kind:"EXPLAIN"}` with `this.Kind()==Table` (kind stays the EXPLAIN label — key off the target's Kind, not the string). Generator keeps the `TABLE` keyword (upstream's `EXPLAIN TABLE t` → `DESCRIBE t` conflates a query-explain with a metadata describe) |
+| `oracle-plsql-function`, `oracle-plsql-trigger`, `oracle-plsql-package`, `oracle-plsql-anonymous-block` | Oracle PL/SQL units kept whole (§1.24): stored units → `Create{kind, this: Command}` with the verbatim unit text; anonymous blocks → `Command{this: BEGIN\|DECLARE}` |
 | `pg-explain` | Postgres `EXPLAIN` → `Describe{kind:"EXPLAIN"}` with structured options + parsed inner statement |
 | `mysql-replace` | `REPLACE INTO …` → `Insert{replace:true}` (MySQL generator renders `REPLACE`) |
 | `mysql-describe-column` | `DESCRIBE tbl col\|'wild'` → `Describe{this:Table, column}` (single identifier/wild only) |
