@@ -729,6 +729,11 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return Base(), nil
 	case "mysql":
 		return MySQL(), nil
+	case "mariadb":
+		// Beyond upstream, which has no MariaDB dialect: an alias of MySQL, so the result is
+		// the MySQL dialect itself (Name "mysql") with all of its behavior. MariaDB-only grammar
+		// is not modeled yet. See DEVIATIONS "Opt-in behavioral extensions".
+		return MySQL(), nil
 	case "postgres":
 		return Postgres(), nil
 	case "presto":

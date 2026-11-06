@@ -217,6 +217,11 @@ Additive analysis features; default behavior and fixture output unchanged.
   catalog is a pure consumer input introspected from the live target — no name sets ship with
   sqlglot-go — and resolution is report-only: the AST is never rewritten. Tests
   `optimizer/engine_catalog_test.go`.
+- **`mariadb` dialect name**: `GetOrRaise("mariadb")` resolves to the MySQL dialect (an alias, so
+  `Name` is `mysql`). Upstream has no MariaDB dialect and raises `unknown dialect`. MariaDB forms
+  the MySQL grammar already accepts (`INSERT`/`DELETE ... RETURNING`, `NEXTVAL(s)`, `ROWNUM()`,
+  `CREATE SEQUENCE`) parse; MariaDB-only grammar (`NEXT VALUE FOR`, the `/*M! ... */` executable
+  comment) is not modeled yet. Test `TestMariaDBAlias` (`dialects/dialecttype_test.go`).
 
 Neither is a grammar construct — no ledger row.
 
