@@ -73,6 +73,9 @@ func Oracle() *Dialect {
 	} {
 		cfg.Keywords[keyword] = tokenType
 	}
+	// divergence (DEVIATIONS §1.23): a line holding only `/` ends the statement, as SQL*Plus
+	// and SQLcl do; upstream lexes it as division.
+	cfg.BatchSeparator = tokens.BatchSeparatorSlash
 	d.TokenizerConfig = tokens.CompileConfig(cfg)
 
 	// parsers/oracle.py:38-56 FUNCTIONS overlay.

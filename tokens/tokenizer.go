@@ -61,7 +61,31 @@ type TokenizerConfig struct {
 	NumbersCanHaveDecimals           bool
 	IdentifiersCanStartWithDigit     bool
 	KeywordTrie                      *trie.Node
+	// BatchSeparator names the client-tool batch separator line the dialect recognizes.
+	// Upstream has none; BatchSeparatorNone (the zero value) keeps that behavior. See
+	// DEVIATIONS §1.22.
+	BatchSeparator BatchSeparator
 }
+
+// BatchSeparator selects a client-tool batch separator: a line that a script runner
+// (sqlcmd/SSMS) strips and treats as the end of the current batch, so it is a statement
+// boundary rather than SQL. The tokenizer emits a matching line as a SEMICOLON token whose
+// Text is the separator line itself, so every downstream consumer splits on it exactly as on
+// `;`. A separator right after a `;` (or at the start of input) is dropped instead, so it
+// never yields an empty statement.
+type BatchSeparator uint8
+
+const (
+	// BatchSeparatorNone recognizes no separator line (upstream behavior).
+	BatchSeparatorNone BatchSeparator = iota
+	// BatchSeparatorGo is the T-SQL `GO [count]` line (sqlcmd/SSMS): `GO`, case-insensitive,
+	// alone on its line apart from spaces/tabs, an optional repeat count, and an optional
+	// trailing `--` comment.
+	BatchSeparatorGo
+	// BatchSeparatorSlash is the Oracle SQL*Plus/SQLcl terminator: a `/` alone on its line
+	// apart from spaces/tabs.
+	BatchSeparatorSlash
+)
 
 func BaseConfig() TokenizerConfig {
 	cfg := TokenizerConfig{

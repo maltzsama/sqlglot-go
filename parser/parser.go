@@ -41,6 +41,9 @@ type Parser struct {
 	chunks         [][]tokens.Token
 	chunkIndex     int
 	nodeCount      int
+	// plsqlUnits marks the chunks that hold one whole Oracle PL/SQL unit, keyed by chunk index
+	// (see dialect_oracle_plsql.go). Nil for every other dialect.
+	plsqlUnits map[int]plsqlUnit
 
 	// statementDepth is the parseStatement recursion depth: 1 at a top-level statement, >1 when
 	// parseStatement is re-entered for a nested value/body (SET assignment RHS, CTE body, CREATE
@@ -94,6 +97,7 @@ func (p *Parser) Reset() {
 	p.prevComments = nil
 	p.chunks = nil
 	p.chunkIndex = 0
+	p.plsqlUnits = nil
 	p.nodeCount = 0
 	p.statementDepth = 0
 }
@@ -470,6 +474,11 @@ func (p *Parser) parseBatchStatements(parseMethod func() exp.Expression, sepFirs
 	chunksLength := len(p.chunks)
 	for p.chunkIndex < chunksLength {
 		p.advanceChunk()
+		if unit, ok := p.plsqlUnits[p.chunkIndex-1]; ok && !sepFirstStatement {
+			startTok := p.curr
+			expressions = append(expressions, p.statementSpanned(p.parseOraclePLSQLUnit(unit), startTok, p.prev))
+			continue
+		}
 		if p.match(tokens.ELSE, false) {
 			// Upstream returns here at top level too, silently dropping every later chunk
 			// (`SELECT 1; ELSE; SELECT 2` -> [Select]). Real MySQL/PG reject a bare ELSE, and
@@ -665,6 +674,12 @@ func (p *Parser) parse(parseMethod func() exp.Expression, rawTokens []tokens.Tok
 	p.Reset()
 	p.sql = sql
 	p.sqlASCII = isASCII(sql)
+	// divergence (DEVIATIONS §1.24): under oracle a PL/SQL unit stays one chunk across the
+	// `;` inside its body; upstream cuts it at the first one.
+	if p.dialect.Name == "oracle" {
+		p.chunks, p.plsqlUnits = splitOracleChunks(rawTokens)
+		return p.parseBatchStatements(parseMethod, false)
+	}
 	total := len(rawTokens)
 	chunks := [][]tokens.Token{{}}
 	for i, token := range rawTokens {
