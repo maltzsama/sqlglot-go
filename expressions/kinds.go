@@ -173,6 +173,10 @@ const (
 	KindFormatJson
 	KindArrayAgg
 	KindArraySize
+	// KindArrayAll and KindArrayAny port exp.ArrayAll / exp.ArrayAny (expressions/array.py:105-110):
+	// ARRAY_ALL(arr, lambda) / ARRAY_ANY(arr, lambda), which unnest_subqueries builds.
+	KindArrayAll
+	KindArrayAny
 	KindArrayContains
 	KindInitcap
 	KindSplit
@@ -1114,6 +1118,8 @@ var argTypes = map[Kind][]argSpec{
 	KindJSONValue:      {{"this", true}, {"path", true}, {"returning", false}, {"on_condition", false}},
 	KindArrayAgg:       {{"this", true}, {"nulls_excluded", false}},
 	KindArraySize:      {{"this", true}, {"expression", false}},
+	KindArrayAll:       {{"this", true}, {"expression", true}},
+	KindArrayAny:       {{"this", true}, {"expression", true}},
 	KindArrayContains:  {{"this", true}, {"expression", true}, {"ensure_variant", false}, {"check_null", false}},
 	KindInitcap:        {{"this", true}, {"expression", false}},
 	KindSplit:          {{"this", true}, {"expression", true}, {"limit", false}, {"null_returns_null", false}, {"empty_delimiter_returns_whole", false}},
@@ -1706,6 +1712,8 @@ var traitsOf = map[Kind]Trait{
 	KindJSONObjectAgg:  TraitCondition | TraitFunc | TraitAggFunc,
 	KindArrayAgg:       TraitCondition | TraitFunc | TraitAggFunc,
 	KindArraySize:      TraitCondition | TraitFunc,
+	KindArrayAll:       TraitCondition | TraitFunc,
+	KindArrayAny:       TraitCondition | TraitFunc,
 	KindArrayContains:  TraitCondition | TraitBinary | TraitFunc | TraitPredicate,
 	KindInitcap:        TraitCondition | TraitFunc,
 	KindSplit:          TraitCondition | TraitFunc,
@@ -2163,6 +2171,8 @@ var className = map[Kind]string{
 	KindFormatJson:                          "FormatJson",
 	KindArrayAgg:                            "ArrayAgg",
 	KindArraySize:                           "ArraySize",
+	KindArrayAll:                            "ArrayAll",
+	KindArrayAny:                            "ArrayAny",
 	KindArrayContains:                       "ArrayContains",
 	KindInitcap:                             "Initcap",
 	KindSplit:                               "Split",

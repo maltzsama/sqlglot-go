@@ -74,6 +74,8 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"QUANTILE":              genericFunction(KindQuantile),
 	"ARRAY_AGG":             genericFunction(KindArrayAgg),
 	"ARRAY_SIZE":            genericFunction(KindArraySize),
+	"ARRAY_ALL":             genericFunction(KindArrayAll),
+	"ARRAY_ANY":             genericFunction(KindArrayAny),
 	"ARRAY_LENGTH":          genericFunction(KindArraySize),
 	"ARRAY_CONTAINS":        genericFunction(KindArrayContains),
 	"ARRAY_HAS":             genericFunction(KindArrayContains),
@@ -306,6 +308,8 @@ func Replace(args Args) Expression        { return newNode(KindReplace, args) }
 func LogicalOr(args Args) Expression      { return newNode(KindLogicalOr, args) }
 func ArrayAgg(args Args) Expression       { return newNode(KindArrayAgg, args) }
 func ArraySize(args Args) Expression      { return newNode(KindArraySize, args) }
+func ArrayAll(args Args) Expression       { return newNode(KindArrayAll, args) }
+func ArrayAny(args Args) Expression       { return newNode(KindArrayAny, args) }
 func ArrayContains(args Args) Expression  { return newNode(KindArrayContains, args) }
 func Initcap(args Args) Expression        { return newNode(KindInitcap, args) }
 func Split(args Args) Expression          { return newNode(KindSplit, args) }
