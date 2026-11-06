@@ -60,3 +60,18 @@ func TestCanonicalStringDialectType(t *testing.T) {
 		t.Fatalf("GetOrRaise(CanonicalString(*Dialect)) = %v, err %v", rt, err)
 	}
 }
+
+// TestMariaDBAlias pins the `mariadb` dialect name: an alias that resolves to the MySQL dialect
+// itself, settings form included, so MariaDB input parses with MySQL behavior.
+func TestMariaDBAlias(t *testing.T) {
+	for _, name := range []string{"mariadb", "MariaDB", " mariadb "} {
+		d, err := dialects.GetOrRaise(name)
+		if err != nil || d == nil || d.Name != "mysql" {
+			t.Fatalf("GetOrRaise(%q) = %v, err %v; want the mysql dialect", name, d, err)
+		}
+	}
+	d, err := dialects.GetOrRaise("mariadb, mysql_version=100611")
+	if err != nil || d.Name != "mysql" || d.MySQLVersion == nil || *d.MySQLVersion != 100611 {
+		t.Fatalf("GetOrRaise(mariadb with settings) = %+v, err %v", d, err)
+	}
+}
