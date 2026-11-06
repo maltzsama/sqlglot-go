@@ -146,14 +146,26 @@ func optimizerTestSchema() *schema.Mapping {
 // compared with the expected SQL and checked for the AST parent/arg-key invariants.
 func checkPassFixtures(t *testing.T, filename string, pretty bool, rule func(exp.Expression) exp.Expression) {
 	t.Helper()
+	checkPassFixturesWith(t, filename, pretty, nil, func(e exp.Expression, _ string) exp.Expression { return rule(e) })
+}
+
+// checkPassFixturesWith is checkPassFixtures for a rule that also takes the fixture's dialect,
+// as check_file passes it, with known gaps (fixture index -> reason) skipped.
+func checkPassFixturesWith(t *testing.T, filename string, pretty bool, gaps map[int]string, rule func(exp.Expression, string) exp.Expression) {
+	t.Helper()
 	for i, pair := range loadSQLFixturePairs(t, filename) {
-		checkPassFixturePair(t, i, pair, pretty, rule)
+		checkPassFixturePairWith(t, i, pair, pretty, gaps[i+1], rule)
 	}
 }
 
 // checkPassFixturePair runs the i-th (0-based) fixture pair the way checkPassFixtures does,
 // titled as upstream titles it.
 func checkPassFixturePair(t *testing.T, i int, pair sqlFixturePair, pretty bool, rule func(exp.Expression) exp.Expression) {
+	t.Helper()
+	checkPassFixturePairWith(t, i, pair, pretty, "", func(e exp.Expression, _ string) exp.Expression { return rule(e) })
+}
+
+func checkPassFixturePairWith(t *testing.T, i int, pair sqlFixturePair, pretty bool, gap string, rule func(exp.Expression, string) exp.Expression) {
 	t.Helper()
 	{
 		title := pair.Meta["title"]
@@ -165,11 +177,14 @@ func checkPassFixturePair(t *testing.T, i int, pair sqlFixturePair, pretty bool,
 			if _, err := dialects.GetOrRaise(dialect); err != nil {
 				t.Skipf("dialect not registered yet: %s", dialect)
 			}
+			if gap != "" {
+				t.Skip(gap)
+			}
 			expression, err := sqlglot.ParseOne(pair.SQL, dialect)
 			if err != nil {
 				t.Fatalf("ParseOne: %v", err)
 			}
-			optimized := rule(expression)
+			optimized := rule(expression, dialect)
 			got, err := sqlglot.Generate(optimized, dialect, generator.Options{Pretty: pretty})
 			if err != nil {
 				t.Fatalf("Generate: %v", err)
