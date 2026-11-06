@@ -127,6 +127,9 @@ type Dialect struct {
 	SupportsStructStarExpansion        bool
 	ExcludesPseudocolumnsFromStar      bool
 	QueryResultsAreStructs             bool
+	// UnpivotValueColumnsFirst ports the parser flag UNPIVOT_VALUE_COLUMNS_FIRST (parser.py:1841):
+	// an UNPIVOT emits its value columns ahead of its name column (T-SQL).
+	UnpivotValueColumnsFirst bool
 	// PrioritizeNonLiteralTypes ports PRIORITIZE_NON_LITERAL_TYPES (dialects/dialect.py:801): when
 	// annotate_types combines a literal and a non-literal of the same integer or real family, the
 	// non-literal's type wins instead of the coerced one.

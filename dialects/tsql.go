@@ -11,6 +11,8 @@ import (
 func TSQL() *Dialect {
 	d := Base()
 	d.Name = "tsql"
+	// parsers/tsql.py:326 UNPIVOT_VALUE_COLUMNS_FIRST.
+	d.UnpivotValueColumnsFirst = true
 	// dialects/tsql.py:22 NORMALIZATION_STRATEGY = CASE_INSENSITIVE.
 	d.NormalizationStrategy = CaseInsensitive
 	// dialects/tsql.py:19-21 TYPED_DIVISION / CONCAT_COALESCE / CONCAT_WS_COALESCE.
