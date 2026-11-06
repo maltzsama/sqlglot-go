@@ -8,7 +8,7 @@ import exp "github.com/maltzsama/sqlglot-go/expressions"
 //
 //	WITH y AS (SELECT a FROM x) SELECT a FROM z  ->  SELECT a FROM z
 func EliminateCTEs(expression exp.Expression, journal *Journal) exp.Expression {
-	root := BuildScope(expression)
+	root := buildScopeForOptimizer(expression)
 	if root == nil {
 		return expression
 	}
