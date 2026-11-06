@@ -220,17 +220,6 @@ func isNilType(t any) bool {
 	return false
 }
 
-// typeIsType is `t.is_type(*dtypes)` for a type value.
-func typeIsType(t any, dtypes ...any) bool {
-	switch v := t.(type) {
-	case exp.DType:
-		return exp.DataTypeIsType(exp.DataType(exp.Args{"this": v}), false, dtypes...)
-	case exp.Expression:
-		return v != nil && exp.DataTypeIsType(v, false, dtypes...)
-	}
-	return false
-}
-
 // isClass reports whether expression is the upstream class name, false while that class has
 // no Kind in this port.
 func isClass(expression exp.Expression, name string) bool {
@@ -732,7 +721,7 @@ func (a *TypeAnnotator) getSetopColumnTypes(setop exp.Expression) *typedMap {
 	// Validate that left and right have the same number of projections (BY NAME operations
 	// match columns by name, so their counts are allowed to differ).
 	if !setop.Is(exp.TraitSetOperation) || len(setop.This().Selects()) == 0 || len(setop.Expr().Selects()) == 0 ||
-		!(truthyArg(setop.Arg("by_name")) || len(setop.This().Selects()) == len(setop.Expr().Selects())) {
+		(!truthyArg(setop.Arg("by_name")) && len(setop.This().Selects()) != len(setop.Expr().Selects())) {
 		return colTypes
 	}
 
