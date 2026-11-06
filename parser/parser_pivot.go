@@ -95,7 +95,7 @@ func (p *Parser) parseUnnest(withAlias bool) exp.Expression {
 	}
 	// divergence: PostgreSQL has no WITH OFFSET (BigQuery-only); upstream's shared grammar
 	// accepts it in every dialect. See DEVIATIONS §1.21.
-	if offset == nil && p.dialect.Name != "postgres" && p.matchPair(tokens.WITH, tokens.OFFSET, true) {
+	if offset == nil && !p.dialectFamily("postgres") && p.matchPair(tokens.WITH, tokens.OFFSET, true) {
 		p.match(tokens.ALIAS)
 		offset = p.parseIdVar(false, nil)
 		if offset == nil {

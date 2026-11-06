@@ -319,7 +319,7 @@ func (p *Parser) parseFunctionParameter() exp.Expression {
 		}
 		return p.parseColumnDef(p.parseIdVar(true, nil))
 	}
-	if p.dialect.Name != "postgres" {
+	if !p.dialectFamily("postgres") {
 		name := p.parseIdVar(true, nil)
 		// parser.py:7501-7502: _parse_column_def(computed_column=False) consumes an optional
 		// AS between the parameter name and its type (T-SQL `@p AS INT`).
@@ -402,7 +402,7 @@ func (p *Parser) parseCreateFunction(ctt tokens.TokenType) (this, expression exp
 	// PG `BEGIN ATOMIC <stmts> END` (SQL-standard function body, PG 14+): consume ATOMIC
 	// so the body statements parse structurally instead of `ATOMIC SELECT ...` mangling
 	// into a column and degrading. Rendering keeps the keyword via the atomic arg.
-	if begin == true && p.dialect.Name == "postgres" && p.matchTextSeq("ATOMIC") {
+	if begin == true && p.dialectFamily("postgres") && p.matchTextSeq("ATOMIC") {
 		begin = "ATOMIC" // render as `BEGIN ATOMIC` (createSQL reads the string form)
 	}
 	returnMatched := p.matchTextSeq("RETURN")
@@ -1159,7 +1159,7 @@ func (p *Parser) parseReturnsProperty() exp.Expression {
 		null = true
 	} else {
 		// divergence: PostgreSQL `RETURNS SETOF <type>`; upstream leaves SETOF unparsed (Command).
-		if p.dialect.Name == "postgres" && p.matchTextSeq("SETOF") {
+		if p.dialectFamily("postgres") && p.matchTextSeq("SETOF") {
 			setof = true
 		}
 		value = p.parseTypes(false, false, true, false)

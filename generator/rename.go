@@ -7,7 +7,7 @@ import "github.com/maltzsama/sqlglot-go/expressions"
 // functionFallbackSQL, which is also what KindVariance rendered before this dispatch entry
 // existed, so base/mysql VARIANCE(x) identity fixtures are unaffected.
 func (g *Generator) varianceSQL(e expressions.Expression) string {
-	if g.dialect.Name != "postgres" {
+	if !g.isDialect("postgres") {
 		return g.functionFallbackSQL(e)
 	}
 	return g.funcCall("VAR_SAMP", g.fallbackArgs(e), "(", ")", true)
@@ -16,7 +16,7 @@ func (g *Generator) varianceSQL(e expressions.Expression) string {
 // variancePopSQL ports rename_func("VAR_POP") applied to exp.VariancePop
 // (generators/postgres.py:383). Base and mysql keep VARIANCE_POP via functionFallbackSQL.
 func (g *Generator) variancePopSQL(e expressions.Expression) string {
-	if g.dialect.Name != "postgres" {
+	if !g.isDialect("postgres") {
 		return g.functionFallbackSQL(e)
 	}
 	return g.funcCall("VAR_POP", g.fallbackArgs(e), "(", ")", true)

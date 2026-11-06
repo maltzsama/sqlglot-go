@@ -83,7 +83,7 @@ func init() {
 // which treats column comments inside CREATE as unsupported and emits nothing (the empty result is
 // filtered out by g.expressions' flat join, so the column renders with no trailing space).
 func (g *Generator) commentColumnConstraintSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		g.unsupported("Column comments are not supported in the CREATE statement")
 		return ""
 	}
@@ -123,7 +123,7 @@ func (g *Generator) inOutColumnConstraintSQL(e expressions.Expression) string {
 	input := boolValue(e.Arg("input_"))
 	output := boolValue(e.Arg("output"))
 	if input && output {
-		if g.dialect.Name == "postgres" || g.dialect.Name == "mysql" {
+		if g.isDialect("postgres") || g.dialect.Name == "mysql" {
 			return "INOUT"
 		}
 		return "IN OUT"
@@ -151,7 +151,7 @@ func (g *Generator) columnConstraintSQL(e expressions.Expression) string {
 // the MySQL override (generators/mysql.py:644-646), and the Postgres override
 // (generators/postgres.py:511-512).
 func (g *Generator) computedColumnConstraintSQL(e expressions.Expression) string {
-	switch g.dialect.Name {
+	switch g.switchDialect() {
 	case "mysql":
 		persisted := "VIRTUAL"
 		if boolValue(e.Arg("persisted")) {

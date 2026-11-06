@@ -9,7 +9,7 @@ func (g *Generator) parseJSONSQL(e expressions.Expression) string {
 	switch {
 	case g.dialect.Name == "mysql":
 		return g.sqlKey(e, "this")
-	case g.dialect.Name == "postgres":
+	case g.isDialect("postgres"):
 		return "CAST(" + g.sqlKey(e, "this") + " AS JSON)"
 	case g.isDialect("presto"):
 		return g.funcCall("JSON_PARSE", []any{e.Arg("this"), e.Arg("expression")}, "(", ")", true)

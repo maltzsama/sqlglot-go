@@ -501,7 +501,7 @@ func (p *Parser) parseBatchStatements(parseMethod func() exp.Expression, sepFirs
 			p.checkErrors()
 		}
 		isBareEnd := !p.next.IsValid() && p.curr.TokenType == tokens.END &&
-			(sepFirstStatement || p.dialect.Name != "postgres")
+			(sepFirstStatement || !p.dialectFamily("postgres"))
 		if isBareEnd && (len(expressions) > 0 || (!sepFirstStatement && p.dialect.Name == "mysql")) &&
 			p.match(tokens.END) {
 			// divergence: a bare top-level END chunk is a parse error under MySQL — real
@@ -2117,7 +2117,7 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 			// CONJUNCTION-level entry instead, owned by parseConjunction; base has no `&&`
 			// support upstream either, so this case does nothing (leaves DAMP unconsumed)
 			// for every other dialect.
-			if p.dialect.Name == "postgres" {
+			if p.dialectFamily("postgres") {
 				p.advance()
 				this = p.parseEscape(p.expression(exp.ArrayOverlaps(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
 			} else {
@@ -2240,7 +2240,7 @@ func (p *Parser) isRangeChainToken(tt tokens.TokenType) bool {
 	}
 	switch tt {
 	case tokens.DAMP, tokens.DAT:
-		return p.dialect.Name == "postgres"
+		return p.dialectFamily("postgres")
 	case tokens.MEMBER_OF:
 		return p.dialect.Name == "mysql"
 	}
@@ -2483,7 +2483,7 @@ func (p *Parser) parseUnary() exp.Expression {
 	if p.match(tokens.TILDE) {
 		return p.expression(exp.BitwiseNot(exp.Args{"this": p.parseUnary()}), nil, p.prevComments)
 	}
-	if p.dialect.Name == "postgres" && p.match(tokens.RLIKE) {
+	if p.dialectFamily("postgres") && p.match(tokens.RLIKE) {
 		// Postgres remaps the single-char `~` lexeme from TILDE to RLIKE, since `~` also
 		// doubles as the binary REGEXP-LIKE operator there (parsers/postgres.py:185-188);
 		// UNARY_PARSERS still builds BitwiseNot when RLIKE appears in prefix position.
@@ -3149,7 +3149,7 @@ var pgReservedValueFunctionTokens = map[tokens.TokenType]bool{
 // derived from `column` preserving each part's quoting (ColumnsToDot), so the Cast round-trips exactly
 // like `'x'::a.b` / `CAST('x' AS a.b)`; a comment between the name and the string is carried onto it.
 func (p *Parser) pgTypedLiteralCast(column exp.Expression, firstTok tokens.Token) exp.Expression {
-	if p.dialect.Name != "postgres" || column == nil || !isPGStringConstantToken(p.curr.TokenType) {
+	if !p.dialectFamily("postgres") || column == nil || !isPGStringConstantToken(p.curr.TokenType) {
 		return nil
 	}
 	if pgReservedValueFunctionTokens[firstTok.TokenType] || !isPGTypeNameChain(column) {
@@ -3243,7 +3243,7 @@ func isPGStringConstantToken(tt tokens.TokenType) bool {
 // position. So only CURRENT_SCHEMA, and only when a string constant immediately follows, defers to
 // the type-name path; a bare `current_schema` still builds CurrentSchema.
 func (p *Parser) deferNiladicToPGTypedLiteral(tokenType tokens.TokenType) bool {
-	return p.dialect.Name == "postgres" &&
+	return p.dialectFamily("postgres") &&
 		tokenType == tokens.CURRENT_SCHEMA &&
 		isPGStringConstantToken(p.next.TokenType)
 }
@@ -3429,7 +3429,7 @@ func (p *Parser) parsePlaceholder() exp.Expression {
 		}
 	}
 	if p.match(tokens.PLACEHOLDER) {
-		if p.dialect.Name == "postgres" {
+		if p.dialectFamily("postgres") {
 			return p.spanned(p.expression(exp.Placeholder(exp.Args{"jdbc": true}), &p.prev, nil), start, p.prev)
 		}
 		return p.spanned(p.expression(exp.Placeholder(nil), &p.prev, nil), start, p.prev)
@@ -3437,7 +3437,7 @@ func (p *Parser) parsePlaceholder() exp.Expression {
 	if p.match(tokens.PARAMETER) {
 		return p.spanned(p.parseParameter(), start, p.prev)
 	}
-	if p.dialect.Name == "postgres" && p.match(tokens.MOD) {
+	if p.dialectFamily("postgres") && p.match(tokens.MOD) {
 		return p.spanned(p.parseQueryParameter(), start, p.prev)
 	}
 	if p.match(tokens.COLON) {

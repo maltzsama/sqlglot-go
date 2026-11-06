@@ -410,7 +410,7 @@ func (p *Parser) parseGeneratedAsIdentityBase() exp.Expression {
 // (parser.py:7374) and returns the raw base result.
 func (p *Parser) parseGeneratedAsIdentity() exp.Expression {
 	this := p.parseGeneratedAsIdentityBase()
-	switch p.dialect.Name {
+	switch p.switchDialect() {
 	case "mysql":
 		if p.matchTexts(map[string]bool{"STORED": true, "VIRTUAL": true}) {
 			persisted := stringsUpper(p.prev.Text) == "STORED"
@@ -447,7 +447,7 @@ func (p *Parser) parseNotConstraint() exp.Expression {
 // parseUniqueKey ports _parse_unique_key (parser.py:7500-7507), overridden to always
 // return nil on postgres (parsers/postgres.py:313-314).
 func (p *Parser) parseUniqueKey() exp.Expression {
-	if p.dialect.Name == "postgres" {
+	if p.dialectFamily("postgres") {
 		return nil
 	}
 	if p.curr.IsValid() && p.curr.TokenType != tokens.IDENTIFIER && p.constraintParserKeys()[stringsUpper(p.curr.Text)] {

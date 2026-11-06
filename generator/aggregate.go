@@ -29,7 +29,7 @@ func (g *Generator) groupConcatSQL(e expressions.Expression) string {
 		}
 		return "GROUP_CONCAT(" + g.sqlKey(e, "this") + " SEPARATOR " + separator + ")"
 	}
-	if g.dialect.Name != "postgres" {
+	if !g.isDialect("postgres") {
 		return g.functionFallbackSQL(e)
 	}
 
@@ -87,7 +87,7 @@ func (g *Generator) groupConcatSQL(e expressions.Expression) string {
 // shared fallbackArgs helper (the same path varianceSQL/variancePopSQL use), so all three
 // dialect renames collect arguments identically.
 func (g *Generator) logicalOrSQL(e expressions.Expression) string {
-	switch g.dialect.Name {
+	switch g.switchDialect() {
 	case "postgres":
 		return g.funcCall("BOOL_OR", g.fallbackArgs(e), "(", ")", true)
 	case "mysql":

@@ -30,7 +30,7 @@ func dataTypeArgs(dtype any, expressions []exp.Expression, nested bool) exp.Args
 // USERDEFINED branch already renders "kind" generically via sqlKey, whether it's a string or
 // an expression).
 func (p *Parser) parseUserDefinedType(identifier exp.Expression) exp.Expression {
-	if p.dialect.Name == "postgres" {
+	if p.dialectFamily("postgres") {
 		udtType := identifier
 		for p.match(tokens.DOT) {
 			if part := p.parseIdVar(true, nil); part != nil {

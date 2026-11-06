@@ -11,7 +11,7 @@ func (g *Generator) showSQL(e expressions.Expression) string {
 	if g.isDialect("hive") {
 		return g.hiveShowSQL(e)
 	}
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		// Postgres `SHOW <name>` (a grammar extension): the parameter name is in "this".
 		return "SHOW " + e.Text("this")
 	}

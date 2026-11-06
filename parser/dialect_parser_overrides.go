@@ -157,7 +157,6 @@ func (p *Parser) functionParser(name string) parserOverrideFunc {
 	// Keep the current base-singleton compatibility gates on the fallback only. An overlay above
 	// may intentionally add or override any of these names for another dialect. These gates use
 	// the concrete dialect rather than the parser overlay key: Athena's query parser is real Trino.
-	dialectName := strings.ToLower(p.dialect.Name)
 	switch name {
 	case "VALUES":
 		if !p.dialect.ValuesIsFunction {
@@ -168,7 +167,7 @@ func (p *Parser) functionParser(name string) parserOverrideFunc {
 			return nil
 		}
 	case "DATE_PART":
-		if dialectName != "postgres" {
+		if !p.dialectFamily("postgres") {
 			return nil
 		}
 	}
@@ -261,7 +260,7 @@ func (p *Parser) noParenFunctionParserFor(name string) parserOverrideFunc {
 		}
 	}
 	parser := noParenFunctionParsers[name]
-	if parser == nil || (name == "VARIADIC" && strings.ToLower(p.dialect.Name) != "postgres") ||
+	if parser == nil || (name == "VARIADIC" && !p.dialectFamily("postgres")) ||
 		(name == "PRIOR" && p.connectPriorDepth == 0) {
 		return nil
 	}
@@ -335,4 +334,13 @@ func mergeTokenSet(base, added, removed map[tokens.TokenType]bool) map[tokens.To
 		merged[tt] = true
 	}
 	return merged
+}
+
+// switchDialect is the dialect name a per-dialect switch keys on. The Postgres subclasses
+// (Redshift, Materialize, RisingWave) inherit PostgresParser, so they fold into "postgres".
+func (p *Parser) switchDialect() string {
+	if p.dialectFamily("postgres") {
+		return "postgres"
+	}
+	return p.dialect.Name
 }

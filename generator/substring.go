@@ -17,7 +17,7 @@ import "github.com/maltzsama/sqlglot-go/expressions"
 func (g *Generator) substringSQL(e expressions.Expression) string {
 	// opaque_functions: only the keyword form parses to Substring, so render FROM/FOR
 	// form-faithfully on every dialect (comma form round-trips as Anonymous).
-	if g.dialect.Name != "postgres" && !g.dialect.OpaqueFunctions {
+	if !g.isDialect("postgres") && !g.dialect.OpaqueFunctions {
 		return g.functionFallbackSQL(e)
 	}
 

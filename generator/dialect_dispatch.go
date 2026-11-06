@@ -136,3 +136,12 @@ func (g *Generator) child(d *dialects.Dialect, overrideName string) *Generator {
 	c.overrideName = overrideName
 	return c
 }
+
+// switchDialect is the dialect name a per-dialect switch keys on. The Postgres subclasses
+// (Redshift, Materialize, RisingWave) inherit PostgresGenerator, so they fold into "postgres".
+func (g *Generator) switchDialect() string {
+	if g.isDialect("postgres") {
+		return "postgres"
+	}
+	return g.dialect.Name
+}

@@ -22,7 +22,7 @@ func init() {
 // a leading END as a transaction terminator (END -> COMMIT), while base/MySQL retreat past the token
 // parseStatement consumed and use the normal expression path, preserving `END AND CHAIN`.
 func (p *Parser) parseEndTransaction() exp.Expression {
-	if p.dialect.Name != "postgres" {
+	if !p.dialectFamily("postgres") {
 		p.retreat(p.index - 1)
 		return p.parseExpressionStatement()
 	}
@@ -157,7 +157,7 @@ func (p *Parser) parseSavepointStatement() exp.Expression {
 		// require the SAVEPOINT keyword), so mysql/base fall through to the normal path.
 		if p.curr.TokenType == tokens.VAR && stringsUpper(p.curr.Text) == "SAVEPOINT" && p.savepointNameAhead(p.next) {
 			p.advance()
-		} else if p.dialect.Name != "postgres" {
+		} else if !p.dialectFamily("postgres") {
 			p.retreat(start)
 			return nil
 		}

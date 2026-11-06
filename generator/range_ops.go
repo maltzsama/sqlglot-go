@@ -50,7 +50,7 @@ func (g *Generator) operatorSQL(e expressions.Expression) string { return g.bina
 // existing functionFallbackSQL rendering ("REGEXP_LIKE(x, y)") this dispatch entry used to
 // get implicitly (KindRegexpLike had no dispatch row before this file).
 func (g *Generator) regexpLikeSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		return g.binary(e, "~")
 	}
 	return g.functionFallbackSQL(e)
@@ -58,7 +58,7 @@ func (g *Generator) regexpLikeSQL(e expressions.Expression) string {
 
 // regexpILikeSQL mirrors regexpLikeSQL for `~*` / RegexpILike (generators/postgres.py:344).
 func (g *Generator) regexpILikeSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		return g.binary(e, "~*")
 	}
 	return g.functionFallbackSQL(e)
@@ -70,7 +70,7 @@ func (g *Generator) regexpILikeSQL(e expressions.Expression) string {
 // here rather than via sqlNameOverrides (generator/name.go, out of this part's file scope)
 // since camelToSnake("JSONBContains") would otherwise split every capital letter.
 func (g *Generator) jsonbContainsSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		return g.binary(e, "?")
 	}
 	return g.funcCall("JSONB_CONTAINS", g.fallbackArgs(e), "(", ")", true)
@@ -117,7 +117,7 @@ func (g *Generator) jsonSQL(e expressions.Expression) string {
 // match operator: `{expr} @@ {this}` per element of "expressions", OR-joined and
 // parenthesized when there's more than one.
 func (g *Generator) matchAgainstSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		this := g.sqlKey(e, "this")
 		list, _ := e.Arg("expressions").([]expressions.Expression)
 		parts := make([]string, len(list))

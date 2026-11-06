@@ -380,7 +380,7 @@ var escapedSequences = map[byte]string{
 // (parsers/postgres.py:96) and always renders "?"; everything else there is its pyformat/
 // psycopg placeholder: bare "%s", or named "%(name)s" (parseQueryParameter).
 func (g *Generator) placeholderSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		if truthy(e.Arg("jdbc")) {
 			return "?"
 		}
@@ -1368,7 +1368,7 @@ func (g *Generator) windowSpecSQL(e expressions.Expression) string {
 		// SUPPORTS_WINDOW_EXCLUDE (generator.py:512, generators/postgres.py:250): base
 		// defaults to unsupported (dropping EXCLUDE with a warning); postgres (like
 		// sqlite/oracle/duckdb upstream, out of scope here) renders it.
-		if g.dialect.Name == "postgres" {
+		if g.isDialect("postgres") {
 			windowSpec += " EXCLUDE " + exclude
 		} else {
 			g.unsupported("EXCLUDE clause is not supported in the WINDOW clause")
@@ -1628,7 +1628,7 @@ func (g *Generator) mergeWithoutTarget(e expressions.Expression) expressions.Exp
 func (g *Generator) mergeSQL(e expressions.Expression) string {
 	// Postgres removes the target table qualifier from WHEN clause columns (see
 	// mergeWithoutTarget); other dialects render the assignments verbatim.
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		e = g.mergeWithoutTarget(e)
 	}
 	table := asExpression(e.Arg("this"))
@@ -1912,7 +1912,7 @@ func (g *Generator) columnDefSQL(e expressions.Expression) string {
 	// (§15.1.17). Unlike upstream, which pop()s the constraint, we render around it so
 	// Generate() stays side-effect free.
 	modePrefix := ""
-	if g.dialect.Name == "postgres" || g.dialect.Name == "mysql" {
+	if g.isDialect("postgres") || g.dialect.Name == "mysql" {
 		for _, item := range listFromValue(e.Arg("constraints")) {
 			if c, ok := item.(expressions.Expression); ok && c != nil && c.Kind() == expressions.KindInOutColumnConstraint {
 				modePrefix = g.gen(c) + " "
@@ -1981,7 +1981,7 @@ var mysqlUnsignedTypeMapping = map[expressions.DType]string{
 // postgresTypeMapping is base typeMapping plus postgres's delta (generators/postgres.py:271-284),
 // and every other dialect (including base) uses the base typeMapping as-is.
 func (g *Generator) typeMappingTable() map[expressions.DType]string {
-	switch g.dialect.Name {
+	switch g.switchDialect() {
 	case "mysql":
 		return mysqlTypeMapping
 	case "postgres":
@@ -2002,7 +2002,7 @@ func (g *Generator) dataTypeSQL(e expressions.Expression) string {
 			// VARCHAR must always have a size - if it doesn't, we always generate TEXT.
 			return "TEXT"
 		}
-	} else if g.dialect.Name == "postgres" {
+	} else if g.isDialect("postgres") {
 		if expressions.IsType(e, expressions.DTypeArray) {
 			if len(listFromValue(e.Arg("expressions"))) > 0 {
 				valuesSQL := g.expressions(exprsOptions{expression: e, key: "values", flat: true})
@@ -2171,7 +2171,7 @@ func (g *Generator) tryCastSQL(e expressions.Expression) string {
 	// (dialects/dialect.py:1261), which renders a plain CAST - so a MySQL cast-target rename
 	// (e.g. TEXT -> CHAR) applies without a stray TRY_ prefix. See generators/mysql.py:223 and
 	// generators/postgres.py:377. Every other dialect keeps TRY_CAST (generator.py:4523).
-	if g.dialect.Name == "mysql" || g.dialect.Name == "postgres" {
+	if g.dialect.Name == "mysql" || g.isDialect("postgres") {
 		return g.castSQLWithPrefix(e, "")
 	}
 	return g.castSQLWithPrefix(e, "TRY_")
@@ -2357,7 +2357,7 @@ func (g *Generator) trimSQL(e expressions.Expression) string {
 	if g.dialect.OpaqueFunctions {
 		return g.trimSQLStandard(e)
 	}
-	if g.dialect.Name == "mysql" || g.dialect.Name == "postgres" {
+	if g.dialect.Name == "mysql" || g.isDialect("postgres") {
 		return g.trimSQLStandard(e)
 	}
 	return g.trimSQLBase(e)
@@ -2457,7 +2457,7 @@ func (g *Generator) arrayAggSQL(e expressions.Expression) string { return g.func
 // g.dialect.Name-gated overrides elsewhere in this package (e.g. varianceSQL).
 func (g *Generator) arraySizeSQL(e expressions.Expression) string {
 	dim := asExpression(e.Arg("expression"))
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		if dim == nil {
 			dim = expressions.LiteralNumber(1)
 		}
@@ -2494,7 +2494,7 @@ func (g *Generator) dateAddSQL(e expressions.Expression) string {
 	switch {
 	case g.isDialect("mysql"):
 		return g.mysqlDateAddSQL("ADD", e)
-	case g.dialect.Name == "postgres":
+	case g.isDialect("postgres"):
 		return g.postgresDateAddSQL("+", e)
 	}
 	return g.funcCall("DATE_ADD", []any{e.Arg("this"), e.Arg("expression"), unitToStr(e)}, "(", ")", true)

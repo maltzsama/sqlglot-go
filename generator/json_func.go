@@ -44,7 +44,7 @@ func (g *Generator) jsonObjectSQL(e expressions.Expression) string {
 		name = "JSON_OBJECTAGG"
 		// Postgres renders JSONObjectAgg as JSON_OBJECT_AGG (generators/postgres.py:389,
 		// rename_func("JSON_OBJECT_AGG")); base/mysql keep the JSON_OBJECTAGG spelling.
-		if g.dialect.Name == "postgres" {
+		if g.isDialect("postgres") {
 			name = "JSON_OBJECT_AGG"
 		}
 	}

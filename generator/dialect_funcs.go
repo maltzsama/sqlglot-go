@@ -57,7 +57,7 @@ func (g *Generator) mysqlRenameFunc(e expressions.Expression, name string) strin
 // default name (CURRENT_SCHEMA, from the class name, functions.py:285) via
 // functionFallbackSQL.
 func (g *Generator) currentSchemaSQL(e expressions.Expression) string {
-	switch g.dialect.Name {
+	switch g.switchDialect() {
 	case "mysql":
 		// generators/mysql.py:807-809 `@unsupported_args("this"); return self.func("SCHEMA")`.
 		return g.funcCall("SCHEMA", nil, "(", ")", true)
@@ -79,7 +79,7 @@ func (g *Generator) currentSchemaSQL(e expressions.Expression) string {
 // (this port defers TsOrDsToDate; see fidelity ast_divergence). Other dialects keep the
 // function fallback.
 func (g *Generator) dayMonthYearSQL(e expressions.Expression) string {
-	if g.dialect.Name != "postgres" {
+	if !g.isDialect("postgres") {
 		return g.functionFallbackSQL(e)
 	}
 	part := expressions.Var(expressions.Args{"this": strings.ToUpper(expressions.ClassName(e.Kind()))})
@@ -100,7 +100,7 @@ var niladicBareDialects = map[string]bool{"postgres": true, "presto": true, "tri
 // resolves the bare CURRENT_TIMESTAMP keyword for every dialect via the base NO_PAREN_FUNCTIONS
 // map, this per-dialect gating is what keeps each dialect's round-trip byte-identical to upstream.
 func (g *Generator) currentTimestampSQL(e expressions.Expression) string {
-	if niladicBareDialects[g.dialect.Name] {
+	if niladicBareDialects[g.switchDialect()] {
 		return "CURRENT_TIMESTAMP"
 	}
 	return g.functionFallbackSQL(e)
@@ -109,7 +109,7 @@ func (g *Generator) currentTimestampSQL(e expressions.Expression) string {
 // currentUserSQL renders CurrentUser bare under postgres/presto/trino/athena; base/mysql/hive
 // render CURRENT_USER() via the function fallback.
 func (g *Generator) currentUserSQL(e expressions.Expression) string {
-	if niladicBareDialects[g.dialect.Name] {
+	if niladicBareDialects[g.switchDialect()] {
 		return "CURRENT_USER"
 	}
 	return g.functionFallbackSQL(e)

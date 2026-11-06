@@ -42,7 +42,7 @@ func pgJSONPathIsInfix(e expressions.Expression) bool {
 // (generators/trino.py:50-68). The Postgres branch stays first so its existing extraction
 // spelling remains authoritative even if a caller supplies a JSONExtract with json_query set.
 func (g *Generator) jsonExtractSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		if boolValue(e.Arg("only_json_types")) || pgJSONPathIsInfix(e) {
 			return g.binary(e, "->")
 		}
@@ -78,7 +78,7 @@ func (g *Generator) jsonExtractSQL(e expressions.Expression) string {
 // EXTRACTION-gated arrow_json_extract_sql helper mysql shares, exactly mirroring upstream's
 // per-dialect TRANSFORMS dict precedence.
 func (g *Generator) jsonExtractScalarSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		if boolValue(e.Arg("only_json_types")) || pgJSONPathIsInfix(e) {
 			return g.binary(e, "->>")
 		}
@@ -106,7 +106,7 @@ func (g *Generator) arrowJSONExtractScalarSQL(e expressions.Expression) string {
 // jsonbExtractSQL ports base/mysql's default (functionFallbackSQL - JSONB_EXTRACT) and
 // postgres's `lambda self, e: self.binary(e, "#>")` (generators/postgres.py:324).
 func (g *Generator) jsonbExtractSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		return g.binary(e, "#>")
 	}
 	return g.funcCall("JSONB_EXTRACT", []any{e.Arg("this"), e.Arg("expression")}, "(", ")", true)
@@ -115,7 +115,7 @@ func (g *Generator) jsonbExtractSQL(e expressions.Expression) string {
 // jsonbExtractScalarSQL ports base/mysql's default (functionFallbackSQL - JSONB_EXTRACT_SCALAR)
 // and postgres's `lambda self, e: self.binary(e, "#>>")` (generators/postgres.py:325).
 func (g *Generator) jsonbExtractScalarSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		return g.binary(e, "#>>")
 	}
 	return g.funcCall("JSONB_EXTRACT_SCALAR", []any{e.Arg("this"), e.Arg("expression")}, "(", ")", true)
