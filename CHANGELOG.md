@@ -18,6 +18,120 @@ merged, tags the version and publishes the GitHub release. See
 [AGENTS.md § Releasing](./AGENTS.md#releasing). Entries for **v0.5.0 and earlier** were written by hand
 before release-please was adopted.
 
+## [0.39.0](https://github.com/maltzsama/sqlglot-go/compare/v0.38.0...v0.39.0) (2026-11-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename module path to github.com/maltzsama/sqlglot-go
+
+### Features
+
+* add the dialect flags and arg order simplify reads ([b1f4db1](https://github.com/maltzsama/sqlglot-go/commit/b1f4db1555c96895c8837b1d8995554100820d28))
+* **clickhouse:** port the ClickHouse dialect to 468/468 corpus parity ([#5](https://github.com/maltzsama/sqlglot-go/issues/5)) ([b81f5b0](https://github.com/maltzsama/sqlglot-go/commit/b81f5b01e9575a24b9af03f4b7508eec99392844))
+* **dialects:** add the PROMOTE_TO_INFERRED_DATETIME_TYPE flag ([e304298](https://github.com/maltzsama/sqlglot-go/commit/e304298403e5ed8e075091bc85e77c7c85e58dd7))
+* **dialects:** add TSQL (SQL Server) support ([782101f](https://github.com/maltzsama/sqlglot-go/commit/782101f0904d6ec872426f1c1572e1144477608a))
+* **dialects:** add TSQL (SQL Server) support ([d63eeb3](https://github.com/maltzsama/sqlglot-go/commit/d63eeb3a13f4101e4b9afd1d1f03166fb7ff27c9)), closes [#118](https://github.com/maltzsama/sqlglot-go/issues/118)
+* **dialects:** register mariadb as an alias of mysql ([1cd9c8b](https://github.com/maltzsama/sqlglot-go/commit/1cd9c8b26d753e57fd312e458c3d545ca7642814))
+* **dialects:** register mariadb as an alias of mysql ([4d42a2b](https://github.com/maltzsama/sqlglot-go/commit/4d42a2b8047ac4e9950aac264901d50f3ba2246d)), closes [#17](https://github.com/maltzsama/sqlglot-go/issues/17)
+* **doris:** port the Apache Doris dialect to 56/56 corpus parity ([33dce2c](https://github.com/maltzsama/sqlglot-go/commit/33dce2c9d36d50fe90ca5df78c8ac8d7b742f2ba))
+* **doris:** port the Apache Doris dialect to 56/56 corpus parity ([70f387e](https://github.com/maltzsama/sqlglot-go/commit/70f387e077e80233cc94e9834a9261522894c88c))
+* **expressions:** add the ArrayAll and ArrayAny function nodes ([771eec9](https://github.com/maltzsama/sqlglot-go/commit/771eec9256d615e3eadaee56b1cda61f6ecb2583))
+* **expressions:** add the lookups type annotation needs ([b64e86f](https://github.com/maltzsama/sqlglot-go/commit/b64e86f7890e29d42ccd09b23e150d6604099f6d))
+* **expressions:** add the Select.having builder ([5ad2d13](https://github.com/maltzsama/sqlglot-go/commit/5ad2d133cb15778ec92e19b0ff66d7d877b9d9bd))
+* **expressions:** annotate expressions with a type ([3b5a2c3](https://github.com/maltzsama/sqlglot-go/commit/3b5a2c3bee0ffa40507473b8564ac48377ea118a))
+* **expressions:** port the query builder API used by the optimizer ([192ed34](https://github.com/maltzsama/sqlglot-go/commit/192ed34ce91ee72a4bbf37b9c2c9a6456e43350f))
+* **optimizer:** complete simplify ([d84576f](https://github.com/maltzsama/sqlglot-go/commit/d84576fa19072564aaef8d10ba32a49736ac9c64))
+* **optimizer:** complete simplify ([4fe5c8f](https://github.com/maltzsama/sqlglot-go/commit/4fe5c8f198984e381d4c98a7c0599ab769311a03))
+* **optimizer:** port annotate_types ([c5310e3](https://github.com/maltzsama/sqlglot-go/commit/c5310e3421442f67fb1c68dc43f4890f42e72eb6))
+* **optimizer:** port annotate_types ([3a6ed89](https://github.com/maltzsama/sqlglot-go/commit/3a6ed897be47508a8a2ed721d661cb31adb69496))
+* **optimizer:** port canonicalize ([08eebdb](https://github.com/maltzsama/sqlglot-go/commit/08eebdb7b270faf34dec8bae90f17f167d752a81))
+* **optimizer:** port canonicalize ([6b0e717](https://github.com/maltzsama/sqlglot-go/commit/6b0e71728b952c32360a74bbdd33fc21e6eb69ff))
+* **optimizer:** port eliminate_ctes and the mutation journal ([261bb94](https://github.com/maltzsama/sqlglot-go/commit/261bb947c745111704a0a43238edaa1fee70f17c))
+* **optimizer:** port eliminate_ctes, eliminate_subqueries and optimize_joins ([ce01ccb](https://github.com/maltzsama/sqlglot-go/commit/ce01ccb4ff8d832eb416fc596eaaa989b4c0ae13))
+* **optimizer:** port eliminate_joins ([1644991](https://github.com/maltzsama/sqlglot-go/commit/1644991b107fed35394c531d10826e96ee6edb1c))
+* **optimizer:** port eliminate_subqueries ([6ce763b](https://github.com/maltzsama/sqlglot-go/commit/6ce763bf9cf04385b047eabdccbff39d10317a69))
+* **optimizer:** port merge_subqueries ([7ff7b7c](https://github.com/maltzsama/sqlglot-go/commit/7ff7b7cb9221809c1b233d951effeacabe0228c1))
+* **optimizer:** port normalize ([bb8710f](https://github.com/maltzsama/sqlglot-go/commit/bb8710f469b55a2a5961a4c56d02c3bb23c28bf4))
+* **optimizer:** port normalize and eliminate_joins ([2bcbbdb](https://github.com/maltzsama/sqlglot-go/commit/2bcbbdba2071ea2506ae0c8db1ae20638c6ab9d5))
+* **optimizer:** port optimize ([ebb5dd1](https://github.com/maltzsama/sqlglot-go/commit/ebb5dd1ecdfb7b2b7c78e784740c966b04eee340))
+* **optimizer:** port optimize and the default rule sequence ([04e5ad6](https://github.com/maltzsama/sqlglot-go/commit/04e5ad6adb5fe15d87f9a4482a02428d0a75485b))
+* **optimizer:** port optimize_joins ([29af823](https://github.com/maltzsama/sqlglot-go/commit/29af8235ad16e69fbf957820f0b3277f3a2a0f6c))
+* **optimizer:** port pushdown_predicates ([168391e](https://github.com/maltzsama/sqlglot-go/commit/168391e77370f4a394712e3efabfb3edfa49ef31))
+* **optimizer:** port pushdown_predicates and pushdown_projections ([0695bdf](https://github.com/maltzsama/sqlglot-go/commit/0695bdfbd6b6723a3d7406ffa8e7677458e0091a))
+* **optimizer:** port pushdown_projections ([15c5db8](https://github.com/maltzsama/sqlglot-go/commit/15c5db8ae0f833290419c7b4f343bf6d4e152d7b))
+* **optimizer:** port simplify's gen pseudo-generator ([392ca35](https://github.com/maltzsama/sqlglot-go/commit/392ca353049a5762d34b6620b5911564746071f8))
+* **optimizer:** port the value semantics simplify folds constants with ([ca09697](https://github.com/maltzsama/sqlglot-go/commit/ca09697d61470d9fb11486b63d6a25dfdc3892dd))
+* **optimizer:** port unnest_subqueries ([cad44a0](https://github.com/maltzsama/sqlglot-go/commit/cad44a030fe26c177dc74e28614048e4912da235))
+* **optimizer:** port unnest_subqueries and merge_subqueries ([15654c4](https://github.com/maltzsama/sqlglot-go/commit/15654c43c297dbdda99b918122a1d39fa4f993cb))
+* **optimizer:** type PIVOT and UNPIVOT columns in annotate_types ([dfb70e7](https://github.com/maltzsama/sqlglot-go/commit/dfb70e758f70c04dfc6929bd61865258fb1966d7))
+* **oracle:** port the Oracle dialect to 249/249 corpus parity ([857ecfd](https://github.com/maltzsama/sqlglot-go/commit/857ecfdd846e1536f800e60310afab6283551fbb))
+* **oracle:** port the Oracle dialect to 249/249 corpus parity ([ebe49a7](https://github.com/maltzsama/sqlglot-go/commit/ebe49a73a5fa9a9119338a85d2fb0b17c7be7901))
+* rename module path to github.com/maltzsama/sqlglot-go ([721b422](https://github.com/maltzsama/sqlglot-go/commit/721b4226ae979ec30dc3bd8cb6a90f5f420759c0))
+* **starrocks:** port the StarRocks dialect to 145/145 corpus parity ([d38921e](https://github.com/maltzsama/sqlglot-go/commit/d38921e42516906d2de2de0d184c12e823e882f1))
+* **starrocks:** port the StarRocks dialect to 145/145 corpus parity ([e477b18](https://github.com/maltzsama/sqlglot-go/commit/e477b184ca38de5fae6f073b055d85646bacc22c))
+* **trino:** parse and generate inline SQL UDFs ([bff1476](https://github.com/maltzsama/sqlglot-go/commit/bff14767b757cef488286c1e5572f192e5b8ab63))
+* **trino:** parse and generate inline SQL UDFs ([032ead7](https://github.com/maltzsama/sqlglot-go/commit/032ead7742aded3581bdbf1c6815cc6a6f37b15f))
+* **tsql:** close remaining corpus gaps to 613/613 ([#4](https://github.com/maltzsama/sqlglot-go/issues/4)) ([4b752de](https://github.com/maltzsama/sqlglot-go/commit/4b752def482a17f9f659ee66bb327691b723177d))
+* **tsql:** extend dialect coverage to 600/613 corpus cases ([15dd345](https://github.com/maltzsama/sqlglot-go/commit/15dd345db29e47f4758640fdab818d0decc73993))
+* **tsql:** extend dialect coverage to 600/613 corpus cases ([4291041](https://github.com/maltzsama/sqlglot-go/commit/4291041fef90fe138c0b2a3379ed8671099e9664))
+
+
+### Bug Fixes
+
+* **errors:** clamp negative limits in ConcatMessages ([f97f13f](https://github.com/maltzsama/sqlglot-go/commit/f97f13f63a26c89f81209c57eed0eb657f384860))
+* **errors:** clamp negative limits in ConcatMessages ([c7028f5](https://github.com/maltzsama/sqlglot-go/commit/c7028f5bc0a8f1b592388150be1529b17f6f8fab))
+* **expressions:** give In and Between the Condition trait ([0922ad3](https://github.com/maltzsama/sqlglot-go/commit/0922ad353edd7580f5bd3e964ce44deaa6029788))
+* **optimizer:** keep alias column lists when merge_subqueries renames a source ([bf25f1c](https://github.com/maltzsama/sqlglot-go/commit/bf25f1c5fa311c7cb24113c7773382025e38c5a2))
+* **optimizer:** port the v30.17.0 scope traversal for DML and Subquery roots ([e0eb848](https://github.com/maltzsama/sqlglot-go/commit/e0eb8480ea8861129e638a3c047040f0bccc6f48))
+* **optimizer:** skip a scalar set-operation subquery unnest can't place ([3821f41](https://github.com/maltzsama/sqlglot-go/commit/3821f418f4fe148c015dcf2e2fdc22dd29c5a4bf))
+* **oracle:** keep PL/SQL units whole across inner semicolons ([6b029e8](https://github.com/maltzsama/sqlglot-go/commit/6b029e8b3fb943ace3da3362ecca8088c87591c5)), closes [#15](https://github.com/maltzsama/sqlglot-go/issues/15)
+* **oracle:** treat a SQL*Plus slash line as a statement terminator ([0b6db4b](https://github.com/maltzsama/sqlglot-go/commit/0b6db4b2d4eea53b281fad46fee87c4fe04e59bc)), closes [#16](https://github.com/maltzsama/sqlglot-go/issues/16)
+* **parser:** infer PIVOT output column names ([b802c58](https://github.com/maltzsama/sqlglot-go/commit/b802c580db7c1bc3d5a20612fe100d310e3190fa))
+* respect script statement boundaries for GO, slash lines and PL/SQL units ([e22aaf1](https://github.com/maltzsama/sqlglot-go/commit/e22aaf1c510d4108196b441ff4942fcba57d43a0))
+* **tsql:** treat a GO line as a batch separator ([23884ed](https://github.com/maltzsama/sqlglot-go/commit/23884ed7caed5ba95b487b6c132172e131e01da7)), closes [#14](https://github.com/maltzsama/sqlglot-go/issues/14)
+
+
+### Performance
+
+* cut allocations across parse and generate ([b3a798d](https://github.com/maltzsama/sqlglot-go/commit/b3a798d3c16124817f4cbb5a4861258e2d6ae836))
+* cut allocations in the parse and generate hot paths ([71ec633](https://github.com/maltzsama/sqlglot-go/commit/71ec6336d09bc64fe8fbba2c4fb725de6cb8900a))
+* cut parse allocations with lazy maps and cached lookups ([a0ac258](https://github.com/maltzsama/sqlglot-go/commit/a0ac25854be627a8e5371658360337a502c178c9))
+* cut parse allocations with lazy maps and cached lookups ([4cc0d8d](https://github.com/maltzsama/sqlglot-go/commit/4cc0d8dde1c803d0a0169b2a36ec9a5702b3f950))
+* **dialects:** cache dialect templates ([59224a8](https://github.com/maltzsama/sqlglot-go/commit/59224a86c1d263bc929596205db28591cdc55b09))
+* **dialects:** share the cached template on read-only paths ([50c5024](https://github.com/maltzsama/sqlglot-go/commit/50c5024067c1122687dfdcd3be623f9318775340))
+* **expressions:** build copied nodes in one pass ([fb8b57c](https://github.com/maltzsama/sqlglot-go/commit/fb8b57c1421810cf489bc04748c86621ec5135e7))
+* **tokens:** index ASCII input without converting to runes ([dea3055](https://github.com/maltzsama/sqlglot-go/commit/dea3055fd3366c9126e55b3d43b9a614f5bea215))
+
+
+### Documentation
+
+* describe annotate_types as ported ([5de040d](https://github.com/maltzsama/sqlglot-go/commit/5de040d1c14b2aee1d2fd5cff23ad5d5f0311ce2))
+* describe the repository as a maintained fork ([e6df3a6](https://github.com/maltzsama/sqlglot-go/commit/e6df3a6f8fd8d77c264a4ec5b5af0fd6965436ac))
+* drop the deferred PIVOT note from the roadmap ([922c446](https://github.com/maltzsama/sqlglot-go/commit/922c446809773d9b0ce4a0eb931287f97df7eb25))
+* **expressions:** document the init-only parser hooks ([9caee23](https://github.com/maltzsama/sqlglot-go/commit/9caee23855453e9c06d74fe81fb20a1a3006a6d9))
+* list canonicalize as ported ([703dcbd](https://github.com/maltzsama/sqlglot-go/commit/703dcbd2c1119bb476aa45588424f36c1ba64047))
+* list normalize and eliminate_joins as ported ([78e3bf7](https://github.com/maltzsama/sqlglot-go/commit/78e3bf7b9e8606bbbaa3969f247a16e4d01f9696))
+* list optimize as ported ([90e1e32](https://github.com/maltzsama/sqlglot-go/commit/90e1e32701d71a47cd8986010316643e2fecd1d0))
+* list simplify as ported ([bcb7761](https://github.com/maltzsama/sqlglot-go/commit/bcb7761c8dbde24ada51322c533d2492fcbab3fa))
+* list the newly ported optimizer passes ([b2afccf](https://github.com/maltzsama/sqlglot-go/commit/b2afccfb27a12a57e0a04ec0dd6129e68f0a1b6c))
+* list the pushdown passes as ported ([8bb849f](https://github.com/maltzsama/sqlglot-go/commit/8bb849f87e87629d29b81f5d97c86133465da5ac))
+* list unnest_subqueries and merge_subqueries as ported ([6aa06cb](https://github.com/maltzsama/sqlglot-go/commit/6aa06cb194753b416f39ef57b5416999ca6b5678))
+* make the fork consumable as github.com/maltzsama/sqlglot-go ([4b1cd5e](https://github.com/maltzsama/sqlglot-go/commit/4b1cd5ecf3683a2a16dc734bdc2c34cf5a42b50c))
+
+
+### Refactoring
+
+* address staticcheck findings in annotate_types ([607a0fa](https://github.com/maltzsama/sqlglot-go/commit/607a0faa2440319a618aedd8de8b3d63d2075d4c))
+* address staticcheck findings in simplify ([ab25fde](https://github.com/maltzsama/sqlglot-go/commit/ab25fde3f4e8d5ef77abe9728001352bb3d6377e))
+* address staticcheck findings in the new optimizer code ([131e50d](https://github.com/maltzsama/sqlglot-go/commit/131e50d4e8733383e2aa6f2ec0800afcc0922268))
+* apply De Morgan's law across simplify's guards ([4713647](https://github.com/maltzsama/sqlglot-go/commit/47136478c362065ac26cd4ac6aa7f06dad5d5fa6))
+* flatten control-flow guard clauses ([b7662a3](https://github.com/maltzsama/sqlglot-go/commit/b7662a32d955d91c047e2dcad0bd947c2572b06f))
+* flatten control-flow guard clauses ([76924fe](https://github.com/maltzsama/sqlglot-go/commit/76924fee231483a94cb1a1361bddd2476cbb0d6b))
+* **optimizer:** keep the typing metadata as plain Go source ([ca2b083](https://github.com/maltzsama/sqlglot-go/commit/ca2b0837ca39ad54bbd4a4ed84bb27eed6f79407))
+* **oracle:** drop dead code and the rendered-SQL Var hack ([12533f1](https://github.com/maltzsama/sqlglot-go/commit/12533f113bb64be313a5d1dcf224306c19195dcb))
+* **parser:** make function-parser registration order-independent ([9283d75](https://github.com/maltzsama/sqlglot-go/commit/9283d756b9a41800e2dbf41d468f45784863e701))
+
 ## [0.38.0](https://github.com/ridi-oss/sqlglot-go/compare/v0.37.4...v0.38.0) (2026-10-21)
 
 
