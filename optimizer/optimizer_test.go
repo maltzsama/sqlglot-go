@@ -50,7 +50,7 @@ func loadTSVSchema(t *testing.T, filename string) *schema.Mapping {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	out := schema.NewMapping()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
