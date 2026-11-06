@@ -3,7 +3,7 @@ package parser_test
 import (
 	"testing"
 
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
 func TestSelectSubqueryClauses(t *testing.T) {

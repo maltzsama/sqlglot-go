@@ -4,7 +4,7 @@ import (
 	"maps"
 	"strings"
 
-	"github.com/ridi-oss/sqlglot-go/trie"
+	"github.com/maltzsama/sqlglot-go/trie"
 )
 
 type FormatString struct {

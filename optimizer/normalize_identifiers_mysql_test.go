@@ -3,9 +3,9 @@ package optimizer_test
 import (
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	"github.com/ridi-oss/sqlglot-go/generator"
-	"github.com/ridi-oss/sqlglot-go/optimizer"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	"github.com/maltzsama/sqlglot-go/generator"
+	"github.com/maltzsama/sqlglot-go/optimizer"
 )
 
 // MySQL identifier normalization is role-aware under lower_case_table_names=0

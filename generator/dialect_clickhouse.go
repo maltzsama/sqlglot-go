@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // ClickHouse generator overrides, ported from

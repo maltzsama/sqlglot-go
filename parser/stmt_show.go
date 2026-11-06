@@ -3,8 +3,8 @@ package parser
 import (
 	"strings"
 
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
-	"github.com/ridi-oss/sqlglot-go/tokens"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 // parseShow ports parser.py:9226-9230 Parser._parse_show. Upstream dialects override

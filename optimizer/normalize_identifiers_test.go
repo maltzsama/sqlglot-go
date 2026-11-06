@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	"github.com/ridi-oss/sqlglot-go/generator"
-	"github.com/ridi-oss/sqlglot-go/optimizer"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	"github.com/maltzsama/sqlglot-go/generator"
+	"github.com/maltzsama/sqlglot-go/optimizer"
 )
 
 func TestNormalizeIdentifiersFixtures(t *testing.T) {

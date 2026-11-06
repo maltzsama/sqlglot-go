@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	sqlerrors "github.com/ridi-oss/sqlglot-go/errors"
-	"github.com/ridi-oss/sqlglot-go/generator"
-	"github.com/ridi-oss/sqlglot-go/optimizer"
-	"github.com/ridi-oss/sqlglot-go/schema"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	sqlerrors "github.com/maltzsama/sqlglot-go/errors"
+	"github.com/maltzsama/sqlglot-go/generator"
+	"github.com/maltzsama/sqlglot-go/optimizer"
+	"github.com/maltzsama/sqlglot-go/schema"
 )
 
 func TestQualifyColumnsFixtures(t *testing.T) {

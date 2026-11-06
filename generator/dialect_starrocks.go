@@ -3,7 +3,7 @@ package generator
 import (
 	"strconv"
 
-	exp "github.com/ridi-oss/sqlglot-go/expressions"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
 // StarRocks generator overrides, ported from

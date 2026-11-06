@@ -1,9 +1,9 @@
 # sqlglot-go
 
-[![CI](https://github.com/ridi-oss/sqlglot-go/actions/workflows/ci.yml/badge.svg)](https://github.com/ridi-oss/sqlglot-go/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/ridi-oss/sqlglot-go.svg)](https://pkg.go.dev/github.com/ridi-oss/sqlglot-go)
-[![Go Report Card](https://goreportcard.com/badge/github.com/ridi-oss/sqlglot-go)](https://goreportcard.com/report/github.com/ridi-oss/sqlglot-go)
-[![Release](https://img.shields.io/github/v/release/ridi-oss/sqlglot-go)](https://github.com/ridi-oss/sqlglot-go/releases)
+[![CI](https://github.com/maltzsama/sqlglot-go/actions/workflows/ci.yml/badge.svg)](https://github.com/maltzsama/sqlglot-go/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/maltzsama/sqlglot-go.svg)](https://pkg.go.dev/github.com/maltzsama/sqlglot-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/maltzsama/sqlglot-go)](https://goreportcard.com/report/github.com/maltzsama/sqlglot-go)
+[![Release](https://img.shields.io/github/v/release/maltzsama/sqlglot-go)](https://github.com/maltzsama/sqlglot-go/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 A Go port of the **parse → AST → generate** core of
@@ -68,7 +68,7 @@ case-folding, to match real engines).
 ## Quick start
 
 ```bash
-go get github.com/ridi-oss/sqlglot-go
+go get github.com/maltzsama/sqlglot-go
 ```
 
 ```go
@@ -77,10 +77,10 @@ package main
 import (
 	"fmt"
 
-	sqlglot "github.com/ridi-oss/sqlglot-go"
-	"github.com/ridi-oss/sqlglot-go/generator"
-	"github.com/ridi-oss/sqlglot-go/optimizer"
-	"github.com/ridi-oss/sqlglot-go/schema"
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	"github.com/maltzsama/sqlglot-go/generator"
+	"github.com/maltzsama/sqlglot-go/optimizer"
+	"github.com/maltzsama/sqlglot-go/schema"
 )
 
 func main() {
