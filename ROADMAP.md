@@ -3,8 +3,7 @@
 Goal: a faithful Go port of sqlglot v30.17.0's **parse → AST → generate** core (tokenizer, AST,
 parser, generator, schema) plus the `qualify` + `scope` optimizer passes that column qualification and
 **lineage** build on, for **base + MySQL + Postgres**. This is deliberately **not** a full port of
-sqlglot: the rest of the optimizer (simplify/normalize/pushdown/eliminate/merge/unnest/`optimize()`),
-cross-dialect transpilation, and the other 30+ dialects are out of scope for now. Port 1:1 from
+sqlglot: cross-dialect transpilation and the other 30+ dialects are out of scope for now. Port 1:1 from
 .reference/sqlglot-v30.17.0/ file-by-file; port the matching upstream tests as the oracle.
 
 Status: the parse → generate round-trip is at **100% parity on the ported upstream identity corpus** —
@@ -107,13 +106,14 @@ The parse → generate round-trip is done for the ported corpus (see Status). Th
 mostly the **optimizer** (port 1:1 from `.reference/`, port the matching upstream tests,
 differential-check against the pinned Python):
 
-- THE REST OF THE OPTIMIZER (the big one):
-  `canonicalize_internal_names` and the top-level `optimize()` rule orchestrator
-  that chains them. Ported today: `qualify` + `scope`/`traverse_scope` (+ `isolate_table_selects`),
+- THE OPTIMIZER is ported, with the top-level `optimize()` rule pipeline (`Optimize`, `Rules`);
+  only `canonicalize_internal_names`, which is not a default rule, is left. Ported: `qualify` +
+  `scope`/`traverse_scope` (+ `isolate_table_selects`),
   `eliminate_ctes` + `journal`, `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries`,
   `merge_subqueries`, `annotate_types`, `simplify`, `normalize`, `eliminate_joins`,
   `pushdown_predicates`, `pushdown_projections` and `canonicalize`, plus the query builder API
-  they share. The remaining `optimize()` orchestrator is tracked by #32.
+  they share. `optimizer.sql` passes except the PIVOT star-expansion cases of #46, and the TPC-H
+  and TPC-DS fixture sets pass in full.
 - annotate_types is ported (#27). What remains is the function nodes it can't type yet because the
   port parses them as `Anonymous` (#44; `optimizer/testdata/annotate_gaps.txt`).
 - CROSS-DIALECT transpilation: same-dialect round-trip is verified; reading one dialect and writing

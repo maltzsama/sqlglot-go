@@ -45,7 +45,7 @@ targeted slice of the optimizer:
   the foundation for **column lineage**.
 
 **Not ported (yet):**
-- The rest of sqlglot's **optimizer**: the top-level `optimize()` rule orchestrator.
+- `canonicalize_internal_names`, which is not one of `optimize()`'s default rules.
 - **Cross-dialect transpilation** — the generator can target a dialect, but only **same-dialect**
   round-trip is a goal and is tested; reading one dialect and writing another is not verified.
 - **Dialects beyond the ones listed under [Dialects](#dialects)** (upstream ships 30+).
@@ -74,7 +74,8 @@ case-folding, to match real engines).
 | Generate (AST → SQL) | `generator` | **100% round-trip** on the upstream identity corpus for base (980/980) and every registered dialect (see [Dialects](#dialects)) |
 | Schema | `schema` | `MappingSchema`, `DataType.build`, type-category sets |
 | Qualify | `optimizer` | `qualify` (qualify_tables, normalize_identifiers, qualify_columns, quote_identifiers, validate) |
-| Rewrite passes | `optimizer` | `EliminateCTEs`, `EliminateSubqueries`, `OptimizeJoins`, `UnnestSubqueries`, `MergeSubqueries` |
+| Rewrite passes | `optimizer` | `EliminateCTEs`, `EliminateSubqueries`, `OptimizeJoins`, `UnnestSubqueries`, `MergeSubqueries`, `Normalize`, `EliminateJoins`, `PushdownPredicates`, `PushdownProjections`, `Canonicalize`, `Simplify`, `AnnotateTypes` |
+| Optimize | `optimizer` | `Optimize` runs upstream's default rule sequence (`Rules`); TPC-H and TPC-DS fixtures pass |
 | Scope / lineage | `optimizer` | `traverse_scope` + full `Scope` API (sources, columns, unions, CTEs) |
 | Dialects | `dialects` | see [Dialects](#dialects) (tokenizer, normalization, quoting, per-dialect functions/flags) |
 
