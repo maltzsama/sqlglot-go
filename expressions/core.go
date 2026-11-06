@@ -103,6 +103,8 @@ type Expression interface {
 	Eq(other any) Expression
 	Not_(copyValue bool) Expression
 
+	IterExpressions(reverse bool) []Expression
+
 	// Annotated types (annotated_type.go).
 	Type() Expression
 	SetType(dtype any)
@@ -527,6 +529,12 @@ func (n *Node) IsLeaf() bool {
 
 func (n *Node) iterExpressions(reverse bool) []Expression {
 	return n.appendExpressions(nil, reverse)
+}
+
+// IterExpressions ports Expr.iter_expressions: the node's direct child expressions, in arg
+// order (reversed when reverse is true).
+func (n *Node) IterExpressions(reverse bool) []Expression {
+	return n.iterExpressions(reverse)
 }
 
 // appendExpressions appends this node's children to dst, avoiding the intermediate slice

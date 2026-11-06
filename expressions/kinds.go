@@ -2637,3 +2637,29 @@ func ArgKeys(k Kind) []string {
 
 // ClassName returns the PascalCase class name for a Kind (e.g. "StddevPop").
 func ClassName(k Kind) string { return className[k] }
+
+var kindByClassName = func() map[string]Kind {
+	out := make(map[string]Kind, len(className))
+	for k, name := range className {
+		out[name] = k
+	}
+	return out
+}()
+
+// KindByClassName returns the Kind whose upstream class name is name (e.g. "StddevPop"), and
+// whether one exists.
+func KindByClassName(name string) (Kind, bool) {
+	k, ok := kindByClassName[name]
+	return k, ok
+}
+
+// KindsWithTrait returns every Kind carrying trait, the port of helper.subclasses(exp, <trait>).
+func KindsWithTrait(trait Trait) []Kind {
+	var out []Kind
+	for k := range className {
+		if traitsOf[k]&trait != 0 {
+			out = append(out, k)
+		}
+	}
+	return out
+}

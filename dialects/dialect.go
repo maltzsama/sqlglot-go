@@ -127,8 +127,12 @@ type Dialect struct {
 	SupportsStructStarExpansion        bool
 	ExcludesPseudocolumnsFromStar      bool
 	QueryResultsAreStructs             bool
-	RequiresParenthesizedStructAccess  bool
-	IndexOffset                        int
+	// PrioritizeNonLiteralTypes ports PRIORITIZE_NON_LITERAL_TYPES (dialects/dialect.py:801): when
+	// annotate_types combines a literal and a non-literal of the same integer or real family, the
+	// non-literal's type wins instead of the coerced one.
+	PrioritizeNonLiteralTypes         bool
+	RequiresParenthesizedStructAccess bool
+	IndexOffset                       int
 	// RenameTableWithDB ports the generator flag of the same name (generator.py:344): base
 	// allows `ALTER TABLE db.a RENAME TO db.b`, some dialects (e.g. postgres, generators/
 	// postgres.py:234) only allow renaming within the same db and drop the db qualifier.
