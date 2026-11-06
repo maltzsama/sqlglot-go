@@ -118,11 +118,12 @@ func New(k Kind, args Args) Expression {
 
 func newNode(k Kind, args Args) *Node {
 	specs := argTypesFor(k)
-	n := &Node{
-		kind:     k,
-		args:     make(map[string]any, len(args)),
-		argOrder: make([]string, 0, len(args)),
-		index:    -1,
+	n := &Node{kind: k, index: -1}
+	if len(args) > 0 {
+		// Niladic nodes (Star, Null, CurrentDate, ...) skip the map entirely; set/Append
+		// allocate it on the first write.
+		n.args = make(map[string]any, len(args))
+		n.argOrder = make([]string, 0, len(args))
 	}
 	for _, spec := range specs {
 		if value, ok := args[spec.Key]; ok {
@@ -149,19 +150,16 @@ func newNode(k Kind, args Args) *Node {
 	return n
 }
 
-func newEmptyNode(k Kind) *Node {
-	return &Node{kind: k, args: map[string]any{}, index: -1}
-}
-
-// newEmptyNodeCapacity is newEmptyNode with room for size arg keys, used when the caller knows
-// the final shape (Node.Copy walks the source node's arg order).
+// newEmptyNodeCapacity creates a bare node with room for size arg keys, used when the caller
+// knows the final shape (Node.Copy walks the source node's arg order). A zero size leaves the
+// args map nil, matching newNode's niladic fast path.
 func newEmptyNodeCapacity(k Kind, size int) *Node {
-	return &Node{
-		kind:     k,
-		args:     make(map[string]any, size),
-		argOrder: make([]string, 0, size),
-		index:    -1,
+	n := &Node{kind: k, index: -1}
+	if size > 0 {
+		n.args = make(map[string]any, size)
+		n.argOrder = make([]string, 0, size)
 	}
+	return n
 }
 
 func argTypesFor(k Kind) []argSpec {
@@ -195,6 +193,7 @@ func (n *Node) SetAt(key string, val any, index int, overwrite bool) {
 
 func (n *Node) Append(key string, val Expression) {
 	n.invalidateHash()
+	n.ensureArgs()
 	values, _ := n.args[key].([]Expression)
 	if values == nil {
 		values = []Expression{}
@@ -223,6 +222,7 @@ func (n *Node) set(key string, val any, index *int, overwrite bool) {
 			for i := idx; i < len(expressions); i++ {
 				expressions[i].SetParent(n, key, i)
 			}
+			n.ensureArgs()
 			n.args[key] = expressions
 			return
 		}
@@ -245,8 +245,16 @@ func (n *Node) set(key string, val any, index *int, overwrite bool) {
 	if !n.hasArgKey(key) {
 		n.argOrder = append(n.argOrder, key)
 	}
+	n.ensureArgs()
 	n.args[key] = val
 	n.setParent(key, val, -1)
+}
+
+// ensureArgs allocates the arg map on the first write for nodes created without one.
+func (n *Node) ensureArgs() {
+	if n.args == nil {
+		n.args = make(map[string]any, 1)
+	}
 }
 
 func (n *Node) setParent(key string, value any, index int) {
@@ -498,68 +506,84 @@ func (n *Node) IsLeaf() bool {
 }
 
 func (n *Node) iterExpressions(reverse bool) []Expression {
+	return n.appendExpressions(nil, reverse)
+}
+
+// appendExpressions appends this node's children to dst, avoiding the intermediate slice
+// iterExpressions would otherwise allocate for every visited node.
+func (n *Node) appendExpressions(dst []Expression, reverse bool) []Expression {
 	order := n.argOrder
-	out := []Expression{}
 	if reverse {
 		for i := len(order) - 1; i >= 0; i-- {
-			out = append(out, expressionsFromValue(n.args[order[i]], true)...)
+			dst = appendExpressionsFromValue(dst, n.args[order[i]], true)
 		}
-		return out
+		return dst
 	}
 	for _, key := range order {
-		out = append(out, expressionsFromValue(n.args[key], false)...)
+		dst = appendExpressionsFromValue(dst, n.args[key], false)
 	}
-	return out
+	return dst
 }
 
 func expressionsFromValue(value any, reverse bool) []Expression {
+	return appendExpressionsFromValue(nil, value, reverse)
+}
+
+func appendExpressionsFromValue(dst []Expression, value any, reverse bool) []Expression {
 	switch v := value.(type) {
 	case []Expression:
-		out := make([]Expression, 0, len(v))
 		if reverse {
 			for i := len(v) - 1; i >= 0; i-- {
 				if v[i] != nil {
-					out = append(out, v[i])
+					dst = append(dst, v[i])
 				}
 			}
 		} else {
 			for _, expr := range v {
 				if expr != nil {
-					out = append(out, expr)
+					dst = append(dst, expr)
 				}
 			}
 		}
-		return out
+		return dst
 	case []any:
-		out := make([]Expression, 0, len(v))
 		if reverse {
 			for i := len(v) - 1; i >= 0; i-- {
 				if expr, ok := v[i].(Expression); ok && expr != nil {
-					out = append(out, expr)
+					dst = append(dst, expr)
 				}
 			}
 		} else {
 			for _, item := range v {
 				if expr, ok := item.(Expression); ok && expr != nil {
-					out = append(out, expr)
+					dst = append(dst, expr)
 				}
 			}
 		}
-		return out
+		return dst
 	case Expression:
 		if v != nil {
-			return []Expression{v}
+			dst = append(dst, v)
 		}
 	}
-	return nil
+	return dst
 }
 
 func (n *Node) Find(t Target) Expression {
-	all := n.FindAll(t)
-	if len(all) == 0 {
-		return nil
+	// Breadth-first with an early exit: Find used to collect every match through FindAll and
+	// then keep the first, walking the whole subtree for a hit near the root.
+	queue := []Expression{n}
+	for len(queue) > 0 {
+		node := queue[0]
+		queue = queue[1:]
+		if t.matches(node) {
+			return node
+		}
+		if nn, ok := node.(*Node); ok {
+			queue = nn.appendExpressions(queue, false)
+		}
 	}
-	return all[0]
+	return nil
 }
 
 func (n *Node) FindAll(t Target, bfsOpt ...bool) []Expression {
@@ -568,9 +592,29 @@ func (n *Node) FindAll(t Target, bfsOpt ...bool) []Expression {
 		bfs = bfsOpt[0]
 	}
 	var out []Expression
-	for _, expression := range n.Walk(bfs) {
-		if t.matches(expression) {
-			out = append(out, expression)
+	if bfs {
+		queue := []Expression{n}
+		for len(queue) > 0 {
+			node := queue[0]
+			queue = queue[1:]
+			if t.matches(node) {
+				out = append(out, node)
+			}
+			if nn, ok := node.(*Node); ok {
+				queue = nn.appendExpressions(queue, false)
+			}
+		}
+		return out
+	}
+	stack := []Expression{n}
+	for len(stack) > 0 {
+		node := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if t.matches(node) {
+			out = append(out, node)
+		}
+		if nn, ok := node.(*Node); ok {
+			stack = nn.appendExpressions(stack, true)
 		}
 	}
 	return out
