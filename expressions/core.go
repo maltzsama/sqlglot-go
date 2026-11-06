@@ -89,6 +89,19 @@ type Expression interface {
 	Right() Expression
 	Into() Expression
 	Keyword() string
+
+	// Query builders (query_builders.go).
+	Subquery(alias string, copyValue bool) Expression
+	Where(appendValue, copyValue bool, expressions ...Expression) Expression
+	From_(expression Expression, copyValue bool) Expression
+	GroupBy(appendValue, copyValue bool, expressions ...Expression) Expression
+	SelectExprs(appendValue, copyValue bool, expressions ...Expression) Expression
+	Join(expression Expression, opts JoinOptions) Expression
+	Unalias() Expression
+	Transform(fun func(Expression) Expression, copyValue bool) Expression
+	Is_(other any) Expression
+	Eq(other any) Expression
+	Not_(copyValue bool) Expression
 }
 
 type Target interface{ matches(Expression) bool }
