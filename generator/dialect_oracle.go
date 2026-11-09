@@ -115,7 +115,7 @@ func oracleDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 			return g.columnDefSQL(e)
 		},
 		// TZ_TO_WITH_TIME_ZONE (generator.py:1790-1792).
-		exp.KindDataType: oracleDataType,
+		exp.KindDataType: tzToWithTimeZone,
 	}
 }
 
@@ -282,14 +282,4 @@ func unqualifyColumnsDeep(e exp.Expression) exp.Expression {
 		}
 	}
 	return e
-}
-
-// oracleDataType ports the TZ_TO_WITH_TIME_ZONE suffix of datatype_sql
-// (generator.py:1789-1793).
-func oracleDataType(g *Generator, e exp.Expression) string {
-	sql := g.dataTypeSQL(e)
-	if dt, ok := e.Arg("this").(exp.DType); ok && (dt == exp.DTypeTimestampTz || dt == exp.DTypeTimeTz) {
-		return sql + " WITH TIME ZONE"
-	}
-	return sql
 }

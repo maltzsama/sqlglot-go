@@ -864,6 +864,18 @@ const (
 	KindMultitableInserts
 	KindConditionalInsert
 	KindConnectByRoot
+	KindFromBase
+	KindCurrentUserId
+	KindObjectTransform
+	KindConvertTimezone
+	KindConcatWs
+	KindSortKeyProperty
+	KindDistKeyProperty
+	KindDistStyleProperty
+	KindPercentileDisc
+	KindAtIndex
+	KindAlterDistStyle
+	KindAlterSortKey
 )
 
 type Trait uint32
@@ -1602,6 +1614,18 @@ var argTypes = map[Kind][]argSpec{
 	KindMultitableInserts:               {{"expressions", true}, {"kind", true}, {"source", true}},
 	KindConditionalInsert:               {{"this", true}, {"expression", false}, {"else_", false}},
 	KindConnectByRoot:                   {{"this", true}},
+	KindFromBase:                        {{"this", true}, {"expression", true}},
+	KindCurrentUserId:                   {},
+	KindObjectTransform:                 {{"this", true}, {"keep", false}, {"set_", false}},
+	KindConvertTimezone:                 {{"source_tz", false}, {"target_tz", true}, {"timestamp", true}, {"options", false}},
+	KindConcatWs:                        {{"expressions", true}, {"safe", false}, {"coalesce", false}},
+	KindSortKeyProperty:                 {{"this", true}, {"compound", false}},
+	KindDistKeyProperty:                 {{"this", true}},
+	KindDistStyleProperty:               {{"this", true}},
+	KindPercentileDisc:                  {{"this", true}, {"expression", false}},
+	KindAtIndex:                         {{"this", true}, {"expression", true}},
+	KindAlterDistStyle:                  {{"this", true}},
+	KindAlterSortKey:                    {{"this", false}, {"expressions", false}, {"compound", false}},
 }
 
 var traitsOf = map[Kind]Trait{
@@ -1970,6 +1994,12 @@ var traitsOf = map[Kind]Trait{
 	KindUnicode:          TraitCondition | TraitFunc,
 	KindJSONArray:        TraitCondition | TraitFunc,
 	KindJSONExists:       TraitCondition | TraitFunc,
+	KindFromBase:         TraitCondition | TraitFunc,
+	KindCurrentUserId:    TraitCondition | TraitFunc,
+	KindObjectTransform:  TraitCondition | TraitFunc,
+	KindConvertTimezone:  TraitCondition | TraitFunc,
+	KindConcatWs:         TraitCondition | TraitFunc,
+	KindPercentileDisc:   TraitCondition | TraitFunc | TraitAggFunc,
 }
 
 var primitive = map[Kind]bool{
@@ -2587,6 +2617,18 @@ var className = map[Kind]string{
 	KindMultitableInserts:               "MultitableInserts",
 	KindConditionalInsert:               "ConditionalInsert",
 	KindConnectByRoot:                   "ConnectByRoot",
+	KindFromBase:                        "FromBase",
+	KindCurrentUserId:                   "CurrentUserId",
+	KindObjectTransform:                 "ObjectTransform",
+	KindConvertTimezone:                 "ConvertTimezone",
+	KindConcatWs:                        "ConcatWs",
+	KindSortKeyProperty:                 "SortKeyProperty",
+	KindDistKeyProperty:                 "DistKeyProperty",
+	KindDistStyleProperty:               "DistStyleProperty",
+	KindPercentileDisc:                  "PercentileDisc",
+	KindAtIndex:                         "AtIndex",
+	KindAlterDistStyle:                  "AlterDistStyle",
+	KindAlterSortKey:                    "AlterSortKey",
 }
 
 // varLenArgs is the authoritative is_var_len_args=True set (mirroring the upstream Func
@@ -2622,6 +2664,7 @@ var varLenArgs = map[Kind]bool{
 	KindExplode:          true,
 	KindCombinedAggFunc:  true,
 	KindAnonymousAggFunc: true,
+	KindConcatWs:         true,
 }
 
 // ArgKeys returns the arg keys of a Kind in class-declaration order (mirrors

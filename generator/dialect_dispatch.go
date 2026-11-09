@@ -23,6 +23,7 @@ var (
 	dialectParents             = map[string]string{
 		"starrocks":    "mysql",
 		"doris":        "mysql",
+		"redshift":     "postgres",
 		"trino":        "presto",
 		"athena-trino": "trino",
 		"athena-hive":  "hive",

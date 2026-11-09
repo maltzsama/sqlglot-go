@@ -698,6 +698,11 @@ func (g *Generator) selectSQL(e expressions.Expression) string {
 	if operationModifiers != "" {
 		operationModifiers = g.sep() + operationModifiers
 	}
+	// generator.py:3381-3385: a select-level EXCLUDE renders after the projections when the
+	// dialect doesn't need the derived-table rewrite (Redshift).
+	if exclude := listFromValue(e.Arg("exclude")); len(exclude) > 0 && !g.dialect.StarExcludeRequiresDerivedTable {
+		expressionsSQL += g.seg("EXCLUDE") + " (" + g.expressions(exprsOptions{sqls: exclude, flat: true}) + ")"
+	}
 	if expressionsSQL != "" {
 		expressionsSQL = g.sep() + expressionsSQL
 	}
@@ -742,11 +747,10 @@ func (g *Generator) selectSQL(e expressions.Expression) string {
 		}
 		sql = "CREATE" + tableKind + " TABLE " + g.sqlKey(into, "this") + " AS " + sql
 	}
-	// Deferred to slice 5 (dialects): base has STAR_EXCLUDE_REQUIRES_DERIVED_TABLE=true, which
-	// upstream (generator.py:3368-3372) rewrites a select-level `exclude` arg into a derived
-	// table `SELECT * EXCLUDE (...) FROM (<subquery>)`. The base parser rejects select-level
-	// EXCLUDE (only Star EXCEPT is produced, handled by starSQL), so `exclude` is never
-	// populated and this path is unreachable; deferred with the SELECT INTO rewrite above.
+	// Not ported: with STAR_EXCLUDE_REQUIRES_DERIVED_TABLE (the base default), upstream
+	// (generator.py:3405-3409) rewrites a select-level `exclude` arg into a derived table
+	// `SELECT * EXCLUDE (...) FROM (<subquery>)`. Only Redshift's parser produces that arg, and
+	// Redshift renders it inline (above), so the rewrite is unreachable for same-dialect output.
 	return sql
 }
 

@@ -30,21 +30,22 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"ARRAY": func(args []Expression) Expression {
 		return newNode(KindArray, Args{"expressions": args})
 	},
-	"ABS":          genericFunction(KindAbs),
-	"AVG":          genericFunction(KindAvg),
-	"SUM":          genericFunction(KindSum),
-	"SQRT":         genericFunction(KindSqrt),
-	"LN":           genericFunction(KindLn),
-	"EXP":          genericFunction(KindExp),
-	"MIN":          genericFunction(KindMin),
-	"MAX":          genericFunction(KindMax),
-	"ROUND":        genericFunction(KindRound),
-	"LOG":          genericFunction(KindLog),
-	"POW":          genericFunction(KindPow),
-	"POWER":        genericFunction(KindPow),
-	"SUBSTR":       genericFunction(KindSubstring),
-	"CEILING":      genericFunction(KindCeil),
-	"GROUP_CONCAT": genericFunction(KindGroupConcat),
+	"ABS":             genericFunction(KindAbs),
+	"AVG":             genericFunction(KindAvg),
+	"SUM":             genericFunction(KindSum),
+	"SQRT":            genericFunction(KindSqrt),
+	"LN":              genericFunction(KindLn),
+	"EXP":             genericFunction(KindExp),
+	"MIN":             genericFunction(KindMin),
+	"MAX":             genericFunction(KindMax),
+	"ROUND":           genericFunction(KindRound),
+	"LOG":             genericFunction(KindLog),
+	"POW":             genericFunction(KindPow),
+	"POWER":           genericFunction(KindPow),
+	"SUBSTR":          genericFunction(KindSubstring),
+	"CEILING":         genericFunction(KindCeil),
+	"PERCENTILE_DISC": genericFunction(KindPercentileDisc),
+	"GROUP_CONCAT":    genericFunction(KindGroupConcat),
 	// LAG/LEAD(this[, offset[, default]]) window functions (aggregate.py:150-163); FromArgList
 	// maps args positionally onto {this, offset, default} per KindLag/KindLead's arg_types.
 	"LAG":  genericFunction(KindLag),
@@ -347,3 +348,15 @@ func SessionUser(args Args) Expression    { return newNode(KindSessionUser, args
 func Localtime(args Args) Expression      { return newNode(KindLocaltime, args) }      // temporal.py:49
 func Localtimestamp(args Args) Expression { return newNode(KindLocaltimestamp, args) } // temporal.py:53
 func CurrentSchema(args Args) Expression  { return newNode(KindCurrentSchema, args) }  // functions.py:285
+
+// Redshift function and property nodes (expressions/functions.py, expressions/properties.py).
+func FromBase(args Args) Expression          { return newNode(KindFromBase, args) }
+func CurrentUserId(args Args) Expression     { return newNode(KindCurrentUserId, args) }
+func ObjectTransform(args Args) Expression   { return newNode(KindObjectTransform, args) }
+func ConvertTimezone(args Args) Expression   { return newNode(KindConvertTimezone, args) }
+func ConcatWs(args Args) Expression          { return newNode(KindConcatWs, args) }
+func SortKeyProperty(args Args) Expression   { return newNode(KindSortKeyProperty, args) }
+func DistKeyProperty(args Args) Expression   { return newNode(KindDistKeyProperty, args) }
+func DistStyleProperty(args Args) Expression { return newNode(KindDistStyleProperty, args) }
+func PercentileDisc(args Args) Expression    { return newNode(KindPercentileDisc, args) }
+func AtIndex(args Args) Expression           { return newNode(KindAtIndex, args) }

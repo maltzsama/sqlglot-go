@@ -83,7 +83,6 @@ func registerDialectParserOverrides(name string, overrides dialectParserOverride
 			panic("parser: nil property parser override for dialect " + name)
 		}
 	}
-
 	dialectParserOverrides[name] = overrides
 }
 
@@ -99,7 +98,11 @@ func (p *Parser) parserOverrideKey() string {
 
 // parserOverrideParents models parser-class inheritance: StarRocksParser extends
 // MySQLParser (parsers/starrocks.py:11), so a StarRocks lookup falls back to the mysql overlay.
-var parserOverrideParents = map[string]string{"starrocks": "mysql", "doris": "mysql"}
+var parserOverrideParents = map[string]string{
+	"starrocks": "mysql",
+	"doris":     "mysql",
+	"redshift":  "postgres",
+}
 
 // overrideChain lists the override keys from the parser's own key up through its parents.
 func (p *Parser) overrideChain() []string {

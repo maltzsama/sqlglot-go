@@ -959,7 +959,14 @@ func (p *Parser) parseSelect(opts ...bool) exp.Expression {
 		// but wire the parser shape to match upstream.
 		top := p.parseLimit(nil, true, false)
 		projections := p.parseCsv(p.parseProjection)
+		var exclude []exp.Expression
+		if p.dialectFamily("redshift") {
+			projections, exclude = p.redshiftProjectionsExclude(projections)
+		}
 		selectArgs := exp.Args{"distinct": distinct, "expressions": projections, "hint": hint}
+		if len(exclude) > 0 {
+			selectArgs["exclude"] = exclude
+		}
 		if top != nil {
 			selectArgs["limit"] = top
 		}
@@ -1310,6 +1317,16 @@ func (p *Parser) parseFrom(joins bool, skipFromToken bool, consumePipe bool) exp
 }
 
 func (p *Parser) parseTable(schema bool, joins bool, aliasTokens map[tokens.TokenType]bool, parseBracket bool, isDBReference bool, parsePartition bool, consumePipe bool) exp.Expression {
+	if p.dialectFamily("redshift") {
+		// parsers/redshift.py:88-108: Redshift UNPIVOTs SUPER objects, e.g.
+		// `UNPIVOT foo.obj[0] AS val AT attr`. parse_partition isn't passed on upstream.
+		unpivot := p.match(tokens.UNPIVOT)
+		table := p.parseTableCore(schema, joins, aliasTokens, parseBracket, isDBReference, false, consumePipe)
+		if unpivot {
+			return p.expression(exp.Pivot(exp.Args{"this": table, "unpivot": true}), nil, nil)
+		}
+		return table
+	}
 	this := p.parseTableCore(schema, joins, aliasTokens, parseBracket, isDBReference, parsePartition, consumePipe)
 	if p.dialect.Name != "clickhouse" || this == nil {
 		return this
@@ -1396,7 +1413,10 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 		}
 	}
 	if this == nil {
-		this = p.parseTableParts(schema, isDBReference, false, false)
+		// parser.py:5054-5058: `_parse_bracket(self._parse_table_parts(...))` — a table part
+		// may be immediately subscripted, e.g. Redshift's `UNPIVOT foo.obj[0]`. parseBracketBase
+		// is a no-op when no `[`/`{` follows, so this is transparent otherwise.
+		this = p.parseBracket(p.parseTableParts(schema, isDBReference, false, false))
 	}
 	if this == nil {
 		return nil
@@ -1450,6 +1470,10 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 		if alias := p.parseTableAlias(aliasTokens); alias != nil {
 			this.Set("alias", alias)
 		}
+	}
+	// parser.py:5094-5097: `FROM t.arr AS a AT i` indexes the navigated array (Redshift SUPER).
+	if this.Kind() == exp.KindTable && p.matchTextSeq("AT") {
+		return p.expression(exp.AtIndex(exp.Args{"this": tableToColumn(this), "expression": p.parseIdVar(true, nil)}), nil, nil)
 	}
 	if hints := p.parseTableHints(); len(hints) > 0 {
 		this.Set("hints", hints)
@@ -3989,6 +4013,7 @@ func (p *Parser) parseFunctionArgs(alias bool) []exp.Expression {
 // FARROW/Kwarg (named-argument `=>`) isn't ported by this part, so the Go LAMBDAS table
 // mirrors only the exp.Lambda-producing half of upstream's map.
 func (p *Parser) parseLambda(alias bool) exp.Expression {
+
 	// Fast path: a simple atom (column, literal, null, bool) followed by , or ) is common
 	// and never a lambda head, so skip the L_PAREN/single-arg lambda probing below entirely
 	// (parser.py:7184-7189).
@@ -4431,6 +4456,14 @@ func (p *Parser) parseWindow(this exp.Expression, alias bool) exp.Expression {
 		p.match(tokens.WHERE)
 		this = p.expression(exp.Filter(exp.Args{"this": this, "expression": p.parseWhere(true)}), nil, nil)
 		p.matchRParen(this)
+	}
+	// FIRST_VALUE(t.c IGNORE|RESPECT NULLS) OVER ... is hoisted to FIRST_VALUE(t.c) IGNORE|RESPECT
+	// NULLS OVER ... (parser.py:8636-8641); the trailing form is parsed just below.
+	if this != nil && this.Is(exp.TraitAggFunc) {
+		if ignoreRespect := findIgnoreRespectInScope(this); ignoreRespect != nil && ignoreRespect != this {
+			ignoreRespect.Replace(ignoreRespect.This())
+			this = p.expression(exp.New(ignoreRespect.Kind(), exp.Args{"this": this}), nil, nil)
+		}
 	}
 	this = p.parseRespectOrIgnoreNulls(this)
 	var over any
@@ -4881,4 +4914,40 @@ func stringsLower(s string) string {
 		}
 	}
 	return string(out)
+}
+
+// findIgnoreRespectInScope is find_in_scope(expression, exp.IgnoreNulls, exp.RespectNulls)
+// (optimizer/scope.py:1084-1101): the first IGNORE/RESPECT NULLS in a DFS that does not descend
+// into a CTE or a nested query, the nodes that start child scopes.
+func findIgnoreRespectInScope(expression exp.Expression) exp.Expression {
+	prune := func(node exp.Expression) bool {
+		if node == expression {
+			return false
+		}
+		switch node.Kind() {
+		case exp.KindCTE, exp.KindSelect:
+			return true
+		}
+		if node.Is(exp.TraitSetOperation) {
+			return true
+		}
+		if node.Is(exp.TraitQuery) {
+			if parent := node.Parent(); parent != nil {
+				switch parent.Kind() {
+				case exp.KindFrom, exp.KindJoin:
+					return true
+				}
+				if parent.Is(exp.TraitUDTF) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	for _, node := range expression.WalkWithPrune(false, prune) {
+		if node.Kind() == exp.KindIgnoreNulls || node.Kind() == exp.KindRespectNulls {
+			return node
+		}
+	}
+	return nil
 }
