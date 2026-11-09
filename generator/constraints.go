@@ -76,6 +76,10 @@ func init() {
 		}
 		return not + "CASESPECIFIC"
 	}
+	// generator.py:5932-5935 watermarkcolumnconstraint_sql (RisingWave `WATERMARK FOR ... AS ...`).
+	dispatch[expressions.KindWatermarkColumnConstraint] = func(g *Generator, e expressions.Expression) string {
+		return "WATERMARK FOR " + g.sqlKey(e, "this") + " AS " + g.sqlKey(e, "expression")
+	}
 }
 
 // commentColumnConstraintSQL ports the base CommentColumnConstraint transform
@@ -165,7 +169,14 @@ func (g *Generator) computedColumnConstraintSQL(e expressions.Expression) string
 	case "postgres":
 		return "GENERATED ALWAYS AS (" + g.sqlKey(e, "this") + ") STORED"
 	}
+	return g.baseComputedColumnConstraintSQL(e)
+}
 
+// baseComputedColumnConstraintSQL ports the base computedcolumnconstraint_sql
+// (generator.py:1207-1216): `AS <expr> [PERSISTED [NOT NULL]]`. It is also the method
+// RisingWaveGenerator calls explicitly (generators/risingwave.py:27-28) to bypass the
+// postgres override above, hence the extracted, shared form.
+func (g *Generator) baseComputedColumnConstraintSQL(e expressions.Expression) string {
 	this := g.sqlKey(e, "this")
 	persisted := ""
 	if boolValue(e.Arg("not_null")) {

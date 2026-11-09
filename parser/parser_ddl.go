@@ -195,6 +195,12 @@ func (p *Parser) parseCreateStructured(start tokens.Token) exp.Expression {
 			}
 		} else if ctt == tokens.VIEW && p.matchTextSeq("WITH", "NO", "SCHEMA", "BINDING") {
 			noSchemaBinding = true
+		} else if ctt == tokens.SINK || ctt == tokens.SOURCE {
+			// parser.py:2699-2700: a RisingWave CREATE SINK/SOURCE carries its trailing
+			// options (WITH/FORMAT/ENCODE/KEY ENCODE) as POST_EXPRESSION properties, right
+			// after the body. They must all be consumed here — the Command fallback below
+			// degrades the whole CREATE otherwise.
+			extendProperties(p.parseProperties())
 		}
 	default:
 		return nil
@@ -682,14 +688,16 @@ func (p *Parser) parseColumnDef(this exp.Expression) exp.Expression {
 	constraints := []exp.Expression{}
 
 	// `<kind> AS (<expr>) [STORED|VIRTUAL]`: the computed-column branch at parser.py:
-	// 7283-7302. Gated on WRAPPED_TRANSFORM_COLUMN_CONSTRAINT (=True for base/mysql/
-	// postgres; only RisingWave, out of scope, overrides False), which requires the AS to
-	// be immediately followed by "(" - so `col INT AS some_expr` (no parens) is left for
-	// parseColumnConstraint's own dispatch instead. The two upstream sibling branches
-	// (ALIAS/MATERIALIZED-prefixed and IN/OUT parameter constraints, parser.py:7262-7281)
-	// are Oracle/T-SQL/procedure-only and aren't exercised by the base/mysql/postgres
-	// corpus, so they're omitted here (documented divergence).
-	if kind != nil && p.matchPair(tokens.ALIAS, tokens.L_PAREN, false) {
+	// 7538-7547 (inside _parse_column_def, parser.py:7494-7575). Gated on
+	// WRAPPED_TRANSFORM_COLUMN_CONSTRAINT (True for base/mysql/postgres; RisingWave sets it
+	// False in parsers/risingwave.py:9-10), which requires the AS to be immediately followed
+	// by "(" — so `col INT AS some_expr` (no parens) is left for parseColumnConstraint's own
+	// dispatch except in RisingWave, where the typeless-column forms are parsed here too.
+	// The two upstream sibling branches (ALIAS/MATERIALIZED-prefixed and IN/OUT parameter
+	// constraints, parser.py:7507-7537) are Oracle/T-SQL/procedure-only and aren't exercised
+	// by the base/mysql/postgres corpus, so they're omitted here (documented divergence).
+	if kind != nil && p.match(tokens.ALIAS, false) &&
+		(!p.dialect.WrappedTransformColumnConstraint || p.next.TokenType == tokens.L_PAREN) {
 		p.advance() // consume AS, leaving `(` as the current token for parseDisjunction below
 		// `this` MUST be parsed before the STORED/VIRTUAL match: upstream (parser.py:7295-7299)
 		// evaluates this=self._parse_disjunction() before persisted=self._match_texts(...), and

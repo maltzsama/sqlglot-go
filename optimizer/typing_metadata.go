@@ -568,6 +568,11 @@ func init() {
 		"Ntile":       typeSpec{returns: dtype("INT")},
 		"WidthBucket": typeSpec{returns: dtype("INT")},
 	})
+	registerTypingMetadata("risingwave", map[string]typeSpec{
+		"Encode":      typeSpec{returns: dtype("TEXT")},
+		"Ntile":       typeSpec{returns: dtype("INT")},
+		"WidthBucket": typeSpec{returns: dtype("INT")},
+	})
 }
 
 var _ = exp.DTypeUnknown

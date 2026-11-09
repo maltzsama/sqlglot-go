@@ -235,6 +235,13 @@ const (
 	KindParameter
 	KindRawString
 	KindFileFormatProperty
+	// KindEncodeProperty/KindIncludeProperty port exp.EncodeProperty/exp.IncludeProperty
+	// (properties.py:586-591): RisingWave's `ENCODE|KEY ENCODE <fmt> (...)` and
+	// `INCLUDE <name> [coldef] [AS alias]` CREATE SOURCE/SINK options
+	// (parsers/risingwave.py:44-66). Both are plain Property subclasses (no
+	// Func/Condition/... mixin), so neither gets a traitsOf row below.
+	KindEncodeProperty
+	KindIncludeProperty
 	// The DDL constraint/alter/drop node family below closes the CREATE-table constraint,
 	// ALTER TABLE/VIEW/INDEX, and DROP round-trip gaps: expressions/constraints.py (column
 	// constraints, PRIMARY KEY, FOREIGN KEY, indexes) and expressions/ddl.py (ALTER/DROP
@@ -260,6 +267,11 @@ const (
 	KindGeneratedAsRowColumnConstraint
 	KindComputedColumnConstraint
 	KindCaseSpecificColumnConstraint
+	// KindWatermarkColumnConstraint ports exp.WatermarkColumnConstraint (constraints.py:
+	// 181-182, arg_types={"this": True, "expression": True}): RisingWave's `WATERMARK FOR
+	// <col> AS <expr>` column option (parsers/risingwave.py CONSTRAINT_PARSERS). It is a
+	// plain Expression (no ColumnConstraintKind/Func/... mixin), so it gets no traitsOf row.
+	KindWatermarkColumnConstraint
 	KindNotForReplicationColumnConstraint
 	KindZeroFillColumnConstraint
 	KindInvisibleColumnConstraint
@@ -1194,6 +1206,9 @@ var argTypes = map[Kind][]argSpec{
 	KindParameter:          {{"this", true}, {"expression", false}},
 	KindRawString:          {{"this", true}},
 	KindFileFormatProperty: {{"this", false}, {"expressions", false}, {"hive_format", false}},
+	// EncodeProperty/IncludeProperty (properties.py:587,591).
+	KindEncodeProperty:  {{"this", true}, {"properties", false}, {"key", false}},
+	KindIncludeProperty: {{"this", true}, {"alias", false}, {"column_def", false}},
 	// ColumnConstraint/Constraint/PrimaryKey/ForeignKey/Reference family (constraints.py:8-237).
 	KindColumnConstraint:           {{"this", false}, {"kind", true}},
 	KindConstraint:                 {{"this", true}, {"expressions", true}},
@@ -1226,6 +1241,7 @@ var argTypes = map[Kind][]argSpec{
 	KindGeneratedAsRowColumnConstraint:      {{"start", false}, {"hidden", false}},
 	KindComputedColumnConstraint:            {{"this", true}, {"persisted", false}, {"not_null", false}, {"data_type", false}},
 	KindCaseSpecificColumnConstraint:        {{"not_", true}},
+	KindWatermarkColumnConstraint:           {{"this", true}, {"expression", true}},
 	// Explicit arg_types = {} classes (constraints.py:37,41,144): no args at all.
 	KindNotForReplicationColumnConstraint: {},
 	KindZeroFillColumnConstraint:          {},
@@ -2269,6 +2285,8 @@ var className = map[Kind]string{
 	KindParameter:                           "Parameter",
 	KindRawString:                           "RawString",
 	KindFileFormatProperty:                  "FileFormatProperty",
+	KindEncodeProperty:                      "EncodeProperty",
+	KindIncludeProperty:                     "IncludeProperty",
 	KindColumnConstraint:                    "ColumnConstraint",
 	KindConstraint:                          "Constraint",
 	KindPrimaryKey:                          "PrimaryKey",
@@ -2288,6 +2306,7 @@ var className = map[Kind]string{
 	KindGeneratedAsRowColumnConstraint:      "GeneratedAsRowColumnConstraint",
 	KindComputedColumnConstraint:            "ComputedColumnConstraint",
 	KindCaseSpecificColumnConstraint:        "CaseSpecificColumnConstraint",
+	KindWatermarkColumnConstraint:           "WatermarkColumnConstraint",
 	KindNotForReplicationColumnConstraint:   "NotForReplicationColumnConstraint",
 	KindZeroFillColumnConstraint:            "ZeroFillColumnConstraint",
 	KindInvisibleColumnConstraint:           "InvisibleColumnConstraint",

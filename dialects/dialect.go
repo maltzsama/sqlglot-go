@@ -836,6 +836,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return Redshift(), nil
 	case "materialize":
 		return Materialize(), nil
+	case "risingwave":
+		return RisingWave(), nil
 	default:
 		return nil, fmt.Errorf("unknown dialect %q", name)
 	}

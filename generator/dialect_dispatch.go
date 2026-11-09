@@ -25,6 +25,7 @@ var (
 		"doris":        "mysql",
 		"redshift":     "postgres",
 		"materialize":  "postgres",
+		"risingwave":   "postgres",
 		"trino":        "presto",
 		"athena-trino": "trino",
 		"athena-hive":  "hive",

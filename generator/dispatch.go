@@ -199,6 +199,9 @@ func init() {
 	dispatch[expressions.KindKwarg] = func(g *Generator, e expressions.Expression) string {
 		return g.binary(e, "=>")
 	}
+	// generator.py:5937-5957 encodeproperty_sql / includeproperty_sql (RisingWave options).
+	dispatch[expressions.KindEncodeProperty] = (*Generator).encodePropertySQL
+	dispatch[expressions.KindIncludeProperty] = (*Generator).includePropertySQL
 	dispatch[expressions.KindAtTimeZone] = (*Generator).atTimeZoneSQL
 	dispatch[expressions.KindPseudoType] = (*Generator).pseudoTypeSQL
 	dispatch[expressions.KindObjectIdentifier] = (*Generator).objectIdentifierSQL

@@ -38,6 +38,12 @@ func ComputedColumnConstraint(args Args) Expression {
 func CaseSpecificColumnConstraint(args Args) Expression {
 	return newNode(KindCaseSpecificColumnConstraint, args)
 }
+
+// WatermarkColumnConstraint ports exp.WatermarkColumnConstraint (constraints.py:181-182):
+// RisingWave's `WATERMARK FOR <col> AS <expr>` column option.
+func WatermarkColumnConstraint(args Args) Expression {
+	return newNode(KindWatermarkColumnConstraint, args)
+}
 func NotForReplicationColumnConstraint(args Args) Expression {
 	return newNode(KindNotForReplicationColumnConstraint, args)
 }

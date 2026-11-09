@@ -416,6 +416,33 @@ func (g *Generator) fileFormatPropertySQL(e expressions.Expression) string {
 	return "FORMAT=" + g.sqlKey(e, "this")
 }
 
+// encodePropertySQL ports encodeproperty_sql (generator.py:5937-5945): RisingWave's
+// `ENCODE|KEY ENCODE <fmt> [(k = v, ...)]` CREATE SOURCE/SINK option.
+func (g *Generator) encodePropertySQL(e expressions.Expression) string {
+	encode := "ENCODE"
+	if boolValue(e.Arg("key")) {
+		encode = "KEY ENCODE"
+	}
+	encode += " " + g.sqlKey(e, "this")
+	if props := asExpression(e.Arg("properties")); props != nil {
+		encode += " " + g.renderProperties(props, "", ", ", "", true)
+	}
+	return encode
+}
+
+// includePropertySQL ports includeproperty_sql (generator.py:5947-5957): RisingWave's
+// `INCLUDE <name> [<coldef> [AS <alias>]]` CREATE SOURCE option.
+func (g *Generator) includePropertySQL(e expressions.Expression) string {
+	include := "INCLUDE " + g.sqlKey(e, "this")
+	if columnDef := g.sqlKey(e, "column_def"); columnDef != "" {
+		include += " " + columnDef
+	}
+	if alias := g.sqlKey(e, "alias"); alias != "" {
+		include += " AS " + alias
+	}
+	return include
+}
+
 func (g *Generator) aliasSQL(e expressions.Expression) string {
 	alias := g.sqlKey(e, "alias")
 	if alias != "" {
@@ -1897,7 +1924,14 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 		clone = " " + clone
 	}
 
-	sql := "CREATE" + modifiers + " " + kind + concurrently + exists + " " + this + propertiesSQL + expressionSQL + postExpressionSQL + indexSQL + noSchemaBinding + clone
+	// generator.py:1431-1435 EXPRESSION_PRECEDES_PROPERTIES_CREATABLES: RisingWave's
+	// `CREATE SINK ... AS <select> WITH (...)` renders the body before the WITH properties
+	// (generators/risingwave.py:26).
+	bodyAndProperties := propertiesSQL + expressionSQL
+	if g.dialect.ExpressionPrecedesPropertiesCreatables[kind] {
+		bodyAndProperties = expressionSQL + propertiesSQL
+	}
+	sql := "CREATE" + modifiers + " " + kind + concurrently + exists + " " + this + bodyAndProperties + postExpressionSQL + indexSQL + noSchemaBinding + clone
 	return g.prependCtes(e, sql)
 }
 

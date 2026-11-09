@@ -472,6 +472,12 @@ var indexOrKeyTokens = map[tokens.TokenType]bool{tokens.INDEX: true, tokens.KEY:
 // hints and MySQL `USE|FORCE|IGNORE INDEX [FOR JOIN|ORDER BY|GROUP BY] (...)` index hints.
 // Called from parseTable, right after alias parsing (parser.py:4920).
 func (p *Parser) parseTableHints() []exp.Expression {
+	// parsers/risingwave.py:34-37: RisingWave has no hint grammar — "Do nothing here to
+	// avoid WITH keywords conflict in CREATE SINK statement" — so `FROM a WITH (...)` must
+	// not swallow the connector properties that follow the table.
+	if p.disableTableHints() {
+		return nil
+	}
 	var hints []exp.Expression
 	if p.matchPair(tokens.WITH, tokens.L_PAREN, true) {
 		hints = append(hints, p.expression(exp.WithTableHint(exp.Args{

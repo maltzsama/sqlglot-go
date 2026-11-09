@@ -63,11 +63,12 @@ from tests.dialects.test_doris import TestDoris  # noqa: E402
 from tests.dialects.test_oracle import TestOracle  # noqa: E402
 from tests.dialects.test_redshift import TestRedshift  # noqa: E402
 from tests.dialects.test_materialize import TestMaterialize  # noqa: E402
+from tests.dialects.test_risingwave import TestRisingWave  # noqa: E402
 from tests.dialects.test_mysql import TestMySQL  # noqa: E402
 from tests.dialects.test_postgres import TestPostgres  # noqa: E402
 
-DIALECTS = ("mysql", "postgres", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize")
-SAME_DIALECT_WRITES = {"athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize"}
+DIALECTS = ("mysql", "postgres", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave")
+SAME_DIALECT_WRITES = {"athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave"}
 
 captured = []
 
@@ -171,7 +172,7 @@ def main():
 
     runner = unittest.TextTestRunner(verbosity=0)
     unexpected = []
-    for cls in (TestMySQL, TestPostgres, TestAthena, TestTrino, TestPresto, TestHive, TestTSQL, TestClickhouse, TestStarrocks, TestDoris, TestOracle, TestRedshift, TestMaterialize):
+    for cls in (TestMySQL, TestPostgres, TestAthena, TestTrino, TestPresto, TestHive, TestTSQL, TestClickhouse, TestStarrocks, TestDoris, TestOracle, TestRedshift, TestMaterialize, TestRisingWave):
         if cls.dialect not in selected:
             continue
         result = runner.run(unittest.defaultTestLoader.loadTestsFromTestCase(cls))

@@ -56,6 +56,10 @@ type dialectParserOverrideSet struct {
 	// LambdaArgParser ports a dialect's _parse_lambda_arg override
 	// (parsers/materialize.py:16-17: _parse_field).
 	LambdaArgParser func(*Parser) exp.Expression
+	// DisableTableHints ports RisingWaveParser._parse_table_hints (parsers/risingwave.py:
+	// 34-37): the dialect has no T-SQL/MySQL hint grammar, so `FROM a WITH (...)` must not
+	// swallow the connector properties that follow the table.
+	DisableTableHints bool
 }
 
 var dialectParserOverrides = map[string]dialectParserOverrideSet{}
@@ -119,6 +123,7 @@ var parserOverrideParents = map[string]string{
 	"doris":       "mysql",
 	"redshift":    "postgres",
 	"materialize": "postgres",
+	"risingwave":  "postgres",
 }
 
 // overrideChain lists the override keys from the parser's own key up through its parents.
@@ -263,6 +268,17 @@ func (p *Parser) lambdaFor(tt tokens.TokenType) func(*Parser, []exp.Expression) 
 func (p *Parser) typedLambdaArgs() bool {
 	for _, key := range p.overrideChain() {
 		if dialectParserOverrides[key].TypedLambdaArgs {
+			return true
+		}
+	}
+	return false
+}
+
+// disableTableHints reports whether any parser class in the chain disables table hints
+// (parsers/risingwave.py:34-37: RisingWaveParser._parse_table_hints always returns None).
+func (p *Parser) disableTableHints() bool {
+	for _, key := range p.overrideChain() {
+		if dialectParserOverrides[key].DisableTableHints {
 			return true
 		}
 	}

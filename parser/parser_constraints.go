@@ -36,6 +36,13 @@ var (
 	clickhouseConstraintParserKeySet   map[string]bool
 	clickhouseSchemaUnnamedConstraints map[string]bool
 
+	// risingwaveConstraintParsers/risingwaveSchemaUnnamedConstraints port
+	// parsers/risingwave.py:24-33: the base CONSTRAINT_PARSERS / SCHEMA_UNNAMED_CONSTRAINTS
+	// (Postgres registers none of its own) plus the WATERMARK column constraint.
+	risingwaveConstraintParsers        map[string]func(*Parser) exp.Expression
+	risingwaveConstraintParserKeySet   map[string]bool
+	risingwaveSchemaUnnamedConstraints map[string]bool
+
 	// schemaUnnamedConstraints/mysqlSchemaUnnamedConstraints port the base subset of
 	// SCHEMA_UNNAMED_CONSTRAINTS (parser.py:1528-1536) that this port has parsers for
 	// (CHECK/EXCLUDE/FOREIGN KEY/LIKE/PERIOD/PRIMARY KEY/UNIQUE), plus mysql's FULLTEXT/
@@ -229,6 +236,24 @@ func init() {
 	}
 	clickhouseSchemaUnnamedConstraints["INDEX"] = true
 	delete(clickhouseSchemaUnnamedConstraints, "CHECK")
+
+	// risingwaveConstraintParsers ports parsers/risingwave.py:24-28 CONSTRAINT_PARSERS:
+	// `**PostgresParser.CONSTRAINT_PARSERS` (which is the base table) plus WATERMARK.
+	risingwaveConstraintParsers = make(map[string]func(*Parser) exp.Expression, len(constraintParsers)+1)
+	for k, v := range constraintParsers {
+		risingwaveConstraintParsers[k] = v
+	}
+	risingwaveConstraintParsers["WATERMARK"] = func(p *Parser) exp.Expression { return p.parseWatermarkConstraint() }
+	risingwaveConstraintParserKeySet = funcMapKeys(risingwaveConstraintParsers)
+
+	// risingwaveSchemaUnnamedConstraints ports parsers/risingwave.py:30-33:
+	// `*PostgresParser.SCHEMA_UNNAMED_CONSTRAINTS` plus WATERMARK, so the schema-level
+	// `WATERMARK FOR <col> AS <expr>` dispatches before the column-definition parse.
+	risingwaveSchemaUnnamedConstraints = make(map[string]bool, len(schemaUnnamedConstraints)+1)
+	for k, v := range schemaUnnamedConstraints {
+		risingwaveSchemaUnnamedConstraints[k] = v
+	}
+	risingwaveSchemaUnnamedConstraints["WATERMARK"] = true
 }
 
 // funcMapKeys materializes a map[string]func(*Parser) exp.Expression's keys as a bool set,
@@ -249,6 +274,8 @@ func (p *Parser) constraintParsers() map[string]func(*Parser) exp.Expression {
 		return tsqlConstraintParsers
 	case p.dialectIs("clickhouse"):
 		return clickhouseConstraintParsers
+	case p.dialectIs("risingwave"):
+		return risingwaveConstraintParsers
 	}
 	return constraintParsers
 }
@@ -261,6 +288,8 @@ func (p *Parser) constraintParserKeys() map[string]bool {
 		return tsqlConstraintParserKeySet
 	case p.dialectIs("clickhouse"):
 		return clickhouseConstraintParserKeySet
+	case p.dialectIs("risingwave"):
+		return risingwaveConstraintParserKeySet
 	}
 	return constraintParserKeySet
 }
@@ -271,6 +300,8 @@ func (p *Parser) schemaUnnamedConstraints() map[string]bool {
 		return mysqlSchemaUnnamedConstraints
 	case p.dialectIs("clickhouse"):
 		return clickhouseSchemaUnnamedConstraints
+	case p.dialectIs("risingwave"):
+		return risingwaveSchemaUnnamedConstraints
 	}
 	return schemaUnnamedConstraints
 }

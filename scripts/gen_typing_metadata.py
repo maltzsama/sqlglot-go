@@ -23,7 +23,7 @@ from sqlglot.dialects.dialect import Dialect  # noqa: E402
 
 GO_DIALECTS = [
     "mysql", "postgres", "presto", "trino", "hive", "athena", "tsql",
-    "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize",
+    "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave",
 ]
 
 # Lambda / function source -> Go annotator expression (a func(*TypeAnnotator, exp.Expression)).
