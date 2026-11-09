@@ -61,18 +61,26 @@ type Dialect struct {
 	// forms (CAST, EXTRACT ... FROM, TRIM ... FROM, SUBSTRING ... FROM/FOR, POSITION ... IN,
 	// CHAR ... USING, CEIL ... TO) keep their structured nodes and render form-faithfully.
 	// Set via the `opaque_functions` dialect setting at GetOrRaise resolve time.
-	OpaqueFunctions          bool
-	NormalizationStrategy    NormalizationStrategy
-	DPipeIsStringConcat      bool
-	StrictStringConcat       bool
-	TypedDivision            bool
-	SafeDivision             bool
-	SupportsColumnJoinMarks  bool
-	ColonIsVariantExtract    bool
-	NullOrdering             string
-	SupportsOrderByAll       bool
-	TryCastRequiresString    *bool
-	DatePartMapping          map[string]string
+	OpaqueFunctions         bool
+	NormalizationStrategy   NormalizationStrategy
+	DPipeIsStringConcat     bool
+	StrictStringConcat      bool
+	TypedDivision           bool
+	SafeDivision            bool
+	SupportsColumnJoinMarks bool
+	ColonIsVariantExtract   bool
+	NullOrdering            string
+	SupportsOrderByAll      bool
+	TryCastRequiresString   *bool
+	DatePartMapping         map[string]string
+	// TimeMapping / InverseTimeMapping port TIME_MAPPING (dialects/dialect.py:447) and the
+	// metaclass-generated INVERSE_TIME_MAPPING (dialect.py:261-271): the dialect's TO_CHAR-style
+	// pattern table (parse side, consumed by build_formatted_time) and its inverse (generate
+	// side, consumed by Generator.format_time). nil for dialects upstream leaves at the {}
+	// default; the Postgres family populates both (redshift overriding with its MON/MONTH
+	// additions, dialects/redshift.py:30-34).
+	TimeMapping              map[string]string
+	InverseTimeMapping       map[string]string
 	ValidIntervalUnits       map[string]bool
 	SupportsUserDefinedTypes bool
 	SupportsFixedSizeArrays  bool
@@ -159,6 +167,24 @@ type Dialect struct {
 	// SupportsChangeColumn ports the generator flag of the same name (generator.py:478):
 	// whether `ALTER TABLE ... CHANGE COLUMN <rename-and-redefine>` syntax is supported.
 	SupportsChangeColumn bool
+	// SupportsCreateTableLike ports the generator flag of the same name (generator.py:480):
+	// whether the CREATE TABLE LIKE statement is supported (base True; Materialize overrides
+	// False, generators/materialize.py:15). Consumed by likeproperty_sql.
+	SupportsCreateTableLike bool
+	// SupportsBetweenFlags ports the generator flag of the same name (generator.py:608):
+	// whether SYMMETRIC/ASYMMETRIC flags are supported with BETWEEN (base False; postgres
+	// True, generators/postgres.py:280; Materialize and RisingWave re-override False).
+	SupportsBetweenFlags bool
+	// ExpressionPrecedesPropertiesCreatables ports Generator.EXPRESSION_PRECEDES_PROPERTIES_
+	// CREATABLES (generator.py:684, base empty set): creatable kinds whose `AS <expression>`
+	// renders before the POST_SCHEMA/POST_WITH properties instead of after them (risingwave
+	// SINK, generators/risingwave.py:22).
+	ExpressionPrecedesPropertiesCreatables map[string]bool
+	// WrappedTransformColumnConstraint ports Parser.WRAPPED_TRANSFORM_COLUMN_CONSTRAINT
+	// (parser.py:1896): whether the `name AS expr` column transform requires the expression
+	// to be parenthesized (base True; risingwave overrides False, parsers/risingwave.py:11,
+	// so `col INT AS expr` parses without the parens).
+	WrappedTransformColumnConstraint bool
 	// VarcharRequiresSize ports the MySQL-generator-family flag of the same name
 	// (generators/mysql.py:149): MySQL requires VARCHAR to carry an explicit size.
 	VarcharRequiresSize bool
@@ -346,6 +372,10 @@ type Dialect struct {
 	// lowercased name is in this set are quoted on generation (identifier_sql, generator.py:
 	// 1983). A nil/empty map (base's zero value) means "quote nothing extra".
 	ReservedKeywords map[string]bool
+	// StringEscape is STRING_ESCAPES[0] when the dialect lists an escape ahead of the quote
+	// (Redshift's ["\\", "'"]); the generator escapes a quote with it. Empty means the
+	// tokenizer's escapes decide, as before.
+	StringEscape string
 	// BitStart/BitEnd, HexStart/HexEnd, ByteStart/ByteEnd port BIT_START/BIT_END,
 	// HEX_START/HEX_END, BYTE_START/BYTE_END (dialects/dialect.py:292-295): the
 	// bitstringSQL/hexstringSQL/bytestringSQL delimiters, derived upstream from the FIRST
@@ -436,6 +466,18 @@ type Dialect struct {
 	// UnpivotAliasesAreIdentifiers ports generator.py UNPIVOT_ALIASES_ARE_IDENTIFIERS
 	// (Oracle disables it, keeping string/number aliases as literals).
 	UnpivotAliasesAreIdentifiers bool
+	// ArrayConcatIsVarLen ports generator.py ARRAY_CONCAT_IS_VAR_LEN: whether ARRAY_CONCAT takes
+	// any number of arguments (true) or nests binary calls (false, Redshift).
+	ArrayConcatIsVarLen bool
+	// ArrayFuncsPropagatesNulls ports ARRAY_FUNCS_PROPAGATES_NULLS (dialects/dialect.py): whether
+	// the array functions return NULL when any input array is NULL (Redshift).
+	ArrayFuncsPropagatesNulls bool
+	// HasDistinctArrayConstructors ports HAS_DISTINCT_ARRAY_CONSTRUCTORS: ARRAY[...] and
+	// ARRAY(...) are different constructors, so the parser records which one was written.
+	HasDistinctArrayConstructors bool
+	// StarExcludeRequiresDerivedTable ports generator.py STAR_EXCLUDE_REQUIRES_DERIVED_TABLE
+	// (true by default; Redshift renders a select-level EXCLUDE inline).
+	StarExcludeRequiresDerivedTable bool
 }
 
 func Base() *Dialect {
@@ -443,19 +485,21 @@ func Base() *Dialect {
 	return &Dialect{
 		Name: "base",
 		// dialects/dialect.py:754 SAFE_TO_ELIMINATE_DOUBLE_NEGATION = True.
-		SafeToEliminateDoubleNegation: true,
-		QuoteStart:                    "'",
-		QuoteEnd:                      "'",
-		IdentifierStart:               "\"",
-		IdentifierEnd:                 "\"",
-		TokenizerConfig:               tokens.BaseConfig(),
-		NormalizationStrategy:         Lowercase,
-		DPipeIsStringConcat:           true,
-		NullOrdering:                  "nulls_are_small",
-		DatePartMapping:               datePartMapping,
-		ValidIntervalUnits:            validIntervalUnits(datePartMapping),
-		SupportsUserDefinedTypes:      true,
-		SupportsFixedSizeArrays:       false,
+		SafeToEliminateDoubleNegation:   true,
+		ArrayConcatIsVarLen:             true,
+		StarExcludeRequiresDerivedTable: true,
+		QuoteStart:                      "'",
+		QuoteEnd:                        "'",
+		IdentifierStart:                 "\"",
+		IdentifierEnd:                   "\"",
+		TokenizerConfig:                 tokens.BaseConfig(),
+		NormalizationStrategy:           Lowercase,
+		DPipeIsStringConcat:             true,
+		NullOrdering:                    "nulls_are_small",
+		DatePartMapping:                 datePartMapping,
+		ValidIntervalUnits:              validIntervalUnits(datePartMapping),
+		SupportsUserDefinedTypes:        true,
+		SupportsFixedSizeArrays:         false,
 		// Accept a bare string as a table name/alias by default (upstream is unconditional here);
 		// postgres/mysql override to false to match their real engines. See the field doc.
 		StringTableIdentifiers: true,
@@ -490,6 +534,18 @@ func Base() *Dialect {
 		// MySQL overrides both to True (generators/mysql.py:127-128).
 		SupportsModifyColumn: false,
 		SupportsChangeColumn: false,
+		// generator.py:480 SUPPORTS_CREATE_TABLE_LIKE = True (base); Materialize overrides
+		// to False (generators/materialize.py:15).
+		SupportsCreateTableLike: true,
+		// generator.py:608 SUPPORTS_BETWEEN_FLAGS = False (base); postgres overrides to True
+		// (generators/postgres.py:280), Materialize/RisingWave back to False.
+		SupportsBetweenFlags: false,
+		// generator.py:684 EXPRESSION_PRECEDES_PROPERTIES_CREATABLES = set() (base); only
+		// the risingwave SINK creatable overrides it (generators/risingwave.py:22).
+		ExpressionPrecedesPropertiesCreatables: map[string]bool{},
+		// parser.py:1896 WRAPPED_TRANSFORM_COLUMN_CONSTRAINT = True (base); only risingwave
+		// overrides it to False (parsers/risingwave.py:11).
+		WrappedTransformColumnConstraint: true,
 		// generators/mysql.py:149 VARCHAR_REQUIRES_SIZE = True; not a base Generator
 		// attribute at all (only referenced within the MySQL generator family), so base
 		// (and postgres, which doesn't override it) is False.

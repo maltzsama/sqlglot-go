@@ -160,6 +160,12 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"TIME_STR_TO_DATE": genericFunction(KindTimeStrToDate),
 	"TIME_STR_TO_TIME": genericFunction(KindTimeStrToTime),
 	"TIME_STR_TO_UNIX": genericFunction(KindTimeStrToUnix),
+	// TimeToStr (temporal.py:486-487) declares no _sql_names, so upstream auto-registers it
+	// under its camel-case name only (core.py:1676-1683 sql_names -> FUNCTION_BY_NAME via
+	// parser.py:374). Base has no TimeToStr generator transform, so it renders back verbatim
+	// through functionFallbackSQL (`TIME_TO_STR(...)`); only dialects carrying a TIME_MAPPING
+	// override generation (generators/postgres.py:399 -> TO_CHAR).
+	"TIME_TO_STR": genericFunction(KindTimeToStr),
 	// dialect-funcs cluster singleton base entries (parity_gaps.txt gaps 114/160; verified
 	// against parser.py:121-129,394 - both are truly base-scope upstream, not per-dialect,
 	// unlike DATABASE()/SCHEMA() below which parsers/mysql.py:134-135 register mysql-only

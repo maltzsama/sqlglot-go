@@ -1700,7 +1700,7 @@ func (p *Parser) parseJoin(skipJoinToken bool, parseBracket bool, aliasTokensArg
 	}
 	if stringsUpper(join.Text("kind")) == "ARRAY" {
 		for _, table := range join.FindAll(exp.KindTable) {
-			table.Replace(clickhouseTableToColumn(table))
+			table.Replace(tableToColumn(table))
 		}
 	}
 	return join

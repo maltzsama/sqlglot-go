@@ -1407,9 +1407,20 @@ func (g *Generator) distinctSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) ignoreNullsSQL(e expressions.Expression) string {
+	if g.isDialect("postgres") {
+		// generators/postgres.py:545-548
+		// https://www.postgresql.org/docs/current/functions-window.html
+		g.unsupported("PostgreSQL does not support IGNORE NULLS.")
+		return g.sqlKey(e, "this")
+	}
 	return g.embedIgnoreNulls(e, "IGNORE NULLS")
 }
 func (g *Generator) respectNullsSQL(e expressions.Expression) string {
+	if g.isDialect("postgres") {
+		// generators/postgres.py:550-553
+		g.unsupported("PostgreSQL does not support RESPECT NULLS.")
+		return g.sqlKey(e, "this")
+	}
 	return g.embedIgnoreNulls(e, "RESPECT NULLS")
 }
 

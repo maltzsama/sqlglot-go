@@ -33,6 +33,8 @@ func Postgres() *Dialect {
 	d.ParameterToken = "$"
 	// generators/postgres.py:235 LOCKING_READS_SUPPORTED = True.
 	d.LockingReadsSupported = true
+	// generators/postgres.py:280 SUPPORTS_BETWEEN_FLAGS = True.
+	d.SupportsBetweenFlags = true
 	// dialects/postgres.py:20 TABLESAMPLE_SIZE_IS_PERCENT = True.
 	d.TablesampleSizeIsPercent = true
 	// generators/postgres.py:242 TABLESAMPLE_SIZE_IS_ROWS = False.
@@ -49,6 +51,13 @@ func Postgres() *Dialect {
 	d.NormalizeNotNull = false
 	// generators/postgres.py:245 JSON_TYPE_REQUIRED_FOR_EXTRACTION = True.
 	d.JSONTypeRequiredForExtraction = true
+
+	// dialects/postgres.py:30-70 TIME_MAPPING, with the metaclass-generated inverse
+	// (dialect.py:261-271). Consumed parse-side by the TO_CHAR builder below
+	// (parsers/postgres.py:122 build_formatted_time) and generate-side by
+	// generators/postgres.py:399 exp.TimeToStr -> TO_CHAR.
+	d.TimeMapping = postgresTimeMapping
+	d.InverseTimeMapping = inverseTimeMapping(postgresTimeMapping, postgresTimeMappingOrder)
 	// TODO(slice 5b): DEFAULT_FUNCTIONS_COLUMN_NAMES (needs KindExplodingGenerateSeries + FUNCTIONS override).
 	// TODO(slice 5b): typing/{mysql,postgres}.py EXPRESSION_METADATA — feeds annotate_types only, off probe's path (ROADMAP 4c).
 
@@ -63,6 +72,20 @@ func Postgres() *Dialect {
 	d.Functions = map[string]func([]exp.Expression) exp.Expression{
 		"CHAR_LENGTH":      exp.FromArgListFunc(exp.KindLength),
 		"CHARACTER_LENGTH": exp.FromArgListFunc(exp.KindLength),
+		// parsers/postgres.py:120 "NOW": exp.CurrentTimestamp.from_arg_list. Materialize and
+		// RisingWave inherit this through their PostgresParser chain, so `NOW()` builds
+		// CurrentTimestamp and renders bare CURRENT_TIMESTAMP there (niladicBareDialects).
+		"NOW": exp.FromArgListFunc(exp.KindCurrentTimestamp),
+		// parsers/postgres.py:111 "DATE_TRUNC": build_timestamp_trunc (dialect.py:1903-1904).
+		// Upstream additionally normalizes the unit through TimeUnit.__init__
+		// (core.py:2055-2066: an uppercased, unabbreviated Var), which exp.TimeUnitVar ports,
+		// so `DATE_TRUNC('month', x)` generates `DATE_TRUNC('MONTH', x)`.
+		"DATE_TRUNC": postgresBuildTimestampTrunc,
+		// parsers/postgres.py:122 "TO_CHAR": build_formatted_time(exp.TimeToStr). The builder
+		// reads the mapping off the Dialect at call time, so subclasses that override
+		// TIME_MAPPING after Postgres() returns (Redshift's MON/MONTH) convert with their own
+		// table — the same object identity upstream gets from the class-level TIME_TRIE.
+		"TO_CHAR": postgresBuildFormattedTime(d),
 	}
 
 	cfg := tokens.BaseConfig()
@@ -172,4 +195,102 @@ func Postgres() *Dialect {
 	delete(cfg.Commands, tokens.SHOW)
 	d.TokenizerConfig = tokens.CompileConfig(cfg)
 	return d
+}
+
+// seqGet ports sqlglot.helper.seq_get: args[i] or nil when out of range.
+func seqGet(args []exp.Expression, i int) exp.Expression {
+	if i < 0 || i >= len(args) {
+		return nil
+	}
+	return args[i]
+}
+
+// postgresBuildTimestampTrunc ports build_timestamp_trunc (dialects/dialect.py:1903-1904):
+// TimestampTrunc(this=args[1], unit=args[0]). The unit additionally runs through
+// TimeUnit.__init__ (core.py:2055-2066), which uppercases literal/var units into a Var —
+// exp.TimeUnitVar carries that normalization into this port.
+func postgresBuildTimestampTrunc(args []exp.Expression) exp.Expression {
+	return exp.TimestampTrunc(exp.Args{
+		"this": seqGet(args, 1),
+		"unit": exp.TimeUnitVar(seqGet(args, 0)),
+	})
+}
+
+// postgresTimeMappingOrder replays the upstream dict insertion order (dialects/postgres.py:
+// 30-70) so the generated INVERSE_TIME_MAPPING resolves duplicate values deterministically
+// (last key wins, exactly like the Python dict comprehension over the ordered literal).
+var postgresTimeMappingOrder = []string{
+	"d", "D", "dd", "DD", "ddd", "DDD", "FMDD", "FMDDD", "FMHH12", "FMHH24", "FMMI", "FMMM",
+	"FMSS", "HH12", "HH24", "mi", "MI", "mm", "MM", "OF", "ss", "SS", "TMDay", "TMDy",
+	"TMMon", "TMMonth", "day", "dy", "TZ", "US", "ww", "WW", "yy", "YY", "yyy", "YYY",
+	"yyyy", "YYYY",
+}
+
+// postgresTimeMapping is TIME_MAPPING (dialects/postgres.py:30-70): TO_CHAR-style pattern
+// -> Python strftime, in upstream insertion order.
+var postgresTimeMapping = map[string]string{
+	"d":   "%u", // 1-based day of week
+	"D":   "%u", // 1-based day of week
+	"dd":  "%d", // day of month
+	"DD":  "%d", // day of month
+	"ddd": "%j", // zero padded day of year
+	"DDD": "%j", // zero padded day of year
+	// FMDD is %-d: "- is no leading zero for Python; same for FM in postgres".
+	"FMDD":    "%-d",
+	"FMDDD":   "%-j",
+	"FMHH12":  "%-I", // 9
+	"FMHH24":  "%-H", // 9
+	"FMMI":    "%-M", // Minute
+	"FMMM":    "%-m", // 1
+	"FMSS":    "%-S", // Second
+	"HH12":    "%I",  // 09
+	"HH24":    "%H",  // 09
+	"mi":      "%M",  // zero padded minute
+	"MI":      "%M",  // zero padded minute
+	"mm":      "%m",  // 01
+	"MM":      "%m",  // 01
+	"OF":      "%z",  // utc offset
+	"ss":      "%S",  // zero padded second
+	"SS":      "%S",  // zero padded second
+	"TMDay":   "%A",  // TM is locale dependent
+	"TMDy":    "%a",
+	"TMMon":   "%b",        // Sep
+	"TMMonth": "%B",        // September
+	"day":     "%Aenlower", // tuesday
+	"dy":      "%aenlower", // tue
+	"TZ":      "%Z",        // uppercase timezone name
+	"US":      "%f",        // zero padded microsecond
+	"ww":      "%U",        // 1-based week of year
+	"WW":      "%U",        // 1-based week of year
+	"yy":      "%y",        // 15
+	"YY":      "%y",        // 15
+	"yyy":     "%Ythree",   // 015
+	"YYY":     "%Ythree",   // 015
+	"yyyy":    "%Y",        // 2015
+	"YYYY":    "%Y",        // 2015
+}
+
+// postgresBuildFormattedTime ports build_formatted_time (dialects/dialect.py:1592-1618) for
+// the parsers/postgres.py:122 TO_CHAR entry: no dialect_override and no default, so a present
+// format argument converts through this Dialect's TIME_MAPPING (Dialect.format_time,
+// dialect.py:1014-1024: only string literals convert; anything else passes through).
+func postgresBuildFormattedTime(d *Dialect) func([]exp.Expression) exp.Expression {
+	return func(args []exp.Expression) exp.Expression {
+		this := seqGet(args, 0)
+		format := seqGet(args, 1)
+		if format == nil {
+			// fmt stays None upstream (default=None) and format_time(None) returns it unchanged.
+			return exp.TimeToStr(exp.Args{"this": this})
+		}
+		if format.IsString() {
+			converted, ok := FormatTime(format.Name(), d.TimeMapping)
+			if !ok {
+				// time.py:27 returns None for an empty format; Literal.string(None) stores
+				// "None" — the same handling hiveFormatTime applies (dialects/hive.go:412-417).
+				converted = "None"
+			}
+			format = exp.LiteralString(converted)
+		}
+		return exp.TimeToStr(exp.Args{"this": this, "format": format})
+	}
 }

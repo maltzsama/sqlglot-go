@@ -601,8 +601,8 @@ func (p *Parser) parseClickhouseJoinParts() (method, side, kind *tokens.Token) {
 	return method, side, kind
 }
 
-// clickhouseTableToColumn ports Table.to_column (expressions/query.py:1004-1018).
-func clickhouseTableToColumn(table exp.Expression) exp.Expression {
+// tableToColumn ports Table.to_column (expressions/query.py:1004-1018).
+func tableToColumn(table exp.Expression) exp.Expression {
 	parts := table.Parts()
 	if len(parts) == 0 {
 		return table
