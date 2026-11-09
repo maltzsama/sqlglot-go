@@ -46,6 +46,16 @@ type dialectParserOverrideSet struct {
 	// QueryModifiers overrides QUERY_MODIFIER_PARSERS entries (parsers/tsql.py:333-337:
 	// OPTION and FOR).
 	QueryModifiers map[tokens.TokenType]func(*Parser) (string, any)
+	// Lambdas overrides base LAMBDAS entries (parsers/materialize.py:20-24: FARROW builds a
+	// raw-head Kwarg with _parse_assignment instead of the base var(_parse_disjunction)).
+	Lambdas map[tokens.TokenType]func(*Parser, []exp.Expression) exp.Expression
+	// TypedLambdaArgs ports Parser.TYPED_LAMBDA_ARGS (parser.py:1076, base False;
+	// parsers/materialize.py:11 True): a single-argument lambda head is probed even when
+	// the token after the argument is not a lambda arrow, so `x INT -> ...` annotations parse.
+	TypedLambdaArgs bool
+	// LambdaArgParser ports a dialect's _parse_lambda_arg override
+	// (parsers/materialize.py:16-17: _parse_field).
+	LambdaArgParser func(*Parser) exp.Expression
 }
 
 var dialectParserOverrides = map[string]dialectParserOverrideSet{}
@@ -83,6 +93,12 @@ func registerDialectParserOverrides(name string, overrides dialectParserOverride
 			panic("parser: nil property parser override for dialect " + name)
 		}
 	}
+	for _, callback := range overrides.Lambdas {
+		if callback == nil {
+			panic("parser: nil lambda override for dialect " + name)
+		}
+	}
+
 	dialectParserOverrides[name] = overrides
 }
 
@@ -99,9 +115,10 @@ func (p *Parser) parserOverrideKey() string {
 // parserOverrideParents models parser-class inheritance: StarRocksParser extends
 // MySQLParser (parsers/starrocks.py:11), so a StarRocks lookup falls back to the mysql overlay.
 var parserOverrideParents = map[string]string{
-	"starrocks": "mysql",
-	"doris":     "mysql",
-	"redshift":  "postgres",
+	"starrocks":   "mysql",
+	"doris":       "mysql",
+	"redshift":    "postgres",
+	"materialize": "postgres",
 }
 
 // overrideChain lists the override keys from the parser's own key up through its parents.
@@ -224,6 +241,39 @@ func (p *Parser) propertyParserKeys() map[string]bool {
 func (p *Parser) typeParserOverride() typeParserOverrideFunc {
 	for _, key := range p.overrideChain() {
 		if parser := dialectParserOverrides[key].TypeParser; parser != nil {
+			return parser
+		}
+	}
+	return nil
+}
+
+// lambdaFor resolves a LAMBDAS entry: the dialect overlay wins over the shared table
+// (parsers/materialize.py:20-24 overrides the base FARROW entry).
+func (p *Parser) lambdaFor(tt tokens.TokenType) func(*Parser, []exp.Expression) exp.Expression {
+	for _, key := range p.overrideChain() {
+		if builder, ok := dialectParserOverrides[key].Lambdas[tt]; ok {
+			return builder
+		}
+	}
+	return lambdas[tt]
+}
+
+// typedLambdaArgs reports whether any parser class in the chain enables TYPED_LAMBDA_ARGS
+// (base False; parsers/materialize.py:11 True).
+func (p *Parser) typedLambdaArgs() bool {
+	for _, key := range p.overrideChain() {
+		if dialectParserOverrides[key].TypedLambdaArgs {
+			return true
+		}
+	}
+	return false
+}
+
+// lambdaArgParser resolves a dialect's _parse_lambda_arg override, falling back to the
+// base id-var parse (parser.py:7489-7490).
+func (p *Parser) lambdaArgParser() func(*Parser) exp.Expression {
+	for _, key := range p.overrideChain() {
+		if parser := dialectParserOverrides[key].LambdaArgParser; parser != nil {
 			return parser
 		}
 	}

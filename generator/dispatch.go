@@ -191,6 +191,14 @@ func init() {
 	dispatch[expressions.KindParameter] = (*Generator).parameterSQL
 	dispatch[expressions.KindRawString] = (*Generator).rawStringSQL
 	dispatch[expressions.KindFileFormatProperty] = (*Generator).fileFormatPropertySQL
+	// generator.py:271 exp.ToMap -> `MAP {this}`.
+	dispatch[expressions.KindToMap] = func(g *Generator, e expressions.Expression) string {
+		return "MAP " + g.sqlKey(e, "this")
+	}
+	// generator.py:4821 kwarg_sql: the `k => v` named argument (base LAMBDAS FARROW entry).
+	dispatch[expressions.KindKwarg] = func(g *Generator, e expressions.Expression) string {
+		return g.binary(e, "=>")
+	}
 	dispatch[expressions.KindAtTimeZone] = (*Generator).atTimeZoneSQL
 	dispatch[expressions.KindPseudoType] = (*Generator).pseudoTypeSQL
 	dispatch[expressions.KindObjectIdentifier] = (*Generator).objectIdentifierSQL

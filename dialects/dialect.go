@@ -834,6 +834,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return Oracle(), nil
 	case "redshift":
 		return Redshift(), nil
+	case "materialize":
+		return Materialize(), nil
 	default:
 		return nil, fmt.Errorf("unknown dialect %q", name)
 	}

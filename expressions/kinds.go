@@ -314,6 +314,17 @@ const (
 	// AS STRUCT<a INT, b TEXT>). Renders through the generic TraitFunc fallback
 	// (STRUCT(...)), matching upstream struct_sql for non-named-field constructors.
 	KindStruct
+	// KindList ports exp.List (array.py:35-37, `class List(Expression, Func)`,
+	// arg_types={"expressions": False}, is_var_len_args=True): the LIST constructor
+	// produced by the ARRAY_CONSTRUCTORS bracket swap (`LIST[1, 2, 3]`) and by a
+	// `LIST(...)` call (base FUNCTIONS registers every Func subclass by sql_name,
+	// expressions/__init__.py:50). Base renders it through the TraitFunc fallback
+	// (LIST(1, 2, 3)); materialize overrides to the bracket form.
+	KindList
+	// KindToMap ports exp.ToMap (array.py:340-341, `class ToMap(Expression, Func)` with
+	// default arg_types {"this": True}): materialize's `MAP[...]` / `MAP(...)` constructor
+	// (parsers/materialize.py `_parse_map`).
+	KindToMap
 	// KindCache/KindUncache port exp.Cache/exp.Uncache (core.py:1583-1594): Spark's
 	// `CACHE [LAZY] TABLE x [OPTIONS(k = v)] [AS <query>]` / `UNCACHE TABLE [IF EXISTS] x`.
 	// Both are plain Expression subclasses (no Func/Condition/... mixin), so neither
@@ -553,6 +564,9 @@ const (
 	// KindPropertyEQ (core.py:2150, `class PropertyEQ(Expression, Binary)`): the ASSIGNMENT
 	// `:=` operator (parser.py:881-883), e.g. mysql `SELECT @var1 := 1`.
 	KindPropertyEQ
+	// KindKwarg ports exp.Kwarg (core.py:1920-1922, `class Kwarg(Expression, Binary)`):
+	// named-argument `k => v` inside a call (base LAMBDAS FARROW entry, parser.py:995-999).
+	KindKwarg
 	// KindDistance/KindDistanceNd (core.py:2154/2158, both `class X(Expression, Binary)`):
 	// the FACTOR-level postgres `<->`/`<<->>` distance operators (parser.py:917-918).
 	KindDistance
@@ -1254,8 +1268,12 @@ var argTypes = map[Kind][]argSpec{
 	KindAtTimeZone:       {{"this", true}, {"zone", true}},
 	KindPseudoType:       defaultArgTypes,
 	KindObjectIdentifier: defaultArgTypes,
-	// Struct (array.py:356): arg_types = {"expressions": False}.
+	// Struct (array.py:356) and List (array.py:36): arg_types = {"expressions": False}.
 	KindStruct: {{"expressions", false}},
+	KindList:   {{"expressions", false}},
+	// ToMap (array.py:340-341) has no arg_types override, so it inherits Expression's
+	// default {"this": True}.
+	KindToMap: defaultArgTypes,
 	// TableSample (query.py:1724-1733): all nine keys optional.
 	KindTableSample: {{"expressions", false}, {"method", false}, {"bucket_numerator", false}, {"bucket_denominator", false}, {"bucket_field", false}, {"percent", false}, {"rows", false}, {"size", false}, {"seed", false}},
 	// Cache/Uncache (core.py:1583-1594).
@@ -1374,6 +1392,7 @@ var argTypes = map[Kind][]argSpec{
 	KindByteString:       {{"this", true}, {"is_bytes", false}},
 	KindSessionParameter: {{"this", true}, {"kind", false}},
 	KindPropertyEQ:       {{"this", true}, {"expression", true}},
+	KindKwarg:            {{"this", true}, {"expression", true}},
 	KindDistance:         {{"this", true}, {"expression", true}},
 	KindDistanceNd:       {{"this", true}, {"expression", true}},
 	// KindLag/KindLead (aggregate.py:150-163): {"this": True, "offset": False, "default": False}.
@@ -1769,6 +1788,9 @@ var traitsOf = map[Kind]Trait{
 	// Struct is `class Struct(Expression, Func)` and Func(Condition) (core.py:1641),
 	// so it carries both mixins - same as KindArray above.
 	KindStruct: TraitCondition | TraitFunc,
+	// List/ToMap are `class X(Expression, Func)` too (array.py:35,340), so same mixins.
+	KindList:  TraitCondition | TraitFunc,
+	KindToMap: TraitCondition | TraitFunc,
 	// Copy is `class Copy(Expression, DML)` (dml.py:166); CopyParameter/Credentials are
 	// plain Expression subclasses with no mixin, so they get no row here (matching e.g.
 	// KindTableAlias above).
@@ -1845,13 +1867,14 @@ var traitsOf = map[Kind]Trait{
 	KindSoundex:                 TraitCondition | TraitFunc,
 	// residual-tail cluster: BitString/HexString/ByteString are `Expression, Condition`
 	// (query.py:471-491); SessionParameter is `Expression, Condition` (core.py:1837);
-	// PropertyEQ/Distance/DistanceNd are `Expression, Binary` and Binary IS-A Condition
+	// PropertyEQ/Kwarg/Distance/DistanceNd are `Expression, Binary` and Binary IS-A Condition
 	// (core.py:1623), so they get the same TraitCondition|TraitBinary combo as Add/Sub.
 	KindBitString:        TraitCondition,
 	KindHexString:        TraitCondition,
 	KindByteString:       TraitCondition,
 	KindSessionParameter: TraitCondition,
 	KindPropertyEQ:       TraitCondition | TraitBinary,
+	KindKwarg:            TraitCondition | TraitBinary,
 	KindDistance:         TraitCondition | TraitBinary,
 	KindDistanceNd:       TraitCondition | TraitBinary,
 	KindLag:              TraitCondition | TraitFunc | TraitAggFunc,
@@ -2294,6 +2317,8 @@ var className = map[Kind]string{
 	KindPseudoType:                          "PseudoType",
 	KindObjectIdentifier:                    "ObjectIdentifier",
 	KindStruct:                              "Struct",
+	KindList:                                "List",
+	KindToMap:                               "ToMap",
 	KindCache:                               "Cache",
 	KindUncache:                             "Uncache",
 	KindCopy:                                "Copy",
@@ -2385,6 +2410,7 @@ var className = map[Kind]string{
 	KindByteString:                          "ByteString",
 	KindSessionParameter:                    "SessionParameter",
 	KindPropertyEQ:                          "PropertyEQ",
+	KindKwarg:                               "Kwarg",
 	KindDistance:                            "Distance",
 	KindDistanceNd:                          "DistanceNd",
 	KindLag:                                 "Lag",
@@ -2647,6 +2673,7 @@ var varLenArgs = map[Kind]bool{
 	KindLeast:             true,
 	KindArray:             true,
 	KindStruct:            true,
+	KindList:              true,
 	KindJSONExtract:       true,
 	KindJSONExtractScalar: true,
 	KindDate:              true,

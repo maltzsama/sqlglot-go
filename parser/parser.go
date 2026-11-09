@@ -4001,7 +4001,7 @@ func (p *Parser) parseFunctionArgs(alias bool) []exp.Expression {
 	return p.parseCsv(func() exp.Expression { return p.parseLambda(alias) })
 }
 
-// parseLambda ports _parse_lambda (parser.py:7181-7226). It is the per-argument parser
+// parseLambda ports _parse_lambda (parser.py:7430-7476). It is the per-argument parser
 // used by parseFunctionArgs, so `x -> body` / `(a, b) -> body` are recognized as an
 // exp.Lambda before falling through to the ordinary argument grammar below. ARROW stays
 // wired into columnOperators for JSON `->` OUTSIDE function-call args (parser.go:1341,
@@ -4009,14 +4009,17 @@ func (p *Parser) parseFunctionArgs(alias bool) []exp.Expression {
 // `a -> b` (and postgres `x::JSON -> 'd' ->> -1`) is unaffected and keeps parsing as
 // JSONExtract.
 //
-// LAMBDAS here only maps TokenType.ARROW (the base LAMBDAS entry that also matters for us);
-// FARROW/Kwarg (named-argument `=>`) isn't ported by this part, so the Go LAMBDAS table
-// mirrors only the exp.Lambda-producing half of upstream's map.
+// LAMBDAS maps both base entries: ARROW to exp.Lambda and FARROW to exp.Kwarg, the
+// named-argument `=>` form. Dialect overlays replace individual entries through lambdaFor
+// (parsers/materialize.py overrides the FARROW entry to parse its value as an assignment).
 func (p *Parser) parseLambda(alias bool) exp.Expression {
+	// parser.py:7431: the next token is captured up front (before the fast path can
+	// consume anything), because the single-argument lambda probe below keys on it.
+	nextTokenType := p.next.TokenType
 
 	// Fast path: a simple atom (column, literal, null, bool) followed by , or ) is common
 	// and never a lambda head, so skip the L_PAREN/single-arg lambda probing below entirely
-	// (parser.py:7184-7189).
+	// (parser.py:7433-7438).
 	if lambdaArgTerminators[p.next.TokenType] {
 		if atom := p.parseAtom(); atom != nil {
 			return atom
@@ -4028,18 +4031,18 @@ func (p *Parser) parseLambda(alias bool) exp.Expression {
 	if p.match(tokens.L_PAREN) {
 		params := p.parseCsv(p.parseLambdaArg)
 		if p.match(tokens.R_PAREN) {
-			if builder, ok := lambdas[p.curr.TokenType]; ok {
+			if builder := p.lambdaFor(p.curr.TokenType); builder != nil {
 				p.advance()
 				return builder(p, params)
 			}
 		}
 		p.retreat(index)
-	} else if _, ok := lambdas[p.next.TokenType]; ok {
-		// TYPED_LAMBDA_ARGS (Snowflake/Materialize's `x INT -> ...`) is always false for the
-		// dialects in this part's scope, so the upstream `self.TYPED_LAMBDA_ARGS or` half of
-		// this condition is dropped.
+	} else if p.typedLambdaArgs() || p.lambdaFor(nextTokenType) != nil {
+		// parser.py:7453-7454: TYPED_LAMBDA_ARGS (Materialize's `x INT -> ...`) probes the
+		// single-argument lambda head even when the token after the argument is not an arrow;
+		// otherwise the arrow itself must be next.
 		params := []exp.Expression{p.parseLambdaArg()}
-		if builder, ok := lambdas[p.curr.TokenType]; ok {
+		if builder := p.lambdaFor(p.curr.TokenType); builder != nil {
 			p.advance()
 			return builder(p, params)
 		}

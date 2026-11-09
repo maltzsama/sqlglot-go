@@ -30,6 +30,13 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"ARRAY": func(args []Expression) Expression {
 		return newNode(KindArray, Args{"expressions": args})
 	},
+	// "LIST" registers exp.List the same way upstream does: FUNCTIONS spreads
+	// exp.FUNCTION_BY_NAME (parser.py:374), which maps every Func subclass's sql_name to
+	// from_arg_list (expressions/__init__.py:50) — so `LIST(1, 2, 3)` parses as exp.List,
+	// not Anonymous, in every dialect.
+	"LIST": func(args []Expression) Expression {
+		return newNode(KindList, Args{"expressions": args})
+	},
 	"ABS":             genericFunction(KindAbs),
 	"AVG":             genericFunction(KindAvg),
 	"SUM":             genericFunction(KindSum),

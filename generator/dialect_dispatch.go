@@ -24,6 +24,7 @@ var (
 		"starrocks":    "mysql",
 		"doris":        "mysql",
 		"redshift":     "postgres",
+		"materialize":  "postgres",
 		"trino":        "presto",
 		"athena-trino": "trino",
 		"athena-hive":  "hive",
