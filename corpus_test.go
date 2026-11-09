@@ -243,7 +243,7 @@ const (
 	minPassClickhouse = 468
 	minPassStarrocks  = 145
 	minPassDoris      = 56
-	minPassOracle     = 0
+	minPassOracle     = 249
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
