@@ -54,7 +54,8 @@ correctness rationale (matches the DB) or an explicit, tracked feature decision 
 MySQL + Postgres — **1847/1847** identity-corpus cases (base 955/955, MySQL 424/424, Postgres 468/468),
 enforced by a monotonic corpus floor (`corpus_test.go` + `testdata/parity_gaps.txt`, now empty). AST
 fidelity is enforced too: no statement fakes a round-trip via a raw-text `exp.Command` where upstream
-builds a structured node (`fidelity_test.go` + `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris, and Oracle: the
+builds a structured node (`fidelity_test.go` + `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
+Oracle, Redshift, Materialize, and RisingWave: the
 tokenizer, the AST + node model, the parser, the generator (`Expression → SQL`),
 `schema.MappingSchema` + `DataType.build`, the `qualify` pass (qualify_tables → normalize_identifiers →
 qualify_columns → quote_identifiers → validate), `traverse_scope` + the full `Scope` API, and the
