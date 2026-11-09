@@ -86,6 +86,12 @@ func Postgres() *Dialect {
 		// TIME_MAPPING after Postgres() returns (Redshift's MON/MONTH) convert with their own
 		// table — the same object identity upstream gets from the class-level TIME_TRIE.
 		"TO_CHAR": postgresBuildFormattedTime(d),
+		// parsers/postgres.py:124 "TO_TIMESTAMP": _build_to_timestamp (parsers/postgres.py:
+		// 32-41) — one argument is a unix epoch, (text, format) parses through
+		// build_formatted_time(exp.StrToTime). Round-tripping as Anonymous hid the missing
+		// entry, but upstream builds the structured nodes (the redshift TO_TIMESTAMP
+		// annotation in tests/dialects/test_redshift.py depends on StrToTime).
+		"TO_TIMESTAMP": postgresBuildToTimestamp(d),
 	}
 
 	cfg := tokens.BaseConfig()
@@ -270,17 +276,25 @@ var postgresTimeMapping = map[string]string{
 	"YYYY":    "%Y",        // 2015
 }
 
-// postgresBuildFormattedTime ports build_formatted_time (dialects/dialect.py:1592-1618) for
-// the parsers/postgres.py:122 TO_CHAR entry: no dialect_override and no default, so a present
-// format argument converts through this Dialect's TIME_MAPPING (Dialect.format_time,
-// dialect.py:1014-1024: only string literals convert; anything else passes through).
+// postgresBuildFormattedTime ports build_formatted_time(exp.TimeToStr) for the
+// parsers/postgres.py:122 TO_CHAR entry.
 func postgresBuildFormattedTime(d *Dialect) func([]exp.Expression) exp.Expression {
+	return postgresBuildFormattedTimeClass(d, exp.KindTimeToStr)
+}
+
+// postgresBuildFormattedTimeClass ports build_formatted_time (dialects/dialect.py:1592-1618):
+// no dialect_override and no default, so a present format argument converts through this
+// Dialect's TIME_MAPPING (Dialect.format_time, dialect.py:1014-1024: only string literals
+// convert; anything else passes through). The expression class is the exp_class argument
+// upstream passes (exp.TimeToStr for TO_CHAR, exp.StrToTime for TO_TIMESTAMP).
+func postgresBuildFormattedTimeClass(d *Dialect, kind exp.Kind) func([]exp.Expression) exp.Expression {
 	return func(args []exp.Expression) exp.Expression {
 		this := seqGet(args, 0)
 		format := seqGet(args, 1)
+		built := exp.Args{"this": this}
 		if format == nil {
 			// fmt stays None upstream (default=None) and format_time(None) returns it unchanged.
-			return exp.TimeToStr(exp.Args{"this": this})
+			return exp.New(kind, built)
 		}
 		if format.IsString() {
 			converted, ok := FormatTime(format.Name(), d.TimeMapping)
@@ -291,6 +305,22 @@ func postgresBuildFormattedTime(d *Dialect) func([]exp.Expression) exp.Expressio
 			}
 			format = exp.LiteralString(converted)
 		}
-		return exp.TimeToStr(exp.Args{"this": this, "format": format})
+		built["format"] = format
+		return exp.New(kind, built)
+	}
+}
+
+// postgresBuildToTimestamp ports _build_to_timestamp (parsers/postgres.py:32-41): a single
+// argument is a unix epoch (exp.UnixToTime), while (text, format) parses through
+// build_formatted_time(exp.StrToTime). Redshift, Materialize and RisingWave inherit this
+// entry through the PostgresParser FUNCTIONS chain, same as upstream.
+func postgresBuildToTimestamp(d *Dialect) func([]exp.Expression) exp.Expression {
+	strToTime := postgresBuildFormattedTimeClass(d, exp.KindStrToTime)
+	return func(args []exp.Expression) exp.Expression {
+		// TO_TIMESTAMP accepts either a single double argument or (text, text).
+		if len(args) == 1 {
+			return exp.UnixToTime(exp.Args{"this": seqGet(args, 0)})
+		}
+		return strToTime(args)
 	}
 }
