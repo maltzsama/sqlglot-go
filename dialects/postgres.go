@@ -92,6 +92,10 @@ func Postgres() *Dialect {
 		// entry, but upstream builds the structured nodes (the redshift TO_TIMESTAMP
 		// annotation in tests/dialects/test_redshift.py depends on StrToTime).
 		"TO_TIMESTAMP": postgresBuildToTimestamp(d),
+		// parsers/postgres.py:112 "GET_BIT": builds Getbit with zero_is_msb=True (Postgres
+		// indexes the most significant bit 0), which the postgres getbit_sql generator
+		// renders back as GET_BIT(...). Redshift drops this entry (parsers/redshift.py:35).
+		"GET_BIT": postgresBuildGetBit,
 	}
 
 	cfg := tokens.BaseConfig()
@@ -323,4 +327,17 @@ func postgresBuildToTimestamp(d *Dialect) func([]exp.Expression) exp.Expression 
 		}
 		return strToTime(args)
 	}
+}
+
+// postgresBuildGetBit ports parsers/postgres.py:112-114: GET_BIT builds Getbit with
+// zero_is_msb=True (Postgres counts the most significant bit as position 0).
+func postgresBuildGetBit(args []exp.Expression) exp.Expression {
+	m := exp.Args{"zero_is_msb": true}
+	if len(args) > 0 {
+		m["this"] = args[0]
+	}
+	if len(args) > 1 {
+		m["expression"] = args[1]
+	}
+	return exp.Getbit(m)
 }

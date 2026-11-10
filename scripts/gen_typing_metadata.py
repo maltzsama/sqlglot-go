@@ -24,6 +24,7 @@ from sqlglot.dialects.dialect import Dialect  # noqa: E402
 GO_DIALECTS = [
     "mysql", "postgres", "presto", "trino", "hive", "athena", "tsql",
     "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave",
+    "spark2", "spark", "databricks",
 ]
 
 # Lambda / function source -> Go annotator expression (a func(*TypeAnnotator, exp.Expression)).
@@ -74,6 +75,12 @@ ANNOTATORS = {
     "_annotate_regexp_replace": "annMySQLRegexpReplace",
     "_annotate_compress": "annMySQLCompress",
     "_annotate_bit_func": "annMySQLBitFunc",
+    # spark2/spark/databricks annotators (typing/spark2.py, typing/spark.py,
+    # typing/databricks.py).
+    "lambda self, e: self._annotate_by_args(e, 'this', array=e.args['quantile'].is_type(exp.DType.ARRAY))": "annApproxQuantileArray",
+    "lambda self, e: _annotate_by_similar_args(self, e, 'expressions')": "annBySimilarArgs(\"expressions\")",
+    "lambda self, e: _annotate_by_similar_args(self, e, 'this', 'fill_pattern')": "annBySimilarArgs(\"this\", \"fill_pattern\")",
+    "lambda self, e: self._set_type(e, exp.DataType.from_str('ARRAY<STRING>', dialect='databricks'))": "annBuild(\"ARRAY<STRING>\", \"databricks\")",
 }
 
 _lambda_cache: dict = {}

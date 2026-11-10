@@ -217,6 +217,36 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"FIRST":        genericFunction(KindFirst),
 	"SHA2":         genericFunction(KindSHA2),
 	"LAST":         genericFunction(KindLast),
+	// Spark/Databricks cluster: the base FUNCTION_BY_NAME entries for the new Func
+	// classes, keyed by each class's sql_names() (expressions/__init__.py:50), so base
+	// parses them typed exactly as upstream does. Dialect-specific spellings (AGGREGATE,
+	// TRY_ADD, BIT_AND, ...) are overlaid in dialects/spark.go / dialects/databricks.go.
+	"REDUCE":              genericFunction(KindReduce),
+	"FROM_TIME_ZONE":      genericFunction(KindFromTimeZone),
+	"ARRAY_INSERT":        genericFunction(KindArrayInsert),
+	"BITWISE_AND_AGG":     genericFunction(KindBitwiseAndAgg),
+	"BITWISE_OR_AGG":      genericFunction(KindBitwiseOrAgg),
+	"BITWISE_XOR_AGG":     genericFunction(KindBitwiseXorAgg),
+	"BITWISE_COUNT":       genericFunction(KindBitwiseCount),
+	"TIMESTAMPDIFF":       genericFunction(KindTimestampDiff),
+	"TIMESTAMP_DIFF":      genericFunction(KindTimestampDiff),
+	"SAFE_ADD":            genericFunction(KindSafeAdd),
+	"SAFE_DIVIDE":         genericFunction(KindSafeDivide),
+	"SAFE_MULTIPLY":       genericFunction(KindSafeMultiply),
+	"SAFE_SUBTRACT":       genericFunction(KindSafeSubtract),
+	"JSON_KEYS":           genericFunction(KindJSONKeys),
+	"UNIFORM":             genericFunction(KindUniform),
+	"REGR_AVGX":           genericFunction(KindRegrAvgx),
+	"REGR_AVGY":           genericFunction(KindRegrAvgy),
+	"REGR_SXX":            genericFunction(KindRegrSxx),
+	"REGR_SXY":            genericFunction(KindRegrSxy),
+	"REGR_SYY":            genericFunction(KindRegrSyy),
+	"REGR_COUNT":          genericFunction(KindRegrCount),
+	"GETBIT":              genericFunction(KindGetbit),
+	"GET_BIT":             genericFunction(KindGetbit),
+	"DATE_FROM_UNIX_DATE": genericFunction(KindDateFromUnixDate),
+	"READ_PARQUET":        genericFunction(KindReadParquet),
+	"FORMAT":              genericFunction(KindFormat),
 }
 
 // buildMod ports build_mod (parser.py:121-129): MOD(x, y) -> exp.Mod, parenthesizing either
@@ -372,3 +402,32 @@ func DistKeyProperty(args Args) Expression   { return newNode(KindDistKeyPropert
 func DistStyleProperty(args Args) Expression { return newNode(KindDistStyleProperty, args) }
 func PercentileDisc(args Args) Expression    { return newNode(KindPercentileDisc, args) }
 func AtIndex(args Args) Expression           { return newNode(KindAtIndex, args) }
+
+// Spark/Databricks function nodes (expressions/{array,math,aggregate,json,temporal,
+// functions,string}.py) and the Databricks TIMESERIES key constraint
+// (expressions/constraints.py:224).
+func Reduce(args Args) Expression           { return newNode(KindReduce, args) }
+func FromTimeZone(args Args) Expression     { return newNode(KindFromTimeZone, args) }
+func ArrayInsert(args Args) Expression      { return newNode(KindArrayInsert, args) }
+func BitwiseAndAgg(args Args) Expression    { return newNode(KindBitwiseAndAgg, args) }
+func BitwiseOrAgg(args Args) Expression     { return newNode(KindBitwiseOrAgg, args) }
+func BitwiseXorAgg(args Args) Expression    { return newNode(KindBitwiseXorAgg, args) }
+func BitwiseCount(args Args) Expression     { return newNode(KindBitwiseCount, args) }
+func TimestampDiff(args Args) Expression    { return newNode(KindTimestampDiff, args) }
+func SafeAdd(args Args) Expression          { return newNode(KindSafeAdd, args) }
+func SafeDivide(args Args) Expression       { return newNode(KindSafeDivide, args) }
+func SafeMultiply(args Args) Expression     { return newNode(KindSafeMultiply, args) }
+func SafeSubtract(args Args) Expression     { return newNode(KindSafeSubtract, args) }
+func JSONKeys(args Args) Expression         { return newNode(KindJSONKeys, args) }
+func Uniform(args Args) Expression          { return newNode(KindUniform, args) }
+func TimeseriesKey(args Args) Expression    { return newNode(KindTimeseriesKey, args) }
+func RegrAvgx(args Args) Expression         { return newNode(KindRegrAvgx, args) }
+func RegrAvgy(args Args) Expression         { return newNode(KindRegrAvgy, args) }
+func RegrSxx(args Args) Expression          { return newNode(KindRegrSxx, args) }
+func RegrSxy(args Args) Expression          { return newNode(KindRegrSxy, args) }
+func RegrSyy(args Args) Expression          { return newNode(KindRegrSyy, args) }
+func RegrCount(args Args) Expression        { return newNode(KindRegrCount, args) }
+func Getbit(args Args) Expression           { return newNode(KindGetbit, args) }
+func DateFromUnixDate(args Args) Expression { return newNode(KindDateFromUnixDate, args) }
+func ReadParquet(args Args) Expression      { return newNode(KindReadParquet, args) }
+func Format(args Args) Expression           { return newNode(KindFormat, args) }

@@ -30,6 +30,14 @@ func Redshift() *Dialect {
 	// UNNEST(...) / LATERAL VIEW EXPLODE instead of a bare column join.
 	d.SupportsImplicitUnnest = true
 
+	// parsers/redshift.py:35: Redshift drops the Postgres GET_BIT FUNCTIONS entry, so
+	// GET_BIT(...) stays an Anonymous call there (round-tripping verbatim) instead of
+	// building Getbit.
+	if d.RemovedFunctions == nil {
+		d.RemovedFunctions = map[string]bool{}
+	}
+	d.RemovedFunctions["GET_BIT"] = true
+
 	// generators/redshift.py:21-44 generator flags that have a Go counterpart.
 	d.LockingReadsSupported = false
 	d.ValuesAsTable = false

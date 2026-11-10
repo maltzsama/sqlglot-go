@@ -20,10 +20,12 @@ type typeSpec struct {
 }
 
 var (
-	typingRegistry    = map[string]map[string]typeSpec{}
-	typingResolved    sync.Map // dialect name -> map[exp.Kind]typeSpec
-	hiveCoercesToOnce sync.Once
-	hiveCoercesTo     map[exp.DType]map[exp.DType]bool
+	typingRegistry          = map[string]map[string]typeSpec{}
+	typingResolved          sync.Map // dialect name -> map[exp.Kind]typeSpec
+	hiveCoercesToOnce       sync.Once
+	hiveCoercesTo           map[exp.DType]map[exp.DType]bool
+	databricksCoercesToOnce sync.Once
+	databricksCoercesTo     map[exp.DType]map[exp.DType]bool
 )
 
 func registerTypingMetadata(dialect string, specs map[string]typeSpec) {
@@ -51,37 +53,64 @@ func expressionMetadataFor(dialect string) map[exp.Kind]typeSpec {
 
 // coercesToFor ports Dialect.COERCES_TO or TypeAnnotator.COERCES_TO (annotate_types.py:208):
 // Hive (non-ANSI mode, dialects/hive.py:37-44) also lets numeric, temporal and interval types
-// coerce into text.
+// coerce into text, and Databricks (dialects/databricks.py:25-34) lets text coerce into the
+// numeric, temporal, binary, boolean and interval types.
 func coercesToFor(dialect string) map[exp.DType]map[exp.DType]bool {
-	if strings.ToLower(dialect) != "hive" {
-		return defaultCoercesTo
-	}
-	hiveCoercesToOnce.Do(func() {
-		hiveCoercesTo = map[exp.DType]map[exp.DType]bool{}
-		for k, v := range defaultCoercesTo {
-			copied := map[exp.DType]bool{}
-			for t := range v {
-				copied[t] = true
+	switch strings.ToLower(dialect) {
+	case "hive":
+		hiveCoercesToOnce.Do(func() {
+			hiveCoercesTo = copyCoercesTo()
+			targets := map[exp.DType]bool{exp.DTypeInterval: true}
+			for t := range exp.NumericTypes {
+				targets[t] = true
 			}
-			hiveCoercesTo[k] = copied
-		}
-		targets := map[exp.DType]bool{exp.DTypeInterval: true}
-		for t := range exp.NumericTypes {
-			targets[t] = true
-		}
-		for t := range exp.TemporalTypes {
-			targets[t] = true
-		}
-		for target := range targets {
-			if hiveCoercesTo[target] == nil {
-				hiveCoercesTo[target] = map[exp.DType]bool{}
+			for t := range exp.TemporalTypes {
+				targets[t] = true
 			}
+			for target := range targets {
+				if hiveCoercesTo[target] == nil {
+					hiveCoercesTo[target] = map[exp.DType]bool{}
+				}
+				for t := range exp.TextTypes {
+					hiveCoercesTo[target][t] = true
+				}
+			}
+		})
+		return hiveCoercesTo
+	case "databricks":
+		databricksCoercesToOnce.Do(func() {
+			databricksCoercesTo = copyCoercesTo()
 			for t := range exp.TextTypes {
-				hiveCoercesTo[target][t] = true
+				if databricksCoercesTo[t] == nil {
+					databricksCoercesTo[t] = map[exp.DType]bool{}
+				}
+				for _, target := range []exp.DType{exp.DTypeBinary, exp.DTypeBoolean, exp.DTypeInterval} {
+					databricksCoercesTo[t][target] = true
+				}
+				for target := range exp.NumericTypes {
+					databricksCoercesTo[t][target] = true
+				}
+				for target := range exp.TemporalTypes {
+					databricksCoercesTo[t][target] = true
+				}
 			}
+		})
+		return databricksCoercesTo
+	}
+	return defaultCoercesTo
+}
+
+// copyCoercesTo deep-copies defaultCoercesTo for a dialect's COERCES_TO overlay.
+func copyCoercesTo() map[exp.DType]map[exp.DType]bool {
+	out := map[exp.DType]map[exp.DType]bool{}
+	for k, v := range defaultCoercesTo {
+		copied := map[exp.DType]bool{}
+		for t := range v {
+			copied[t] = true
 		}
-	})
-	return hiveCoercesTo
+		out[k] = copied
+	}
+	return out
 }
 
 // dtype resolves an upstream DType value name (e.g. "VARCHAR") to the Go DType.
@@ -181,6 +210,45 @@ func annPrestoRand(a *TypeAnnotator, e exp.Expression) {
 
 func annByArgs(args annotateArgs) func(*TypeAnnotator, exp.Expression) {
 	return func(a *TypeAnnotator, e exp.Expression) { a.annotateByArgs(e, args) }
+}
+
+// annBySimilarArgs ports typing/spark2.py's module-level _annotate_by_similar_args, used by
+// the Concat and Pad annotators: all-BINARY -> BINARY (the binary overload); otherwise any
+// known non-array non-binary arg -> TEXT (Spark coerces dates/ints to string when mixed with
+// a string-resolving arg); else UNKNOWN (all-unknown, binary+unknown, or array involvement).
+func annBySimilarArgs(keys ...string) func(*TypeAnnotator, exp.Expression) {
+	return func(a *TypeAnnotator, e exp.Expression) {
+		argExprs := byKeys(keys...).values(e)
+		allBinary := len(argExprs) > 0
+		anyKnown := false
+		for _, t := range argExprs {
+			if !t.IsType(exp.DTypeBinary) {
+				allBinary = false
+			}
+			if t.Type() != nil && !t.IsType(exp.DTypeUnknown, exp.DTypeArray, exp.DTypeBinary) {
+				anyKnown = true
+			}
+		}
+		switch {
+		case allBinary:
+			a.setType(e, exp.DTypeBinary)
+		case anyKnown:
+			a.setType(e, exp.DTypeText)
+		default:
+			a.setType(e, exp.DTypeUnknown)
+		}
+	}
+}
+
+// annApproxQuantileArray ports Spark2's ApproxQuantile annotator (typing/spark2.py):
+// annotateByArgs over "this" with the array flag taken from the quantile argument's type
+// (an ARRAY quantile means the array overload, which returns an array of doubles).
+func annApproxQuantileArray(a *TypeAnnotator, e exp.Expression) {
+	array := false
+	if q := asExpression(e.Arg("quantile")); q != nil && q.IsType(exp.DTypeArray) {
+		array = true
+	}
+	a.annotateByArgs(e, annotateArgs{keys: []string{"this"}, array: array})
 }
 
 // annBuild ports `self._set_type(e, exp.DataType.build(sql, dialect=dialect))` (and from_str):

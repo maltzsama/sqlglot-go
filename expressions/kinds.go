@@ -902,6 +902,34 @@ const (
 	KindAtIndex
 	KindAlterDistStyle
 	KindAlterSortKey
+	// Spark/Databricks cluster (expressions/{array,math,aggregate,json,temporal,
+	// functions,string,constraints}.py): nodes the spark2/spark/databricks parsers and
+	// generators build.
+	KindReduce
+	KindFromTimeZone
+	KindArrayInsert
+	KindBitwiseAndAgg
+	KindBitwiseOrAgg
+	KindBitwiseXorAgg
+	KindBitwiseCount
+	KindTimestampDiff
+	KindSafeAdd
+	KindSafeDivide
+	KindSafeMultiply
+	KindSafeSubtract
+	KindJSONKeys
+	KindUniform
+	KindTimeseriesKey
+	KindRegrAvgx
+	KindRegrAvgy
+	KindRegrSxx
+	KindRegrSxy
+	KindRegrSyy
+	KindRegrCount
+	KindGetbit
+	KindDateFromUnixDate
+	KindReadParquet
+	KindFormat
 )
 
 type Trait uint32
@@ -1661,6 +1689,34 @@ var argTypes = map[Kind][]argSpec{
 	KindAtIndex:                         {{"this", true}, {"expression", true}},
 	KindAlterDistStyle:                  {{"this", true}},
 	KindAlterSortKey:                    {{"this", false}, {"expressions", false}, {"compound", false}},
+	// Spark/Databricks cluster (arg_types verbatim from the upstream classes: array.py:66,
+	// 215; math.py:208-286; aggregate.py:250-283; json.py:151; temporal.py:136,298;
+	// functions.py:431,530; string.py:52; constraints.py:224; core.py:2286).
+	KindReduce:           {{"this", true}, {"initial", true}, {"merge", true}, {"finish", false}},
+	KindFromTimeZone:     {{"this", true}, {"zone", true}},
+	KindArrayInsert:      {{"this", true}, {"position", true}, {"expression", true}, {"offset", false}},
+	KindBitwiseAndAgg:    defaultArgTypes,
+	KindBitwiseOrAgg:     defaultArgTypes,
+	KindBitwiseXorAgg:    defaultArgTypes,
+	KindBitwiseCount:     defaultArgTypes,
+	KindTimestampDiff:    {{"this", true}, {"expression", true}, {"unit", false}},
+	KindSafeAdd:          {{"this", true}, {"expression", true}},
+	KindSafeDivide:       {{"this", true}, {"expression", true}},
+	KindSafeMultiply:     {{"this", true}, {"expression", true}},
+	KindSafeSubtract:     {{"this", true}, {"expression", true}},
+	KindJSONKeys:         {{"this", true}, {"expression", false}, {"expressions", false}},
+	KindUniform:          {{"this", true}, {"expression", true}, {"gen", false}, {"seed", false}},
+	KindTimeseriesKey:    defaultArgTypes,
+	KindRegrAvgx:         {{"this", true}, {"expression", true}},
+	KindRegrAvgy:         {{"this", true}, {"expression", true}},
+	KindRegrSxx:          {{"this", true}, {"expression", true}},
+	KindRegrSxy:          {{"this", true}, {"expression", true}},
+	KindRegrSyy:          {{"this", true}, {"expression", true}},
+	KindRegrCount:        {{"this", true}, {"expression", false}},
+	KindGetbit:           {{"this", true}, {"expression", true}, {"zero_is_msb", false}},
+	KindDateFromUnixDate: defaultArgTypes,
+	KindReadParquet:      {{"expressions", true}},
+	KindFormat:           {{"this", true}, {"expressions", false}},
 }
 
 var traitsOf = map[Kind]Trait{
@@ -2039,6 +2095,33 @@ var traitsOf = map[Kind]Trait{
 	KindConvertTimezone:  TraitCondition | TraitFunc,
 	KindConcatWs:         TraitCondition | TraitFunc,
 	KindPercentileDisc:   TraitCondition | TraitFunc | TraitAggFunc,
+	// Spark/Databricks cluster: Funcs carry TraitCondition|TraitFunc; the AggFunc
+	// subclasses add TraitAggFunc (aggregate.py AggFunc). TimeseriesKey is a plain
+	// Expression (constraints.py:224) with no traits row.
+	KindReduce:           TraitCondition | TraitFunc,
+	KindFromTimeZone:     TraitCondition | TraitFunc,
+	KindArrayInsert:      TraitCondition | TraitFunc,
+	KindBitwiseAndAgg:    TraitCondition | TraitFunc | TraitAggFunc,
+	KindBitwiseOrAgg:     TraitCondition | TraitFunc | TraitAggFunc,
+	KindBitwiseXorAgg:    TraitCondition | TraitFunc | TraitAggFunc,
+	KindBitwiseCount:     TraitCondition | TraitFunc,
+	KindTimestampDiff:    TraitCondition | TraitFunc,
+	KindSafeAdd:          TraitCondition | TraitFunc,
+	KindSafeDivide:       TraitCondition | TraitFunc,
+	KindSafeMultiply:     TraitCondition | TraitFunc,
+	KindSafeSubtract:     TraitCondition | TraitFunc,
+	KindJSONKeys:         TraitCondition | TraitFunc,
+	KindUniform:          TraitCondition | TraitFunc,
+	KindRegrAvgx:         TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrAvgy:         TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrSxx:          TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrSxy:          TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrSyy:          TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrCount:        TraitCondition | TraitFunc | TraitAggFunc,
+	KindGetbit:           TraitCondition | TraitFunc,
+	KindDateFromUnixDate: TraitCondition | TraitFunc,
+	KindReadParquet:      TraitCondition | TraitFunc,
+	KindFormat:           TraitCondition | TraitFunc,
 }
 
 var primitive = map[Kind]bool{
@@ -2674,6 +2757,32 @@ var className = map[Kind]string{
 	KindAtIndex:                         "AtIndex",
 	KindAlterDistStyle:                  "AlterDistStyle",
 	KindAlterSortKey:                    "AlterSortKey",
+	// Spark/Databricks cluster.
+	KindReduce:           "Reduce",
+	KindFromTimeZone:     "FromTimeZone",
+	KindArrayInsert:      "ArrayInsert",
+	KindBitwiseAndAgg:    "BitwiseAndAgg",
+	KindBitwiseOrAgg:     "BitwiseOrAgg",
+	KindBitwiseXorAgg:    "BitwiseXorAgg",
+	KindBitwiseCount:     "BitwiseCount",
+	KindTimestampDiff:    "TimestampDiff",
+	KindSafeAdd:          "SafeAdd",
+	KindSafeDivide:       "SafeDivide",
+	KindSafeMultiply:     "SafeMultiply",
+	KindSafeSubtract:     "SafeSubtract",
+	KindJSONKeys:         "JSONKeys",
+	KindUniform:          "Uniform",
+	KindTimeseriesKey:    "TimeseriesKey",
+	KindRegrAvgx:         "RegrAvgx",
+	KindRegrAvgy:         "RegrAvgy",
+	KindRegrSxx:          "RegrSxx",
+	KindRegrSxy:          "RegrSxy",
+	KindRegrSyy:          "RegrSyy",
+	KindRegrCount:        "RegrCount",
+	KindGetbit:           "Getbit",
+	KindDateFromUnixDate: "DateFromUnixDate",
+	KindReadParquet:      "ReadParquet",
+	KindFormat:           "Format",
 }
 
 // varLenArgs is the authoritative is_var_len_args=True set (mirroring the upstream Func
@@ -2711,6 +2820,12 @@ var varLenArgs = map[Kind]bool{
 	KindCombinedAggFunc:  true,
 	KindAnonymousAggFunc: true,
 	KindConcatWs:         true,
+
+	// Spark/Databricks cluster: is_var_len_args = True (json.py:153 JSONKeys,
+	// string.py:54 Format, functions.py:432 ReadParquet).
+	KindJSONKeys:    true,
+	KindFormat:      true,
+	KindReadParquet: true,
 }
 
 // ArgKeys returns the arg keys of a Kind in class-declaration order (mirrors

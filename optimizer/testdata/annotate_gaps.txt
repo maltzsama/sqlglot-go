@@ -181,8 +181,6 @@ annotate_functions.sql|mysql|1736
 annotate_functions.sql|mysql|1737
 annotate_functions.sql|mysql|1738
 annotate_functions.sql|mysql|1739
-annotate_functions.sql|mysql|1752
-annotate_functions.sql|mysql|1753
 annotate_functions.sql|mysql|1754
 annotate_functions.sql|mysql|1755
 annotate_functions.sql|mysql|1756
