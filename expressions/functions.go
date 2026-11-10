@@ -96,19 +96,24 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"STANDARD_HASH":         genericFunction(KindStandardHash),
 	"HEX":                   genericFunction(KindHex),
 	"UNHEX":                 genericFunction(KindUnhex),
-	"MD5":                   genericFunction(KindMD5),
-	"ST_POINT":              genericFunction(KindStPoint),
-	"ST_MAKEPOINT":          genericFunction(KindStPoint),
-	"ST_DISTANCE":           genericFunction(KindStDistance),
-	"GENERATE_SERIES":       genericFunction(KindGenerateSeries),
-	"DATE":                  genericFunction(KindDate),
-	"ADD_MONTHS":            genericFunction(KindAddMonths),
-	"DATE_ADD":              genericFunction(KindDateAdd),
-	"DATEADD":               genericFunction(KindDateAdd),
-	"DATEDIFF":              genericFunction(KindDateDiff),
-	"DATE_DIFF":             genericFunction(KindDateDiff),
-	"JSON_EXTRACT":          jsonExtractFunction(KindJSONExtract),
-	"JSON_EXTRACT_SCALAR":   jsonExtractFunction(KindJSONExtractScalar),
+	// FROM_BASE(this, expression) (string.py:297-299): upstream registers every Func
+	// subclass's sql_name in FUNCTION_BY_NAME (parser.py:374), so FROM_BASE parses
+	// structurally in every dialect — Redshift renames it to STRTOL on write
+	// (generator/dialect_redshift.go). Without this entry it degrades to Anonymous.
+	"FROM_BASE":           genericFunction(KindFromBase),
+	"MD5":                 genericFunction(KindMD5),
+	"ST_POINT":            genericFunction(KindStPoint),
+	"ST_MAKEPOINT":        genericFunction(KindStPoint),
+	"ST_DISTANCE":         genericFunction(KindStDistance),
+	"GENERATE_SERIES":     genericFunction(KindGenerateSeries),
+	"DATE":                genericFunction(KindDate),
+	"ADD_MONTHS":          genericFunction(KindAddMonths),
+	"DATE_ADD":            genericFunction(KindDateAdd),
+	"DATEADD":             genericFunction(KindDateAdd),
+	"DATEDIFF":            genericFunction(KindDateDiff),
+	"DATE_DIFF":           genericFunction(KindDateDiff),
+	"JSON_EXTRACT":        jsonExtractFunction(KindJSONExtract),
+	"JSON_EXTRACT_SCALAR": jsonExtractFunction(KindJSONExtractScalar),
 	// REPLACE(this, expression[, replacement]) (string.py:113); base has no replace_sql, so
 	// it renders via functionFallbackSQL like any other unadorned Func (see KindInitcap).
 	"REPLACE": genericFunction(KindReplace),
