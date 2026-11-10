@@ -30,6 +30,8 @@ func Redshift() *Dialect {
 	d.LockingReadsSupported = false
 	d.ValuesAsTable = false
 	d.CopyParamsAreWrapped = false
+	// dialects/redshift.py:20: COPY params are space-separated, not comma-separated.
+	d.CopyParamsAreCsv = false
 	d.AlterSetType = "TYPE"
 	d.LimitFetch = "LIMIT"
 	// Redshift has no WITH in its with_properties.

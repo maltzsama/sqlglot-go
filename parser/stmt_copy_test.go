@@ -130,16 +130,16 @@ func TestCopyFormatAs(t *testing.T) {
 	}
 }
 
-// TestCopyCredentialsDegradesToCommand covers the single-option credentials clause
-// (`CREDENTIALS = (A='b')`). These Snowflake/Redshift-only clauses render faithfully only via
-// upstream's unported _parse_property grammar, so parseCopy degrades any COPY carrying one to
-// a raw Command (exact round-trip) rather than emit a lossy structural rewrite. This makes the
-// single-option case consistent with the multi-option case in TestCopyCredentialsTerminates.
-func TestCopyCredentialsDegradesToCommand(t *testing.T) {
+// TestCopyCredentialsParsesStructurally covers the single-option credentials clause
+// (`CREDENTIALS = (A='b')`). Upstream's _parse_copy (parser.py:9909-9942) has no
+// credentials-specific fallback — it builds exp.Copy with Credentials whenever the
+// statement is fully consumed — so the port must too (verified against the pinned
+// reference: postgres round-trips this input as a structured Copy).
+func TestCopyCredentialsParsesStructurally(t *testing.T) {
 	sql := "COPY tbl FROM 'file' CREDENTIALS = (A='b')"
 	root := parseOneDialect(t, sql, "postgres")
-	if root.Kind() != exp.KindCommand {
-		t.Fatalf("kind = %v, want Command:\n%s", root.Kind(), root.ToS())
+	if root.Kind() != exp.KindCopy {
+		t.Fatalf("kind = %v, want Copy:\n%s", root.Kind(), root.ToS())
 	}
 	got, err := generateSQL(t, root, "postgres")
 	if err != nil {
@@ -151,11 +151,12 @@ func TestCopyCredentialsDegradesToCommand(t *testing.T) {
 }
 
 // TestCopyCredentialsTerminates is a regression guard for the parseCopyWrappedOptions /
-// parseCopyParameters no-progress guards: a comma-separated CREDENTIALS list is a shape this
-// port doesn't fully model (no _parse_property grammar), and before the fix its loop spun
-// forever on the comma token. It must now terminate — degrading to Command and round-tripping
-// the raw input is the acceptable fallback (upstream models this via SequenceProperties, which
-// isn't ported). The go test -timeout would fire if this ever regresses to an infinite loop.
+// parseCopyParameters no-progress guards: a comma-separated CREDENTIALS list is a shape
+// this port doesn't fully model (no _parse_property grammar), and before the fix its loop spun
+// forever on the comma token. It must now terminate — structurally, dropping the comma between
+// options exactly as upstream does (pinned reference generates
+// `CREDENTIALS = (A='b' C='d')` for this input, round-trip failure and all). The go test
+// -timeout would fire if this ever regresses to an infinite loop.
 func TestCopyCredentialsTerminates(t *testing.T) {
 	sql := "COPY tbl FROM 'file' CREDENTIALS = (A='b', C='d')"
 	root := parseOneDialect(t, sql, "postgres")
@@ -163,7 +164,8 @@ func TestCopyCredentialsTerminates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
-	if got != sql {
-		t.Fatalf("round-trip = %q, want %q", got, sql)
+	want := "COPY tbl FROM 'file' CREDENTIALS = (A='b' C='d')"
+	if got != want {
+		t.Fatalf("round-trip = %q, want %q", got, want)
 	}
 }
