@@ -21,15 +21,19 @@ var (
 
 	mysqlAlterParsers map[string]func(*Parser) []exp.Expression
 
-	// alterAlterParsers/mysqlAlterAlterParsers port ALTER_ALTER_PARSERS (parser.py:1451-
-	// 1456): base's four entries (DISTKEY/DISTSTYLE/SORTKEY/COMPOUND) are Redshift-only and
-	// out of scope, so the base table is empty; mysql adds INDEX (parsers/mysql.py:260-263).
-	alterAlterParsers = map[string]func(*Parser) exp.Expression{}
+	// alterAlterParsers/mysqlAlterAlterParsers port ALTER_ALTER_PARSERS (parser.py:1521-
+	// 1526); mysql adds INDEX (parsers/mysql.py:257-260).
+	alterAlterParsers = map[string]func(*Parser) exp.Expression{
+		"DISTKEY":   (*Parser).parseAlterDiststyle,
+		"DISTSTYLE": (*Parser).parseAlterDiststyle,
+		"SORTKEY":   func(p *Parser) exp.Expression { return p.parseAlterSortkey(false) },
+		"COMPOUND":  func(p *Parser) exp.Expression { return p.parseAlterSortkey(true) },
+	}
 
 	// clickhouseAlterParsers ports parsers/clickhouse.py:460-464: base ALTER_PARSERS
 	// plus MODIFY (ALTER COLUMN) and REPLACE (REPLACE PARTITION).
 	clickhouseAlterParsers    map[string]func(*Parser) []exp.Expression
-	alterAlterParserKeys      = map[string]bool{}
+	alterAlterParserKeys      = map[string]bool{"DISTKEY": true, "DISTSTYLE": true, "SORTKEY": true, "COMPOUND": true}
 	mysqlAlterAlterParsers    map[string]func(*Parser) exp.Expression
 	mysqlAlterAlterParserKeys map[string]bool
 )
@@ -82,6 +86,10 @@ func init() {
 		"INDEX": func(p *Parser) exp.Expression { return p.parseAlterTableAlterIndex() },
 	}
 	mysqlAlterAlterParserKeys = map[string]bool{"INDEX": true}
+	for key, parser := range alterAlterParsers {
+		mysqlAlterAlterParsers[key] = parser
+		mysqlAlterAlterParserKeys[key] = true
+	}
 }
 
 func (p *Parser) alterParsers() map[string]func(*Parser) []exp.Expression {
@@ -584,4 +592,27 @@ func (p *Parser) parseAlterTableSet() exp.Expression {
 	}
 
 	return alterSet
+}
+
+// parseAlterDiststyle ports _parse_alter_diststyle (parser.py:9118-9123).
+func (p *Parser) parseAlterDiststyle() exp.Expression {
+	if p.matchTexts(map[string]bool{"ALL": true, "EVEN": true, "AUTO": true}) {
+		return p.expression(exp.New(exp.KindAlterDistStyle, exp.Args{"this": exp.Var(exp.Args{"this": stringsUpper(p.prev.Text)})}), nil, nil)
+	}
+	p.matchTextSeq("KEY", "DISTKEY")
+	return p.expression(exp.New(exp.KindAlterDistStyle, exp.Args{"this": p.parseColumn()}), nil, nil)
+}
+
+// parseAlterSortkey ports _parse_alter_sortkey (parser.py:9125-9137).
+func (p *Parser) parseAlterSortkey(compound bool) exp.Expression {
+	var compoundArg any
+	if compound {
+		compoundArg = true
+		p.matchTextSeq("SORTKEY")
+	}
+	if p.curr.TokenType == tokens.L_PAREN {
+		return p.expression(exp.New(exp.KindAlterSortKey, exp.Args{"expressions": p.parseWrappedIdVars(), "compound": compoundArg}), nil, nil)
+	}
+	p.matchTexts(map[string]bool{"AUTO": true, "NONE": true})
+	return p.expression(exp.New(exp.KindAlterSortKey, exp.Args{"this": exp.Var(exp.Args{"this": stringsUpper(p.prev.Text)}), "compound": compoundArg}), nil, nil)
 }

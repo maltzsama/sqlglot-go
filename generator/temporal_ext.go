@@ -272,7 +272,7 @@ func timeStrToTimeSQL(g *Generator, e expressions.Expression, includePrecision b
 // (TIME_STR_TO_TIME(...), camelToSnake(ClassName) - not corpus-tested, base/StrTo* generation
 // is fallback-only in this port's scope).
 func (g *Generator) timeStrToTimeDispatchSQL(e expressions.Expression) string {
-	switch g.dialect.Name {
+	switch g.switchDialect() {
 	case "mysql":
 		return timeStrToTimeSQL(g, e, !truthy(e.Arg("zone")))
 	case "postgres":

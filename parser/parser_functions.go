@@ -52,6 +52,9 @@ func dialectFunction(d *dialects.Dialect, name string) func([]exp.Expression) ex
 }
 
 func (p *Parser) parseConvert(strict bool, safe any) exp.Expression {
+	if p.dialectFamily("redshift") {
+		return p.redshiftParseConvert(safe)
+	}
 	this := p.parseBitwise()
 	var to exp.Expression
 	if p.match(tokens.USING) {

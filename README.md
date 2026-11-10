@@ -14,7 +14,8 @@ third-party dependencies** (Go stdlib only).
 
 This repository is a maintained, independent continuation of `ridi-oss/sqlglot-go` (forked at its
 v0.38.0 release). It tracks upstream sqlglot **v30.17.0** and extends the original base/MySQL/Postgres
-port with TSQL, ClickHouse, Oracle, StarRocks, Doris, Presto, Trino, Hive, and Athena.
+port with TSQL, ClickHouse, Oracle, StarRocks, Doris, Presto, Trino, Hive, Athena, Redshift,
+Materialize, and RisingWave.
 
 ## Scope — what this is (and isn't)
 
@@ -91,12 +92,15 @@ Same-dialect round-trip parity against the ported upstream identity corpus
 | TSQL (SQL Server) | `tsql` | 613/613 |
 | ClickHouse | `clickhouse` | 468/468 |
 | Oracle | `oracle` | 249/249 |
+| Redshift | `redshift` | 171/171 |
 | Presto | `presto` | 170/170 |
 | StarRocks | `starrocks` | 145/145 |
 | Hive | `hive` | 141/141 |
 | Trino | `trino` | 115/115 |
 | Doris | `doris` | 56/56 |
 | Athena | `athena` | 51/51 |
+| Materialize | `materialize` | 24/24 |
+| RisingWave | `risingwave` | 7/7 |
 
 ## Quick start
 

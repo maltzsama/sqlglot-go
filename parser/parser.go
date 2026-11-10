@@ -501,7 +501,7 @@ func (p *Parser) parseBatchStatements(parseMethod func() exp.Expression, sepFirs
 			p.checkErrors()
 		}
 		isBareEnd := !p.next.IsValid() && p.curr.TokenType == tokens.END &&
-			(sepFirstStatement || p.dialect.Name != "postgres")
+			(sepFirstStatement || !p.dialectFamily("postgres"))
 		if isBareEnd && (len(expressions) > 0 || (!sepFirstStatement && p.dialect.Name == "mysql")) &&
 			p.match(tokens.END) {
 			// divergence: a bare top-level END chunk is a parse error under MySQL — real
@@ -959,7 +959,14 @@ func (p *Parser) parseSelect(opts ...bool) exp.Expression {
 		// but wire the parser shape to match upstream.
 		top := p.parseLimit(nil, true, false)
 		projections := p.parseCsv(p.parseProjection)
+		var exclude []exp.Expression
+		if p.dialectFamily("redshift") {
+			projections, exclude = p.redshiftProjectionsExclude(projections)
+		}
 		selectArgs := exp.Args{"distinct": distinct, "expressions": projections, "hint": hint}
+		if len(exclude) > 0 {
+			selectArgs["exclude"] = exclude
+		}
 		if top != nil {
 			selectArgs["limit"] = top
 		}
@@ -1104,6 +1111,11 @@ func (p *Parser) parseQueryModifiers(this exp.Expression) exp.Expression {
 				}
 			}
 		}
+	}
+	// v30.17.0 parser.py:4385-4386: dialects with SUPPORTS_IMPLICIT_UNNEST rewrite the
+	// `FROM a, a.b` column joins parsed above into explicit Unnest nodes.
+	if p.dialect.SupportsImplicitUnnest && this != nil && this.Arg("from_") != nil {
+		this = p.implicitUnnestsToExplicit(this)
 	}
 	return this
 }
@@ -1310,6 +1322,16 @@ func (p *Parser) parseFrom(joins bool, skipFromToken bool, consumePipe bool) exp
 }
 
 func (p *Parser) parseTable(schema bool, joins bool, aliasTokens map[tokens.TokenType]bool, parseBracket bool, isDBReference bool, parsePartition bool, consumePipe bool) exp.Expression {
+	if p.dialectFamily("redshift") {
+		// parsers/redshift.py:88-108: Redshift UNPIVOTs SUPER objects, e.g.
+		// `UNPIVOT foo.obj[0] AS val AT attr`. parse_partition isn't passed on upstream.
+		unpivot := p.match(tokens.UNPIVOT)
+		table := p.parseTableCore(schema, joins, aliasTokens, parseBracket, isDBReference, false, consumePipe)
+		if unpivot {
+			return p.expression(exp.Pivot(exp.Args{"this": table, "unpivot": true}), nil, nil)
+		}
+		return table
+	}
 	this := p.parseTableCore(schema, joins, aliasTokens, parseBracket, isDBReference, parsePartition, consumePipe)
 	if p.dialect.Name != "clickhouse" || this == nil {
 		return this
@@ -1396,7 +1418,10 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 		}
 	}
 	if this == nil {
-		this = p.parseTableParts(schema, isDBReference, false, false)
+		// parser.py:5054-5058: `_parse_bracket(self._parse_table_parts(...))` — a table part
+		// may be immediately subscripted, e.g. Redshift's `UNPIVOT foo.obj[0]`. parseBracketBase
+		// is a no-op when no `[`/`{` follows, so this is transparent otherwise.
+		this = p.parseBracket(p.parseTableParts(schema, isDBReference, false, false))
 	}
 	if this == nil {
 		return nil
@@ -1450,6 +1475,10 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 		if alias := p.parseTableAlias(aliasTokens); alias != nil {
 			this.Set("alias", alias)
 		}
+	}
+	// parser.py:5094-5097: `FROM t.arr AS a AT i` indexes the navigated array (Redshift SUPER).
+	if this.Kind() == exp.KindTable && p.matchTextSeq("AT") {
+		return p.expression(exp.AtIndex(exp.Args{"this": tableToColumn(this), "expression": p.parseIdVar(true, nil)}), nil, nil)
 	}
 	if hints := p.parseTableHints(); len(hints) > 0 {
 		this.Set("hints", hints)
@@ -1700,7 +1729,7 @@ func (p *Parser) parseJoin(skipJoinToken bool, parseBracket bool, aliasTokensArg
 	}
 	if stringsUpper(join.Text("kind")) == "ARRAY" {
 		for _, table := range join.FindAll(exp.KindTable) {
-			table.Replace(clickhouseTableToColumn(table))
+			table.Replace(tableToColumn(table))
 		}
 	}
 	return join
@@ -2117,7 +2146,7 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 			// CONJUNCTION-level entry instead, owned by parseConjunction; base has no `&&`
 			// support upstream either, so this case does nothing (leaves DAMP unconsumed)
 			// for every other dialect.
-			if p.dialect.Name == "postgres" {
+			if p.dialectFamily("postgres") {
 				p.advance()
 				this = p.parseEscape(p.expression(exp.ArrayOverlaps(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
 			} else {
@@ -2240,7 +2269,7 @@ func (p *Parser) isRangeChainToken(tt tokens.TokenType) bool {
 	}
 	switch tt {
 	case tokens.DAMP, tokens.DAT:
-		return p.dialect.Name == "postgres"
+		return p.dialectFamily("postgres")
 	case tokens.MEMBER_OF:
 		return p.dialect.Name == "mysql"
 	}
@@ -2483,7 +2512,7 @@ func (p *Parser) parseUnary() exp.Expression {
 	if p.match(tokens.TILDE) {
 		return p.expression(exp.BitwiseNot(exp.Args{"this": p.parseUnary()}), nil, p.prevComments)
 	}
-	if p.dialect.Name == "postgres" && p.match(tokens.RLIKE) {
+	if p.dialectFamily("postgres") && p.match(tokens.RLIKE) {
 		// Postgres remaps the single-char `~` lexeme from TILDE to RLIKE, since `~` also
 		// doubles as the binary REGEXP-LIKE operator there (parsers/postgres.py:185-188);
 		// UNARY_PARSERS still builds BitwiseNot when RLIKE appears in prefix position.
@@ -3149,7 +3178,7 @@ var pgReservedValueFunctionTokens = map[tokens.TokenType]bool{
 // derived from `column` preserving each part's quoting (ColumnsToDot), so the Cast round-trips exactly
 // like `'x'::a.b` / `CAST('x' AS a.b)`; a comment between the name and the string is carried onto it.
 func (p *Parser) pgTypedLiteralCast(column exp.Expression, firstTok tokens.Token) exp.Expression {
-	if p.dialect.Name != "postgres" || column == nil || !isPGStringConstantToken(p.curr.TokenType) {
+	if !p.dialectFamily("postgres") || column == nil || !isPGStringConstantToken(p.curr.TokenType) {
 		return nil
 	}
 	if pgReservedValueFunctionTokens[firstTok.TokenType] || !isPGTypeNameChain(column) {
@@ -3243,7 +3272,7 @@ func isPGStringConstantToken(tt tokens.TokenType) bool {
 // position. So only CURRENT_SCHEMA, and only when a string constant immediately follows, defers to
 // the type-name path; a bare `current_schema` still builds CurrentSchema.
 func (p *Parser) deferNiladicToPGTypedLiteral(tokenType tokens.TokenType) bool {
-	return p.dialect.Name == "postgres" &&
+	return p.dialectFamily("postgres") &&
 		tokenType == tokens.CURRENT_SCHEMA &&
 		isPGStringConstantToken(p.next.TokenType)
 }
@@ -3429,7 +3458,7 @@ func (p *Parser) parsePlaceholder() exp.Expression {
 		}
 	}
 	if p.match(tokens.PLACEHOLDER) {
-		if p.dialect.Name == "postgres" {
+		if p.dialectFamily("postgres") {
 			return p.spanned(p.expression(exp.Placeholder(exp.Args{"jdbc": true}), &p.prev, nil), start, p.prev)
 		}
 		return p.spanned(p.expression(exp.Placeholder(nil), &p.prev, nil), start, p.prev)
@@ -3437,7 +3466,7 @@ func (p *Parser) parsePlaceholder() exp.Expression {
 	if p.match(tokens.PARAMETER) {
 		return p.spanned(p.parseParameter(), start, p.prev)
 	}
-	if p.dialect.Name == "postgres" && p.match(tokens.MOD) {
+	if p.dialectFamily("postgres") && p.match(tokens.MOD) {
 		return p.spanned(p.parseQueryParameter(), start, p.prev)
 	}
 	if p.match(tokens.COLON) {
@@ -3977,7 +4006,7 @@ func (p *Parser) parseFunctionArgs(alias bool) []exp.Expression {
 	return p.parseCsv(func() exp.Expression { return p.parseLambda(alias) })
 }
 
-// parseLambda ports _parse_lambda (parser.py:7181-7226). It is the per-argument parser
+// parseLambda ports _parse_lambda (parser.py:7430-7476). It is the per-argument parser
 // used by parseFunctionArgs, so `x -> body` / `(a, b) -> body` are recognized as an
 // exp.Lambda before falling through to the ordinary argument grammar below. ARROW stays
 // wired into columnOperators for JSON `->` OUTSIDE function-call args (parser.go:1341,
@@ -3985,13 +4014,17 @@ func (p *Parser) parseFunctionArgs(alias bool) []exp.Expression {
 // `a -> b` (and postgres `x::JSON -> 'd' ->> -1`) is unaffected and keeps parsing as
 // JSONExtract.
 //
-// LAMBDAS here only maps TokenType.ARROW (the base LAMBDAS entry that also matters for us);
-// FARROW/Kwarg (named-argument `=>`) isn't ported by this part, so the Go LAMBDAS table
-// mirrors only the exp.Lambda-producing half of upstream's map.
+// LAMBDAS maps both base entries: ARROW to exp.Lambda and FARROW to exp.Kwarg, the
+// named-argument `=>` form. Dialect overlays replace individual entries through lambdaFor
+// (parsers/materialize.py overrides the FARROW entry to parse its value as an assignment).
 func (p *Parser) parseLambda(alias bool) exp.Expression {
+	// parser.py:7431: the next token is captured up front (before the fast path can
+	// consume anything), because the single-argument lambda probe below keys on it.
+	nextTokenType := p.next.TokenType
+
 	// Fast path: a simple atom (column, literal, null, bool) followed by , or ) is common
 	// and never a lambda head, so skip the L_PAREN/single-arg lambda probing below entirely
-	// (parser.py:7184-7189).
+	// (parser.py:7433-7438).
 	if lambdaArgTerminators[p.next.TokenType] {
 		if atom := p.parseAtom(); atom != nil {
 			return atom
@@ -4003,18 +4036,18 @@ func (p *Parser) parseLambda(alias bool) exp.Expression {
 	if p.match(tokens.L_PAREN) {
 		params := p.parseCsv(p.parseLambdaArg)
 		if p.match(tokens.R_PAREN) {
-			if builder, ok := lambdas[p.curr.TokenType]; ok {
+			if builder := p.lambdaFor(p.curr.TokenType); builder != nil {
 				p.advance()
 				return builder(p, params)
 			}
 		}
 		p.retreat(index)
-	} else if _, ok := lambdas[p.next.TokenType]; ok {
-		// TYPED_LAMBDA_ARGS (Snowflake/Materialize's `x INT -> ...`) is always false for the
-		// dialects in this part's scope, so the upstream `self.TYPED_LAMBDA_ARGS or` half of
-		// this condition is dropped.
+	} else if p.typedLambdaArgs() || p.lambdaFor(nextTokenType) != nil {
+		// parser.py:7453-7454: TYPED_LAMBDA_ARGS (Materialize's `x INT -> ...`) probes the
+		// single-argument lambda head even when the token after the argument is not an arrow;
+		// otherwise the arrow itself must be next.
 		params := []exp.Expression{p.parseLambdaArg()}
-		if builder, ok := lambdas[p.curr.TokenType]; ok {
+		if builder := p.lambdaFor(p.curr.TokenType); builder != nil {
 			p.advance()
 			return builder(p, params)
 		}
@@ -4431,6 +4464,14 @@ func (p *Parser) parseWindow(this exp.Expression, alias bool) exp.Expression {
 		p.match(tokens.WHERE)
 		this = p.expression(exp.Filter(exp.Args{"this": this, "expression": p.parseWhere(true)}), nil, nil)
 		p.matchRParen(this)
+	}
+	// FIRST_VALUE(t.c IGNORE|RESPECT NULLS) OVER ... is hoisted to FIRST_VALUE(t.c) IGNORE|RESPECT
+	// NULLS OVER ... (parser.py:8636-8641); the trailing form is parsed just below.
+	if this != nil && this.Is(exp.TraitAggFunc) {
+		if ignoreRespect := findIgnoreRespectInScope(this); ignoreRespect != nil && ignoreRespect != this {
+			ignoreRespect.Replace(ignoreRespect.This())
+			this = p.expression(exp.New(ignoreRespect.Kind(), exp.Args{"this": this}), nil, nil)
+		}
 	}
 	this = p.parseRespectOrIgnoreNulls(this)
 	var over any
@@ -4881,4 +4922,40 @@ func stringsLower(s string) string {
 		}
 	}
 	return string(out)
+}
+
+// findIgnoreRespectInScope is find_in_scope(expression, exp.IgnoreNulls, exp.RespectNulls)
+// (optimizer/scope.py:1084-1101): the first IGNORE/RESPECT NULLS in a DFS that does not descend
+// into a CTE or a nested query, the nodes that start child scopes.
+func findIgnoreRespectInScope(expression exp.Expression) exp.Expression {
+	prune := func(node exp.Expression) bool {
+		if node == expression {
+			return false
+		}
+		switch node.Kind() {
+		case exp.KindCTE, exp.KindSelect:
+			return true
+		}
+		if node.Is(exp.TraitSetOperation) {
+			return true
+		}
+		if node.Is(exp.TraitQuery) {
+			if parent := node.Parent(); parent != nil {
+				switch parent.Kind() {
+				case exp.KindFrom, exp.KindJoin:
+					return true
+				}
+				if parent.Is(exp.TraitUDTF) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	for _, node := range expression.WalkWithPrune(false, prune) {
+		if node.Kind() == exp.KindIgnoreNulls || node.Kind() == exp.KindRespectNulls {
+			return node
+		}
+	}
+	return nil
 }

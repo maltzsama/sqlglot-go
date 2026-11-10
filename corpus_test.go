@@ -232,34 +232,40 @@ func writeGaps(fails map[gapKey]string) error {
 // Presto, and Hive, and TSQL. Their gaps in testdata/parity_gaps.txt are the generator-port
 // burndown list. Pass and total floors are monotonic: raise them, never lower them.
 const (
-	minPassBase       = 980
-	minPassMySQL      = 428
-	minPassPostgres   = 468
-	minPassAthena     = 51
-	minPassTrino      = 115
-	minPassPresto     = 170
-	minPassHive       = 141
-	minPassTSQL       = 613
-	minPassClickhouse = 468
-	minPassStarrocks  = 145
-	minPassDoris      = 56
-	minPassOracle     = 0
+	minPassBase        = 980
+	minPassMySQL       = 428
+	minPassPostgres    = 468
+	minPassAthena      = 51
+	minPassTrino       = 115
+	minPassPresto      = 170
+	minPassHive        = 141
+	minPassTSQL        = 613
+	minPassClickhouse  = 468
+	minPassStarrocks   = 145
+	minPassDoris       = 56
+	minPassOracle      = 249
+	minPassRedshift    = 171
+	minPassMaterialize = 24
+	minPassRisingWave  = 7
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
 const (
-	minTotalBase       = 980
-	minTotalMySQL      = 428
-	minTotalPostgres   = 468
-	minTotalAthena     = 51
-	minTotalTrino      = 115
-	minTotalPresto     = 170
-	minTotalHive       = 141
-	minTotalTSQL       = 613
-	minTotalClickhouse = 468
-	minTotalStarrocks  = 145
-	minTotalDoris      = 56
-	minTotalOracle     = 249
+	minTotalBase        = 980
+	minTotalMySQL       = 428
+	minTotalPostgres    = 468
+	minTotalAthena      = 51
+	minTotalTrino       = 115
+	minTotalPresto      = 170
+	minTotalHive        = 141
+	minTotalTSQL        = 613
+	minTotalClickhouse  = 468
+	minTotalStarrocks   = 145
+	minTotalDoris       = 56
+	minTotalOracle      = 249
+	minTotalRedshift    = 171
+	minTotalMaterialize = 24
+	minTotalRisingWave  = 7
 )
 
 // TestCorpus is the single round-trip harness for both the base-dialect
@@ -318,6 +324,9 @@ func TestCorpus(t *testing.T) {
 		{"starrocks", minPassStarrocks, minTotalStarrocks},
 		{"doris", minPassDoris, minTotalDoris},
 		{"oracle", minPassOracle, minTotalOracle},
+		{"redshift", minPassRedshift, minTotalRedshift},
+		{"materialize", minPassMaterialize, minTotalMaterialize},
+		{"risingwave", minPassRisingWave, minTotalRisingWave},
 	}
 	var counts []string
 	for _, floor := range floors {

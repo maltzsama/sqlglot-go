@@ -380,7 +380,7 @@ var escapedSequences = map[byte]string{
 // (parsers/postgres.py:96) and always renders "?"; everything else there is its pyformat/
 // psycopg placeholder: bare "%s", or named "%(name)s" (parseQueryParameter).
 func (g *Generator) placeholderSQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		if truthy(e.Arg("jdbc")) {
 			return "?"
 		}
@@ -414,6 +414,33 @@ func (g *Generator) rawStringSQL(e expressions.Expression) string {
 // upstream's generic property_sql path (generator.py:2083-2092, PROPERTY_TO_NAME lookup).
 func (g *Generator) fileFormatPropertySQL(e expressions.Expression) string {
 	return "FORMAT=" + g.sqlKey(e, "this")
+}
+
+// encodePropertySQL ports encodeproperty_sql (generator.py:5937-5945): RisingWave's
+// `ENCODE|KEY ENCODE <fmt> [(k = v, ...)]` CREATE SOURCE/SINK option.
+func (g *Generator) encodePropertySQL(e expressions.Expression) string {
+	encode := "ENCODE"
+	if boolValue(e.Arg("key")) {
+		encode = "KEY ENCODE"
+	}
+	encode += " " + g.sqlKey(e, "this")
+	if props := asExpression(e.Arg("properties")); props != nil {
+		encode += " " + g.renderProperties(props, "", ", ", "", true)
+	}
+	return encode
+}
+
+// includePropertySQL ports includeproperty_sql (generator.py:5947-5957): RisingWave's
+// `INCLUDE <name> [<coldef> [AS <alias>]]` CREATE SOURCE option.
+func (g *Generator) includePropertySQL(e expressions.Expression) string {
+	include := "INCLUDE " + g.sqlKey(e, "this")
+	if columnDef := g.sqlKey(e, "column_def"); columnDef != "" {
+		include += " " + columnDef
+	}
+	if alias := g.sqlKey(e, "alias"); alias != "" {
+		include += " AS " + alias
+	}
+	return include
 }
 
 func (g *Generator) aliasSQL(e expressions.Expression) string {
@@ -698,6 +725,11 @@ func (g *Generator) selectSQL(e expressions.Expression) string {
 	if operationModifiers != "" {
 		operationModifiers = g.sep() + operationModifiers
 	}
+	// generator.py:3381-3385: a select-level EXCLUDE renders after the projections when the
+	// dialect doesn't need the derived-table rewrite (Redshift).
+	if exclude := listFromValue(e.Arg("exclude")); len(exclude) > 0 && !g.dialect.StarExcludeRequiresDerivedTable {
+		expressionsSQL += g.seg("EXCLUDE") + " (" + g.expressions(exprsOptions{sqls: exclude, flat: true}) + ")"
+	}
 	if expressionsSQL != "" {
 		expressionsSQL = g.sep() + expressionsSQL
 	}
@@ -742,11 +774,10 @@ func (g *Generator) selectSQL(e expressions.Expression) string {
 		}
 		sql = "CREATE" + tableKind + " TABLE " + g.sqlKey(into, "this") + " AS " + sql
 	}
-	// Deferred to slice 5 (dialects): base has STAR_EXCLUDE_REQUIRES_DERIVED_TABLE=true, which
-	// upstream (generator.py:3368-3372) rewrites a select-level `exclude` arg into a derived
-	// table `SELECT * EXCLUDE (...) FROM (<subquery>)`. The base parser rejects select-level
-	// EXCLUDE (only Star EXCEPT is produced, handled by starSQL), so `exclude` is never
-	// populated and this path is unreachable; deferred with the SELECT INTO rewrite above.
+	// Not ported: with STAR_EXCLUDE_REQUIRES_DERIVED_TABLE (the base default), upstream
+	// (generator.py:3405-3409) rewrites a select-level `exclude` arg into a derived table
+	// `SELECT * EXCLUDE (...) FROM (<subquery>)`. Only Redshift's parser produces that arg, and
+	// Redshift renders it inline (above), so the rewrite is unreachable for same-dialect output.
 	return sql
 }
 
@@ -1368,7 +1399,7 @@ func (g *Generator) windowSpecSQL(e expressions.Expression) string {
 		// SUPPORTS_WINDOW_EXCLUDE (generator.py:512, generators/postgres.py:250): base
 		// defaults to unsupported (dropping EXCLUDE with a warning); postgres (like
 		// sqlite/oracle/duckdb upstream, out of scope here) renders it.
-		if g.dialect.Name == "postgres" {
+		if g.isDialect("postgres") {
 			windowSpec += " EXCLUDE " + exclude
 		} else {
 			g.unsupported("EXCLUDE clause is not supported in the WINDOW clause")
@@ -1407,9 +1438,20 @@ func (g *Generator) distinctSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) ignoreNullsSQL(e expressions.Expression) string {
+	if g.isDialect("postgres") {
+		// generators/postgres.py:545-548
+		// https://www.postgresql.org/docs/current/functions-window.html
+		g.unsupported("PostgreSQL does not support IGNORE NULLS.")
+		return g.sqlKey(e, "this")
+	}
 	return g.embedIgnoreNulls(e, "IGNORE NULLS")
 }
 func (g *Generator) respectNullsSQL(e expressions.Expression) string {
+	if g.isDialect("postgres") {
+		// generators/postgres.py:550-553
+		g.unsupported("PostgreSQL does not support RESPECT NULLS.")
+		return g.sqlKey(e, "this")
+	}
 	return g.embedIgnoreNulls(e, "RESPECT NULLS")
 }
 
@@ -1628,7 +1670,7 @@ func (g *Generator) mergeWithoutTarget(e expressions.Expression) expressions.Exp
 func (g *Generator) mergeSQL(e expressions.Expression) string {
 	// Postgres removes the target table qualifier from WHEN clause columns (see
 	// mergeWithoutTarget); other dialects render the assignments verbatim.
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		e = g.mergeWithoutTarget(e)
 	}
 	table := asExpression(e.Arg("this"))
@@ -1882,7 +1924,14 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 		clone = " " + clone
 	}
 
-	sql := "CREATE" + modifiers + " " + kind + concurrently + exists + " " + this + propertiesSQL + expressionSQL + postExpressionSQL + indexSQL + noSchemaBinding + clone
+	// generator.py:1431-1435 EXPRESSION_PRECEDES_PROPERTIES_CREATABLES: RisingWave's
+	// `CREATE SINK ... AS <select> WITH (...)` renders the body before the WITH properties
+	// (generators/risingwave.py:26).
+	bodyAndProperties := propertiesSQL + expressionSQL
+	if g.dialect.ExpressionPrecedesPropertiesCreatables[kind] {
+		bodyAndProperties = expressionSQL + propertiesSQL
+	}
+	sql := "CREATE" + modifiers + " " + kind + concurrently + exists + " " + this + bodyAndProperties + postExpressionSQL + indexSQL + noSchemaBinding + clone
 	return g.prependCtes(e, sql)
 }
 
@@ -1912,7 +1961,7 @@ func (g *Generator) columnDefSQL(e expressions.Expression) string {
 	// (§15.1.17). Unlike upstream, which pop()s the constraint, we render around it so
 	// Generate() stays side-effect free.
 	modePrefix := ""
-	if g.dialect.Name == "postgres" || g.dialect.Name == "mysql" {
+	if g.isDialect("postgres") || g.dialect.Name == "mysql" {
 		for _, item := range listFromValue(e.Arg("constraints")) {
 			if c, ok := item.(expressions.Expression); ok && c != nil && c.Kind() == expressions.KindInOutColumnConstraint {
 				modePrefix = g.gen(c) + " "
@@ -1981,7 +2030,7 @@ var mysqlUnsignedTypeMapping = map[expressions.DType]string{
 // postgresTypeMapping is base typeMapping plus postgres's delta (generators/postgres.py:271-284),
 // and every other dialect (including base) uses the base typeMapping as-is.
 func (g *Generator) typeMappingTable() map[expressions.DType]string {
-	switch g.dialect.Name {
+	switch g.switchDialect() {
 	case "mysql":
 		return mysqlTypeMapping
 	case "postgres":
@@ -2002,7 +2051,7 @@ func (g *Generator) dataTypeSQL(e expressions.Expression) string {
 			// VARCHAR must always have a size - if it doesn't, we always generate TEXT.
 			return "TEXT"
 		}
-	} else if g.dialect.Name == "postgres" {
+	} else if g.isDialect("postgres") {
 		if expressions.IsType(e, expressions.DTypeArray) {
 			if len(listFromValue(e.Arg("expressions"))) > 0 {
 				valuesSQL := g.expressions(exprsOptions{expression: e, key: "values", flat: true})
@@ -2171,7 +2220,7 @@ func (g *Generator) tryCastSQL(e expressions.Expression) string {
 	// (dialects/dialect.py:1261), which renders a plain CAST - so a MySQL cast-target rename
 	// (e.g. TEXT -> CHAR) applies without a stray TRY_ prefix. See generators/mysql.py:223 and
 	// generators/postgres.py:377. Every other dialect keeps TRY_CAST (generator.py:4523).
-	if g.dialect.Name == "mysql" || g.dialect.Name == "postgres" {
+	if g.dialect.Name == "mysql" || g.isDialect("postgres") {
 		return g.castSQLWithPrefix(e, "")
 	}
 	return g.castSQLWithPrefix(e, "TRY_")
@@ -2357,7 +2406,7 @@ func (g *Generator) trimSQL(e expressions.Expression) string {
 	if g.dialect.OpaqueFunctions {
 		return g.trimSQLStandard(e)
 	}
-	if g.dialect.Name == "mysql" || g.dialect.Name == "postgres" {
+	if g.dialect.Name == "mysql" || g.isDialect("postgres") {
 		return g.trimSQLStandard(e)
 	}
 	return g.trimSQLBase(e)
@@ -2457,7 +2506,7 @@ func (g *Generator) arrayAggSQL(e expressions.Expression) string { return g.func
 // g.dialect.Name-gated overrides elsewhere in this package (e.g. varianceSQL).
 func (g *Generator) arraySizeSQL(e expressions.Expression) string {
 	dim := asExpression(e.Arg("expression"))
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		if dim == nil {
 			dim = expressions.LiteralNumber(1)
 		}
@@ -2494,7 +2543,7 @@ func (g *Generator) dateAddSQL(e expressions.Expression) string {
 	switch {
 	case g.isDialect("mysql"):
 		return g.mysqlDateAddSQL("ADD", e)
-	case g.dialect.Name == "postgres":
+	case g.isDialect("postgres"):
 		return g.postgresDateAddSQL("+", e)
 	}
 	return g.funcCall("DATE_ADD", []any{e.Arg("this"), e.Arg("expression"), unitToStr(e)}, "(", ")", true)

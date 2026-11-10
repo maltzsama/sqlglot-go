@@ -31,6 +31,12 @@ func Pragma(args Args) Expression         { return newNode(KindPragma, args) }
 // FileFormatProperty backs the `FORMAT=<fmt>` option on DESCRIBE (properties.py:176).
 func FileFormatProperty(args Args) Expression { return newNode(KindFileFormatProperty, args) }
 
+// EncodeProperty/IncludeProperty port exp.EncodeProperty/exp.IncludeProperty
+// (properties.py:586-591): RisingWave's `ENCODE|KEY ENCODE <fmt> (...)` and
+// `INCLUDE <name> [coldef] [AS alias]` CREATE SOURCE/SINK options.
+func EncodeProperty(args Args) Expression  { return newNode(KindEncodeProperty, args) }
+func IncludeProperty(args Args) Expression { return newNode(KindIncludeProperty, args) }
+
 // Builders for the ALTER TABLE/VIEW/INDEX and DROP node family (ddl.py:241-401), plus
 // ColumnPosition/AddPartition/DropPartition (query.py:498,1941,1949); see the Kind block
 // comment in kinds.go for the full upstream reference.

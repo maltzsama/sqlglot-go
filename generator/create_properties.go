@@ -60,15 +60,18 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindSqlSecurityProperty:          propertyLocationPostSchema,
 	expressions.KindStabilityProperty:            propertyLocationPostSchema,
 	expressions.KindStrictProperty:               propertyLocationPostSchema,
-	expressions.KindFileFormatProperty:           propertyLocationPostWith,
-	expressions.KindProperty:                     propertyLocationPostWith,
-	expressions.KindLockingProperty:              propertyLocationPostAlias,
-	expressions.KindNoPrimaryIndexProperty:       propertyLocationPostExpression,
-	expressions.KindOnCommitProperty:             propertyLocationPostExpression,
-	expressions.KindOnProperty:                   propertyLocationPostSchema,
-	expressions.KindSequenceProperties:           propertyLocationPostExpression,
-	expressions.KindTriggerProperties:            propertyLocationPostExpression,
-	expressions.KindWithDataProperty:             propertyLocationPostExpression,
+	// generator.py:717/732 (RisingWave SOURCE/SINK options).
+	expressions.KindEncodeProperty:         propertyLocationPostExpression,
+	expressions.KindIncludeProperty:        propertyLocationPostSchema,
+	expressions.KindFileFormatProperty:     propertyLocationPostWith,
+	expressions.KindProperty:               propertyLocationPostWith,
+	expressions.KindLockingProperty:        propertyLocationPostAlias,
+	expressions.KindNoPrimaryIndexProperty: propertyLocationPostExpression,
+	expressions.KindOnCommitProperty:       propertyLocationPostExpression,
+	expressions.KindOnProperty:             propertyLocationPostSchema,
+	expressions.KindSequenceProperties:     propertyLocationPostExpression,
+	expressions.KindTriggerProperties:      propertyLocationPostExpression,
+	expressions.KindWithDataProperty:       propertyLocationPostExpression,
 	// upstream generator.py:711-788: the POST_SCHEMA property set used by ClickHouse's
 	// CREATE TABLE / CREATE DICTIONARY.
 	expressions.KindDictProperty:     propertyLocationPostSchema,
@@ -129,7 +132,7 @@ func (g *Generator) propertyLocation(property expressions.Expression) (propertyL
 		return location, true
 	}
 	if property.Kind() == expressions.KindPartitionedByProperty {
-		switch g.dialect.Name {
+		switch g.switchDialect() {
 		case "postgres":
 			return propertyLocationPostSchema, true
 		case "mysql":
@@ -231,7 +234,7 @@ func (g *Generator) propertySQL(e expressions.Expression) string {
 	if e.Kind() == expressions.KindProperty {
 		return g.propertyName(e, false) + "=" + g.sqlKey(e, "value")
 	}
-	if e.Kind() == expressions.KindSchemaCommentProperty && g.dialect.Name == "postgres" {
+	if e.Kind() == expressions.KindSchemaCommentProperty && g.isDialect("postgres") {
 		g.unsupported("Table comments are not supported in the CREATE statement")
 		return ""
 	}
@@ -266,7 +269,7 @@ func (g *Generator) likePropertySQL(e expressions.Expression) string {
 		optionsSQL = " " + strings.Join(options, " ")
 	}
 	like := "LIKE " + g.sqlKey(e, "this") + optionsSQL
-	if g.dialect.Name == "postgres" && (e.Parent() == nil || e.Parent().Kind() != expressions.KindSchema) {
+	if g.isDialect("postgres") && (e.Parent() == nil || e.Parent().Kind() != expressions.KindSchema) {
 		like = "(" + like + ")"
 	}
 	return like
@@ -353,7 +356,7 @@ func (g *Generator) lockingPropertySQL(e expressions.Expression) string {
 }
 
 func (g *Generator) partitionedByPropertySQL(e expressions.Expression) string {
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		return "PARTITION BY " + g.sqlKey(e, "this")
 	}
 	return propertyNames[expressions.KindPartitionedByProperty] + "=" + g.sqlKey(e, "this")

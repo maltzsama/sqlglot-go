@@ -120,7 +120,9 @@ differential-check against the pinned Python):
   another is not. The per-dialect override tables that make it correct are partial — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
-- DIALECTS beyond base + MySQL + Postgres (upstream ships 30+).
+- DIALECTS: base, MySQL, Postgres, TSQL, ClickHouse, StarRocks, Doris, Presto, Trino, Hive, Athena,
+  Oracle, Redshift, Materialize and RisingWave are ported; upstream ships 30+ and the rest are out of
+  scope for now (queued: Spark2/Spark/Databricks #35, DuckDB #39, Snowflake #40, BigQuery #41).
 - TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): the v30.17.0 bump removed
   the FOR VERSION/TIMESTAMP and hive AS OF compound keywords but did not port `VERSION_PHRASES` +
   `_parse_version` (parser.py:1738-1745, 5120-5146); the constructs now fail closed (parse error)
@@ -726,3 +728,93 @@ table alias without `AS`, and the PIVOT/UNPIVOT alias rules.
 Corpus: 249 `validate_identity` cases from `tests/dialects/test_oracle.py`
 (`scripts/extract_dialect_corpus.py --dialects oracle`), at **249/249**, with no Oracle rows in
 `testdata/parity_gaps.txt`. Regression tests: `oracle_test.go`.
+
+## Redshift dialect — DONE (issue #34)
+
+Ported 1:1 from `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/redshift.py`.
+Redshift extends Postgres (the parser and generator override chains fall back to the postgres
+tables), with case-insensitive identifier normalization, `NormalizeNotNull`, the `(+)` outer-join
+marker enabled through `SUPPORTS_COLUMN_JOIN_MARKS`, `LockingReadsSupported = False`, no derived
+table needed for star `EXCLUDE`, distinct array constructors, and the Redshift `TIME_MAPPING`
+additions (including the `MON`/`MONTH` conversions layered on Postgres's table).
+
+Parsed end to end: `SUPER`/`HLLSKETCH`/`VARBYTE` types with the Redshift type mapping, `UNPIVOT`
+over SUPER objects (`UNPIVOT foo.obj[0] AS val AT attr`), `AT` array indexing, select-level
+`EXCLUDE`, `ALTER TABLE ... DISTKEY / DISTSTYLE / SORTKEY`, `COPY` and `UNLOAD`, `GRANT`/`REVOKE`,
+the `CONVERT` parse override, `DATEADD`/`DATEDIFF` builders mapped through `DATE_PART_MAPPING`,
+`IGNORE NULLS`/`RESPECT NULLS` hoisting for window functions, `ENCODE` column properties and the
+`DISTKEY`/`SORTKEY`/`DISTSTYLE` table properties, and `CURRENT_USER_ID` as a no-paren function.
+
+Generator details: the Redshift type mappings (`VARCHAR(max)`, `TIMESTAMPTZ`), the shared
+`tzToWithTimeZone` datatype transform (renamed out of the Oracle generator so both dialects render
+`WITH TIME ZONE`), the no-op cast to `JSON`, and the property rendering for the table/column
+properties above.
+
+Corpus: 171 `validate_identity` cases from `tests/dialects/test_redshift.py`
+(`scripts/extract_dialect_corpus.py --dialects redshift`), at **171/171**, with no Redshift rows in
+`testdata/parity_gaps.txt`. Regression tests: `redshift_test.go` (the full upstream test file is
+ported there: identity, cross-dialect, AST shapes, dialect flags, qualify/scope, cast,
+TO_TIMESTAMP annotation and the Command-fallback GRANT/REVOKE/UNLOAD rows).
+
+Known divergences for this slice:
+
+- The implicit-unnest conversion landed after the dialect port: `FROM a, a.b` joins whose leftmost
+  part names an already-introduced relation now become explicit `Unnest` nodes, matching upstream
+  `SUPPORTS_IMPLICIT_UNNEST` (parsers/redshift.py:84 → parser.py:4305-4330), so cross-dialect writes
+  emit `UNNEST(...)` instead of a bare column join. Asserted by `TestRedshiftColumnUnnesting`.
+- 23 of the 106 `validate_all` arms of `tests/dialects/test_redshift.py` are omitted from
+  `TestRedshiftCrossDialect`: cross-dialect generator output this port does not reproduce yet. They
+  group as — `JSON_EXTRACT_PATH_TEXT` → presto; `ADD_MONTHS` → trino, tsql; `IS TRUE`/`IS
+  FALSE`/`IS NOT FALSE` → presto; `DISTINCT ON` → hive, mysql, oracle, presto, starrocks, trino,
+  tsql; `DATEDIFF` day → hive, presto; `DATEADD` month → hive, mysql, postgres, presto, tsql;
+  `DATEDIFF` week → hive, postgres, presto. The same statements' Redshift identity rows all pass;
+  each group is a shared-generator rendering gap, not a Redshift parse gap.
+- Pre-existing (not introduced by this branch): the hive generator's `unnest_to_explode` transform
+  (upstream generators/hive.py:339; also databricks.py:44, spark2.py:188) is not ported, so an
+  explicit Unnest written to hive renders `SELECT * FROM x, EXPLODE(a.b, _t0(c))` where upstream
+  renders `SELECT * FROM x LATERAL VIEW EXPLODE(a.b) _t0 AS c`. Base-read of that query produced the
+  same wrong hive output before the implicit-unnest fix, which is how pre-existence was proven.
+  Worth closing when Spark2/Spark/Databricks (#35) lands, since those generators share the transform.
+
+## Materialize dialect — DONE (issue #36)
+
+Ported 1:1 from `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/materialize.py`.
+Materialize extends Postgres with `NormalizeNotNull` re-enabled, `SupportsCreateTableLike` and
+`SupportsBetweenFlags` back at their base defaults, and `TYPED_LAMBDA_ARGS = True`.
+
+Parsed end to end: the `LIST` and `MAP` constructors in both bracket and call notation
+(`LIST[1, 2, 3]`, `MAP{k: v}`), named arguments through the `FARROW` (`=>`) lambda entry with
+Materialize's lambda overrides (a typed single-argument head like `x INT -> ...`, and the
+field-based lambda argument parser), `ON CONFLICT ... DO NOTHING`, `MZ_NOW()`, the `mz_timestamp`
+cast, and `SERIAL`/`AUTO_INCREMENT` columns that render without `NOT NULL`.
+
+Generator details: the `ToMap` rendering (the base `MAP {this}` transform is dropped so the
+parenthesized form wins), the `mz_timestamp`/`mz_now` type and function output, and the Materialize
+`TIME_MAPPING` and type mappings.
+
+Corpus: 24 `validate_identity` cases from `tests/dialects/test_materialize.py`
+(`scripts/extract_dialect_corpus.py --dialects materialize`), at **24/24**, with no Materialize rows
+in `testdata/parity_gaps.txt`. Regression tests: `materialize_test.go`.
+
+## RisingWave dialect — DONE (issue #36)
+
+Ported 1:1 from `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/risingwave.py`.
+RisingWave extends Postgres with `NormalizeNotNull`, parenthesized struct access required, struct
+star expansion supported, `LockingReadsSupported = False`, `SupportsBetweenFlags` back at the base
+default, unwrapped transform column constraints (`col INT AS expr` without parentheses), and
+`ExpressionPrecedesPropertiesCreatables` for `CREATE SINK`.
+
+Parsed end to end: `CREATE SINK`/`CREATE SOURCE` with their connector options, the `ENCODE`/`KEY
+ENCODE`/`INCLUDE` create properties as new `EncodeProperty`/`IncludeProperty` nodes, the `WATERMARK
+FOR <col> AS <expr>` column constraint at column and schema level, computed columns without
+parentheses, `MAP` datatype constructors with angle-bracket or parenthesized fields, and
+`MATERIALIZED`/`NOT MATERIALIZED` CTE markers; table hints are disabled so connector properties are
+not swallowed as a table alias.
+
+Generator details: the body-before-properties `CREATE` order for sinks, the `ENCODE`/`INCLUDE`
+property rendering, `PROPERTIES_LOCATION` moving `FileFormatProperty` after the CREATE body, the
+`watermarkcolumnconstraint` transform, and the watermark/computed-column output.
+
+Corpus: 7 `validate_identity` cases from `tests/dialects/test_risingwave.py`
+(`scripts/extract_dialect_corpus.py --dialects risingwave`), at **7/7**, with no RisingWave rows in
+`testdata/parity_gaps.txt`. Regression tests: `risingwave_test.go`.

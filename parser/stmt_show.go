@@ -28,7 +28,7 @@ func (p *Parser) parseShow() exp.Expression {
 		}
 		return p.parseAsCommand(start)
 	}
-	if p.dialect.Name == "postgres" {
+	if p.dialectFamily("postgres") {
 		return p.parsePostgresShow(p.prev)
 	}
 	return p.parseAsCommand(p.prev)

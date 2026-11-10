@@ -40,9 +40,6 @@ annotate_functions.sql|hive|1886
 annotate_functions.sql|hive|1887
 annotate_functions.sql|hive|1888
 annotate_functions.sql|hive|1889
-annotate_functions.sql|hive|1910
-annotate_functions.sql|hive|1911
-annotate_functions.sql|hive|1912
 annotate_functions.sql|hive|1913
 annotate_functions.sql|hive|192
 annotate_functions.sql|hive|194
@@ -205,6 +202,12 @@ annotate_functions.sql|postgres|1861
 annotate_functions.sql|postgres|1890
 annotate_functions.sql|presto|1864
 annotate_functions.sql|presto|1871
+annotate_functions.sql|redshift|1878
+annotate_functions.sql|redshift|1879
+annotate_functions.sql|redshift|1891
+annotate_functions.sql|redshift|1892
+annotate_functions.sql|redshift|1893
+annotate_functions.sql|redshift|1894
 annotate_functions.sql|trino|1864
 annotate_functions.sql|trino|1871
 annotate_functions.sql|trino|1878
@@ -250,9 +253,6 @@ annotate_functions.sql||1903
 annotate_functions.sql||1904
 annotate_functions.sql||1905
 annotate_functions.sql||1906
-annotate_functions.sql||1907
-annotate_functions.sql||1908
-annotate_functions.sql||1909
 annotate_functions.sql||20
 annotate_functions.sql||21
 annotate_functions.sql||22

@@ -108,7 +108,7 @@ func (p *Parser) parseSet() exp.Expression {
 			}
 		}
 	}
-	if p.curr.IsValid() || len(items) == 0 || (p.dialect.Name == "postgres" && len(items) > 1) || standaloneInMultiItem {
+	if p.curr.IsValid() || len(items) == 0 || (p.dialectFamily("postgres") && len(items) > 1) || standaloneInMultiItem {
 		p.retreat(index)
 		return p.parseAsCommand(start)
 	}
@@ -124,7 +124,7 @@ func (p *Parser) parseSet() exp.Expression {
 // CHARSET/NAMES), falling back to a plain assignment.
 func (p *Parser) parseSetItem() exp.Expression {
 	parsers, trie := setParsers, setTrie
-	switch p.dialect.Name {
+	switch p.switchDialect() {
 	case "mysql":
 		parsers, trie = mysqlSetParsers, mysqlSetTrie
 	case "postgres":
@@ -188,7 +188,7 @@ func (p *Parser) parseSetItemAssignment(kind any) exp.Expression {
 	// Commands these. A bare `SET SESSION AUTHORIZATION` (SESSION as the form-start, no scope) is not
 	// matched here — its follower is a lone AUTHORIZATION, not `SESSION AUTHORIZATION` — and falls to
 	// the block below.
-	if kindStr, ok := kind.(string); ok && (kindStr == "SESSION" || kindStr == "LOCAL") && p.dialect.Name == "postgres" && p.isUnquotedKeywordAhead() {
+	if kindStr, ok := kind.(string); ok && (kindStr == "SESSION" || kindStr == "LOCAL") && p.dialectFamily("postgres") && p.isUnquotedKeywordAhead() {
 		// SECURITY: `role` and `session_authorization` are also plain GUCs, so `SET SESSION role =
 		// attacker` / `SET LOCAL SESSION AUTHORIZATION = x` are ASSIGNMENTS (privilege escalation via
 		// the GUC alias), NOT the `ROLE <name>` / `SESSION AUTHORIZATION <name>` privileged forms. A
@@ -228,7 +228,7 @@ func (p *Parser) parseSetItemAssignment(kind any) exp.Expression {
 	// Postgres `SET SESSION AUTHORIZATION ...` / `SET SESSION CHARACTERISTICS AS TRANSACTION ...`
 	// — the `SESSION` shadows these longer forms in the dispatch trie, so disambiguate here on the
 	// word that follows (an ordinary `SET SESSION x = v` continues to the assignment path below).
-	if kindStr, ok := kind.(string); ok && kindStr == "SESSION" && p.dialect.Name == "postgres" {
+	if kindStr, ok := kind.(string); ok && kindStr == "SESSION" && p.dialectFamily("postgres") {
 		// matchUnquotedTextSeq: a quoted `SET SESSION "AUTHORIZATION" x` is not the privileged form —
 		// the quoted identifier is never the keyword (real Postgres rejects it), so it falls through to
 		// the assignment path / fails closed rather than being structured as SESSION AUTHORIZATION.
@@ -276,7 +276,7 @@ func (p *Parser) parseSetItemAssignment(kind any) exp.Expression {
 	// extra values collected in SetItem.expressions with the EQ (LHS + first value) staying in `this` so
 	// a consumer reads the assignment's variable name off EQ→this exactly as for the single-value form.
 	var rest []exp.Expression
-	if p.dialect.Name == "postgres" && p.curr.TokenType == tokens.COMMA {
+	if p.dialectFamily("postgres") && p.curr.TokenType == tokens.COMMA {
 		// A comma after the first value means a Postgres single-GUC VALUE list (`SET search_path = a, b`).
 		// Postgres `var_list` admits only simple `var_value`s — an identifier, string, number, boolean, or
 		// signed number — so EVERY element, the first included, must be one. Anything else (an expression
@@ -395,7 +395,7 @@ func isQuotedIdentifierExpr(e exp.Expression) bool {
 func (p *Parser) parseSetTransaction(global bool) exp.Expression {
 	p.matchTextSeq("TRANSACTION")
 	characteristics := transactionCharacteristics
-	if p.dialect.Name == "postgres" {
+	if p.dialectFamily("postgres") {
 		characteristics = pgTransactionCharacteristics
 	}
 	modes := p.parseCsv(func() exp.Expression {

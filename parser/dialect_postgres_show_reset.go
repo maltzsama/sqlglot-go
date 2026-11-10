@@ -157,7 +157,7 @@ func (p *Parser) atStatementEnd() bool {
 // Postgres RESET this owns the statement: a valid parameter builds exp.Reset, anything else fails
 // closed to a raw Command (never a mis-parsed expression). Grammar extension, ledger id pg-reset.
 func (p *Parser) parseResetStatement() exp.Expression {
-	if p.dialect.Name != "postgres" || p.curr.TokenType != tokens.VAR || stringsUpper(p.curr.Text) != "RESET" {
+	if !p.dialectFamily("postgres") || p.curr.TokenType != tokens.VAR || stringsUpper(p.curr.Text) != "RESET" {
 		return nil
 	}
 	resetTok := p.curr

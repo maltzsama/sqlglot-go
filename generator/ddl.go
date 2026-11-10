@@ -242,7 +242,7 @@ func (g *Generator) renameIndexSQL(e expressions.Expression) string {
 func (g *Generator) alterSetSQL(e expressions.Expression) string {
 	exprs := g.expressions(exprsOptions{expression: e, flat: true})
 
-	if g.dialect.Name == "postgres" {
+	if g.isDialect("postgres") {
 		if exprs != "" {
 			exprs = "(" + exprs + ")"
 		}

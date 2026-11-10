@@ -714,6 +714,30 @@
 {"dialect": "hive", "sql": "x >> 1", "want": "x >> 1", "pretty": false, "identify": false}
 {"dialect": "hive", "sql": "x | 1", "want": "x | 1", "pretty": false, "identify": false}
 {"dialect": "hive", "sql": "~x", "want": "~x", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "CREATE TABLE example (id INT AUTO_INCREMENT, name TEXT)", "want": "CREATE TABLE example (id INT NOT NULL, name TEXT)", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "CREATE TABLE example (id INT PRIMARY KEY, name TEXT)", "want": "CREATE TABLE example (id INT, name TEXT)", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "CREATE TABLE example (id INT, name LIST)", "want": "CREATE TABLE example (id INT, name LIST)", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "CREATE TABLE example (id SERIAL, name TEXT)", "want": "CREATE TABLE example (id INT NOT NULL, name TEXT)", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "CURRENT_TIMESTAMP", "want": "CURRENT_TIMESTAMP", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "INSERT INTO example (id, name) VALUES (1, 'Alice') ON CONFLICT(id) DO NOTHING", "want": "INSERT INTO example (id, name) VALUES (1, 'Alice')", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "MZ_NOW()", "want": "MZ_NOW()", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "NOW()", "want": "CURRENT_TIMESTAMP", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT CAST(1 AS mz_timestamp)", "want": "SELECT CAST(1 AS mz_timestamp)", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT CAST(LIST[1, 2, 3] AS INT LIST)", "want": "SELECT CAST(LIST[1, 2, 3] AS INT LIST)", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT CAST(MAP['a' => 1] AS MAP[TEXT => INT])", "want": "SELECT CAST(MAP['a' => 1] AS MAP[TEXT => INT])", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT CAST(NULL AS INT LIST LIST LIST)", "want": "SELECT CAST(NULL AS INT LIST LIST LIST)", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT CAST(NULL AS INT LIST)", "want": "SELECT CAST(NULL AS INT LIST)", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT CAST(NULL AS MAP[TEXT => INT])", "want": "SELECT CAST(NULL AS MAP[TEXT => INT])", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT CAST(NULL AS MAP[TEXT => MAP[TEXT => INT]])", "want": "SELECT CAST(NULL AS MAP[TEXT => MAP[TEXT => INT]])", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "want": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT LIST(SELECT 1)", "want": "SELECT LIST(SELECT 1)", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT LIST[1, 2, 3]", "want": "SELECT LIST[1, 2, 3]", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT LIST[LIST[1], LIST[2], NULL]", "want": "SELECT LIST[LIST[1], LIST[2], NULL]", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT LIST[]", "want": "SELECT LIST[]", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT MAP(SELECT 'a', 1)", "want": "SELECT MAP(SELECT 'a', 1)", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT MAP['a' => 1]", "want": "SELECT MAP['a' => 1]", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT MAP['a' => MAP['b' => 'c']]", "want": "SELECT MAP['a' => MAP['b' => 'c']]", "pretty": false, "identify": false}
+{"dialect": "materialize", "sql": "SELECT MAP[]", "want": "SELECT MAP[]", "pretty": false, "identify": false}
 {"dialect": "mysql", "sql": "\"'abc'\"", "want": "'''abc'''", "pretty": false}
 {"dialect": "mysql", "sql": "'\t'", "want": "'\\t'", "pretty": false}
 {"dialect": "mysql", "sql": "'\"abc\"'", "want": "'\"abc\"'", "pretty": false}
@@ -2029,6 +2053,184 @@
 {"dialect": "presto", "sql": "u&'Hello winter #2603 !' UESCAPE '#'", "want": "U&'Hello winter #2603 !' UESCAPE '#'", "pretty": false, "identify": false}
 {"dialect": "presto", "sql": "u&'Hello winter \\2603 !'", "want": "U&'Hello winter \\2603 !'", "pretty": false, "identify": false}
 {"dialect": "presto", "sql": "x IN ('a', 'a''b')", "want": "x IN ('a', 'a''b')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "'%' SIMILAR TO '^%' ESCAPE '^'", "want": "'%' SIMILAR TO '^%' ESCAPE '^'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "'abc' SIMILAR TO '(b|c)%'", "want": "'abc' SIMILAR TO '(b|c)%'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "1 div", "want": "1 AS div", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "1::\"int\"", "want": "CAST(1 AS INTEGER)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE db.t1 RENAME TO db.t2", "want": "ALTER TABLE db.t1 RENAME TO t2", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE s.t ALTER SORTKEY (c)", "want": "ALTER TABLE s.t ALTER SORTKEY (c)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t ALTER COMPOUND SORTKEY (c1, c2)", "want": "ALTER TABLE t ALTER COMPOUND SORTKEY (c1, c2)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t ALTER DISTKEY c", "want": "ALTER TABLE t ALTER DISTSTYLE KEY DISTKEY c", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t ALTER DISTSTYLE ALL", "want": "ALTER TABLE t ALTER DISTSTYLE ALL", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t ALTER DISTSTYLE AUTO", "want": "ALTER TABLE t ALTER DISTSTYLE AUTO", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t ALTER DISTSTYLE EVEN", "want": "ALTER TABLE t ALTER DISTSTYLE EVEN", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t ALTER DISTSTYLE KEY DISTKEY c", "want": "ALTER TABLE t ALTER DISTSTYLE KEY DISTKEY c", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t ALTER SORTKEY (c1, c2)", "want": "ALTER TABLE t ALTER SORTKEY (c1, c2)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t ALTER SORTKEY AUTO", "want": "ALTER TABLE t ALTER SORTKEY AUTO", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t ALTER SORTKEY NONE", "want": "ALTER TABLE t ALTER SORTKEY NONE", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t SET FILE FORMAT AVRO", "want": "ALTER TABLE t SET FILE FORMAT AVRO", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t SET LOCATION 's3://bucket/folder/'", "want": "ALTER TABLE t SET LOCATION 's3://bucket/folder/'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE t SET TABLE PROPERTIES ('a' = '5', 'b' = 'c')", "want": "ALTER TABLE t SET TABLE PROPERTIES ('a' = '5', 'b' = 'c')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ALTER TABLE table_name ALTER COLUMN bla TYPE VARCHAR", "want": "ALTER TABLE table_name ALTER COLUMN bla TYPE VARCHAR", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ANALYZE TBL ALL COLUMNS", "want": "ANALYZE TBL ALL COLUMNS", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ANALYZE TBL PREDICATE COLUMNS", "want": "ANALYZE TBL PREDICATE COLUMNS", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ANALYZE TBL(col1, col2)", "want": "ANALYZE TBL(col1, col2)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ANALYZE VERBOSE TBL", "want": "ANALYZE VERBOSE TBL", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CAST('bla' AS SUPER)", "want": "CAST('bla' AS SUPER)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CAST('foo' AS HLLSKETCH)", "want": "CAST('foo' AS HLLSKETCH)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CONVERT(INT, x)", "want": "CAST(x AS INTEGER)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "COPY customer FROM 's3://mybucket/customer' IAM_ROLE 'arn:aws:iam::0123456789012:role/MyRedshiftRole' REGION 'us-east-1' FORMAT orc", "want": "COPY customer FROM 's3://mybucket/customer' IAM_ROLE 'arn:aws:iam::0123456789012:role/MyRedshiftRole' REGION 'us-east-1' FORMAT orc", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "COPY customer FROM 's3://mybucket/mydata' CREDENTIALS 'aws_iam_role=arn:aws:iam::<aws-account-id>:role/<role-name>;master_symmetric_key=<root-key>' emptyasnull blanksasnull timeformat 'YYYY-MM-DD HH:MI:SS'", "want": "COPY customer FROM 's3://mybucket/mydata' CREDENTIALS 'aws_iam_role=arn:aws:iam::<aws-account-id>:role/<role-name>;master_symmetric_key=<root-key>' emptyasnull blanksasnull timeformat 'YYYY-MM-DD HH:MI:SS'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "COPY test_staging_tbl FROM 's3://your/bucket/prefix/here' IAM_ROLE default FORMAT AS AVRO 'auto'", "want": "COPY test_staging_tbl FROM 's3://your/bucket/prefix/here' IAM_ROLE default FORMAT AS AVRO 'auto'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "COPY test_staging_tbl FROM 's3://your/bucket/prefix/here' IAM_ROLE default FORMAT AS JSON 's3://jsonpaths_file'", "want": "COPY test_staging_tbl FROM 's3://your/bucket/prefix/here' IAM_ROLE default FORMAT AS JSON 's3://jsonpaths_file'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE MATERIALIZED VIEW orders AUTO REFRESH YES AS SELECT 1", "want": "CREATE MATERIALIZED VIEW orders AUTO REFRESH YES AS SELECT 1", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE OR REPLACE VIEW v1 AS SELECT cola, colb FROM t1 WITH NO SCHEMA BINDING", "want": "CREATE OR REPLACE VIEW v1 AS SELECT cola, colb FROM t1 WITH NO SCHEMA BINDING", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE OR REPLACE VIEW v1 AS SELECT id, AVG(average_metric1) AS m1, AVG(average_metric2) AS m2 FROM t GROUP BY id WITH NO SCHEMA BINDING", "want": "CREATE OR REPLACE VIEW v1 AS SELECT id, AVG(average_metric1) AS m1, AVG(average_metric2) AS m2 FROM t GROUP BY id WITH NO SCHEMA BINDING", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE \"TEST\" (\"cola\" VARCHAR(MAX))", "want": "CREATE TABLE \"TEST\" (\"cola\" VARCHAR(MAX))", "pretty": false, "identify": true}
+{"dialect": "redshift", "sql": "CREATE TABLE SOUP (LIKE other_table) DISTKEY(soup1) SORTKEY(soup2) DISTSTYLE ALL", "want": "CREATE TABLE SOUP (LIKE other_table) DISTKEY(soup1) SORTKEY(soup2) DISTSTYLE ALL", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE SOUP (SOUP1 VARCHAR(50) NOT NULL ENCODE ZSTD, SOUP2 VARCHAR(70) NULL ENCODE DELTA)", "want": "CREATE TABLE SOUP (SOUP1 VARCHAR(50) NOT NULL ENCODE ZSTD, SOUP2 VARCHAR(70) NULL ENCODE DELTA)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE a (b BINARY VARYING(10))", "want": "CREATE TABLE a (b VARBYTE(10))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE datetable (start_date DATE, end_date DATE)", "want": "CREATE TABLE datetable (start_date DATE, end_date DATE)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE real1 (realcol REAL)", "want": "CREATE TABLE real1 (realcol REAL)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE sales (salesid INTEGER NOT NULL) DISTKEY(listid) COMPOUND SORTKEY(listid, sellerid) DISTSTYLE AUTO", "want": "CREATE TABLE sales (salesid INTEGER NOT NULL) DISTKEY(listid) COMPOUND SORTKEY(listid, sellerid) DISTSTYLE AUTO", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE t (c BIGINT GENERATED BY DEFAULT AS IDENTITY (0, 1))", "want": "CREATE TABLE t (c BIGINT IDENTITY(0, 1))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE t (c BIGINT IDENTITY(0, 1))", "want": "CREATE TABLE t (c BIGINT IDENTITY(0, 1))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE t1 (LIKE t2)", "want": "CREATE TABLE t1 (LIKE t2)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE t1 (col VARCHAR, LIKE t2)", "want": "CREATE TABLE t1 (col VARCHAR, LIKE t2)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE table_backup (i INTEGER, b VARCHAR) BACKUP NO", "want": "CREATE TABLE table_backup (i INTEGER, b VARCHAR) BACKUP NO", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE table_backup (i INTEGER, b VARCHAR) BACKUP YES", "want": "CREATE TABLE table_backup (i INTEGER, b VARCHAR) BACKUP YES", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE table_backup BACKUP NO AS SELECT * FROM event", "want": "CREATE TABLE table_backup BACKUP NO AS SELECT * FROM event", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "CREATE TABLE table_backup BACKUP YES AS SELECT * FROM event", "want": "CREATE TABLE table_backup BACKUP YES AS SELECT * FROM event", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "DATEDIFF('day', a, b)", "want": "DATEDIFF(DAY, a, b)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "DATEDIFF(days, a, b)", "want": "DATEDIFF(DAY, a, b)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "DATE_PART(year, \"somecol\")", "want": "EXTRACT(year FROM \"somecol\")", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "DECODE(x, a, b, c, d)", "want": "DECODE(x, a, b, c, d)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GETDATE()", "want": "GETDATE()", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT ALL FOR TABLES IN SCHEMA ShareSchema DATABASE ShareDb TO ROLE Sales", "want": "GRANT ALL FOR TABLES IN SCHEMA ShareSchema DATABASE ShareDb TO ROLE Sales", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT ALL ON SCHEMA qa_tickit TO GROUP qa_users", "want": "GRANT ALL ON SCHEMA qa_tickit TO GROUP qa_users", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT ALL ON TABLE qa_tickit.sales TO GROUP qa_users", "want": "GRANT ALL ON TABLE qa_tickit.sales TO GROUP qa_users", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT ALL ON TABLE qa_tickit.sales TO GROUP qa_users, GROUP ro_users", "want": "GRANT ALL ON TABLE qa_tickit.sales TO GROUP qa_users, GROUP ro_users", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT ALL ON view_date TO view_user", "want": "GRANT ALL ON view_date TO view_user", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT ALL(cust_name, cust_phone, cust_contact_preference) ON cust_profile TO GROUP sales_admin", "want": "GRANT ALL(cust_name, cust_phone, cust_contact_preference) ON cust_profile TO GROUP sales_admin", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT ASSUMEROLE ON 'arn:aws:iam::123456789012:role/Redshift-Exfunc' TO reg_user1 FOR EXTERNAL FUNCTION", "want": "GRANT ASSUMEROLE ON 'arn:aws:iam::123456789012:role/Redshift-Exfunc' TO reg_user1 FOR EXTERNAL FUNCTION", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT EXECUTE FOR FUNCTIONS IN SCHEMA Sales_schema TO bob", "want": "GRANT EXECUTE FOR FUNCTIONS IN SCHEMA Sales_schema TO bob", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT ROLE sample_role1 TO ROLE sample_role2", "want": "GRANT ROLE sample_role1 TO ROLE sample_role2", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT SELECT FOR TABLES IN DATABASE Sales_db TO alice WITH GRANT OPTION", "want": "GRANT SELECT FOR TABLES IN DATABASE Sales_db TO alice WITH GRANT OPTION", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT SELECT ON ALL TABLES IN SCHEMA qa_tickit TO fred", "want": "GRANT SELECT ON ALL TABLES IN SCHEMA qa_tickit TO fred", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT SELECT ON TABLE sales TO fred", "want": "GRANT SELECT ON TABLE sales TO fred", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT SELECT ON sales_db.sales_schema.tickit_sales_redshift TO Bob", "want": "GRANT SELECT ON sales_db.sales_schema.tickit_sales_redshift TO Bob", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT SELECT(cust_name, cust_phone), UPDATE(cust_contact_preference) ON cust_profile TO GROUP sales_group", "want": "GRANT SELECT(cust_name, cust_phone), UPDATE(cust_contact_preference) ON cust_profile TO GROUP sales_group", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT USAGE FOR SCHEMAS IN DATABASE Sales_db TO ROLE Sales", "want": "GRANT USAGE FOR SCHEMAS IN DATABASE Sales_db TO ROLE Sales", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT USAGE ON DATABASE sales_db TO Bob", "want": "GRANT USAGE ON DATABASE sales_db TO Bob", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT USAGE ON DATASHARE salesshare TO NAMESPACE '13b8833d-17c6-4f16-8fe4-1a018f5ed00d'", "want": "GRANT USAGE ON DATASHARE salesshare TO NAMESPACE '13b8833d-17c6-4f16-8fe4-1a018f5ed00d'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "GRANT USAGE ON SCHEMA sales_schema TO ROLE Analyst_role", "want": "GRANT USAGE ON SCHEMA sales_schema TO ROLE Analyst_role", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "INSERT INTO t (a) VALUES (1), (2), (3)", "want": "INSERT INTO t (a) VALUES (1), (2), (3)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "INSERT INTO t (a, b) VALUES (1, 2), (3, 4)", "want": "INSERT INTO t (a, b) VALUES (1, 2), (3, 4)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "LEN(x)", "want": "LENGTH(x)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "LISTAGG(DISTINCT foo, ', ')", "want": "LISTAGG(DISTINCT foo, ', ')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "LISTAGG(sellerid, ', ')", "want": "LISTAGG(sellerid, ', ')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "NVL(a, b, c, d)", "want": "COALESCE(a, b, c, d)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "REVOKE ALL ON SCHEMA qa_tickit FROM GROUP qa_users", "want": "REVOKE ALL ON SCHEMA qa_tickit FROM GROUP qa_users", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "REVOKE EXECUTE FOR FUNCTIONS IN SCHEMA Sales_schema FROM bob", "want": "REVOKE EXECUTE FOR FUNCTIONS IN SCHEMA Sales_schema FROM bob", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "REVOKE ROLE sample_role1 FROM ROLE sample_role2", "want": "REVOKE ROLE sample_role1 FROM ROLE sample_role2", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "REVOKE SELECT FOR TABLES IN DATABASE Sales_db FROM alice", "want": "REVOKE SELECT FOR TABLES IN DATABASE Sales_db FROM alice", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "REVOKE SELECT ON ALL TABLES IN SCHEMA qa_tickit FROM fred", "want": "REVOKE SELECT ON ALL TABLES IN SCHEMA qa_tickit FROM fred", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "REVOKE SELECT ON TABLE sales FROM fred", "want": "REVOKE SELECT ON TABLE sales FROM fred", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "REVOKE USAGE FOR SCHEMAS IN DATABASE Sales_db FROM ROLE Sales", "want": "REVOKE USAGE FOR SCHEMAS IN DATABASE Sales_db FROM ROLE Sales", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "REVOKE USAGE ON DATABASE sales_db FROM Bob", "want": "REVOKE USAGE ON DATABASE sales_db FROM Bob", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "REVOKE USAGE ON DATASHARE salesshare FROM NAMESPACE '13b8833d-17c6-4f16-8fe4-1a018f5ed00d'", "want": "REVOKE USAGE ON DATASHARE salesshare FROM NAMESPACE '13b8833d-17c6-4f16-8fe4-1a018f5ed00d'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "REVOKE USAGE ON SCHEMA sales_schema FROM ROLE Analyst_role", "want": "REVOKE USAGE ON SCHEMA sales_schema FROM ROLE Analyst_role", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "ROUND(CAST(a AS DOUBLE PRECISION) / CAST(b AS DOUBLE PRECISION), 2)", "want": "ROUND(CAST(a AS DOUBLE PRECISION) / CAST(b AS DOUBLE PRECISION), 2)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT\n  c_name,\n  orders.o_orderkey AS orderkey,\n  index AS orderkey_index\nFROM customer_orders_lineitem AS c, c.c_orders AS orders AT index\nORDER BY\n  orderkey_index", "want": "SELECT\n  c_name,\n  orders.o_orderkey AS orderkey,\n  index AS orderkey_index\nFROM customer_orders_lineitem AS c, c.c_orders AS orders AT index\nORDER BY\n  orderkey_index", "pretty": true, "identify": false}
+{"dialect": "redshift", "sql": "SELECT 'a''b'", "want": "SELECT 'a\\'b'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT 'abc'::BINARY", "want": "SELECT CAST('abc' AS VARBYTE)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT 'abc'::CHARACTER", "want": "SELECT CAST('abc' AS CHAR)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT * FROM #x", "want": "SELECT * FROM #x", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT * FROM (SELECT 1 AS EXCLUDE) AS t", "want": "SELECT * FROM (SELECT 1 AS EXCLUDE) AS t", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT * FROM t FETCH FIRST 1 ROWS ONLY", "want": "SELECT * FROM t LIMIT 1", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT * FROM venue WHERE (venuecity, venuestate) IN (('Miami', 'FL'), ('Tampa', 'FL')) ORDER BY venueid", "want": "SELECT * FROM venue WHERE (venuecity, venuestate) IN (('Miami', 'FL'), ('Tampa', 'FL')) ORDER BY venueid", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT * FROM x WHERE y = DATEADD('month', -1, DATE_TRUNC('month', (SELECT y FROM #temp_table)))", "want": "SELECT * FROM x WHERE y = DATEADD(MONTH, -1, DATE_TRUNC('MONTH', (SELECT y FROM #temp_table)))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT *, 4 AS col4 EXCLUDE (col2, col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)", "want": "SELECT *, 4 AS col4 EXCLUDE (col2, col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT *, 4 AS col4 EXCLUDE col2, col3 FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)", "want": "SELECT *, 4 AS col4 EXCLUDE (col2, col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT 1 AS EXCLUDE", "want": "SELECT 1 AS EXCLUDE", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT 1 AS EXCLUDE, 2 AS foo", "want": "SELECT 1 AS EXCLUDE, 2 AS foo", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT 1 EXCLUDE", "want": "SELECT 1 AS EXCLUDE", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT 1 EXCLUDE FROM t", "want": "SELECT 1 AS EXCLUDE FROM t", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT ADD_MONTHS('2008-03-31', 1)", "want": "SELECT DATEADD(MONTH, 1, '2008-03-31')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT APPROXIMATE AS y", "want": "SELECT APPROXIMATE AS y", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT APPROXIMATE COUNT(DISTINCT y)", "want": "SELECT APPROXIMATE COUNT(DISTINCT y)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT APPROXIMATE PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY totalprice)", "want": "SELECT APPROXIMATE PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY totalprice)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT ARRAY(1, 2, 3)", "want": "SELECT ARRAY(1, 2, 3)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT ARRAY[1, 2, 3]", "want": "SELECT ARRAY[1, 2, 3]", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT CAST('01:03:05.124' AS TIME(2) WITH TIME ZONE)", "want": "SELECT CAST('01:03:05.124' AS TIME(2) WITH TIME ZONE)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT CAST('2020-02-02 01:03:05.124' AS TIMESTAMP(2) WITH TIME ZONE)", "want": "SELECT CAST('2020-02-02 01:03:05.124' AS TIMESTAMP(2) WITH TIME ZONE)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT CAST(value AS FLOAT(8))", "want": "SELECT CAST(value AS FLOAT(8))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT CONCAT('abc', 'def')", "want": "SELECT 'abc' || 'def'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT CONVERT_TIMEZONE('America/New_York', '2024-08-06 09:10:00.000')", "want": "SELECT CONVERT_TIMEZONE('UTC', 'America/New_York', '2024-08-06 09:10:00.000')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT COSH(1.5)", "want": "SELECT COSH(1.5)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT COUNT(*) FROM event WHERE eventname LIKE '%Ring%' OR eventname LIKE '%Die%'", "want": "SELECT COUNT(*) FROM event WHERE eventname LIKE '%Ring%' OR eventname LIKE '%Die%'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DATEADD('day', ndays, caldate)", "want": "SELECT DATEADD(DAY, ndays, caldate)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DATEADD(DAY, 1, 'today')", "want": "SELECT DATEADD(DAY, 1, 'today')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DATEADD(HOUR, 0, CAST('2020-02-02 01:03:05.124' AS TIMESTAMP))", "want": "SELECT DATEADD(HOUR, 0, CAST('2020-02-02 01:03:05.124' AS TIMESTAMP))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DATEADD(month, 18, '2008-02-28')", "want": "SELECT DATEADD(MONTH, 18, '2008-02-28')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DATEDIFF(SECOND, '2020-02-02 00:00:00.000', '2020-02-02 01:03:05.124')", "want": "SELECT DATEDIFF(SECOND, '2020-02-02 00:00:00.000', '2020-02-02 01:03:05.124')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')", "want": "SELECT DATEDIFF(WEEK, '2009-01-01', '2009-12-31')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DATE_ADD('day', 1, DATE('2023-01-01'))", "want": "SELECT DATEADD(DAY, 1, DATE('2023-01-01'))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DATE_DIFF('month', CAST('2020-02-29 00:00:00' AS TIMESTAMP), CAST('2020-03-02 00:00:00' AS TIMESTAMP))", "want": "SELECT DATEDIFF(MONTH, CAST('2020-02-29 00:00:00' AS TIMESTAMP), CAST('2020-03-02 00:00:00' AS TIMESTAMP))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DATE_PART(minute, timestamp '2023-01-04 04:05:06.789')", "want": "SELECT EXTRACT(minute FROM CAST('2023-01-04 04:05:06.789' AS TIMESTAMP))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DATE_PART(month, date '20220502')", "want": "SELECT EXTRACT(month FROM CAST('20220502' AS DATE))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC", "want": "SELECT a, b FROM (SELECT a AS a, b AS b, ROW_NUMBER() OVER (PARTITION BY a ORDER BY c DESC) AS _row_number FROM x) AS _t WHERE _row_number = 1", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT EXP(1)", "want": "SELECT EXP(1)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT EXTRACT(EPOCH FROM CURRENT_DATE)", "want": "SELECT EXTRACT(EPOCH FROM CURRENT_DATE)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT GETBIT(FROM_HEX('4d'), 2)", "want": "SELECT GETBIT(FROM_HEX('4d'), 2)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT INTERVAL '5 DAY'", "want": "SELECT INTERVAL '5 DAY'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "want": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT JSON_EXTRACT_PATH_TEXT('{\"f2\":{\"f3\":1},\"f4\":{\"f5\":99,\"f6\":\"star\"}', 'f4', 'f6', TRUE)", "want": "SELECT JSON_EXTRACT_PATH_TEXT('{\"f2\":{\"f3\":1},\"f4\":{\"f5\":99,\"f6\":\"star\"}', 'f4', 'f6', TRUE)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT JSON_PARSE('[]')", "want": "SELECT JSON_PARSE('[]')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT LAG(x IGNORE NULLS) OVER (PARTITION BY y ORDER BY z)", "want": "SELECT LAG(x) IGNORE NULLS OVER (PARTITION BY y ORDER BY z)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT LAG(x RESPECT NULLS) OVER (PARTITION BY y ORDER BY z)", "want": "SELECT LAG(x) RESPECT NULLS OVER (PARTITION BY y ORDER BY z)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT LAG(x) IGNORE NULLS OVER (PARTITION BY y ORDER BY z)", "want": "SELECT LAG(x) IGNORE NULLS OVER (PARTITION BY y ORDER BY z)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT LAG(x) RESPECT NULLS OVER (PARTITION BY y ORDER BY z)", "want": "SELECT LAG(x) RESPECT NULLS OVER (PARTITION BY y ORDER BY z)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT REGEXP_SUBSTR(abc, 'pattern(group)', 2) FROM table", "want": "SELECT REGEXP_SUBSTR(abc, 'pattern(group)', 2) FROM \"table\"", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT SNAPSHOT, type", "want": "SELECT \"SNAPSHOT\", \"type\"", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT SPLIT_TO_ARRAY('12,345,6789')", "want": "SELECT SPLIT_TO_ARRAY('12,345,6789', ',')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT STRTOL('abc', 16)", "want": "SELECT STRTOL('abc', 16)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT ST_AsEWKT(ST_GeogFromText('LINESTRING(110 40, 2 3, -10 80, -7 9)')::geometry)", "want": "SELECT ST_ASEWKT(CAST(ST_GEOGFROMTEXT('LINESTRING(110 40, 2 3, -10 80, -7 9)') AS GEOMETRY))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT ST_AsEWKT(ST_GeomFromEWKT('SRID=4326;POINT(10 20)')::geography)", "want": "SELECT ST_ASEWKT(CAST(ST_GEOMFROMEWKT('SRID=4326;POINT(10 20)') AS GEOGRAPHY))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT SYSDATE", "want": "SELECT SYSDATE", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT TEXTLEN('hello world')", "want": "SELECT LENGTH('hello world')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT TOP 1 x FROM y", "want": "SELECT x FROM y LIMIT 1", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT VERSION()", "want": "SELECT VERSION()", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT attr AS attr, JSON_TYPEOF(val) AS value_type FROM customer_orders_lineitem AS c, UNPIVOT c.c_orders AS val AT attr WHERE c_custkey = 9451", "want": "SELECT attr AS attr, JSON_TYPEOF(val) AS value_type FROM customer_orders_lineitem AS c, UNPIVOT c.c_orders AS val AT attr WHERE c_custkey = 9451", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT attr AS attr, JSON_TYPEOF(val) AS value_type FROM customer_orders_lineitem AS c, UNPIVOT c.c_orders[0] WHERE c_custkey = 9451", "want": "SELECT attr AS attr, JSON_TYPEOF(val) AS value_type FROM customer_orders_lineitem AS c, UNPIVOT c.c_orders[0] WHERE c_custkey = 9451", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT c.*, o FROM bloo AS c, c.c_orders AS o", "want": "SELECT c.*, o FROM bloo AS c, c.c_orders AS o", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT c.*, o, l FROM bloo AS c, c.c_orders AS o, o.o_lineitems AS l", "want": "SELECT c.*, o, l FROM bloo AS c, c.c_orders AS o, o.o_lineitems AS l", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT caldate + INTERVAL '1 SECOND' AS dateplus FROM date WHERE caldate = '12-31-2008'", "want": "SELECT caldate + INTERVAL '1 SECOND' AS dateplus FROM date WHERE caldate = '12-31-2008'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT col1, *, col2 EXCLUDE(col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)", "want": "SELECT col1, *, col2 EXCLUDE (col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT date_col - INTERVAL '1' AS one_second_later", "want": "SELECT date_col - INTERVAL '1' AS one_second_later", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT date_col - INTERVAL '1' HOUR AS one_hour_later", "want": "SELECT date_col - INTERVAL '1 HOUR' AS one_hour_later", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT date_col - INTERVAL '30' DAY FROM t", "want": "SELECT date_col - INTERVAL '30 DAY' FROM t", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT date_col - INTERVAL '30' FROM t", "want": "SELECT date_col - INTERVAL '30' FROM t", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "SELECT tablename, \"column\" FROM pg_table_def WHERE \"column\" LIKE '%start\\\\_%' LIMIT 5", "want": "SELECT tablename, \"column\" FROM pg_table_def WHERE \"column\" LIKE '%start\\\\_%' LIMIT 5", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "TIME_TO_STR(a, '%Y-%m-%d %H:%M:%S.%f')", "want": "TO_CHAR(a, 'YYYY-MM-DD HH24:MI:SS.US')", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "UNLOAD ('select * from venue') TO 's3://mybucket/unload/' IAM_ROLE 'arn:aws:iam::0123456789012:role/MyRedshiftRole'", "want": "UNLOAD ('select * from venue') TO 's3://mybucket/unload/' IAM_ROLE 'arn:aws:iam::0123456789012:role/MyRedshiftRole'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "create table \"group\" (\"col\" char(10))", "want": "CREATE TABLE \"group\" (\"col\" CHAR(10))", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "create table if not exists city_slash_id(\"city/id\" integer not null, state char(2) not null)", "want": "CREATE TABLE IF NOT EXISTS city_slash_id (\"city/id\" INTEGER NOT NULL, state CHAR(2) NOT NULL)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "foo$", "want": "foo$", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "select a.foo, b.bar, a.baz from a, b where a.baz = b.baz (+)", "want": "SELECT a.foo, b.bar, a.baz FROM a, b WHERE a.baz = b.baz (+)", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "select foo, bar from table_1 minus select foo, bar from table_2", "want": "SELECT foo, bar FROM table_1 EXCEPT SELECT foo, bar FROM table_2", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "x LIKE 'abc' || '%'", "want": "x LIKE 'abc' || '%'", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "x is false", "want": "x IS FALSE", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "x is not false", "want": "NOT x IS FALSE", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "x is true", "want": "x IS TRUE", "pretty": false, "identify": false}
+{"dialect": "redshift", "sql": "x ~* 'pat'", "want": "x ~* 'pat'", "pretty": false, "identify": false}
+{"dialect": "risingwave", "sql": "CREATE SINK my_sink AS SELECT * FROM A WITH (connector='kafka', topic='my_topic') FORMAT PLAIN ENCODE PROTOBUF (A=1, B=2) KEY ENCODE PROTOBUF (A=3, B=4)", "want": "CREATE SINK my_sink AS SELECT * FROM A WITH (connector='kafka', topic='my_topic') FORMAT PLAIN ENCODE PROTOBUF (A=1, B=2) KEY ENCODE PROTOBUF (A=3, B=4)", "pretty": false, "identify": false}
+{"dialect": "risingwave", "sql": "CREATE SOURCE from_kafka (*, gen_i32_field INT AS int32_field + 2, gen_i64_field INT AS int64_field + 2, WATERMARK FOR time_col AS time_col - INTERVAL '5 SECOND') INCLUDE header foo VARCHAR AS myheader INCLUDE key AS mykey WITH (connector='kafka', topic='my_topic') FORMAT PLAIN ENCODE PROTOBUF (A=1, B=2) KEY ENCODE PROTOBUF (A=3, B=4)", "want": "CREATE SOURCE from_kafka (*, gen_i32_field INT AS int32_field + 2, gen_i64_field INT AS int64_field + 2, WATERMARK FOR time_col AS time_col - INTERVAL '5 SECOND') INCLUDE header foo VARCHAR AS myheader INCLUDE key AS mykey WITH (connector='kafka', topic='my_topic') FORMAT PLAIN ENCODE PROTOBUF (A=1, B=2) KEY ENCODE PROTOBUF (A=3, B=4)", "pretty": false, "identify": false}
+{"dialect": "risingwave", "sql": "CREATE TABLE t (map_col MAP(VARCHAR, INT))", "want": "CREATE TABLE t (map_col MAP(VARCHAR, INT))", "pretty": false, "identify": false}
+{"dialect": "risingwave", "sql": "CREATE TABLE t (map_col MAP<VARCHAR, INT>)", "want": "CREATE TABLE t (map_col MAP(VARCHAR, INT))", "pretty": false, "identify": false}
+{"dialect": "risingwave", "sql": "SELECT CAST(NULL AS MAP(VARCHAR, INT)) AS map_column", "want": "SELECT CAST(NULL AS MAP(VARCHAR, INT)) AS map_column", "pretty": false, "identify": false}
+{"dialect": "risingwave", "sql": "SELECT NULL::MAP<VARCHAR, INT> AS map_column", "want": "SELECT CAST(NULL AS MAP(VARCHAR, INT)) AS map_column", "pretty": false, "identify": false}
+{"dialect": "risingwave", "sql": "WITH t1 AS MATERIALIZED (SELECT 1), t2 AS NOT MATERIALIZED (SELECT 2) SELECT * FROM t1, t2", "want": "WITH t1 AS MATERIALIZED (SELECT 1), t2 AS NOT MATERIALIZED (SELECT 2) SELECT * FROM t1, t2", "pretty": false, "identify": false}
 {"dialect": "starrocks", "sql": "ALTER TABLE a SWAP WITH b", "want": "ALTER TABLE a SWAP WITH b", "pretty": false, "identify": false}
 {"dialect": "starrocks", "sql": "ALTER TABLE t1 RENAME t2", "want": "ALTER TABLE t1 RENAME t2", "pretty": false, "identify": false}
 {"dialect": "starrocks", "sql": "ANALYZE FULL TABLE TBL(c1, c2) PROPERTIES ('prop1'=val1)", "want": "ANALYZE FULL TABLE TBL(c1, c2) PROPERTIES ('prop1'=val1)", "pretty": false, "identify": false}

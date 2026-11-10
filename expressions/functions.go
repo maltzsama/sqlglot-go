@@ -30,21 +30,29 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"ARRAY": func(args []Expression) Expression {
 		return newNode(KindArray, Args{"expressions": args})
 	},
-	"ABS":          genericFunction(KindAbs),
-	"AVG":          genericFunction(KindAvg),
-	"SUM":          genericFunction(KindSum),
-	"SQRT":         genericFunction(KindSqrt),
-	"LN":           genericFunction(KindLn),
-	"EXP":          genericFunction(KindExp),
-	"MIN":          genericFunction(KindMin),
-	"MAX":          genericFunction(KindMax),
-	"ROUND":        genericFunction(KindRound),
-	"LOG":          genericFunction(KindLog),
-	"POW":          genericFunction(KindPow),
-	"POWER":        genericFunction(KindPow),
-	"SUBSTR":       genericFunction(KindSubstring),
-	"CEILING":      genericFunction(KindCeil),
-	"GROUP_CONCAT": genericFunction(KindGroupConcat),
+	// "LIST" registers exp.List the same way upstream does: FUNCTIONS spreads
+	// exp.FUNCTION_BY_NAME (parser.py:374), which maps every Func subclass's sql_name to
+	// from_arg_list (expressions/__init__.py:50) — so `LIST(1, 2, 3)` parses as exp.List,
+	// not Anonymous, in every dialect.
+	"LIST": func(args []Expression) Expression {
+		return newNode(KindList, Args{"expressions": args})
+	},
+	"ABS":             genericFunction(KindAbs),
+	"AVG":             genericFunction(KindAvg),
+	"SUM":             genericFunction(KindSum),
+	"SQRT":            genericFunction(KindSqrt),
+	"LN":              genericFunction(KindLn),
+	"EXP":             genericFunction(KindExp),
+	"MIN":             genericFunction(KindMin),
+	"MAX":             genericFunction(KindMax),
+	"ROUND":           genericFunction(KindRound),
+	"LOG":             genericFunction(KindLog),
+	"POW":             genericFunction(KindPow),
+	"POWER":           genericFunction(KindPow),
+	"SUBSTR":          genericFunction(KindSubstring),
+	"CEILING":         genericFunction(KindCeil),
+	"PERCENTILE_DISC": genericFunction(KindPercentileDisc),
+	"GROUP_CONCAT":    genericFunction(KindGroupConcat),
 	// LAG/LEAD(this[, offset[, default]]) window functions (aggregate.py:150-163); FromArgList
 	// maps args positionally onto {this, offset, default} per KindLag/KindLead's arg_types.
 	"LAG":  genericFunction(KindLag),
@@ -88,19 +96,24 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"STANDARD_HASH":         genericFunction(KindStandardHash),
 	"HEX":                   genericFunction(KindHex),
 	"UNHEX":                 genericFunction(KindUnhex),
-	"MD5":                   genericFunction(KindMD5),
-	"ST_POINT":              genericFunction(KindStPoint),
-	"ST_MAKEPOINT":          genericFunction(KindStPoint),
-	"ST_DISTANCE":           genericFunction(KindStDistance),
-	"GENERATE_SERIES":       genericFunction(KindGenerateSeries),
-	"DATE":                  genericFunction(KindDate),
-	"ADD_MONTHS":            genericFunction(KindAddMonths),
-	"DATE_ADD":              genericFunction(KindDateAdd),
-	"DATEADD":               genericFunction(KindDateAdd),
-	"DATEDIFF":              genericFunction(KindDateDiff),
-	"DATE_DIFF":             genericFunction(KindDateDiff),
-	"JSON_EXTRACT":          jsonExtractFunction(KindJSONExtract),
-	"JSON_EXTRACT_SCALAR":   jsonExtractFunction(KindJSONExtractScalar),
+	// FROM_BASE(this, expression) (string.py:297-299): upstream registers every Func
+	// subclass's sql_name in FUNCTION_BY_NAME (parser.py:374), so FROM_BASE parses
+	// structurally in every dialect — Redshift renames it to STRTOL on write
+	// (generator/dialect_redshift.go). Without this entry it degrades to Anonymous.
+	"FROM_BASE":           genericFunction(KindFromBase),
+	"MD5":                 genericFunction(KindMD5),
+	"ST_POINT":            genericFunction(KindStPoint),
+	"ST_MAKEPOINT":        genericFunction(KindStPoint),
+	"ST_DISTANCE":         genericFunction(KindStDistance),
+	"GENERATE_SERIES":     genericFunction(KindGenerateSeries),
+	"DATE":                genericFunction(KindDate),
+	"ADD_MONTHS":          genericFunction(KindAddMonths),
+	"DATE_ADD":            genericFunction(KindDateAdd),
+	"DATEADD":             genericFunction(KindDateAdd),
+	"DATEDIFF":            genericFunction(KindDateDiff),
+	"DATE_DIFF":           genericFunction(KindDateDiff),
+	"JSON_EXTRACT":        jsonExtractFunction(KindJSONExtract),
+	"JSON_EXTRACT_SCALAR": jsonExtractFunction(KindJSONExtractScalar),
 	// REPLACE(this, expression[, replacement]) (string.py:113); base has no replace_sql, so
 	// it renders via functionFallbackSQL like any other unadorned Func (see KindInitcap).
 	"REPLACE": genericFunction(KindReplace),
@@ -160,6 +173,12 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"TIME_STR_TO_DATE": genericFunction(KindTimeStrToDate),
 	"TIME_STR_TO_TIME": genericFunction(KindTimeStrToTime),
 	"TIME_STR_TO_UNIX": genericFunction(KindTimeStrToUnix),
+	// TimeToStr (temporal.py:486-487) declares no _sql_names, so upstream auto-registers it
+	// under its camel-case name only (core.py:1676-1683 sql_names -> FUNCTION_BY_NAME via
+	// parser.py:374). Base has no TimeToStr generator transform, so it renders back verbatim
+	// through functionFallbackSQL (`TIME_TO_STR(...)`); only dialects carrying a TIME_MAPPING
+	// override generation (generators/postgres.py:399 -> TO_CHAR).
+	"TIME_TO_STR": genericFunction(KindTimeToStr),
 	// dialect-funcs cluster singleton base entries (parity_gaps.txt gaps 114/160; verified
 	// against parser.py:121-129,394 - both are truly base-scope upstream, not per-dialect,
 	// unlike DATABASE()/SCHEMA() below which parsers/mysql.py:134-135 register mysql-only
@@ -341,3 +360,15 @@ func SessionUser(args Args) Expression    { return newNode(KindSessionUser, args
 func Localtime(args Args) Expression      { return newNode(KindLocaltime, args) }      // temporal.py:49
 func Localtimestamp(args Args) Expression { return newNode(KindLocaltimestamp, args) } // temporal.py:53
 func CurrentSchema(args Args) Expression  { return newNode(KindCurrentSchema, args) }  // functions.py:285
+
+// Redshift function and property nodes (expressions/functions.py, expressions/properties.py).
+func FromBase(args Args) Expression          { return newNode(KindFromBase, args) }
+func CurrentUserId(args Args) Expression     { return newNode(KindCurrentUserId, args) }
+func ObjectTransform(args Args) Expression   { return newNode(KindObjectTransform, args) }
+func ConvertTimezone(args Args) Expression   { return newNode(KindConvertTimezone, args) }
+func ConcatWs(args Args) Expression          { return newNode(KindConcatWs, args) }
+func SortKeyProperty(args Args) Expression   { return newNode(KindSortKeyProperty, args) }
+func DistKeyProperty(args Args) Expression   { return newNode(KindDistKeyProperty, args) }
+func DistStyleProperty(args Args) Expression { return newNode(KindDistStyleProperty, args) }
+func PercentileDisc(args Args) Expression    { return newNode(KindPercentileDisc, args) }
+func AtIndex(args Args) Expression           { return newNode(KindAtIndex, args) }

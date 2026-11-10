@@ -557,6 +557,22 @@ func init() {
 		"Uuid":             typeSpec{returns: dtype("VARCHAR")},
 		"Week":             typeSpec{returns: dtype("INT")},
 	})
+	registerTypingMetadata("redshift", map[string]typeSpec{
+		"Encode":      typeSpec{returns: dtype("TEXT")},
+		"Rank":        typeSpec{returns: dtype("INT")},
+		"StrToTime":   typeSpec{returns: dtype("TIMESTAMPTZ")},
+		"WidthBucket": typeSpec{returns: dtype("INT")},
+	})
+	registerTypingMetadata("materialize", map[string]typeSpec{
+		"Encode":      typeSpec{returns: dtype("TEXT")},
+		"Ntile":       typeSpec{returns: dtype("INT")},
+		"WidthBucket": typeSpec{returns: dtype("INT")},
+	})
+	registerTypingMetadata("risingwave", map[string]typeSpec{
+		"Encode":      typeSpec{returns: dtype("TEXT")},
+		"Ntile":       typeSpec{returns: dtype("INT")},
+		"WidthBucket": typeSpec{returns: dtype("INT")},
+	})
 }
 
 var _ = exp.DTypeUnknown

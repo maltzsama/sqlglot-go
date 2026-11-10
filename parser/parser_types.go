@@ -30,7 +30,7 @@ func dataTypeArgs(dtype any, expressions []exp.Expression, nested bool) exp.Args
 // USERDEFINED branch already renders "kind" generically via sqlKey, whether it's a string or
 // an expression).
 func (p *Parser) parseUserDefinedType(identifier exp.Expression) exp.Expression {
-	if p.dialect.Name == "postgres" {
+	if p.dialectFamily("postgres") {
 		udtType := identifier
 		for p.match(tokens.DOT) {
 			if part := p.parseIdVar(true, nil); part != nil {
@@ -673,17 +673,16 @@ func (p *Parser) parseBracketBase(this exp.Expression) exp.Expression {
 		// parser.py:7974-7978: `{...}` is a struct constructor (duckdb/hive).
 		this = p.expression(exp.New(exp.KindStruct, exp.Args{"expressions": p.kvToPropEQ(expressions)}), nil, nil)
 	} else if this == nil {
-		this = exp.Array(exp.Args{"expressions": expressions})
-	} else if stringsUpper(this.Name()) == "ARRAY" {
-		// _parse_bracket's ARRAY_CONSTRUCTORS swap (parser.py:7713-7721, table at :787-790): a
-		// bracket subscripting a bare "ARRAY" reference (e.g. `ARRAY[1, 2, 3]`, tokenized as an
-		// ordinary column/var since ARRAY is ID_VAR_TOKENS-eligible) is really an array
-		// literal, not indexing - build exp.Array and discard `this`. Matches upstream's own
-		// name-based check exactly (no extra unquoted/no-table guard), including its
-		// limitation: a genuine column named "array" would be misread the same way upstream
-		// misreads it. duckdb's "LIST" ARRAY_CONSTRUCTORS entry isn't modeled (out of base/
-		// mysql/postgres scope).
-		this = exp.Array(exp.Args{"expressions": expressions})
+		this = p.buildArrayConstructor(exp.KindArray, expressions, bracketKind)
+	} else if ctorKind, ok := arrayConstructors[stringsUpper(this.Name())]; ok {
+		// _parse_bracket's ARRAY_CONSTRUCTORS swap (parser.py:7984-7992, table at :852-855): a
+		// bracket subscripting a bare "ARRAY"/"LIST" reference (e.g. `ARRAY[1, 2, 3]`,
+		// `LIST[1, 2, 3]`, tokenized as an ordinary column/var since both are
+		// ID_VAR_TOKENS-eligible) is really a constructor literal, not indexing - build the
+		// constructor node and discard `this`. Matches upstream's own name-based check exactly
+		// (no extra unquoted/no-table guard), including its limitation: a genuine column named
+		// "array"/"list" would be misread the same way upstream misreads it.
+		this = p.buildArrayConstructor(ctorKind, expressions, bracketKind)
 	} else {
 		this = p.expression(exp.Bracket(exp.Args{"this": this, "expressions": expressions}), nil, this.PopComments())
 	}
@@ -793,4 +792,23 @@ func temporalCastDType(dt exp.DType) bool {
 		return true
 	}
 	return false
+}
+
+// arrayConstructors ports Parser.ARRAY_CONSTRUCTORS (parser.py:852-855): a bracket subscripting
+// one of these bare name references is really a constructor call, not an index.
+var arrayConstructors = map[string]exp.Kind{
+	"ARRAY": exp.KindArray,
+	"LIST":  exp.KindList,
+}
+
+// buildArrayConstructor ports build_array_constructor (parser.py:147-155): the named constructor
+// (Array or List) is built from the bracketed arguments, and a dialect with distinct ARRAY[...]
+// and ARRAY(...) constructors records which one was used (only exp.Array carries the flag
+// upstream - the guard is `exp_class == exp.Array`).
+func (p *Parser) buildArrayConstructor(kind exp.Kind, expressions []exp.Expression, bracketKind tokens.TokenType) exp.Expression {
+	constructor := exp.New(kind, exp.Args{"expressions": expressions})
+	if kind == exp.KindArray && p.dialect.HasDistinctArrayConstructors {
+		constructor.Set("bracket_notation", bracketKind == tokens.L_BRACKET)
+	}
+	return constructor
 }

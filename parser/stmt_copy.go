@@ -9,10 +9,10 @@ func init() {
 	statementParsers[tokens.COPY] = (*Parser).parseCopy
 }
 
-// parseCopy ports _parse_copy (parser.py:9616-9649): `COPY [INTO] <table-or-select>
+// parseCopy ports _parse_copy (parser.py:9909-9942): `COPY [INTO] <table-or-select>
 // FROM|TO <files> [<credentials>] [WITH] [(<params>)]`. Any input this doesn't
-// structurally recognize (e.g. dialect-specific option shapes this slice doesn't model)
-// degrades to a raw Command via parseAsCommand, mirroring upstream's own fallback.
+// structurally recognize (leftover tokens after the parameter list) degrades to a raw
+// Command via parseAsCommand, mirroring upstream's own fallback.
 func (p *Parser) parseCopy() exp.Expression {
 	start := p.prev
 
@@ -26,7 +26,7 @@ func (p *Parser) parseCopy() exp.Expression {
 	}
 
 	// kind = self._match(TokenType.FROM) or not self._match_text_seq("TO")
-	// (parser.py:9631): only probe for TO when FROM didn't match, preserving Python's
+	// (parser.py:9920): only probe for TO when FROM didn't match, preserving Python's
 	// short-circuit "or".
 	kind := p.match(tokens.FROM)
 	if !kind {
@@ -36,7 +36,7 @@ func (p *Parser) parseCopy() exp.Expression {
 	files := p.parseCsv(func() exp.Expression { return p.parseField(false, nil, false) })
 	if p.match(tokens.EQ, false) {
 		// Backtrack one token since we've consumed the lhs of a parameter assignment here
-		// (parser.py:9636-9640): this can happen for Snowflake dialect. Instead, we'd like
+		// (parser.py:9924-9928): this can happen for Snowflake dialect. Instead, we'd like
 		// to parse the parameter list via parseCopyParameters below.
 		p.retreat(p.index - 1)
 		files = nil
@@ -44,20 +44,10 @@ func (p *Parser) parseCopy() exp.Expression {
 
 	credentials := p.parseCredentials()
 
-	// The CREDENTIALS/ENCRYPTION/STORAGE_INTEGRATION/IAM_ROLE/REGION clauses are
-	// Snowflake/Redshift-only and render faithfully only via upstream's unported
-	// _parse_property grammar. None of base/mysql/postgres produce them, so when one is
-	// present degrade to a raw Command (exact round-trip via parseAsCommand's source
-	// recapture) rather than emit a lossy structural rewrite. This keeps every credential
-	// shape consistent — cf. the multi-option case that already degrades via trailing tokens.
-	if credentialsPresent(credentials) {
-		return p.parseAsCommand(start)
-	}
-
 	p.matchTextSeq("WITH")
 
-	// _parse_wrapped(self._parse_copy_parameters, optional=True) (parser.py:9646;
-	// _parse_wrapped at parser.py:8635-8641): _parse_wrapped ALWAYS invokes the parse method,
+	// _parse_wrapped(self._parse_copy_parameters, optional=True) (parser.py:9934;
+	// _parse_wrapped at parser.py:8908-8915): _parse_wrapped ALWAYS invokes the parse method,
 	// matching the closing ")" only when an opening "(" was present. With optional=True a
 	// missing "(" is not an error, so unwrapped parameter lists parse too — postgres
 	// `COPY tbl FROM 'file' WITH FORMAT csv` -> `COPY tbl FROM 'file' WITH (FORMAT csv)`.
@@ -142,27 +132,12 @@ func (p *Parser) parseCopyParameters() []exp.Expression {
 	return options
 }
 
-// credentialsPresent reports whether parseCredentials matched any of its clauses (i.e.
-// set any of Credentials' args). Used to decide whether a COPY must degrade to Command.
-func credentialsPresent(e exp.Expression) bool {
-	if e == nil {
-		return false
-	}
-	for _, key := range []string{"storage", "credentials", "encryption", "iam_role", "region"} {
-		if e.Arg(key) != nil {
-			return true
-		}
-	}
-	return false
-}
-
-// parseCredentials ports _parse_credentials (parser.py:9590-9611): `[STORAGE_INTEGRATION
+// parseCredentials ports _parse_credentials (parser.py:9883-9906): `[STORAGE_INTEGRATION
 // = <field>] [CREDENTIALS [= (<opts>)|<field>]] [ENCRYPTION (<opts>)] [IAM_ROLE
-// DEFAULT|<field>] [REGION <field>]`. This port's target dialects (base/mysql/postgres)
-// never exercise any of these guards (they're Snowflake/Redshift-specific), so this
-// always returns an all-nil Credentials node in practice; it's still ported structurally
-// so a stray CREDENTIALS/ENCRYPTION/... clause is consumed rather than falling through to
-// the Command fallback.
+// DEFAULT|<field>] [REGION <field>]`. Base/mysql/postgres never set any of these args, but
+// Redshift does (IAM_ROLE/REGION/CREDENTIALS), so the clause is consumed structurally
+// rather than falling through to the Command fallback — matching upstream, whose
+// _parse_copy builds exp.Copy with Credentials for these shapes.
 func (p *Parser) parseCredentials() exp.Expression {
 	expr := p.expression(exp.Credentials(exp.Args{}), nil, nil)
 

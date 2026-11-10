@@ -19,7 +19,7 @@ func init() {
 		exp.KindAutoIncrementColumnConstraint: func(g *Generator, e exp.Expression) string { return "IDENTITY" },
 		exp.KindCeil:                          rename("CEILING"),
 		exp.KindChr:                           rename("CHAR"),
-		exp.KindDateAdd:                       tsqlDateDelta("DATEADD", false),
+		exp.KindDateAdd:                       dateDeltaSQL("DATEADD", false),
 		exp.KindCurrentDate:                   func(g *Generator, e exp.Expression) string { return "GETDATE()" },
 		exp.KindCurrentTimestamp:              func(g *Generator, e exp.Expression) string { return "GETDATE()" },
 		exp.KindCurrentTimestampLTZ:           func(g *Generator, e exp.Expression) string { return "SYSDATETIMEOFFSET()" },
@@ -80,9 +80,9 @@ func init() {
 		exp.KindTemporaryProperty: func(g *Generator, e exp.Expression) string { return "" },
 		exp.KindTimeStrToTime:     tsqlTimeStrToTime,
 		exp.KindTimeToStr:         tsqlFormatSQL,
-		exp.KindTimestampAdd:      tsqlDateDelta("DATEADD", false),
-		exp.KindTsOrDsAdd:         tsqlDateDelta("DATEADD", true),
-		exp.KindTsOrDsDiff:        tsqlDateDelta("DATEDIFF", false),
+		exp.KindTimestampAdd:      dateDeltaSQL("DATEADD", false),
+		exp.KindTsOrDsAdd:         dateDeltaSQL("DATEADD", true),
+		exp.KindTsOrDsDiff:        dateDeltaSQL("DATEDIFF", false),
 		exp.KindTimestampTrunc: func(g *Generator, e exp.Expression) string {
 			unit := asExpression(e.Arg("unit"))
 			if unit != nil {
@@ -190,8 +190,8 @@ func rename(name string) func(*Generator, exp.Expression) string {
 	}
 }
 
-// tsqlDateDelta ports date_delta_sql("NAME") (dialects/dialect.py:2014-2026).
-func tsqlDateDelta(name string, cast bool) func(*Generator, exp.Expression) string {
+// dateDeltaSQL ports date_delta_sql("NAME") (dialects/dialect.py:2014-2026).
+func dateDeltaSQL(name string, cast bool) func(*Generator, exp.Expression) string {
 	return func(g *Generator, e exp.Expression) string {
 		unit := asExpression(e.Arg("unit"))
 		if unit != nil {

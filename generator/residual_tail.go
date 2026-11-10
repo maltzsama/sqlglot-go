@@ -192,7 +192,7 @@ func (g *Generator) arraySQL(e expressions.Expression) string {
 		// generators/presto.py:316-319 (the struct-field-name preprocess has no effect here).
 		return "ARRAY[" + g.expressions(exprsOptions{expression: e, flat: true}) + "]"
 	}
-	if g.dialect.Name != "postgres" {
+	if !g.isDialect("postgres") {
 		return g.functionFallbackSQL(e)
 	}
 	exprs := listFromValue(e.Arg("expressions"))

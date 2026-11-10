@@ -12,10 +12,9 @@ var lambdaArgTerminators = map[tokens.TokenType]bool{
 	tokens.R_PAREN: true,
 }
 
-// lambdas ports the base LAMBDAS table (parser.py:988-1001), restricted to the ARROW ->
-// exp.Lambda entry. Upstream's other entry, FARROW -> exp.Kwarg (named arguments like
-// `foo(bar => 1)`), isn't ported here: exp.Kwarg has no Kind in this codebase yet, and no
-// gap in this part's scope needs it.
+// lambdas ports the base LAMBDAS table (parser.py:988-1001): ARROW -> exp.Lambda and
+// FARROW -> exp.Kwarg (named arguments like `foo(bar => 1)`). Dialect overlays replace
+// individual entries through dialectParserOverrideSet.Lambdas (parsers/materialize.py:20-24).
 //
 // Declared empty and populated from func init() (rather than a map literal referencing the
 // closure directly): the closure calls parseDisjunction, which transitively calls back
@@ -29,18 +28,36 @@ func init() {
 		body := replaceLambda(p.parseDisjunction(), params)
 		return p.expression(exp.Lambda(exp.Args{"this": body, "expressions": params}), nil, nil)
 	}
+	// parser.py:1064-1070: FARROW builds a Kwarg whose key is the (unnamed) head's var form
+	// and whose value is a disjunction (falling back to a select), e.g. `foo(bar => 1)`.
+	lambdas[tokens.FARROW] = func(p *Parser, params []exp.Expression) exp.Expression {
+		var this exp.Expression
+		if len(params) > 0 && params[0] != nil {
+			this = exp.Var(exp.Args{"this": params[0].Name()})
+		}
+		body := p.parseDisjunction()
+		if body == nil {
+			body = p.parseSelect()
+		}
+		return p.expression(exp.Kwarg(exp.Args{"this": this, "expression": body}), nil, nil)
+	}
 }
 
-// parseLambdaArg ports _parse_lambda_arg (parser.py:7178-7179): a lambda parameter is just
-// an id-var (Snowflake/Materialize override this to also accept `x INT`, out of scope here).
+// parseLambdaArg ports _parse_lambda_arg (parser.py:7427-7428): a lambda parameter is just
+// an id-var, unless the dialect overrides the arg parser (parsers/materialize.py:16-17
+// re-parses a full field, so `x INT -> ...` annotations work).
 func (p *Parser) parseLambdaArg() exp.Expression {
+	if parser := p.lambdaArgParser(); parser != nil {
+		return parser(p)
+	}
 	return p.parseIdVar(true, nil)
 }
 
 // replaceLambda ports _replace_lambda (parser.py:9436-9464), simplified for this part's
-// scope (base/mysql/postgres): TYPED_LAMBDA_ARGS is always false for those dialects, so a
-// lambda param never carries a "to" type annotation and the upstream Cast branch (wrapping
-// a matched column in exp.Cast) never fires - it's dropped here accordingly.
+// scope: the upstream Cast branch (wrapping a matched column in exp.Cast when the param
+// carries a "to" type annotation) never fires here - only Snowflake builds such params,
+// and Materialize's TYPED_LAMBDA_ARGS=True re-parses a plain field (parsers/materialize.py:
+// 16-17), which has no "to" arg - so it's dropped accordingly.
 //
 // For every exp.Column in the lambda body whose leading part (parts[0], i.e. the outermost
 // qualifier - catalog/db/table/this in that priority) names a parameter, the column is

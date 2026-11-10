@@ -20,6 +20,10 @@ func SessionParameter(args Args) Expression { return newNode(KindSessionParamete
 // operator (parser.py:881-883), e.g. mysql `SELECT @var1 := 1`.
 func PropertyEQ(args Args) Expression { return newNode(KindPropertyEQ, args) }
 
+// Kwarg ports exp.Kwarg (expressions/core.py:1920-1922): a named argument `k => v`
+// inside a call (the base LAMBDAS FARROW entry, parser.py:995-999).
+func Kwarg(args Args) Expression { return newNode(KindKwarg, args) }
+
 // Distance ports exp.Distance (expressions/core.py:2154-2155): the postgres `<->` point
 // distance operator.
 func Distance(args Args) Expression { return newNode(KindDistance, args) }

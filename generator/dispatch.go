@@ -142,6 +142,31 @@ func init() {
 	dispatch[expressions.KindSort] = (*Generator).sortSQL
 	dispatch[expressions.KindWithinGroup] = (*Generator).withinGroupSQL
 	dispatch[expressions.KindIgnoreNulls] = (*Generator).ignoreNullsSQL
+	// alterdiststyle_sql / altersortkey_sql (generator.py:4296-4307).
+	dispatch[expressions.KindAlterDistStyle] = func(g *Generator, e expressions.Expression) string {
+		this := g.sqlKey(e, "this")
+		if t := asExpression(e.Arg("this")); t == nil || t.Kind() != expressions.KindVar {
+			this = "KEY DISTKEY " + this
+		}
+		return "ALTER DISTSTYLE " + this
+	}
+	dispatch[expressions.KindAlterSortKey] = func(g *Generator, e expressions.Expression) string {
+		compound := ""
+		if truthy(e.Arg("compound")) {
+			compound = " COMPOUND"
+		}
+		this := g.sqlKey(e, "this")
+		if this == "" {
+			if exprs := g.expressions(exprsOptions{expression: e, flat: true}); exprs != "" {
+				this = "(" + exprs + ")"
+			}
+		}
+		return "ALTER" + compound + " SORTKEY " + this
+	}
+	// atindex_sql (generator.py:4046-4049).
+	dispatch[expressions.KindAtIndex] = func(g *Generator, e expressions.Expression) string {
+		return g.sqlKey(e, "this") + " AT " + g.sqlKey(e, "expression")
+	}
 	dispatch[expressions.KindRespectNulls] = (*Generator).respectNullsSQL
 	dispatch[expressions.KindPivotAny] = func(g *Generator, e expressions.Expression) string {
 		return "ANY" + g.sqlKey(e, "this")
@@ -166,6 +191,17 @@ func init() {
 	dispatch[expressions.KindParameter] = (*Generator).parameterSQL
 	dispatch[expressions.KindRawString] = (*Generator).rawStringSQL
 	dispatch[expressions.KindFileFormatProperty] = (*Generator).fileFormatPropertySQL
+	// generator.py:271 exp.ToMap -> `MAP {this}`.
+	dispatch[expressions.KindToMap] = func(g *Generator, e expressions.Expression) string {
+		return "MAP " + g.sqlKey(e, "this")
+	}
+	// generator.py:4821 kwarg_sql: the `k => v` named argument (base LAMBDAS FARROW entry).
+	dispatch[expressions.KindKwarg] = func(g *Generator, e expressions.Expression) string {
+		return g.binary(e, "=>")
+	}
+	// generator.py:5937-5957 encodeproperty_sql / includeproperty_sql (RisingWave options).
+	dispatch[expressions.KindEncodeProperty] = (*Generator).encodePropertySQL
+	dispatch[expressions.KindIncludeProperty] = (*Generator).includePropertySQL
 	dispatch[expressions.KindAtTimeZone] = (*Generator).atTimeZoneSQL
 	dispatch[expressions.KindPseudoType] = (*Generator).pseudoTypeSQL
 	dispatch[expressions.KindObjectIdentifier] = (*Generator).objectIdentifierSQL

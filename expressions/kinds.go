@@ -235,6 +235,13 @@ const (
 	KindParameter
 	KindRawString
 	KindFileFormatProperty
+	// KindEncodeProperty/KindIncludeProperty port exp.EncodeProperty/exp.IncludeProperty
+	// (properties.py:586-591): RisingWave's `ENCODE|KEY ENCODE <fmt> (...)` and
+	// `INCLUDE <name> [coldef] [AS alias]` CREATE SOURCE/SINK options
+	// (parsers/risingwave.py:44-66). Both are plain Property subclasses (no
+	// Func/Condition/... mixin), so neither gets a traitsOf row below.
+	KindEncodeProperty
+	KindIncludeProperty
 	// The DDL constraint/alter/drop node family below closes the CREATE-table constraint,
 	// ALTER TABLE/VIEW/INDEX, and DROP round-trip gaps: expressions/constraints.py (column
 	// constraints, PRIMARY KEY, FOREIGN KEY, indexes) and expressions/ddl.py (ALTER/DROP
@@ -260,6 +267,11 @@ const (
 	KindGeneratedAsRowColumnConstraint
 	KindComputedColumnConstraint
 	KindCaseSpecificColumnConstraint
+	// KindWatermarkColumnConstraint ports exp.WatermarkColumnConstraint (constraints.py:
+	// 181-182, arg_types={"this": True, "expression": True}): RisingWave's `WATERMARK FOR
+	// <col> AS <expr>` column option (parsers/risingwave.py CONSTRAINT_PARSERS). It is a
+	// plain Expression (no ColumnConstraintKind/Func/... mixin), so it gets no traitsOf row.
+	KindWatermarkColumnConstraint
 	KindNotForReplicationColumnConstraint
 	KindZeroFillColumnConstraint
 	KindInvisibleColumnConstraint
@@ -314,6 +326,17 @@ const (
 	// AS STRUCT<a INT, b TEXT>). Renders through the generic TraitFunc fallback
 	// (STRUCT(...)), matching upstream struct_sql for non-named-field constructors.
 	KindStruct
+	// KindList ports exp.List (array.py:35-37, `class List(Expression, Func)`,
+	// arg_types={"expressions": False}, is_var_len_args=True): the LIST constructor
+	// produced by the ARRAY_CONSTRUCTORS bracket swap (`LIST[1, 2, 3]`) and by a
+	// `LIST(...)` call (base FUNCTIONS registers every Func subclass by sql_name,
+	// expressions/__init__.py:50). Base renders it through the TraitFunc fallback
+	// (LIST(1, 2, 3)); materialize overrides to the bracket form.
+	KindList
+	// KindToMap ports exp.ToMap (array.py:340-341, `class ToMap(Expression, Func)` with
+	// default arg_types {"this": True}): materialize's `MAP[...]` / `MAP(...)` constructor
+	// (parsers/materialize.py `_parse_map`).
+	KindToMap
 	// KindCache/KindUncache port exp.Cache/exp.Uncache (core.py:1583-1594): Spark's
 	// `CACHE [LAZY] TABLE x [OPTIONS(k = v)] [AS <query>]` / `UNCACHE TABLE [IF EXISTS] x`.
 	// Both are plain Expression subclasses (no Func/Condition/... mixin), so neither
@@ -553,6 +576,9 @@ const (
 	// KindPropertyEQ (core.py:2150, `class PropertyEQ(Expression, Binary)`): the ASSIGNMENT
 	// `:=` operator (parser.py:881-883), e.g. mysql `SELECT @var1 := 1`.
 	KindPropertyEQ
+	// KindKwarg ports exp.Kwarg (core.py:1920-1922, `class Kwarg(Expression, Binary)`):
+	// named-argument `k => v` inside a call (base LAMBDAS FARROW entry, parser.py:995-999).
+	KindKwarg
 	// KindDistance/KindDistanceNd (core.py:2154/2158, both `class X(Expression, Binary)`):
 	// the FACTOR-level postgres `<->`/`<<->>` distance operators (parser.py:917-918).
 	KindDistance
@@ -864,6 +890,18 @@ const (
 	KindMultitableInserts
 	KindConditionalInsert
 	KindConnectByRoot
+	KindFromBase
+	KindCurrentUserId
+	KindObjectTransform
+	KindConvertTimezone
+	KindConcatWs
+	KindSortKeyProperty
+	KindDistKeyProperty
+	KindDistStyleProperty
+	KindPercentileDisc
+	KindAtIndex
+	KindAlterDistStyle
+	KindAlterSortKey
 )
 
 type Trait uint32
@@ -1168,6 +1206,9 @@ var argTypes = map[Kind][]argSpec{
 	KindParameter:          {{"this", true}, {"expression", false}},
 	KindRawString:          {{"this", true}},
 	KindFileFormatProperty: {{"this", false}, {"expressions", false}, {"hive_format", false}},
+	// EncodeProperty/IncludeProperty (properties.py:587,591).
+	KindEncodeProperty:  {{"this", true}, {"properties", false}, {"key", false}},
+	KindIncludeProperty: {{"this", true}, {"alias", false}, {"column_def", false}},
 	// ColumnConstraint/Constraint/PrimaryKey/ForeignKey/Reference family (constraints.py:8-237).
 	KindColumnConstraint:           {{"this", false}, {"kind", true}},
 	KindConstraint:                 {{"this", true}, {"expressions", true}},
@@ -1200,6 +1241,7 @@ var argTypes = map[Kind][]argSpec{
 	KindGeneratedAsRowColumnConstraint:      {{"start", false}, {"hidden", false}},
 	KindComputedColumnConstraint:            {{"this", true}, {"persisted", false}, {"not_null", false}, {"data_type", false}},
 	KindCaseSpecificColumnConstraint:        {{"not_", true}},
+	KindWatermarkColumnConstraint:           {{"this", true}, {"expression", true}},
 	// Explicit arg_types = {} classes (constraints.py:37,41,144): no args at all.
 	KindNotForReplicationColumnConstraint: {},
 	KindZeroFillColumnConstraint:          {},
@@ -1242,8 +1284,12 @@ var argTypes = map[Kind][]argSpec{
 	KindAtTimeZone:       {{"this", true}, {"zone", true}},
 	KindPseudoType:       defaultArgTypes,
 	KindObjectIdentifier: defaultArgTypes,
-	// Struct (array.py:356): arg_types = {"expressions": False}.
+	// Struct (array.py:356) and List (array.py:36): arg_types = {"expressions": False}.
 	KindStruct: {{"expressions", false}},
+	KindList:   {{"expressions", false}},
+	// ToMap (array.py:340-341) has no arg_types override, so it inherits Expression's
+	// default {"this": True}.
+	KindToMap: defaultArgTypes,
 	// TableSample (query.py:1724-1733): all nine keys optional.
 	KindTableSample: {{"expressions", false}, {"method", false}, {"bucket_numerator", false}, {"bucket_denominator", false}, {"bucket_field", false}, {"percent", false}, {"rows", false}, {"size", false}, {"seed", false}},
 	// Cache/Uncache (core.py:1583-1594).
@@ -1362,6 +1408,7 @@ var argTypes = map[Kind][]argSpec{
 	KindByteString:       {{"this", true}, {"is_bytes", false}},
 	KindSessionParameter: {{"this", true}, {"kind", false}},
 	KindPropertyEQ:       {{"this", true}, {"expression", true}},
+	KindKwarg:            {{"this", true}, {"expression", true}},
 	KindDistance:         {{"this", true}, {"expression", true}},
 	KindDistanceNd:       {{"this", true}, {"expression", true}},
 	// KindLag/KindLead (aggregate.py:150-163): {"this": True, "offset": False, "default": False}.
@@ -1602,6 +1649,18 @@ var argTypes = map[Kind][]argSpec{
 	KindMultitableInserts:               {{"expressions", true}, {"kind", true}, {"source", true}},
 	KindConditionalInsert:               {{"this", true}, {"expression", false}, {"else_", false}},
 	KindConnectByRoot:                   {{"this", true}},
+	KindFromBase:                        {{"this", true}, {"expression", true}},
+	KindCurrentUserId:                   {},
+	KindObjectTransform:                 {{"this", true}, {"keep", false}, {"set_", false}},
+	KindConvertTimezone:                 {{"source_tz", false}, {"target_tz", true}, {"timestamp", true}, {"options", false}},
+	KindConcatWs:                        {{"expressions", true}, {"safe", false}, {"coalesce", false}},
+	KindSortKeyProperty:                 {{"this", true}, {"compound", false}},
+	KindDistKeyProperty:                 {{"this", true}},
+	KindDistStyleProperty:               {{"this", true}},
+	KindPercentileDisc:                  {{"this", true}, {"expression", false}},
+	KindAtIndex:                         {{"this", true}, {"expression", true}},
+	KindAlterDistStyle:                  {{"this", true}},
+	KindAlterSortKey:                    {{"this", false}, {"expressions", false}, {"compound", false}},
 }
 
 var traitsOf = map[Kind]Trait{
@@ -1745,6 +1804,9 @@ var traitsOf = map[Kind]Trait{
 	// Struct is `class Struct(Expression, Func)` and Func(Condition) (core.py:1641),
 	// so it carries both mixins - same as KindArray above.
 	KindStruct: TraitCondition | TraitFunc,
+	// List/ToMap are `class X(Expression, Func)` too (array.py:35,340), so same mixins.
+	KindList:  TraitCondition | TraitFunc,
+	KindToMap: TraitCondition | TraitFunc,
 	// Copy is `class Copy(Expression, DML)` (dml.py:166); CopyParameter/Credentials are
 	// plain Expression subclasses with no mixin, so they get no row here (matching e.g.
 	// KindTableAlias above).
@@ -1821,13 +1883,14 @@ var traitsOf = map[Kind]Trait{
 	KindSoundex:                 TraitCondition | TraitFunc,
 	// residual-tail cluster: BitString/HexString/ByteString are `Expression, Condition`
 	// (query.py:471-491); SessionParameter is `Expression, Condition` (core.py:1837);
-	// PropertyEQ/Distance/DistanceNd are `Expression, Binary` and Binary IS-A Condition
+	// PropertyEQ/Kwarg/Distance/DistanceNd are `Expression, Binary` and Binary IS-A Condition
 	// (core.py:1623), so they get the same TraitCondition|TraitBinary combo as Add/Sub.
 	KindBitString:        TraitCondition,
 	KindHexString:        TraitCondition,
 	KindByteString:       TraitCondition,
 	KindSessionParameter: TraitCondition,
 	KindPropertyEQ:       TraitCondition | TraitBinary,
+	KindKwarg:            TraitCondition | TraitBinary,
 	KindDistance:         TraitCondition | TraitBinary,
 	KindDistanceNd:       TraitCondition | TraitBinary,
 	KindLag:              TraitCondition | TraitFunc | TraitAggFunc,
@@ -1970,6 +2033,12 @@ var traitsOf = map[Kind]Trait{
 	KindUnicode:          TraitCondition | TraitFunc,
 	KindJSONArray:        TraitCondition | TraitFunc,
 	KindJSONExists:       TraitCondition | TraitFunc,
+	KindFromBase:         TraitCondition | TraitFunc,
+	KindCurrentUserId:    TraitCondition | TraitFunc,
+	KindObjectTransform:  TraitCondition | TraitFunc,
+	KindConvertTimezone:  TraitCondition | TraitFunc,
+	KindConcatWs:         TraitCondition | TraitFunc,
+	KindPercentileDisc:   TraitCondition | TraitFunc | TraitAggFunc,
 }
 
 var primitive = map[Kind]bool{
@@ -2216,6 +2285,8 @@ var className = map[Kind]string{
 	KindParameter:                           "Parameter",
 	KindRawString:                           "RawString",
 	KindFileFormatProperty:                  "FileFormatProperty",
+	KindEncodeProperty:                      "EncodeProperty",
+	KindIncludeProperty:                     "IncludeProperty",
 	KindColumnConstraint:                    "ColumnConstraint",
 	KindConstraint:                          "Constraint",
 	KindPrimaryKey:                          "PrimaryKey",
@@ -2235,6 +2306,7 @@ var className = map[Kind]string{
 	KindGeneratedAsRowColumnConstraint:      "GeneratedAsRowColumnConstraint",
 	KindComputedColumnConstraint:            "ComputedColumnConstraint",
 	KindCaseSpecificColumnConstraint:        "CaseSpecificColumnConstraint",
+	KindWatermarkColumnConstraint:           "WatermarkColumnConstraint",
 	KindNotForReplicationColumnConstraint:   "NotForReplicationColumnConstraint",
 	KindZeroFillColumnConstraint:            "ZeroFillColumnConstraint",
 	KindInvisibleColumnConstraint:           "InvisibleColumnConstraint",
@@ -2264,6 +2336,8 @@ var className = map[Kind]string{
 	KindPseudoType:                          "PseudoType",
 	KindObjectIdentifier:                    "ObjectIdentifier",
 	KindStruct:                              "Struct",
+	KindList:                                "List",
+	KindToMap:                               "ToMap",
 	KindCache:                               "Cache",
 	KindUncache:                             "Uncache",
 	KindCopy:                                "Copy",
@@ -2355,6 +2429,7 @@ var className = map[Kind]string{
 	KindByteString:                          "ByteString",
 	KindSessionParameter:                    "SessionParameter",
 	KindPropertyEQ:                          "PropertyEQ",
+	KindKwarg:                               "Kwarg",
 	KindDistance:                            "Distance",
 	KindDistanceNd:                          "DistanceNd",
 	KindLag:                                 "Lag",
@@ -2587,6 +2662,18 @@ var className = map[Kind]string{
 	KindMultitableInserts:               "MultitableInserts",
 	KindConditionalInsert:               "ConditionalInsert",
 	KindConnectByRoot:                   "ConnectByRoot",
+	KindFromBase:                        "FromBase",
+	KindCurrentUserId:                   "CurrentUserId",
+	KindObjectTransform:                 "ObjectTransform",
+	KindConvertTimezone:                 "ConvertTimezone",
+	KindConcatWs:                        "ConcatWs",
+	KindSortKeyProperty:                 "SortKeyProperty",
+	KindDistKeyProperty:                 "DistKeyProperty",
+	KindDistStyleProperty:               "DistStyleProperty",
+	KindPercentileDisc:                  "PercentileDisc",
+	KindAtIndex:                         "AtIndex",
+	KindAlterDistStyle:                  "AlterDistStyle",
+	KindAlterSortKey:                    "AlterSortKey",
 }
 
 // varLenArgs is the authoritative is_var_len_args=True set (mirroring the upstream Func
@@ -2605,6 +2692,7 @@ var varLenArgs = map[Kind]bool{
 	KindLeast:             true,
 	KindArray:             true,
 	KindStruct:            true,
+	KindList:              true,
 	KindJSONExtract:       true,
 	KindJSONExtractScalar: true,
 	KindDate:              true,
@@ -2622,6 +2710,7 @@ var varLenArgs = map[Kind]bool{
 	KindExplode:          true,
 	KindCombinedAggFunc:  true,
 	KindAnonymousAggFunc: true,
+	KindConcatWs:         true,
 }
 
 // ArgKeys returns the arg keys of a Kind in class-declaration order (mirrors

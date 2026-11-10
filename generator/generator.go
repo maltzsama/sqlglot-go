@@ -112,7 +112,9 @@ func New(d *dialects.Dialect, o Options) *Generator {
 	identifierStart, identifierEnd := identifierDelimiters(d)
 	quoteStart, quoteEnd := quoteDelimiters(d)
 	stringEscape := "'"
-	if !d.TokenizerConfig.StringEscapes['\''] {
+	if d.StringEscape != "" {
+		stringEscape = d.StringEscape
+	} else if !d.TokenizerConfig.StringEscapes['\''] {
 		for r := range d.TokenizerConfig.StringEscapes {
 			stringEscape = string(r)
 			break

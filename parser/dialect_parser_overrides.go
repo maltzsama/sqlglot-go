@@ -46,6 +46,20 @@ type dialectParserOverrideSet struct {
 	// QueryModifiers overrides QUERY_MODIFIER_PARSERS entries (parsers/tsql.py:333-337:
 	// OPTION and FOR).
 	QueryModifiers map[tokens.TokenType]func(*Parser) (string, any)
+	// Lambdas overrides base LAMBDAS entries (parsers/materialize.py:20-24: FARROW builds a
+	// raw-head Kwarg with _parse_assignment instead of the base var(_parse_disjunction)).
+	Lambdas map[tokens.TokenType]func(*Parser, []exp.Expression) exp.Expression
+	// TypedLambdaArgs ports Parser.TYPED_LAMBDA_ARGS (parser.py:1076, base False;
+	// parsers/materialize.py:11 True): a single-argument lambda head is probed even when
+	// the token after the argument is not a lambda arrow, so `x INT -> ...` annotations parse.
+	TypedLambdaArgs bool
+	// LambdaArgParser ports a dialect's _parse_lambda_arg override
+	// (parsers/materialize.py:16-17: _parse_field).
+	LambdaArgParser func(*Parser) exp.Expression
+	// DisableTableHints ports RisingWaveParser._parse_table_hints (parsers/risingwave.py:
+	// 34-37): the dialect has no T-SQL/MySQL hint grammar, so `FROM a WITH (...)` must not
+	// swallow the connector properties that follow the table.
+	DisableTableHints bool
 }
 
 var dialectParserOverrides = map[string]dialectParserOverrideSet{}
@@ -83,6 +97,11 @@ func registerDialectParserOverrides(name string, overrides dialectParserOverride
 			panic("parser: nil property parser override for dialect " + name)
 		}
 	}
+	for _, callback := range overrides.Lambdas {
+		if callback == nil {
+			panic("parser: nil lambda override for dialect " + name)
+		}
+	}
 
 	dialectParserOverrides[name] = overrides
 }
@@ -99,7 +118,13 @@ func (p *Parser) parserOverrideKey() string {
 
 // parserOverrideParents models parser-class inheritance: StarRocksParser extends
 // MySQLParser (parsers/starrocks.py:11), so a StarRocks lookup falls back to the mysql overlay.
-var parserOverrideParents = map[string]string{"starrocks": "mysql", "doris": "mysql"}
+var parserOverrideParents = map[string]string{
+	"starrocks":   "mysql",
+	"doris":       "mysql",
+	"redshift":    "postgres",
+	"materialize": "postgres",
+	"risingwave":  "postgres",
+}
 
 // overrideChain lists the override keys from the parser's own key up through its parents.
 func (p *Parser) overrideChain() []string {
@@ -157,7 +182,6 @@ func (p *Parser) functionParser(name string) parserOverrideFunc {
 	// Keep the current base-singleton compatibility gates on the fallback only. An overlay above
 	// may intentionally add or override any of these names for another dialect. These gates use
 	// the concrete dialect rather than the parser overlay key: Athena's query parser is real Trino.
-	dialectName := strings.ToLower(p.dialect.Name)
 	switch name {
 	case "VALUES":
 		if !p.dialect.ValuesIsFunction {
@@ -168,7 +192,7 @@ func (p *Parser) functionParser(name string) parserOverrideFunc {
 			return nil
 		}
 	case "DATE_PART":
-		if dialectName != "postgres" {
+		if !p.dialectFamily("postgres") {
 			return nil
 		}
 	}
@@ -228,6 +252,50 @@ func (p *Parser) typeParserOverride() typeParserOverrideFunc {
 	return nil
 }
 
+// lambdaFor resolves a LAMBDAS entry: the dialect overlay wins over the shared table
+// (parsers/materialize.py:20-24 overrides the base FARROW entry).
+func (p *Parser) lambdaFor(tt tokens.TokenType) func(*Parser, []exp.Expression) exp.Expression {
+	for _, key := range p.overrideChain() {
+		if builder, ok := dialectParserOverrides[key].Lambdas[tt]; ok {
+			return builder
+		}
+	}
+	return lambdas[tt]
+}
+
+// typedLambdaArgs reports whether any parser class in the chain enables TYPED_LAMBDA_ARGS
+// (base False; parsers/materialize.py:11 True).
+func (p *Parser) typedLambdaArgs() bool {
+	for _, key := range p.overrideChain() {
+		if dialectParserOverrides[key].TypedLambdaArgs {
+			return true
+		}
+	}
+	return false
+}
+
+// disableTableHints reports whether any parser class in the chain disables table hints
+// (parsers/risingwave.py:34-37: RisingWaveParser._parse_table_hints always returns None).
+func (p *Parser) disableTableHints() bool {
+	for _, key := range p.overrideChain() {
+		if dialectParserOverrides[key].DisableTableHints {
+			return true
+		}
+	}
+	return false
+}
+
+// lambdaArgParser resolves a dialect's _parse_lambda_arg override, falling back to the
+// base id-var parse (parser.py:7489-7490).
+func (p *Parser) lambdaArgParser() func(*Parser) exp.Expression {
+	for _, key := range p.overrideChain() {
+		if parser := dialectParserOverrides[key].LambdaArgParser; parser != nil {
+			return parser
+		}
+	}
+	return nil
+}
+
 // isQueryModifierToken reports whether tt starts a query modifier in this dialect, including
 // an overlay-only modifier such as TSQL's OPTION.
 func (p *Parser) isQueryModifierToken(tt tokens.TokenType) bool {
@@ -261,7 +329,7 @@ func (p *Parser) noParenFunctionParserFor(name string) parserOverrideFunc {
 		}
 	}
 	parser := noParenFunctionParsers[name]
-	if parser == nil || (name == "VARIADIC" && strings.ToLower(p.dialect.Name) != "postgres") ||
+	if parser == nil || (name == "VARIADIC" && !p.dialectFamily("postgres")) ||
 		(name == "PRIOR" && p.connectPriorDepth == 0) {
 		return nil
 	}
@@ -335,4 +403,13 @@ func mergeTokenSet(base, added, removed map[tokens.TokenType]bool) map[tokens.To
 		merged[tt] = true
 	}
 	return merged
+}
+
+// switchDialect is the dialect name a per-dialect switch keys on. The Postgres subclasses
+// (Redshift, Materialize, RisingWave) inherit PostgresParser, so they fold into "postgres".
+func (p *Parser) switchDialect() string {
+	if p.dialectFamily("postgres") {
+		return "postgres"
+	}
+	return p.dialect.Name
 }
