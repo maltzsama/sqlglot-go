@@ -752,7 +752,29 @@ properties above.
 
 Corpus: 171 `validate_identity` cases from `tests/dialects/test_redshift.py`
 (`scripts/extract_dialect_corpus.py --dialects redshift`), at **171/171**, with no Redshift rows in
-`testdata/parity_gaps.txt`. Regression tests: `redshift_test.go`.
+`testdata/parity_gaps.txt`. Regression tests: `redshift_test.go` (the full upstream test file is
+ported there: identity, cross-dialect, AST shapes, dialect flags, qualify/scope, cast,
+TO_TIMESTAMP annotation and the Command-fallback GRANT/REVOKE/UNLOAD rows).
+
+Known divergences for this slice:
+
+- The implicit-unnest conversion landed after the dialect port: `FROM a, a.b` joins whose leftmost
+  part names an already-introduced relation now become explicit `Unnest` nodes, matching upstream
+  `SUPPORTS_IMPLICIT_UNNEST` (parsers/redshift.py:84 → parser.py:4305-4330), so cross-dialect writes
+  emit `UNNEST(...)` instead of a bare column join. Asserted by `TestRedshiftColumnUnnesting`.
+- 23 of the 106 `validate_all` arms of `tests/dialects/test_redshift.py` are omitted from
+  `TestRedshiftCrossDialect`: cross-dialect generator output this port does not reproduce yet. They
+  group as — `JSON_EXTRACT_PATH_TEXT` → presto; `ADD_MONTHS` → trino, tsql; `IS TRUE`/`IS
+  FALSE`/`IS NOT FALSE` → presto; `DISTINCT ON` → hive, mysql, oracle, presto, starrocks, trino,
+  tsql; `DATEDIFF` day → hive, presto; `DATEADD` month → hive, mysql, postgres, presto, tsql;
+  `DATEDIFF` week → hive, postgres, presto. The same statements' Redshift identity rows all pass;
+  each group is a shared-generator rendering gap, not a Redshift parse gap.
+- Pre-existing (not introduced by this branch): the hive generator's `unnest_to_explode` transform
+  (upstream generators/hive.py:339; also databricks.py:44, spark2.py:188) is not ported, so an
+  explicit Unnest written to hive renders `SELECT * FROM x, EXPLODE(a.b, _t0(c))` where upstream
+  renders `SELECT * FROM x LATERAL VIEW EXPLODE(a.b) _t0 AS c`. Base-read of that query produced the
+  same wrong hive output before the implicit-unnest fix, which is how pre-existence was proven.
+  Worth closing when Spark2/Spark/Databricks (#35) lands, since those generators share the transform.
 
 ## Materialize dialect — DONE (issue #36)
 
