@@ -1,0 +1,403 @@
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"ALTER TABLE labels ADD COLUMN label_score FLOAT"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"ALTER TABLE t CLUSTER BY NONE"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"ANALYZE TABLE ctlg.db.tbl COMPUTE DELTA STATISTICS NOSCAN"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"ANALYZE TABLE ctlg.db.tbl PARTITION(foo = 'foo', bar = 'bar') COMPUTE STATISTICS NOSCAN"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"ANALYZE TABLE tbl COMPUTE DELTA STATISTICS FOR ALL COLUMNS"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"ANALYZE TABLE tbl COMPUTE DELTA STATISTICS FOR COLUMNS foo, bar"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"ANALYZE TABLE tbl COMPUTE DELTA STATISTICS NOSCAN"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"ANALYZE TABLES COMPUTE STATISTICS NOSCAN"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"ANALYZE TABLES FROM db COMPUTE STATISTICS"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"ANALYZE TABLES IN db COMPUTE STATISTICS"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"BITMAP_OR_AGG(x)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"BIT_GET(11, 0)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"COPY INTO target FROM `s3://link` FILEFORMAT = AVRO VALIDATE = ALL FILES = ('file1', 'file2') FORMAT_OPTIONS ('opt1'='true', 'opt2'='test') COPY_OPTIONS ('mergeSchema'='true')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE FUNCTION a AS b"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE FUNCTION a() ENVIRONMENT (dependencies = '[\"foo1==1\", \"foo2==2\"]', environment_version = 'None')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE FUNCTION a() HANDLER 'handler_function'"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE FUNCTION a() PARAMETER STYLE PANDAS"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE FUNCTION a.b(x INT) RETURNS INT RETURN x + 1"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE FUNCTION add_one(x INT) RETURNS INT LANGUAGE PYTHON AS $$def add_one(x):\n  return x+1$$"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE FUNCTION add_one(x INT) RETURNS INT LANGUAGE PYTHON AS $FOO$def add_one(x):\n  return x+1$FOO$"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE OR REFRESH STREAMING TABLE csv_data (id INT, ts TIMESTAMP, event STRING) AS SELECT * FROM STREAM READ_FILES('s3://bucket/path', format => 'csv', schema => 'id int, ts timestamp, event string')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE OR REPLACE FUNCTION func(a BIGINT, b BIGINT) RETURNS BIGINT RETURN a"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE OR REPLACE FUNCTION func(a BIGINT, b BIGINT) RETURNS TABLE (a INT) RETURN SELECT a"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE STREAMING TABLE raw_data AS SELECT * FROM STREAM READ_FILES('abfss://container@storageAccount.dfs.core.windows.net/base/path')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE IF NOT EXISTS db.table (a TIMESTAMP, b BOOLEAN GENERATED ALWAYS AS (NOT a IS NULL)) USING DELTA"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE foo (m MAP<STRING, STRING COLLATE UTF8_BINARY>)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE foo (my_arr ARRAY<STRING COLLATE UTF8_BINARY>)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE foo (x DATE GENERATED ALWAYS AS (CAST(y AS DATE)))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE foo (x INT GENERATED ALWAYS AS (YEAR(y)))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE my_table TBLPROPERTIES ('a.b'=15)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE my_table TBLPROPERTIES (a.b=15)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t (a INT, b TIMESTAMP, PRIMARY KEY (a, b TIMESERIES))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t (a STRUCT<c: MAP<STRING, STRING>>)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t (c STRING COMMENT 'Hello World')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t (c STRUCT<interval: DOUBLE COMMENT 'aaa'>)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t (customer_id INT NOT NULL, ts TIMESTAMP NOT NULL, CONSTRAINT customer_features_pk PRIMARY KEY (customer_id, ts TIMESERIES))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t CLUSTER BY (col1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t CLUSTER BY (col1, col2)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t1 (foo BIGINT NOT NULL CONSTRAINT foo_c FOREIGN KEY REFERENCES t2 (foo))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t1 (foo BIGINT NOT NULL CONSTRAINT foo_c FOREIGN KEY REFERENCES t2 MATCH FULL)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t1 (foo BIGINT NOT NULL CONSTRAINT foo_c FOREIGN KEY REFERENCES t2 NOT ENFORCED)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE t1 (foo BIGINT NOT NULL CONSTRAINT foo_c FOREIGN KEY REFERENCES t2)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE table1 CLUSTER BY AUTO"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE target SHALLOW CLONE source"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE tbl (id BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE tbl (id BIGINT NOT NULL GENERATED BY DEFAULT AS IDENTITY (START WITH 1 INCREMENT BY 1))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CREATE TABLE x (SELECT 1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CURDATE"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CURDATE()"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CURRENT_TIMEZONE()"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"CURRENT_VERSION()"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"DATE_DIFF(day, created_at, current_date())"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"DECLARE OR REPLACE x INT = 1"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"DECLARE VAR x INT"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"DECLARE VARIABLE myvar INT DEFAULT 1"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"DECLARE x INT"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"DECLARE x INT = 1"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"DECLARE x, y, z INT DEFAULT 1"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"DESCRIBE EXTENDED staging.onetrade_startb AS JSON"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"DESCRIBE HISTORY a.b"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"DESCRIBE history.tbl"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"FROM_UTC_TIMESTAMP(x::TIMESTAMP, tz)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"GETDATE()"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"GRANT ALL PRIVILEGES ON TABLE forecasts TO finance"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"GRANT CREATE ON SCHEMA my_schema TO `alf@melmak.et`"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"GRANT SELECT ON TABLE sample_data TO `alf@melmak.et`"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"GRANT SELECT ON TABLE t TO `fab9e00e-ca35-11ec-9d64-0242ac120002`"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"INSERT INTO a REPLACE WHERE cond VALUES (1), (2)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"INSERT INTO t REPLACE WHERE a = 1 SELECT * FROM src"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"INSERT INTO t REPLACE WHERE a = 2 (SELECT * FROM src)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"INSERT INTO target REPLACE USING (c1, c2) SELECT c1, c2 FROM source"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"NOW()"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"NTILE() OVER (ORDER BY 1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"PARSE_URL('https://example.com/path')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"PARSE_URL('https://example.com/path', 'HOST')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"PARSE_URL('https://example.com/path', 'QUERY', 'param')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"REGEXP_LIKE(x, y)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"REVOKE ALL PRIVILEGES ON TABLE forecasts FROM finance"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"REVOKE CREATE ON SCHEMA my_schema FROM `alf@melmak.et`"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"REVOKE SELECT ON TABLE sample_data FROM `alf@melmak.et`"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"REVOKE SELECT ON TABLE t FROM `fab9e00e-ca35-11ec-9d64-0242ac120002`"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT ${x} FROM ${y} WHERE ${z} > 1"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT '20'?::INTEGER"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT * FROM STREAM t"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT * FROM sales UNPIVOT EXCLUDE NULLS (sales FOR quarter IN (q1 AS `Jan-Mar`))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT * FROM sales UNPIVOT INCLUDE NULLS (sales FOR quarter IN (q1 AS `Jan-Mar`))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT * FROM stream"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT * FROM t1, t2"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT BITMAP_BIT_POSITION(10)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT BITMAP_BUCKET_NUMBER(32769)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT BITMAP_CONSTRUCT_AGG(value)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT CAST('11 23:4:0' AS INTERVAL DAY TO HOUR)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT CAST('11 23:4:0' AS INTERVAL DAY TO MINUTE)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT CAST('11 23:4:0' AS INTERVAL DAY TO SECOND)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT CAST('23:00:00' AS INTERVAL HOUR TO MINUTE)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT CAST('23:00:00' AS INTERVAL HOUR TO SECOND)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT CAST('23:00:00' AS INTERVAL MINUTE TO SECOND)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT CAST('a' AS STRING COLLATE UTF8_BINARY)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT CAST(NULL AS VOID)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT COSH(1.5)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT CURDATE()"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEADD(e, 24) FROM t"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEADD(year, 1, '2020-01-01')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF('end', 'start')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF(day, 'start', 'end')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF(hour, 'start', 'end')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF(microsecond, 'start', 'end')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF(millisecond, 'start', 'end')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF(minute, 'start', 'end')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF(month, 'start', 'end')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF(quarter, 'start', 'end')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF(second, 'start', 'end')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF(week, 'start', 'end')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATEDIFF(year, 'start', 'end')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATE_ADD('2020-01-01', 1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATE_ADD(MONTH, 1, '2020-01-01')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT DATE_FORMAT(CAST(FROM_UTC_TIMESTAMP(foo, 'America/Los_Angeles') AS TIMESTAMP), 'yyyy-MM-dd HH:mm:ss') AS foo FROM t"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT ELT(2, 'foo', 'bar', 'baz') AS Result"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT EXP(1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT FROM_JSON(c1:item[*].price, 'ARRAY<DOUBLE>')[0] FROM VALUES ('{ \"item\": [ { \"model\" : \"basic\", \"price\" : 6.12 }, { \"model\" : \"medium\", \"price\" : 9.24 } ] }') AS T(c1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT GET_JSON_OBJECT(GET_JSON_OBJECT(col, '$[0]'), '$.a')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT GET_JSON_OBJECT(c1, '$.item[1].price')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT GET_JSON_OBJECT(c1, '$.price') FROM VALUES ('{ \"price\": 5 }') AS T(c1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT GET_JSON_OBJECT(col, CONCAT('$.', field_name))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT GET_JSON_OBJECT(col, path_col)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT IF(x > 0, 'positive', 'non-positive')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT INLINE(FROM_JSON(c1:item[*], 'ARRAY<STRUCT<model STRING, price DOUBLE>>')) FROM VALUES ('{ \"item\": [ { \"model\" : \"basic\", \"price\" : 6.12 }, { \"model\" : \"medium\", \"price\" : 9.24 } ] }') AS T(c1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT MAKE_INTERVAL(100, 11, 12, 13, 14, 14, 15)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT MODE(category)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT MODE(price, TRUE) AS deterministic_mode FROM products"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT OVERLAY('Spark SQL' PLACING 'ANSI ' FROM 7 FOR 0)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT OVERLAY('Spark SQL' PLACING 'CORE' FROM 7)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT OVERLAY('Spark SQL', 'ANSI ', 7, 0)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT OVERLAY(ENCODE('Spark SQL', 'utf-8') PLACING ENCODE('_', 'utf-8') FROM 6)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT PARSE_JSON('{}')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT RANDSTR(123)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT RANDSTR(123, 456)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT SUBSTR('Spark SQL', 5)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT SUBSTR('Spark' FROM 5 FOR 1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT SUBSTR(ENCODE('Spark SQL', 'utf-8'), 5)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT SUBSTRING_INDEX('a.b.c.d', '.', 2)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT SUBSTRING_INDEX(str, delim, count)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT TIMESTAMP '2025-04-29 18.47.18'::DATE"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT TRY_CAST(c1:[\"foo bar\"][\"baz qux\"] AS ARRAY<VARIANT>)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT TRY_CAST(c1:price AS ARRAY<VARIANT>)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT TRY_DIVIDE(a, b)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT X'1A2B'"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT c1:['price'] FROM VALUES ('{ \"price\": 5 }') AS T(c1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT c1:item[*].price FROM VALUES ('{ \"item\": [ { \"model\" : \"basic\", \"price\" : 6.12 }, { \"model\" : \"medium\", \"price\" : 9.24 } ] }') AS T(c1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT c1:item[1].price"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT c1:item[1].price FROM VALUES ('{ \"item\": [ { \"model\" : \"basic\", \"price\" : 6.12 }, { \"model\" : \"medium\", \"price\" : 9.24 } ] }') AS T(c1)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT c1:price, c1:price.foo, c1:price.bar[1]"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT col1 FROM t CLUSTER BY col1"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT col1, col2 FROM t CLUSTER BY col1, col2"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT col:`fr'uit`"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT name, GROUPING_ID() FROM customer GROUP BY ROLLUP (name)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT r\"\\\\foo.bar\\\""}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT raw:`zip code`, raw:`fb:testid`, raw:store['bicycle'], raw:store[\"zip code\"]"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT t.current_time FROM t"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT test, LISTAGG(email, '') AS Email FROM organizations GROUP BY test"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SELECT void FROM t"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SET VAR v = 5"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SET VARIABLE (v1, v2) = (SELECT 1, 2)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SET VARIABLE v = (SELECT MAX(c1) FROM VALUES (1), (2) AS T(c1))"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SET VARIABLE v = 5"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SET VARIABLE v = DEFAULT"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"SET VARIABLE v1 = 1, v2 = '2'"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"TRUNCATE TABLE t1 PARTITION(age = 10, name = 'test', address)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"TRUNCATE TABLE t1 PARTITION(age = 10, name = 'test', city LIKE 'LA')"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"UNIFORM(1, 10)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"UNIFORM(1, 10, 5)"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"WITH s AS (SELECT * FROM src) INSERT INTO t REPLACE USING (a) SELECT * FROM s"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"WITH s AS (SELECT * FROM src) INSERT INTO t REPLACE WHERE a = 1 SELECT * FROM s"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT get_json_object(c, '$.x-y') FROM t"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"WITH t AS (VALUES ('foo_val') AS t(foo1)) SELECT foo1 FROM t"}
+{"dialect":"databricks","category":"parse: unknown dialect \"databricks\"","sql":"WITH x (select 1) SELECT * FROM x"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"'毛'"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"AGGREGATE(my_arr, 0, (acc, x) -> acc + x, s -> s * 2)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER TABLE StudentInfo ADD COLUMNS (LastName STRING, DOB TIMESTAMP)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER TABLE StudentInfo DROP COLUMNS (LastName, DOB)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER TABLE db.example ALTER COLUMN col_a TYPE BIGINT"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER TABLE db.example CHANGE COLUMN col_a col_a BIGINT"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER TABLE db.example RENAME COLUMN col_a TO col_b"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER TABLE foo ADD IF NOT EXISTS PARTITION(event = 'click')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER TABLE foo ADD PARTITION(event = 'click')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER VIEW StudentInfoView AS SELECT * FROM StudentInfo"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER VIEW StudentInfoView AS SELECT LastName FROM StudentInfo"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER VIEW StudentInfoView RENAME TO StudentInfoViewRenamed"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER VIEW StudentInfoView SET TBLPROPERTIES ('key1'='val1', 'key2'='val2')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ALTER VIEW StudentInfoView UNSET TBLPROPERTIES ('key1', 'key2')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ANALYZE TABLE ctlg.db.tbl COMPUTE STATISTICS NOSCAN"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ANALYZE TABLE ctlg.db.tbl PARTITION(foo = 'foo', bar = 'bar') COMPUTE STATISTICS NOSCAN"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ANALYZE TABLE tbl COMPUTE STATISTICS FOR ALL COLUMNS"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ANALYZE TABLE tbl COMPUTE STATISTICS FOR COLUMNS foo, bar"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ANALYZE TABLE tbl COMPUTE STATISTICS NOSCAN"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ANALYZE TABLES COMPUTE STATISTICS NOSCAN"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ANALYZE TABLES FROM db COMPUTE STATISTICS"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ANALYZE TABLES IN db COMPUTE STATISTICS"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ARRAY(0, 1, 2)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ARRAY_SORT(x, (left, right) -> -1)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"BITMAP_OR_AGG(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"BIT_GET(11, 0)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"BOOLEAN(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CACHE TABLE testCache OPTIONS ('storageLevel' 'DISK_ONLY') SELECT * FROM testData"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CONCAT_WS(' ', NULL, 'Smith')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE NAMESPACE my_catalog.my_namespace"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE blah (col_a INT) COMMENT \"Test comment: blah\" PARTITIONED BY (date STRING) USING ICEBERG TBLPROPERTIES('x' = '1')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE db.example_table (col_a array<int>, col_b array<array<int>>)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE db.example_table (col_a struct<struct_col_a:int, struct_col_b:string>)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE db.example_table (col_a struct<struct_col_a:int, struct_col_b:struct<nested_col_a:string, nested_col_b:string>>)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE foo (col STRING) CLUSTERED BY (col) INTO 10 BUCKETS"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE foo (col STRING) CLUSTERED BY (col) SORTED BY (col) INTO 10 BUCKETS"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE foo (col STRUCT<struct_col_a: VARCHAR((50))>)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE foo (col VARCHAR(50))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE foo AS WITH t AS (SELECT 1 AS col) SELECT col FROM t"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE test STORED AS PARQUET AS SELECT 1"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TABLE x USING ICEBERG PARTITIONED BY (MONTHS(y)) LOCATION 's3://z'"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE TEMPORARY VIEW test AS SELECT 1"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE VIEW emp_v WITH SCHEMA BINDING AS SELECT * FROM emp"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE VIEW emp_v WITH SCHEMA COMPENSATION AS SELECT * FROM emp"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE VIEW emp_v WITH SCHEMA EVOLUTION AS SELECT * FROM emp"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CREATE VIEW emp_v WITH SCHEMA TYPE EVOLUTION AS SELECT * FROM emp"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CURRENT_USER"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"CURRENT_USER()"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DATE(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DAYOFMONTH(TO_DATE(x))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DAYOFWEEK(TO_DATE(x))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DAYOFYEAR(TO_DATE(x))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DECLARE OR REPLACE five = 55"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DECLARE VAR x INT"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DECLARE VARIABLE myvar INT DEFAULT 5"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DECLARE VARIABLE size DEFAULT 6"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DECLARE five = 5"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DECLARE some_var STRING"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DECLARE x INT"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DECLARE x INT = 5"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DECLARE x, y, z INT DEFAULT 1"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DESCRIBE EXTENDED db.tbl"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DESCRIBE schema.test PARTITION(ds = '2024-01-01')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DOUBLE(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"DROP NAMESPACE my_catalog.my_namespace"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"FLOAT(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"IF(cond, foo AS bar, bla AS baz)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ILIKE(foo, 'pattern')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"ILIKE(foo, 'pattern', '!')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"INSERT OVERWRITE TABLE db1.tb1 TABLE db2.tb2"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"INSERT OVERWRITE TABLE table WITH cte AS (SELECT cola FROM other_table) SELECT cola FROM cte"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"INT(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"INTERVAL '-86' DAYS"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"LIKE(foo, 'pattern')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"LIKE(foo, 'pattern', '!')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"LISTAGG(x, ', ')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"MAP(1, 2, 3, 4)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"MAP_FROM_ARRAYS(ARRAY(1), c)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"MONTH('2021-03-01')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"PERCENTILE_APPROX(DISTINCT col, 0.3)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"PERCENTILE_APPROX(DISTINCT col, 0.3, 200)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"REFRESH 'hdfs://path/to/table'"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"REFRESH TABLE a.b.c"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"REFRESH TABLE tempDB.view1"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM ((VALUES 1))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM POSEXPLODE(ARRAY('a'))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM POSEXPLODE(ARRAY('a')) AS (a, b)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM db.table1 MINUS SELECT * FROM db.table2"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM t1, t2"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM test TABLESAMPLE (5 ROWS)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM test TABLESAMPLE (50 PERCENT)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM test TABLESAMPLE (BUCKET 4 OUT OF 10)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM {df}"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT * FROM {df} WHERE id > :foo"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT /*+ BROADCAST(table) */ cola FROM table"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT /*+ BROADCASTJOIN(table) */ cola FROM table"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT /*+ COALESCE(3) */ * FROM x"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT /*+ COALESCE(3), REPARTITION(1) */ * FROM x"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT /*+ MAPJOIN(table) */ cola FROM table"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT /*+ MERGE(table) */ cola FROM table"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT /*+ MERGEJOIN(table) */ cola FROM table"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT /*+ SHUFFLEMERGE(table) */ cola FROM table"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT /*+ SHUFFLE_HASH(table) */ cola FROM table"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT /*+ SHUFFLE_REPLICATE_NL(table) */ cola FROM table"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT 1 limit"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT 1 offset"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT APPROX_COUNT_DISTINCT(a) FROM foo"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT APPROX_TOP_K_ACCUMULATE(col)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT APPROX_TOP_K_ACCUMULATE(col, 10)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT ARRAY_AGG(1)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT ARRAY_AGG(DISTINCT STRUCT('a'))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT ARRAY_AGG(x) FILTER (WHERE x = 5) FROM (SELECT 1 UNION ALL SELECT NULL) AS t(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT ARRAY_INSERT(ARRAY('a', 'b', 'c'), 1, 'z')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT ARRAY_SORT(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT BITMAP_BIT_POSITION(10)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT BITMAP_CONSTRUCT_AGG(value)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT BIT_COUNT(0)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT CASE WHEN a = NULL THEN 1 ELSE 2 END"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT CAST('2023-01-01' AS TIMESTAMP) + INTERVAL '23' HOUR + '59' MINUTE + '59' SECONDS"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT CAST('2023-01-01' AS TIMESTAMP) + INTERVAL 23 HOUR + 59 MINUTE + 59 SECONDS"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT CAST('a' AS CHAR(10) COLLATE UTF8_BINARY)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT CAST('a' AS VARCHAR(10) COLLATE UTF8_BINARY)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT CAST(123456 AS VARCHAR(3))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT CAST(STRUCT('fooo') AS STRUCT<a: VARCHAR(2)>)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT CAST(col AS TIMESTAMP)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT CURDATE()"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT DATEDIFF(MONTH, '2020-01-01', '2020-03-05')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT DATEDIFF(MONTH, CAST('1996-10-30' AS TIMESTAMP), CAST('1997-02-28 10:30:00' AS TIMESTAMP))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT DATEDIFF(week, '2020-01-01', '2020-12-31')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT DATE_ADD(MONTH, 20, col)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT DATE_ADD(my_date_column, 1)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT DATE_FORMAT(DATE '2020-01-01', 'EEEE') AS weekday"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT DATE_FORMAT(x, 'yyyy-MM-dd HH:mm:ss')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT DATE_FORMAT(x, 'yyyy-MM-dd')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT ELT(2, 'foo', 'bar', 'baz') AS Result"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT EXPLODE(col) FROM _u"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT EXPLODE(x) FROM tbl"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT FROM_UTC_TIMESTAMP('2016-08-31', 'Asia/Seoul')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT INTERVAL '5' HOURS '30' MINUTES '5' SECONDS '6' MILLISECONDS '7' MICROSECONDS"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT INTERVAL 5 HOURS 30 MINUTES 5 SECONDS 6 MILLISECONDS 7 MICROSECONDS"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT LEFT(x, 2), RIGHT(x, 2)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT MAKE_INTERVAL(100, 11, 12, 13, 14, 14, 15)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT MAKE_TIMESTAMP(2014, 12, 28, 6, 30, 45.887)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT MODE() WITHIN GROUP (ORDER BY status) FROM orders"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT MODE(category)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT MODE(price, TRUE) AS deterministic_mode FROM products"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT MONTHS_BETWEEN('1997-02-28 10:30:00', '1996-10-30')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT MONTHS_BETWEEN('1997-02-28 10:30:00', '1996-10-30', FALSE)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT POSEXPLODE(ARRAY('a'))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT POSEXPLODE(x) AS (a, b)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT REGEXP_REPLACE('100-200', R'([^0-9])', '')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT REGEXP_REPLACE('100-200', r'([^0-9])', '')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT RLIKE('John Doe', 'John.*')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT SPLIT('123|789', '\\\\|')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT STRUCT(1, 2)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT STRUCT(x, 1, y AS col3, STRUCT(5)) FROM t"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT STR_TO_MAP('a:1,b:2,c:3')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT STR_TO_MAP('a:1,b:2,c:3', ',', ':')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT SUBSTR('Spark SQL', 5)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT SUBSTR('Spark' FROM 5 FOR 1)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT SUBSTR(ENCODE('Spark SQL', 'utf-8'), 5)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TIMESTAMPDIFF(MONTH, foo, bar)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_DATE(x, 'MM/dd/yyyy')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_DATE(x, 'yyyy-M-d')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_JSON(STRUCT('blah' AS x)) AS y"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_TIMESTAMP('2016-1-1 3:4:5', 'yyyy-M-d H:m:s')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_TIMESTAMP('2016-1-1', 'yyyy-M-d')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_TIMESTAMP('2016-12-31 00:12:00')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_TIMESTAMP('2016-12-31 03:04:05', 'yyyy-MM-dd HH:mm:ss')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_TIMESTAMP('2016-12-31', 'yyyy-MM-dd')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_TIMESTAMP('20161231', 'yyyyMMdd')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_TIMESTAMP('20161231030405', 'yyyyMMddHHmmss')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_TIMESTAMP('3:4:5 PM', 'h:m:s a')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TO_UTC_TIMESTAMP('2016-08-31', 'Asia/Seoul')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRANSFORM(ARRAY(1, 2, 3), (x, i) -> x + i)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRANSFORM(ARRAY(1, 2, 3), x -> x + 1)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRANSFORM(name, age) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' NULL DEFINED AS 'NULL' USING 'cat' AS (name_age STRING) ROW FORMAT DELIMITED FIELDS TERMINATED BY '@' LINES TERMINATED BY '\\n' NULL DEFINED AS 'NULL' FROM person"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRANSFORM(x) USING 'x' AS (x INT) FROM t"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRANSFORM(zip_code, name, age) ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe' WITH SERDEPROPERTIES ('field.delim'='\\t') USING 'cat' AS (a STRING, b STRING, c STRING) ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe' WITH SERDEPROPERTIES ('field.delim'='\\t') FROM person WHERE zip_code > 94511"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRANSFORM(zip_code, name, age) USING 'cat' AS (a STRING, b STRING, c STRING) FROM person WHERE zip_code > 94511"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRANSFORM(zip_code, name, age) USING 'cat' AS (a, b, c) FROM person WHERE zip_code > 94511"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRANSFORM(zip_code, name, age) USING 'cat' FROM person WHERE zip_code > 94500"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRY_CAST('a' AS INT)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRY_DIVIDE(a, b)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRY_ELEMENT_AT(ARRAY(1, 2, 3), 2)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT TRY_ELEMENT_AT(MAP(1, 'a', 2, 'b'), 2)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT UNIX_TIMESTAMP('2016-1-1', 'yyyy-M-d')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT UNIX_TIMESTAMP('2016-12-31', 'yyyy-MM-dd')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT UNIX_TIMESTAMP()"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT a, LOGICAL_OR(b) FROM table GROUP BY a"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT id_column, name, age FROM test_table LATERAL VIEW INLINE(struc_column) explode_view AS name, age"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT name, GROUPING_ID() FROM customer GROUP BY ROLLUP (name)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT named_struct('a', 1, 'b', 'x')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT timestamp AS of FROM t"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SELECT version AS of FROM t"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SET VAR v = 5"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SET VARIABLE (v1, v2) = (SELECT 1, 2)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SET VARIABLE v = (SELECT MAX(c1) FROM VALUES (1), (2) AS T(c1))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SET VARIABLE v = 5"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SET VARIABLE v = DEFAULT"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SET VARIABLE v1 = 1, v2 = '2'"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"SPLIT(str, pattern, lim)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"STRING(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"STRING_AGG(x, ', ')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TIMESTAMP(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TIMESTAMP_LTZ(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TIMESTAMP_NTZ(x)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TO_DATE(x, 'yyyy')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TO_DATE(x, 'yyyy-MM-dd')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TRIM('    SparkSQL   ')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TRIM('SL', 'SSparkSQLS')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TRIM(BOTH 'SL' FROM 'SSparkSQLS')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TRIM(LEADING 'SL' FROM 'SSparkSQLS')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TRIM(TRAILING 'SL' FROM 'SSparkSQLS')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TRUNC(date_col, 'MM')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"TRUNCATE TABLE t1 PARTITION(age = 10, name = 'test', address)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"UNHEX(MD5(x))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"WEEKOFYEAR(TO_DATE(x))"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"WITH tbl AS (SELECT 1 AS id, 'eggy' AS name UNION ALL SELECT NULL AS id, 'jake' AS name) SELECT COUNT(DISTINCT id, name) AS cnt FROM tbl"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"YEAR('2021-03-01')"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"any_value(col, true)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"first(col, true)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"first_value(col, true)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"last(col, true)"}
+{"dialect":"spark","category":"parse: unknown dialect \"spark\"","sql":"last_value(col, true)"}
