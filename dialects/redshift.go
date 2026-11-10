@@ -105,7 +105,7 @@ func redshiftReservedKeywords() map[string]bool {
 		"aes256",
 		"all",
 		"allowoverwrite",
-		"analyse",
+		"analyse", //nolint:misspell // SQL keyword: upstream lists both spellings, generators/redshift.py:120-121
 		"analyze",
 		"and",
 		"any",
