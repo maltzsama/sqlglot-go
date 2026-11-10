@@ -82,6 +82,7 @@ type Expression interface {
 	NamedSelects() []string
 	ToPy() any
 	Parts() []Expression
+	ToColumn() Expression
 	TableName() string
 	SchemaName() string
 	CatalogName() string
@@ -1195,6 +1196,56 @@ func (n *Node) Parts() []Expression {
 }
 
 var TablePartKeys = []string{"this", "schema", "catalog"}
+
+// ToColumn ports Table.to_column (expressions/query.py:1004-1018): the table's rightmost part
+// qualified by the parts before it — a Column for up to four parts, a Dot chain beyond that —
+// with the table's alias carried along as an Alias wrapper. A non-Identifier last part (a
+// function or array wrapped in a Table) is returned as-is, matching upstream's fallback branch.
+func (n *Node) ToColumn() Expression {
+	parts := n.Parts()
+	if len(parts) == 0 {
+		return nil
+	}
+	lastPart := parts[len(parts)-1]
+	col := lastPart
+	if lastPart.Kind() == KindIdentifier {
+		// column(*reversed(parts[0:4]), fields=parts[4:], copy=copy): the first four parts land
+		// in col/table/schema/catalog (so a table's catalog, db, table order comes out reversed)
+		// and any remainder becomes Dot fields — f.g.h.i.j.k yields Dot(Dot(Column(i, h, g, f), j), k).
+		head := parts
+		if len(head) > 4 {
+			head = head[:4]
+		}
+		reversedParts := make([]Expression, len(head))
+		for i, part := range head {
+			reversedParts[len(head)-1-i] = part.Copy()
+		}
+		at := func(i int) any {
+			if i < len(reversedParts) {
+				return reversedParts[i]
+			}
+			return nil
+		}
+		var fields []any
+		if len(parts) > 4 {
+			fields = make([]any, 0, len(parts)-4)
+			for _, field := range parts[4:] {
+				fields = append(fields, field.Copy())
+			}
+		}
+		col = Column_(at(0), at(1), at(2), at(3), fields)
+	}
+	if alias, ok := n.args["alias"].(Expression); ok && alias != nil {
+		// alias_(col, alias.this, copy=True): copy both sides so the result shares no node with
+		// the table it is derived from (the caller typically replaces that table outright).
+		var aliasIdent Expression
+		if this := alias.This(); this != nil {
+			aliasIdent = this.Copy()
+		}
+		return AliasExpr(col.Copy(), aliasIdent, false)
+	}
+	return col
+}
 
 func applyKwargs(e Expression, kwargs Args) Expression {
 	// kwargs is empty or single-key in the M1 surface, so map iteration order is immaterial.

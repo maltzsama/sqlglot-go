@@ -86,6 +86,12 @@ type Dialect struct {
 	SupportsFixedSizeArrays  bool
 	SupportsLimitAll         bool
 	SupportsValuesDefault    bool
+	// SupportsImplicitUnnest ports the parser flag SUPPORTS_IMPLICIT_UNNEST
+	// (parser.py:1887): when true, `_parse_query_modifiers` rewrites a `FROM a, a.b` join
+	// whose leftmost table part matches an already-introduced relation into an explicit
+	// Unnest (parser.py:4305-4330). Base defaults to false (parser.py:1887); upstream sets
+	// it true for Redshift (parsers/redshift.py:84) and BigQuery (parsers/bigquery.py:192).
+	SupportsImplicitUnnest bool
 	// SupportsSelectInto ports the generator flag SUPPORTS_SELECT_INTO (generator.py:466):
 	// when false (base/mysql), the generator rewrites `SELECT ... INTO x` into
 	// `CREATE TABLE x AS SELECT ...`; postgres (and tsql) keep the inline INTO.

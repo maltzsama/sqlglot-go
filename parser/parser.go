@@ -1112,6 +1112,11 @@ func (p *Parser) parseQueryModifiers(this exp.Expression) exp.Expression {
 			}
 		}
 	}
+	// v30.17.0 parser.py:4385-4386: dialects with SUPPORTS_IMPLICIT_UNNEST rewrite the
+	// `FROM a, a.b` column joins parsed above into explicit Unnest nodes.
+	if p.dialect.SupportsImplicitUnnest && this != nil && this.Arg("from_") != nil {
+		this = p.implicitUnnestsToExplicit(this)
+	}
 	return this
 }
 

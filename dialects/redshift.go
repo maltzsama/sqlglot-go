@@ -25,6 +25,10 @@ func Redshift() *Dialect {
 	// Redshift's KEYWORDS add it (dialects/redshift.py:45), so the `(+)` outer-join marker is
 	// parsed and rendered like Oracle's.
 	d.SupportsColumnJoinMarks = true
+	// parsers/redshift.py:84: Redshift rewrites `FROM a, a.b` joins into explicit Unnest
+	// nodes (parser.py:4305-4330), which is what makes cross-dialect output emit
+	// UNNEST(...) / LATERAL VIEW EXPLODE instead of a bare column join.
+	d.SupportsImplicitUnnest = true
 
 	// generators/redshift.py:21-44 generator flags that have a Go counterpart.
 	d.LockingReadsSupported = false
