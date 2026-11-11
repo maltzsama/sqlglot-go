@@ -67,11 +67,12 @@ from tests.dialects.test_risingwave import TestRisingWave  # noqa: E402
 from tests.dialects.test_spark import TestSpark  # noqa: E402
 from tests.dialects.test_databricks import TestDatabricks  # noqa: E402
 from tests.dialects.test_bigquery import TestBigQuery  # noqa: E402
+from tests.dialects.test_duckdb import TestDuckDB  # noqa: E402
 from tests.dialects.test_mysql import TestMySQL  # noqa: E402
 from tests.dialects.test_postgres import TestPostgres  # noqa: E402
 
-DIALECTS = ("bigquery", "mysql", "postgres", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks")
-SAME_DIALECT_WRITES = {"bigquery", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks"}
+DIALECTS = ("bigquery", "duckdb", "mysql", "postgres", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks")
+SAME_DIALECT_WRITES = {"bigquery", "duckdb", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks"}
 
 captured = []
 
@@ -175,7 +176,7 @@ def main():
 
     runner = unittest.TextTestRunner(verbosity=0)
     unexpected = []
-    for cls in (TestBigQuery, TestMySQL, TestPostgres, TestAthena, TestTrino, TestPresto, TestHive, TestTSQL, TestClickhouse, TestStarrocks, TestDoris, TestOracle, TestRedshift, TestMaterialize, TestRisingWave, TestSpark, TestDatabricks):
+    for cls in (TestBigQuery, TestDuckDB, TestMySQL, TestPostgres, TestAthena, TestTrino, TestPresto, TestHive, TestTSQL, TestClickhouse, TestStarrocks, TestDoris, TestOracle, TestRedshift, TestMaterialize, TestRisingWave, TestSpark, TestDatabricks):
         if cls.dialect not in selected:
             continue
         result = runner.run(unittest.defaultTestLoader.loadTestsFromTestCase(cls))

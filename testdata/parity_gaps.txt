@@ -5,3 +5,568 @@
 {"dialect":"bigquery","category":"gen: canonicalization","sql":"JSON_QUERY_ARRAY(doc, '$. a b c .d')"}
 {"dialect":"bigquery","category":"gen: canonicalization","sql":"JSON_VALUE(doc, '$. a b c .d')"}
 {"dialect":"databricks","category":"gen: canonicalization","sql":"WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT get_json_object(c, '$.x-y') FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"\n            SELECT\n                l_returnflag,\n                l_linestatus,\n                sum_qty:        sum(l_quantity),\n                sum_base_price: sum(l_extendedprice),\n                sum_disc_price: sum(l_extendedprice * (1-l_discount)),\n                sum_charge:     sum(l_extendedprice * (1-l_discount) * (1+l_tax)),\n                avg_qty:        avg(l_quantity),\n                avg_price:      avg(l_extendedprice),\n                avg_disc:       avg(l_discount),\n                count_order:    count(*)\n            "}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"'red' IN flags"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"'red' IN tbl.flags"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"(FROM (SELECT 1) t1(c) EXCEPT FROM (SELECT 2) t2(c)) UNION ALL (FROM (SELECT 3) t3(c) EXCEPT FROM (SELECT 4) t4(c))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"123::CHARACTER VARYING"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"1d"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ALTER TABLE \"db\".\"t1\" RENAME TO \"db\".\"t2\""}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ALTER TABLE db.t1 RENAME TO db.t2"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ANALYZE"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARG_MAX(keyword_name, keyword_category, 3 ORDER BY keyword_name DESC)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARG_MIN({'d': \"DATE\", 'ts': \"TIMESTAMP\", 'i': \"INT\", 'b': \"BIGINT\", 's': \"VARCHAR\"}, \"DOUBLE\")"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY((SELECT id FROM t))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY(SELECT id FROM t)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_COMPACT(NULL)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_COMPACT(['a', NULL, 'b', NULL, 'c'])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_COMPACT([1, NULL, 2, NULL, 3])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_COMPACT([[1, 2], NULL, [3, 4]])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_COMPACT([])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_CONSTRUCT_COMPACT('a', NULL, 'b', NULL, 'c')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_CONSTRUCT_COMPACT()"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_CONSTRUCT_COMPACT(1, 2, 3, 4, 5)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_REVERSE_SORT(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_SLICE(x, 1, 3, 2)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ARRAY_TO_STRING(arr, delim)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ATTACH ':memory:' AS db_alias"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ATTACH 'file.db'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ATTACH 'file.db' (READ_ONLY FALSE, TYPE sqlite)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ATTACH 'file.db' (TYPE POSTGRES, SCHEMA 'public')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ATTACH 'file.db' AS db_alias (READ_ONLY)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ATTACH DATABASE 'file.db'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ATTACH IF NOT EXISTS 'file.db' AS db_alias"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(ROW(1, ROW(1)) AS STRUCT(number BIGINT, row STRUCT(number BIGINT)))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST([STRUCT_PACK(a := 1)] AS STRUCT(a BIGINT)[])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST([[STRUCT_PACK(a := 1)]] AS STRUCT(a BIGINT)[][])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(start AS TIMESTAMPTZ) AT TIME ZONE 'America/New_York'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS BINARY)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS BIT)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS BLOB)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS BPCHAR)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS BYTEA)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS CHAR)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS DATE)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS DECIMAL(15, 4))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS DECIMAL)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS DOUBLE)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS FLOAT)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS FLOAT4)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS FOO)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS HUGEINT)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS INT1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS INT128)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS INT16)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS INT32)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS INT4)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS INT64)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS INT8)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS INTEGER)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS LOGICAL)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS NUMERIC(1, 2))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS NUMERIC)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS REAL)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS SIGNED)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS STRING)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS STRUCT(number BIGINT))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS TEXT)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS UBIGINT)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS UHUGEINT)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS UINTEGER)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS USMALLINT)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS UTINYINT)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS UUID)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS VARBINARY)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS VARCHAR(5))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST(x AS VARCHAR)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CAST({'i': 1, 's': 'foo'} AS STRUCT(\"s\" TEXT, \"i\" INT))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"COL::BIGINT[]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"COPY (SELECT * FROM \"input.parquet\" USING SAMPLE RESERVOIR (5000 ROWS)) TO 'output.parquet' WITH (FORMAT PARQUET, KV_METADATA {'origin': 'Dagster', 'dagster_run_id': '98c85a11-d05c-4935-bfa2-198214c2204'})"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"COPY (SELECT 42 AS a, 'hello' AS b) TO 'query.json' WITH (FORMAT JSON, ARRAY TRUE)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"COPY lineitem (l_orderkey) TO 'orderkey.tbl' WITH (DELIMITER '|')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"COPY lineitem FROM 'lineitem.ndjson' WITH (FORMAT JSON, DELIMITER ',', AUTO_DETECT TRUE, COMPRESSION SNAPPY, CODEC ZSTD, FORCE_NOT_NULL (col1, col2))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"COUNT_IF(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE FUNCTION add(a, b) AS a + b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE FUNCTION ifelse(a, b, c) AS CASE WHEN a THEN b ELSE c END"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE FUNCTION my_table_function(a, b) AS TABLE SELECT x, y FROM (VALUES (a, b)) AS tbl(x, y)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE MACRO add(a, b) AS a + b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE MACRO add_x (a, b) AS a + b, (a, b, c) AS a + b + c"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE MACRO foo (a TINYINT) AS a + 1, (a INT) AS a + 2"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE MACRO foo(a TINYINT) AS a = 127"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE MACRO ifelse(a, b, c) AS CASE WHEN a THEN b ELSE c END"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE MACRO is_maximal (a TINYINT) AS a = 127, (a INT) AS a = 2147483647"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE MACRO my_table_function(a, b) AS TABLE SELECT x, y FROM (VALUES (a, b)) AS tbl(x, y)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE MACRO tbl (a) AS TABLE (SELECT a AS x), (a, b) AS TABLE (SELECT a AS x, b AS y)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE OR REPLACE FUNCTION func(a INT, b FLOAT) AS TABLE SELECT a"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE OR REPLACE MACRO foo (a) AS a, (a, b) AS a + b, (a, b, c) AS a + b + c"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE SEQUENCE serial START 101"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE SEQUENCE serial START WITH 1 INCREMENT BY 2"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE SEQUENCE serial START WITH 1 MAXVALUE 10 CYCLE"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE SEQUENCE serial START WITH 1 MAXVALUE 10 NO CYCLE"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE SEQUENCE serial START WITH 99 INCREMENT BY -1 MAXVALUE 99"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE TABLE IF NOT EXISTS t (cola INT COMMENT 'cola', colb STRING) USING ICEBERG PARTITIONED BY (colb)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE TABLE IF NOT EXISTS t (cola INT, colb STRING) USING ICEBERG PARTITIONED BY (colb)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE TABLE color (name ENUM('RED', 'GREEN', 'BLUE'))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE TABLE notes (watermark TEXT)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE TABLE t1 AS (FROM t2 SELECT foo1, foo2)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE TABLE tbl1 (u UNION(num INT, str TEXT))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CREATE TABLE tbl_summary AS SELECT * FROM (SUMMARIZE tbl)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"CURRENT_LOCALTIMESTAMP()"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"DATESUB('YEAR', col, '2020-01-01')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"DATE_SUB('YEAR', col, '2020-01-01')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"DATE_TRUNC('DAY', x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"DAYNAME(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"DECODE(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"DELETE FROM t USING (VALUES (1)) AS t1(c), (VALUES (1), (2)) AS t2(c) WHERE t.c = t1.c AND t.c = t2.c"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"DETACH DATABASE IF EXISTS file"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"DETACH DATABASE db"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"DETACH IF EXISTS file"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"DETACH new_database"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EDITDIST3(col1, col2)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ENCODE(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EPOCH(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EPOCH_MS(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EXTRACT(ISODOW FROM foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EXTRACT(ISOYEAR FROM foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EXTRACT(TIMEZONE_HOUR FROM foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EXTRACT(TIMEZONE_MINUTE FROM foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EXTRACT(WEEK FROM foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EXTRACT(WEEKDAY FROM foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EXTRACT(WEEKOFYEAR FROM foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"EXTRACT(YEARWEEK FROM foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FORCE CHECKPOINT db"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FORCE INSTALL httpfs"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FORCE INSTALL httpfs FROM 'https://extensions.duckdb.org'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FORCE INSTALL httpfs FROM community"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FORMAT('foo')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FORMAT('foo', 'foo2', 'foo3')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM  x SELECT x UNION SELECT 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM (FROM (SELECT 1) AS t2(c), (SELECT t2.c AS c0))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM (FROM (SELECT 2000 as amount) t GROUP BY amount HAVING SUM(amount) > 1000)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM (FROM a) AS t1 JOIN (FROM b) AS t2 ON t1.x = t2.x JOIN (FROM c) AS t3 ON t2.y = t3.y SELECT t1.x, t2.x, t3.y"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM (FROM t1 LEFT JOIN t2 USING (id) SELECT *)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM (FROM t1 SELECT foo1, foo2)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM (FROM t1 UNION FROM t2)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM (FROM tbl)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM (FROM tbl_1) AS t1 POSITIONAL JOIN (FROM tbl_2) AS t2 SELECT t1.x AS x1, t2.x AS x2"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM t1, t2 SELECT *"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM tbl"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"FROM_HEX('AA')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"INSERT INTO t DEFAULT VALUES RETURNING (c1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"INSERT INTO x BY NAME SELECT 1 AS y"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"INSTALL httpfs"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"INSTALL httpfs FROM 'https://extensions.duckdb.org'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"INSTALL httpfs FROM community"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ISINF(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ISNAN(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"JARO_WINKLER_SIMILARITY('hello', 'world')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"JSON_EXTRACT(x, '$.family')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"JSON_EXTRACT_PATH(x, '$.family')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"JSON_EXTRACT_PATH_TEXT(x, '$.family')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"JSON_EXTRACT_STRING(x, '$.family')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"LISTAGG(x, ', ')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"LIST_CONCAT([1, 2], [3, 4])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"LIST_CONTAINS([1, 2, NULL], 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"LIST_CONTAINS([1, 2, NULL], NULL)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"LIST_COSINE_DISTANCE(x, y)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"LIST_DISTANCE(x, y)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"LIST_HAS_ANY([1, 2, 3], [1,2])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"LIST_REVERSE_SORT(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"LIST_SORT(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"MAKE_TIMESTAMP(1667810584123456)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"MAKE_TIMESTAMP(1992, 9, 20, 13, 34, 27.123456)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"MAP {'1': 'a', '2': 'b'}"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"MAP {1: 'a', 2: 'b'}"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"MAP {[1, 2]: 'a', [3, 4]: 'b'}"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"MERGE INTO people USING (SELECT 1 AS id, 98000.0 AS salary) AS salary_updates USING (id) WHEN MATCHED THEN UPDATE"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"MERGE INTO people USING (SELECT 1 AS id, 98000.0 AS salary) AS salary_updates USING (id) WHEN MATCHED THEN UPDATE SET salary = salary_updates.salary"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"MONTH('2021-03-01')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"MONTHNAME(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT (FROM tbl_1 LEFT JOIN tbl_2 USING (id) SELECT *) ON col_1 USING SUM(col_2)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT Cities ON Country || '_' || Name USING SUM(Population)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT Cities ON Country, Name USING SUM(Population)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT Cities ON Year IN (2000, 2010) USING SUM(Population) GROUP BY Country"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT Cities ON Year USING FIRST(Population)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT Cities ON Year USING SUM(Population)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT Cities ON Year USING SUM(Population) AS total, MAX(Population) AS max GROUP BY Country"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT Cities ON Year USING SUM(Population) GROUP BY Country"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT Cities ON Year USING SUM(Population) GROUP BY Country, Name"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT duckdb_functions() ON schema_name USING AVG(LENGTH(function_name))::INTEGER GROUP BY schema_name"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"PIVOT_WIDER Cities ON Year USING SUM(Population)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"QUANTILE(x, 0.5)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"REGEXP_FULL_MATCH(x, y, 'i')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"REGEXP_MATCHES(x, y)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"REGEXP_REPLACE(this, pattern, replacement)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"REGEXP_REPLACE(this, pattern, replacement, 'g')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"REGEXP_REPLACE(this, pattern, replacement, 'gi')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"REGEXP_REPLACE(this, pattern, replacement, 'ims')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"RESET GLOBAL memory_limit"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"RESET LOCAL threads"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"RESET SESSION default_collation"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"RESET SESSION threads"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"RESET default_collation"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"RESET memory_limit"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"RESET threads"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"ROUND(2.256, 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT \"foo\" /* bla */: 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT \"foo\": /* bla */ 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT \"foo\": /* bla */ 1 /* foo */"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT \"foo\": 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT \"foo\": 1 /* bla */"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT #2 AS a, #1 AS b FROM (VALUES (1, 'foo'))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT #2, #1 FROM (VALUES (1, 'foo'))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT $$foo$$"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT $foo"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT $tag$foo$tag$"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT $🦆$foo$🦆$"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT '{ \"family\": \"anatidae\", \"species\": [ \"duck\", \"goose\", \"swan\", null ] }' ->> ['$.family', '$.species']"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT '{\"duck\": [1, 2, 3]}' -> '$.duck[#-1]'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT '{\"foo\": [1, 2, 3]}' -> 'foo' -> 0"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT '{\"x\": 1}' -> c FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ($$hello)'world$$)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT (@-1) + 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT (@col) + 1 FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT (MAP {'x': 1})['x']"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ([1,2,3])[:-:-1]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT (x, x + 1, y) FROM (SELECT 1 AS x, 'a' AS y)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM 'x.y'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM (DESCRIBE t)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM (PIVOT Cities ON Year USING SUM(Population) GROUP BY Country) AS pivot_alias"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM (SELECT * FROM t) AS t1 TABLESAMPLE (1 ROWS), (SELECT * FROM t) AS t2 TABLESAMPLE (2 ROWS)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM (UNPIVOT monthly_sales ON COLUMNS(* EXCLUDE (empid, dept)) INTO NAME month VALUE sales) AS unpivot_alias"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM GENERATE_SERIES(2, 13, 4)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM GLOB(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM RANGE(1, 5, 10)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM cities PIVOT(SUM(population) FOR year IN (2000, 2010, 2020) GROUP BY country)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM example TABLESAMPLE RESERVOIR (3 ROWS) REPEATABLE (82)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM foo /* bla */: /* baz */ bar /* boo */"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM foo /* bla */: bar"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM foo /* bla */: bar /* baz */"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM foo ASOF LEFT JOIN bar ON a = b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM foo WHERE bar > $baz AND bla = $bob"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM foo: bar"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM foo: c.db.tbl"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM my_ducklake.demo AT (VERSION => 2)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM r: range(10), v: (VALUES (42)), s: (FROM range(10))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM t LIMIT 10 PERCENT"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM t LIMIT 10 PERCENT OFFSET 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM t LIMIT 10%"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM t LIMIT 10% OFFSET 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM t PIVOT(FIRST(t) AS t, FOR quarter IN ('Q1', 'Q2'))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM t PIVOT(SUM(y) FOR foo IN y_enum)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM t1 AS a AT (VERSION => 3) JOIN t2 AS b AT (TIMESTAMP => NOW() - INTERVAL '1' WEEK) ON a.id = b.id"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM t1 WHERE NOT EXISTS(FROM t2 WHERE t2.id = t1.id)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM tbl TABLESAMPLE RESERVOIR(20%), tbl2 WHERE tbl.i=tbl2.i"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM tbl USING SAMPLE 10 PERCENT (bernoulli)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM tbl USING SAMPLE 10%"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM tbl USING SAMPLE 10% (system, 377)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM tbl USING SAMPLE 5"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM tbl USING SAMPLE reservoir(50 ROWS) REPEATABLE (100)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM tbl, tbl2 WHERE tbl.i=tbl2.i USING SAMPLE RESERVOIR(20%)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM x INNER JOIN UNNEST(y) ON TRUE"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM x LEFT JOIN UNNEST(y) ON TRUE"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM x LEFT OUTER JOIN UNNEST(y) ON TRUE"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT * FROM x ORDER BY 1 NULLS LAST"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 AS a$b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 AS x UNION ALL BY NAME SELECT 2 AS x"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) LIMIT 1 OFFSET 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) LIMIT 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) OFFSET 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 LIMIT 1 OFFSET 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 LIMIT 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 OFFSET 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 WHERE x > $1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1 WHERE x > $name"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 1_2E+1_0::FLOAT"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT 20_000 AS literal"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT @(-1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT @(-1) + 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT @col + 1 FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT @col FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ANY_VALUE(sample_column) FROM sample_table"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT APPROX_QUANTILE(a, 0.5) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ARRAY[1, 2, 3]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ARRAY[[[1]]]::INT[1][1][1]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ARRAY_AGG(DISTINCT a) FILTER (WHERE a IS NOT NULL)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ARRAY_AGG(col ORDER BY sort_col) FILTER (WHERE col IS NOT NULL)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ARRAY_LENGTH([0], 1) AS x"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT AVG(x) FILTER (WHERE TRUE) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT BIT_AND(CAST(val AS DOUBLE)) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT BIT_OR(CAST(val AS DECIMAL(10, 2))) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT BIT_OR(CAST(val AS FLOAT)) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT BIT_XOR(CAST(val AS DECIMAL)) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CARDINALITY(CAST({'a': 1, 'b': 2, 'c': 3} AS MAP(TEXT, DECIMAL(38, 0)))) AS map_size"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CASE WHEN 'hello, snowman' IS NULL THEN NULL ELSE ['hello, snowman'] END AS result"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CASE WHEN 4.2 IS NULL THEN NULL ELSE [4.2] END AS result"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CAST('09:05:03' AS TIME) + INTERVAL 2 HOUR"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CAST('12.3456' AS DECIMAL(10, 0))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CAST('12.3456' AS DECIMAL(10, 2))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CAST('12.3456' AS DECIMAL(38, 0))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CAST('2018-01-01 00:00:00' AS DATE) + INTERVAL 3 DAY"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CAST('{\"x\": 1}' AS JSON)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CAST(ROW(1, 2) AS ROW(a INTEGER, b INTEGER))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CAST(TRIM(CAST(CAST('***apple***' AS BLOB) AS TEXT), CAST(CAST('*' AS BLOB) AS TEXT)) AS BLOB) AS result"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COALESCE(*COLUMNS(*)) FROM (SELECT NULL, 2, 3) AS t(a, b, c)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COALESCE(*COLUMNS(['a', 'b', 'c'])) AS result FROM (SELECT NULL AS a, 42 AS b, TRUE AS c)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COALESCE(COLUMNS(['a', 'b', 'c'])) AS result FROM (SELECT NULL AS a, 42 AS b, TRUE AS c)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COLUMNS('(id|numbers?)') FROM numbers"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COLUMNS(*) + COLUMNS(*) FROM numbers"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COLUMNS(c -> c LIKE '%num%') FROM numbers"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CONCAT(COALESCE(['abc'], []), ['bcg'])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CONCAT(foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COSH(1.5)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COUNT(*) FILTER (WHERE b > 0) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COUNT(DISTINCT a) FILTER (WHERE b > 0) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COUNT(t.*) FILTER (WHERE b > 0) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT COUNT_IF(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CUME_DIST( ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CURRENT_DATABASE()"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CURRENT_DATE"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CURRENT_SCHEMA()"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CURRENT_SCHEMAS(TRUE)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT CURRENT_TIMESTAMP"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT DATEDIFF('day', t1.\"A\", t1.\"B\") FROM \"table\" AS t1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT DATE_ADD(CAST('2020-01-01' AS DATE), INTERVAL 1 DAY)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT DATE_DIFF('day', DATE '2020-01-01', DATE '2020-01-05')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT EPOCH_MS(10) AS t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT EXP(1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT FIRST_VALUE(c IGNORE NULLS) OVER (PARTITION BY gb ORDER BY ob) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT FIRST_VALUE(c RESPECT NULLS) OVER (PARTITION BY gb ORDER BY ob) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT FUNCTION"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT GET_BIT(CAST('0110010' AS BIT), 2)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT GET_CURRENT_TIME()"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT GREATEST(1.0, 2.5, NULL, 3.7)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT INTERVAL '1 hour'::VARCHAR"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT INTERVAL '1 quarter'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ISNAN(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON('{\"fruit\": {\"foo\": \"banana\"}}') -> 'fruit' -> 'foo'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON('{\"fruit\":\"banana\"}') -> 'fruit'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_ARRAY('a', 'b', 'c')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_ARRAY('a', 'b', 'c', 'd', 'e')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_ARRAY()"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_ARRAY(NULL)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_ARRAY(NULL, 'a', 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_EXTRACT('{\"duck\": [1, 2, 3]}', '/duck/0')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_EXTRACT(c, '$.k1') = 'v1'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_EXTRACT(c, '$[*].id')[0:2]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_EXTRACT_STRING('{ \"family\": \"anatidae\", \"species\": [ \"duck\", \"goose\", \"swan\", null ] }', ['$.family', '$.species'])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_EXTRACT_STRING(c, '$.k1') = 'v1'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT JSON_EXTRACT_STRING(c, '$[*].id')[0:2]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LAST_VALUE(x ORDER BY x IGNORE NULLS) OVER (ORDER BY x) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LAST_VALUE(x ORDER BY x RESPECT NULLS) OVER (ORDER BY x) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LENGTH(foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST(col) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_APPLY(RANGE(1, 4), i -> {'f1': LIST_VALUE(1, 2, 3)[i], 'f2': LIST_VALUE(1, 2, 3)[i]})"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_DISTINCT(col)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_FILTER([4, 5, 6], x -> x > 4)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_MAX(values) FROM table1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_MIN(values) FROM table1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_SORT(x, 'ASC')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_SORT(x, 'ASC', 'NULLS FIRST')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_SORT(x, 'ASC', 'NULLS LAST')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_SORT(x, 'DE' || 'SC')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_SORT(x, 'DE' || 'SC', 'NULLS' || ' FIRST')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_SORT(x, 'DESC')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_SORT(x, 'DESC', 'NULLS FIRST')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_SORT(x, 'DESC', 'NULLS LAST')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_SORT(x, 'DESC', 'NULLS' || ' FIRST')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_TRANSFORM(LIST_FILTER([0, 1, 2, 3, 4, 5], LAMBDA x : x % 2 = 0), LAMBDA y : y * y)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_TRANSFORM(STR_SPLIT_REGEX('abc , dfg ', ','), x -> TRIM(x))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_TRANSFORM([5, NULL, 6], (x, y) -> COALESCE(x, y, 0) + 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x : COALESCE(x, 0) + 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x, y : COALESCE(x, y, 0) + 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_TRANSFORM(nbr, LAMBDA x : x + 1) FROM article AS a"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT LIST_VALUE(1)[i]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MACRO"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MAKE_DATE(2016, 12, 25)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MAKE_DATE(DATE_PART(['year', 'month', 'day'], CURRENT_DATE))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MAKE_TIMESTAMP(10) AS t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MAP {'x': 1}"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MAP(['key1', 'key2', 'key3'], [10, 20, 30])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MAP_CONCAT(CAST({'a': 1, 'b': 2} AS MAP(TEXT, DECIMAL(38, 0))), MAP {'c': CAST(3 AS DECIMAL(38, 0))})"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MAP_CONCAT(CAST({'a': 1} AS MAP(TEXT, DECIMAL(38, 0))), MAP {'a': CAST(99 AS DECIMAL(38, 0))})"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MAP_FROM_ENTRIES(LIST_FILTER(MAP_ENTRIES(CAST({'a': 1, 'b': 2, 'c': 3} AS MAP(TEXT, DECIMAL(38, 0)))), x -> NOT x.key IN ('a', 'b')))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MIN(COLUMNS(* REPLACE (number + id AS number))), COUNT(COLUMNS(* EXCLUDE (number))) FROM numbers"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT MODE(category)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT NTH_VALUE(is_deleted, 2 IGNORE NULLS) OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT NTH_VALUE(is_deleted, 2) OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT NTILE(1 ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY y DESC) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY y DESC) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT PERCENT_RANK( ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT QUANTILE_CONT(x, q) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT QUANTILE_DISC(x, q) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT RANGE(1, 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT RANGE(1, 2)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT RANGE(1, 5)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT RANGE(1, 5, 2)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT RANGE(5, 1, -1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT RANGE(5, 1, 0)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT RANK( ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REGEXP_EXTRACT(a, 'pattern') FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REGEXP_EXTRACT(a, 'pattern', 0)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REGEXP_EXTRACT(a, 'pattern', 0, 'i')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REGEXP_EXTRACT(a, 'pattern', 1, 'i')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REGEXP_EXTRACT(a, 'pattern', 2, 'i') FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 0)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 0)[2:]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 0, 'i')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 1, 'im')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REPLACE('apple pie', 'pie', 'cobbler') AS result"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT REPLACE(CAST(CAST('apple pie' AS BLOB) AS TEXT), CAST(CAST('pie' AS BLOB) AS TEXT), CAST(CAST('cobbler' AS BLOB) AS TEXT)) AS result"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ROW(x, x + 1, y) FROM (SELECT 1 AS x, 'a' AS y)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT SHA256('abc')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT SPLIT_PART('11.22.33', '.', 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT STAR(tbl, exclude := [foo])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT STRFTIME(CAST('2020-01-01' AS TIMESTAMP), CONCAT('%Y', '%m'))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT SUM(X) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT SUM(X) OVER (ORDER BY x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT SUM(x) FILTER (x = 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT SUM(x) OVER (ORDER BY x GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT TIMESTAMP 'foo'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT TODAY()"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT TO_BINARY('test')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT TO_TIMESTAMP(10) AS t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT TO_VARIANT('1')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT TRIM('***apple***', '*') AS result"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT TRY(LOG(0))"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT TRY_STRPTIME('2013-04-28T20:57:01.123456789+07:00', '%Y-%m-%dT%H:%M:%S.%n%z')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT UNNEST([*COLUMNS('alias_.*')]) AS column_name"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT UNNEST([1, 2, 3])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT UNNEST([1, 2])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT UNNEST(col, recursive := TRUE) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT UUID()"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT UUIDV7()"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT ['a', 'b'] AS result"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT [1, 2, 3][1 + 1:LENGTH([1, 2, 3]) + -1]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT [4, 5, 6] AS l, [x FOR x, i IN l IF i = 2] AS filtered"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT a, LOGICAL_OR(b) FROM foo GROUP BY a"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT a.x FROM (SELECT {'x': 1, 'y': 2, 'z': 3} AS a)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT a['x space'] FROM (SELECT {'x space': 1, 'y': 2, 'z': 3} AS a)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT c, COUNT(*) FILTER (WHERE b > 0) OVER (PARTITION BY c) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT col FROM t WHERE JSON_EXTRACT_STRING(col, '$.id') NOT IN ('b')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT df1.*, df2.* FROM df1 POSITIONAL JOIN df2"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT e'Hello\nworld'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT e'\\n'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT e'\\t'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT e'update table_name set a = \\'foo\\' where 1 = 0' AS x FROM tab"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT e: 1 + 2, f: len('asdf'), s: (SELECT 42)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT file[256] FROM GLOB('*')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT file[:256] FROM GLOB('*')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT foo: 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT foo: 1, bar: 2, baz: 3"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT foo: bar"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT foo: t.col FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT i FROM GENERATE_SERIES(12) AS _(i) ORDER BY i ASC"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT i FROM RANGE(5) AS _(i) ORDER BY i ASC"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT id, CARDINALITY(attrs) AS attr_count FROM demo_maps"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT id, MAP_CONCAT(attrs, MAP {'new_key': 'new_value'}) AS attrs_with_insert FROM demo_maps"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT id, MAP_FROM_ENTRIES(LIST_FILTER(MAP_ENTRIES(attrs), x -> NOT x.key IN (del_key1, del_key2))) AS attrs_after_delete FROM demo_maps"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT id, STRUCT_PACK(*COLUMNS('m\\d')) AS measurements FROM many_measurements"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT row"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT schema_name, function_name, ROW_NUMBER() OVER my_window AS function_rank FROM DUCKDB_FUNCTIONS() WINDOW my_window AS (PARTITION BY schema_name ORDER BY function_name) QUALIFY ROW_NUMBER() OVER my_window < 3"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT some_arr[1] AS first FROM blah"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT species, island, COUNT(*) FROM t GROUP BY CUBE (species), CUBE (island)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT species, island, COUNT(*) FROM t GROUP BY GROUPING SETS (species), GROUPING SETS (island)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT species, island, COUNT(*) FROM t GROUP BY ROLLUP (species), ROLLUP (island)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT str[0:1]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT straight_join"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT tbl.x*1e4+tbl.y FROM tbl"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT w::TIMESTAMP_S, x::TIMESTAMP_MS, y::TIMESTAMP_US, z::TIMESTAMP_NS"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT x::INT[3][3]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT {'a': 1} AS x"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT {'a': {'b': {'c': 1}}, 'd': {'e': 2}} AS x"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT {'key1': 'string', 'key2': 1, 'key3': 12.345}"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT {'x': 1, 'y': 2, 'z': 3}"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SELECT {'yes': 'duck', 'maybe': 'goose', 'huh': NULL, 'no': 'heron'}"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SET GLOBAL sort_order = 'desc'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SET SESSION default_collation = 'nocase'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SET VARIABLE a = 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SET VARIABLE location_map = (SELECT foo FROM bar)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SET VARIABLE my_var = 30"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SET VARIABLE my_var TO 30"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SET memory_limit = '10GB'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SHA1('foo')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SHA1(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SHA256('foo')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SHA256(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SHOW ALL TABLES"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SHOW TABLES"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SHOW TABLES FROM my_database"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SHOW TABLES FROM my_database.my_schema"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SHOW TABLES FROM my_schema"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STDDEV(a)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRFTIME(x, '%Y-%m-%d %H:%M:%S')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRFTIME(x, '%y-%-m-%S')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRING_AGG(x, ', ')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRING_TO_ARRAY(x, 'a')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRPTIME(x, '%-m/%-d/%y %-I:%M %p')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRPTIME(x, '%y-%-m')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRUCT_EXTRACT(STRUCT_EXTRACT(x, 'y'), 'abc')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRUCT_EXTRACT(x, 'abc')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRUCT_PACK(\"a b\" := 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRUCT_PACK(a := 'b')::STRUCT(a TEXT)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRUCT_PACK(a := 'b')::json"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRUCT_PACK(key1 := 'value1', key2 := 42)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STRUCT_PACK(x := 1, y := '2')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STR_SPLIT(x, 'a')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"STR_SPLIT_REGEX(x, 'a')"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SUMMARIZE SELECT * FROM tbl"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SUMMARIZE TABLE 'https://blobs.duckdb.org/data/Star_Trek-Season_1.csv'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"SUMMARIZE tbl"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"TO_TIMESTAMP(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"TRUNC(3.14)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"UNICODE(foo)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"UNION_VALUE(k1 := 1)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"UNNEST(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"UNPIVOT (SELECT 1 AS col1, 2 AS col2) ON foo, bar"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"UNPIVOT monthly_sales ON (jan, feb, mar) AS q1, (apr, may, jun) AS q2 INTO NAME quarter VALUE month_1_sales, month_2_sales, month_3_sales"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"UNPIVOT monthly_sales ON COLUMNS(* EXCLUDE (empid, dept)) INTO NAME month VALUE sales"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"UNPIVOT monthly_sales ON jan, feb, mar, apr, may, jun INTO NAME month VALUE sales"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"VARIANCE(a)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"VAR_POP(a)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"VAR_POP(x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"VERSION()"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH 'x' AS (SELECT 1) SELECT * FROM x"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH RECURSIVE tbl(a, b) USING KEY (a) AS (SELECT a, b FROM (VALUES (1, 3), (2, 4)) AS t(a, b) UNION SELECT a + 1, b FROM tbl WHERE a < 3) SELECT * FROM tbl"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH RECURSIVE tbl(a, b) USING KEY (a, b) AS (SELECT a, b FROM (VALUES (1, 3), (2, 4)) AS t(a, b) UNION SELECT a + 1, b FROM tbl WHERE a < 3) SELECT * FROM tbl"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH _data AS (SELECT [{'a': 1, 'b': 2}, {'a': 2, 'b': 3}] AS col) SELECT t.col['b'] FROM _data, UNNEST(_data.col) AS t(col) WHERE t.col['a'] = 1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH cities(country, name, year, population) AS (SELECT 'NL', 'Amsterdam', 2000, 1005 UNION ALL SELECT 'US', 'Seattle', 2020, 738) PIVOT cities ON year USING SUM(population)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH cte(x) AS (SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3) SELECT AVG(x) FILTER (WHERE x > 1) FROM cte"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH pivot_alias AS (PIVOT Cities ON Year USING SUM(Population) GROUP BY Country) SELECT * FROM pivot_alias"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH t AS (SELECT 1) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH t AS (SELECT 1) SELECT * FROM (FROM t)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH t AS (SELECT 2 AS c) SELECT RANGE(1, c) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH t AS (SELECT 5 AS c) SELECT RANGE(1, c) FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH t AS (SELECT i, i * i * i * i * i AS i5 FROM RANGE(1, 5) t(i)) SELECT * FROM t"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH t1 AS (FROM (FROM t2 SELECT foo1, foo2)) FROM t1"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"WITH unpivot_alias AS (UNPIVOT monthly_sales ON COLUMNS(* EXCLUDE (empid, dept)) INTO NAME month VALUE sales) SELECT * FROM unpivot_alias"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"XOR(a, b)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"[0, 1, 2]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"[x.STRING_SPLIT(' ')[i] FOR x IN ['1', '2', 3] IF x.CONTAINS('1')]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a !~~ b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a !~~* b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a && b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a ** b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a / b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a <@ b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a @> b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a ^ b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a ^@ b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a ~~ b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"a ~~~ b"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"cast([[1]] as int[][])"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"struct_pack(a := 1, b := x)"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"x !~ y"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"x -> '$.family'"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"x ~ y"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"x::int[3]"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"x::timestamp"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"x::timestamp with time zone"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"x::timestamp without time zone"}
+{"dialect":"duckdb","category":"parse: unknown dialect \"duckdb\"","sql":"{'x': LIST_VALUE(1)[i]}"}
