@@ -51,11 +51,14 @@ correctness rationale (matches the DB) or an explicit, tracked feature decision 
 ## Current status
 
 `go test ./...` is green. The parse → generate pipeline is at **100% round-trip parity** for base +
-MySQL + Postgres — **1847/1847** identity-corpus cases (base 955/955, MySQL 424/424, Postgres 468/468),
-enforced by a monotonic corpus floor (`corpus_test.go` + `testdata/parity_gaps.txt`, now empty). AST
-fidelity is enforced too: no statement fakes a round-trip via a raw-text `exp.Command` where upstream
-builds a structured node (`fidelity_test.go` + `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
-Oracle, Redshift, Materialize, and RisingWave: the
+MySQL + Postgres — **1876/1876** base-corpus cases (base 980/980, MySQL 428/428, Postgres 468/468),
+and every registered dialect meets its floor in the per-dialect corpus
+(`testdata/dialect_identity.jsonl`, 4489 records); the lone open row is the Databricks
+`GET_JSON_OBJECT` path rewrite (`testdata/parity_gaps.txt`), which needs the deferred JSONPath
+tokenizer. AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
+`exp.Command` where upstream builds a structured node (`fidelity_test.go` +
+`testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
+Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, and Databricks: the
 tokenizer, the AST + node model, the parser, the generator (`Expression → SQL`),
 `schema.MappingSchema` + `DataType.build`, the `qualify` pass (qualify_tables → normalize_identifiers →
 qualify_columns → quote_identifiers → validate), `traverse_scope` + the full `Scope` API, and the
@@ -70,7 +73,7 @@ table qualification (`QualifyOpts.SearchPath`), top-level `UPDATE`/`DELETE`/`MER
 structural PG `EXPLAIN`, MySQL `REPLACE`, and the `FoldIdentifierName`/`IsReservedKeyword`
 helpers. See **[CHANGELOG.md](./CHANGELOG.md)** for the per-version history.
 
-**Remaining work** (see `ROADMAP.md`): the function nodes `annotate_types` can't type yet (#44); verified cross-dialect transpilation; and dialects beyond base/MySQL/Postgres.
+**Remaining work** (see `ROADMAP.md`): the function nodes `annotate_types` can't type yet (#44); verified cross-dialect transpilation; the deferred JSONPath tokenizer (used by `to_json_path`); and dialects beyond base/MySQL/Postgres/Spark.
 The parse/generate round-trip itself is done — a construct upstream parses that this port doesn't is a
 regression, not expected.
 

@@ -121,8 +121,8 @@ differential-check against the pinned Python):
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
 - DIALECTS: base, MySQL, Postgres, TSQL, ClickHouse, StarRocks, Doris, Presto, Trino, Hive, Athena,
-  Oracle, Redshift, Materialize and RisingWave are ported; upstream ships 30+ and the rest are out of
-  scope for now (queued: Spark2/Spark/Databricks #35, DuckDB #39, Snowflake #40, BigQuery #41).
+  Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark and Databricks are ported; upstream ships
+  30+ and the rest are out of scope for now (queued: DuckDB #39, Snowflake #40, BigQuery #41).
 - TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): the v30.17.0 bump removed
   the FOR VERSION/TIMESTAMP and hive AS OF compound keywords but did not port `VERSION_PHRASES` +
   `_parse_version` (parser.py:1738-1745, 5120-5146); the constructs now fail closed (parse error)
@@ -774,7 +774,9 @@ Known divergences for this slice:
   explicit Unnest written to hive renders `SELECT * FROM x, EXPLODE(a.b, _t0(c))` where upstream
   renders `SELECT * FROM x LATERAL VIEW EXPLODE(a.b) _t0 AS c`. Base-read of that query produced the
   same wrong hive output before the implicit-unnest fix, which is how pre-existence was proven.
-  Worth closing when Spark2/Spark/Databricks (#35) lands, since those generators share the transform.
+  Still open after #35 landed: the whole hive `Select` preprocess chain (eliminate_qualify,
+  eliminate_distinct_on, unnest_to_explode, any_to_exists) remains a documented cross-dialect-only
+  deferral in DEVIATIONS §2, and no identity-corpus case depends on it.
 
 ## Materialize dialect — DONE (issue #36)
 
@@ -818,3 +820,39 @@ property rendering, `PROPERTIES_LOCATION` moving `FileFormatProperty` after the 
 Corpus: 7 `validate_identity` cases from `tests/dialects/test_risingwave.py`
 (`scripts/extract_dialect_corpus.py --dialects risingwave`), at **7/7**, with no RisingWave rows in
 `testdata/parity_gaps.txt`. Regression tests: `risingwave_test.go`.
+
+## Spark 2, Spark 3 and Databricks dialects — DONE (issue #35)
+
+Ported 1:1 from
+`.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/{spark2,spark,databricks}.py`
+plus the shared `transforms.py` preprocess helpers. The dialects form the upstream chain
+`Spark2(Hive) → Spark(Spark2) → Databricks(Spark)`.
+
+Spark 2 adds the `X'..'` hex strings, the TIMESTAMP→TIMESTAMPTZ keyword remap, the AND/OR
+connector functions, the Spark join hints, APPROX_PERCENTILE, TRIM_PATTERN_FIRST,
+CHANGE COLUMN ... TYPE, the DROP COLUMNS form, the PIVOT column-naming rule, and the whole
+Spark2Generator transform table: FROM_UTC_TIMESTAMP/TO_UTC_TIMESTAMP, TO_TIMESTAMP, TRUNC,
+AGGREGATE, FORMAT_STRING, SHIFTLEFT/SHIFTRIGHT, MAP_FROM_ARRAYS, ELEMENT_AT, the FROM_JSON/TO_JSON
+casts, `USING`/`STORED AS` file formats, ALTER COLUMN rendering and the safe-bracket ELEMENT_AT.
+
+Spark 3 adds raw strings, the DECLARE keyword, the Spark FUNCTIONS overlay, widget placeholders,
+SET VAR/SET VARIABLE, non-aggregate PIVOT entries, computed GENERATED columns, DECLARE and REFRESH
+statements, LISTAGG, the datasource CREATE partition fold, TRY_ELEMENT_AT, TRY_CAST and the Spark
+TYPE_MAPPING.
+
+Databricks adds STRICT_CAST, the colon VARIANT accessor with its JSONPath node support, the
+STREAM/VOID keywords, the FUNCTIONS overlay for IFF/GETDATE/NOW/DATEDIFF/TO_DATE/UNIFORM, CURDATE
+with optional parens, the REGR distinct-argument functions, `?::`, TIMESERIES primary keys,
+CLUSTER BY AUTO/NONE, and the generator's CURRENT_VERSION/CURRENT_CATALOG/VARIANT/LISTAGG
+overrides plus the RETURNS TABLE wrapping and generated-identity BIGINT rule.
+
+Supporting base pieces: the EXPLODE/EXPLODE_OUTER, STRING, JSONPath, Stream, ClusterProperty and
+EnviromentProperty nodes; the hive IF rendering; top-level CTE hoisting; faithful DECLARE
+rendering; the INSERT TABLE source; LIKE/ILIKE ESCAPE; and the STRING/VOID type mappings.
+
+Corpus: 227 `spark` and 176 `databricks` `validate_identity` cases from
+`tests/dialects/test_spark.py` and `tests/dialects/test_databricks.py`
+(`scripts/extract_dialect_corpus.py`), at **227/227** and **175/176**. The remaining Databricks
+row is the `GET_JSON_OBJECT` path rewrite, which needs the deferred JSONPath tokenizer
+(DEVIATIONS §1.27). Regression tests: `spark2_test.go`, `spark_test.go`, `databricks_test.go`.
+The two newly-running optimizer fixtures that do not pass yet are recorded in `optimizeGaps`.

@@ -100,6 +100,9 @@ Same-dialect round-trip parity against the ported upstream identity corpus
 | Doris | `doris` | 56/56 |
 | Athena | `athena` | 51/51 |
 | Materialize | `materialize` | 24/24 |
+| Spark | `spark` | 227/227 |
+| Databricks | `databricks` | 175/176 |
+| Spark 2 | `spark2` | n/a (no upstream fixture; exercised through Spark) |
 | RisingWave | `risingwave` | 7/7 |
 
 ## Quick start
