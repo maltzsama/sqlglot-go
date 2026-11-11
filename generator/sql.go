@@ -2617,12 +2617,31 @@ func (g *Generator) arrayAggSQL(e expressions.Expression) string {
 	if column != nil && column.Kind() == expressions.KindOrder {
 		column = column.This()
 	}
-	if parent := e.Parent(); parent != nil && parent.Kind() == expressions.KindFilter && column != nil {
-		if cond := asExpression(parent.Arg("expression")); cond != nil {
-			notNull := expressions.Not(expressions.Args{
-				"this": expressions.Is(expressions.Args{"this": column.Copy(), "expression": expressions.Null()}),
-			})
-			cond.Replace(expressions.And(expressions.Args{"this": cond.Copy(), "expression": notNull}))
+	// A DISTINCT input checks its underlying expression, never the Distinct node itself.
+	nullCheck := column
+	if nullCheck != nil && nullCheck.Kind() == expressions.KindDistinct {
+		if distinctArgs := nullCheck.Expressions(); len(distinctArgs) == 1 {
+			nullCheck = distinctArgs[0]
+		}
+	}
+	if parent := e.Parent(); parent != nil && parent.Kind() == expressions.KindFilter && nullCheck != nil {
+		if where := asExpression(parent.Arg("expression")); where != nil {
+			inner := where
+			if where.Kind() == expressions.KindWhere {
+				inner = where.This()
+			}
+			if inner != nil {
+				// Keep the original predicate grouped so a disjunction still evaluates as a
+				// whole before the null check is AND-ed in.
+				original := inner.Copy()
+				if original.Is(expressions.TraitConnector) || original.Is(expressions.TraitBinary) {
+					original = expressions.Paren(expressions.Args{"this": original})
+				}
+				notNull := expressions.Not(expressions.Args{
+					"this": expressions.Is(expressions.Args{"this": nullCheck.Copy(), "expression": expressions.Null()}),
+				})
+				inner.Replace(expressions.And(expressions.Args{"this": original, "expression": notNull}))
+			}
 		}
 		return sql
 	}
@@ -2632,6 +2651,9 @@ func (g *Generator) arrayAggSQL(e expressions.Expression) string {
 		columnSQL := g.gen(column)
 		if column.Kind() == expressions.KindDistinct {
 			columnSQL = g.expressions(exprsOptions{expression: column, flat: true})
+		} else if column.Is(expressions.TraitBinary) || column.Is(expressions.TraitConnector) {
+			// The null check must apply to the whole aggregate input, not its last operand.
+			columnSQL = "(" + columnSQL + ")"
 		}
 		sql += " FILTER(WHERE " + columnSQL + " IS NOT NULL)"
 	}
