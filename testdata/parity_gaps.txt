@@ -1,1 +1,690 @@
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"\n            MERGE dataset.Inventory T\n            USING dataset.NewArrivals S ON FALSE\n            WHEN NOT MATCHED BY TARGET AND product LIKE '%a%'\n            THEN DELETE\n            WHEN NOT MATCHED BY SOURCE AND product LIKE '%b%'\n            THEN DELETE"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"\"\"\"a\n\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"\"\"\"x\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"\"\"\"x'\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"'\\\\'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"--c\nARRAY_AGG(v IGNORE NULLS)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ALTER TABLE db.t1 RENAME TO db.t2"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ALTER TABLE foo DROP PRIMARY KEY IF EXISTS"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_QUANTILES((SELECT 1 AS val), CAST(2.1 AS INT64))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_QUANTILES(DISTINCT foo, 2 IGNORE NULLS)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_QUANTILES(DISTINCT foo, 2 RESPECT NULLS)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_QUANTILES(DISTINCT x, 2 RESPECT NULLS)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_QUANTILES(DISTINCT x, 2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_QUANTILES(FALSE OR TRUE, 2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_QUANTILES(foo, 2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_QUANTILES(x, 2 IGNORE NULLS)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_QUANTILES(x, 2 RESPECT NULLS)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_QUANTILES(x, 2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"APPROX_TOP_COUNT(col, 2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARPOX_TOP_SUM(col, 1.5, 2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY(SELECT AS STRUCT e.x AS y, e.z AS bla FROM UNNEST(bob))::ARRAY<STRUCT<y STRING, bro NUMERIC>>"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_AGG(DISTINCT x IGNORE NULLS HAVING MAX x ORDER BY x LIMIT 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_AGG(DISTINCT x IGNORE NULLS ORDER BY x LIMIT 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_AGG(x IGNORE NULLS LIMIT 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_AGG(x IGNORE NULLS ORDER BY x LIMIT 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_AGG(x IGNORE NULLS)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_CONCAT([1, 2], [3, 4], [5, 6])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_CONCAT_AGG(x LIMIT 2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_CONCAT_AGG(x ORDER BY ARRAY_LENGTH(x) LIMIT 2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_CONCAT_AGG(x ORDER BY ARRAY_LENGTH(x))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_CONCAT_AGG(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_FIRST(['a', 'b'])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ARRAY_LAST(['a', 'b'])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"BEGIN DECLARE y INT64"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"BEGIN TRANSACTION"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"BOOL(PARSE_JSON('true'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"BYTE_LENGTH('foo')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"BYTE_LENGTH(b'foo')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CASE A WHEN 90 THEN 'red' WHEN 50 THEN 'blue' ELSE 'green' END"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(STRUCT<a INT64>(1) AS STRUCT<a INT64>)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(a AS BYTES)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(a AS INT64)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(a AS NUMERIC)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(encrypted_value AS STRING FORMAT 'BASE64')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(x AS BIGNUMERIC)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(x AS CHAR)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(x AS NCHAR)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(x AS NVARCHAR)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(x AS RECORD)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(x AS STRUCT<list ARRAY<INT64>>)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(x AS TIMESTAMP)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CAST(x AS TIMESTAMPTZ)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CODE_POINTS_TO_BYTES([65, 98])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CODE_POINTS_TO_STRING([65, 255])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"COMMIT TRANSACTION"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CONTAINS_SUBSTR(a, b)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CONTAINS_SUBSTR(a, b, json_scope => 'JSON_KEYS_AND_VALUES')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE MODEL project_id.mydataset.mymodel\nINPUT(\n  f1 INT64,\n  f2 FLOAT64,\n  f3 STRING,\n  f4 ARRAY<INT64>\n)\nOUTPUT(\n  out1 INT64,\n  out2 INT64\n)\nREMOTE WITH CONNECTION myproject.us.test_connection\nOPTIONS (\n  ENDPOINT='https://us-central1-aiplatform.googleapis.com/v1/projects/myproject/locations/us-central1/endpoints/1234'\n)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE OR REPLACE MODEL foo OPTIONS (model_type='linear_reg') AS SELECT bla FROM foo WHERE cond"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE OR REPLACE MODEL m\nTRANSFORM(\n  ML.FEATURE_CROSS(STRUCT(f1, f2)) AS cross_f,\n  ML.QUANTILE_BUCKETIZE(f3) OVER () AS buckets,\n  label_col\n)\nOPTIONS (\n  model_type='linear_reg',\n  input_label_cols=['label_col']\n) AS\nSELECT\n  *\nFROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE OR REPLACE TABLE `a.b.c` CLONE `a.b.d`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE OR REPLACE TABLE `a.b.c` COPY `a.b.d`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE OR REPLACE VIEW test (tenant_id OPTIONS (description='Test description on table creation')) AS SELECT 1 AS tenant_id, 1 AS customer_id"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE SCHEMA x DEFAULT COLLATE 'en'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE FUNCTION a(x INT64) RETURNS TABLE <q STRING, r INT64> AS SELECT s, t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE IF NOT EXISTS foo AS SELECT * FROM bla EXCEPT DISTINCT (SELECT * FROM bar) LIMIT 0"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE db.example_table (col_a STRUCT<struct_col_a INT64, struct_col_b STRUCT<nested_col_a STRING, nested_col_b STRING>>)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE db.example_table (col_a struct<struct_col_a:int, struct_col_b:string>)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE db.example_table (x int) PARTITION BY x cluster by x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE t CLUSTER BY col1, col2"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE test (a NUMERIC(10, 2))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE x (a STRING OPTIONS (description='x')) OPTIONS (table_expiration_days=1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE x (a STRUCT<b STRING OPTIONS (description='b')>)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE x (a STRUCT<values ARRAY<INT64>>)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TABLE x (y INT64) DEFAULT COLLATE 'en'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TEMP TABLE foo AS SELECT 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TEMPORARY FUNCTION FOO()\nRETURNS STRING\nLANGUAGE js AS\n'return \"Hello world!\"'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TEMPORARY FUNCTION a(x FLOAT64, y FLOAT64) AS ((x + 4) / y)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TEMPORARY FUNCTION a(x FLOAT64, y FLOAT64) RETURNS FLOAT64 NOT DETERMINISTIC LANGUAGE js AS 'return x*y;'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TEMPORARY FUNCTION string_length_0(strings ARRAY<STRING>) RETURNS FLOAT64 LANGUAGE js AS \"\"\"'use strict'; function string_length(strings) { return _.sum(_.map(strings, ((x) => x.length))); } return string_length(strings);\"\"\" OPTIONS (library=['gs://ibis-testing-libraries/lodash.min.js'])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE TEMPORARY FUNCTION udf(x ANY TYPE) AS (x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CREATE VIEW `d.v` OPTIONS (expiration_timestamp=TIMESTAMP '2020-01-02T04:05:06.007Z') AS SELECT 1 AS c"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CURRENT_DATE('UTC')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CURRENT_TIMESTAMP"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"CURRENT_TIMESTAMP()"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE(2016, 12, 25)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE(CAST('2016-12-25 05:30:00+07' AS DATETIME), 'America/Los_Angeles')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE(CAST('2016-12-25 23:59:59' AS DATETIME))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATETIME_DIFF('2017-12-18', '2017-12-17', WEEK(MONDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE_DIFF('2017-12-18', '2017-12-17', WEEK(SATURDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE_DIFF('2021-01-01', '2020-01-01', DAY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE_DIFF(DATE '2010-07-07', DATE '2008-12-25', DAY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE_DIFF(DATE '2010-07-07', DATE '2008-12-25', MINUTE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE_TRUNC(col, MONTH, 'UTC+8')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE_TRUNC(col, WEEK(MONDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE_TRUNC(date, WEEK(MONDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DATE_TRUNC(x, @foo)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE START_DATE DATE DEFAULT CURRENT_DATE - 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE TS TIMESTAMP DEFAULT CURRENT_TIMESTAMP() - INTERVAL '1' HOUR"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE X FLOAT64 DEFAULT 0.9"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE X INT64"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE X INT64 DEFAULT (SELECT MAX(col) FROM foo)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE X INT64 DEFAULT 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE X, Y, Z INT64"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE X, Y, Z INT64 DEFAULT (SELECT 42)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE X, Y, Z INT64 DEFAULT 42"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE x BIGDECIMAL(1e1000000, 4)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE x BIGDECIMAL(20, 4)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE x BIGDECIMAL(76, 38)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE x BIGNUMERIC(1e1000000, 4)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE x BIGNUMERIC(20, 4)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DECLARE x BIGNUMERIC(76, 38)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DELETE FROM db.example_table AS tb WHERE example_table.x = 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DELETE FROM db.example_table AS tb WHERE tb.x = 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DELETE FROM db.example_table WHERE example_table.x = 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DELETE FROM db.example_table WHERE x = 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DELETE FROM db.example_table tb WHERE tb.x = 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DELETE FROM db.t1 AS t1 WHERE NOT t1.c IN (SELECT db.t2.c FROM db.t2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DELETE db.example_table AS tb WHERE tb.x = 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DELETE db.example_table WHERE x = 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DELETE db.example_table tb WHERE tb.x = 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"DIV(x, y)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"EDIT_DISTANCE(a, b)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"EDIT_DISTANCE(col1, col2, max_distance => 3)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"EXPORT DATA OPTIONS (URI='gs://bucket/folder/*.csv') AS (SELECT 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"EXPORT DATA OPTIONS (URI='gs://path*.csv.gz', FORMAT='CSV') AS SELECT * FROM all_rows"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"EXPORT DATA WITH CONNECTION myproject.us.myconnection OPTIONS (URI='gs://path*.csv.gz', FORMAT='CSV') AS SELECT * FROM all_rows"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"EXTRACT(HOUR FROM DATETIME(2008, 12, 25, 15, 30, 00))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"EXTRACT(WEEK(THURSDAY) FROM DATE '2013-12-25')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"FLOAT64(PARSE_JSON('9.8'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"FLOAT64(PARSE_JSON('9.8'), wide_number_mode => 'exact')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"FLOAT64(PARSE_JSON('9.8'), wide_number_mode => 'round')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"FOO(values)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"FOR record IN (SELECT word, word_count FROM bigquery-public-data.samples.shakespeare LIMIT 5) DO SELECT record.word, record.word_count"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"FOR system_time IN (SELECT 1 AS x) DO SELECT system_time.x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"FOR timestamp IN (SELECT 1 AS x) DO SELECT timestamp.x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"FORMAT_TIME('%R', CAST('15:30:00' AS TIME))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"FROM_HEX('foo')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"INSERT INTO test (cola, colb) VALUES (CAST(7 AS STRING(10)), CAST(14 AS STRING(10)))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_ARRAY()"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_ARRAY(10)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_ARRAY(10, ['foo', 'bar'], [20, 30])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_ARRAY(STRUCT(10 AS a, 'foo' AS b))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_ARRAY([])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_ARRAY_APPEND(PARSE_JSON('[\"a\", \"b\", \"c\"]'), '$', [1, 2], append_each_element => FALSE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_ARRAY_INSERT(PARSE_JSON('[\"a\", \"b\", \"c\"]'), '$[1]', [1, 2], insert_each_element => FALSE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_EXTRACT(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_EXTRACT_ARRAY(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_EXTRACT_SCALAR(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_EXTRACT_STRING_ARRAY(PARSE_JSON('{\"fruits\": [\"apples\", \"oranges\", \"grapes\"]}'), '$.fruits')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_KEYS(PARSE_JSON('{\"a\": {\"b\":1}}'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_KEYS(PARSE_JSON('{\"a\": {\"b\":1}}'), 1, mode => 'lax')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_KEYS(PARSE_JSON('{\"a\": {\"b\":1}}', 1))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_QUERY(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_QUERY_ARRAY(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_SET(PARSE_JSON('{\"a\": 1}'), '$.b', 999, create_if_missing => FALSE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_STRIP_NULLS(PARSE_JSON('[1, null, 2, null, [null]]'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_STRIP_NULLS(PARSE_JSON('[1, null, 2, null]'), include_arrays => FALSE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_STRIP_NULLS(PARSE_JSON('{\"a\": {\"b\": {\"c\": null}}, \"d\": [null], \"e\": [], \"f\": 1}'), include_arrays => FALSE, remove_empty => TRUE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_TYPE(PARSE_JSON('1'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"JSON_VALUE(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LAST_DAY(DATETIME '2008-11-10 15:30:00', WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LAX_BOOL(PARSE_JSON('true'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LAX_FLOAT64(PARSE_JSON('9.8'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LAX_INT64(PARSE_JSON('10'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LAX_STRING(PARSE_JSON('\"str\"'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LOAD DATA INTO TABLE mydataset.table1 FROM FILES(FORMAT='AVRO', uris=['gs://bucket/path/file.avro'])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LOAD DATA INTO TEMP TABLE mydataset.table1 FROM FILES(FORMAT='AVRO', uris=['gs://bucket/path/file.avro'])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LOAD DATA OVERWRITE mydataset.table1 FROM FILES(FORMAT='AVRO', uris=['gs://bucket/path/file.avro'])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LOG(n, b)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LOOP SET x = x + 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"LOWER(TO_HEX(x))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"MD5(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"MERGE INTO dataset.NewArrivals USING (SELECT * FROM UNNEST([('microwave', 10, 'warehouse #1'), ('dryer', 30, 'warehouse #1'), ('oven', 20, 'warehouse #2')])) ON FALSE WHEN NOT MATCHED THEN INSERT ROW WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"MOD('a', b)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"MOD((a + 1) * 8, 5 - 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"MOD((a + 1), b)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"MOD(5, 2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"MOD(a, b)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"NET.HOST('http://example.com')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"NET.REG_DOMAIN('http://example.com')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"NORMALIZE_AND_CASEFOLD('foo')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"NORMALIZE_AND_CASEFOLD('foo', NFKC)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"OCTET_LENGTH('foo')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"OCTET_LENGTH(b'foo')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"PARSE_BIGNUMERIC('1.2')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"PARSE_JSON('{}', wide_number_mode => 'exact')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"PARSE_NUMERIC('1.2')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"PARSE_TIME('%I:%M:%S', '07:30:00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"PARSE_TIMESTAMP('%FT%H:%M:%E*S%z', x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E6S%z', x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"R\"\"\"/\\*.*\\*/\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"RANGE_BUCKET(20, [0, 10, 20, 30, 40])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"REGEXP_EXTRACT(`foo`, 'bar: (.+?)', 1, 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"REGEXP_EXTRACT(svc_plugin_output, r'\\\\\\((.*)')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"REGEXP_EXTRACT(x, '(?<)')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"REGEXP_EXTRACT_ALL('a1_a2a3_a4A5a6', '(a)[0-9]')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"REGEXP_EXTRACT_ALL('a1_a2a3_a4A5a6', 'a[0-9]')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"REGEXP_SUBSTR(value, pattern, position, occurrence)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"REPEAT SET x = x + 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"ROLLBACK TRANSACTION"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE.PARSE_DATE('%Y-%m-%d', '2024-01-15')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE.PARSE_DATETIME('%Y-%m-%d %H:%M:%S', '2024-01-15 10:30:00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', '2024-01-15 10:30:00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE.SOME_RANDOM_FUNC(a, b, c)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE.SUBSTR('foo', 0, -2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE.TIMESTAMP(foo, zone)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE_CAST(encrypted_value AS STRING FORMAT 'BASE64')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE_CAST(some_date AS DATE FORMAT 'DD MONTH YYYY')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE_CAST(some_date AS DATE FORMAT 'YYYY-MM-DD') AS some_date"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE_CAST(x AS STRING)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE_CAST(x AS TIMESTAMP)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE_CONVERT_BYTES_TO_STRING(b'Â')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE_DIVIDE(x + 1, 2 * y)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE_DIVIDE(x, y)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SAFE_NEGATE(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT \"\"\"a\\\"b\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT \"\"\"ends with \\\"word\\\"\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT '''ends with \\'word\\''''"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT '\\n'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT '\\n\\r\\a\\v\\f\\t'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 'foo' 'bar'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 'foo'/* c */'bar'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM (SELECT * FROM `t`) AS a UNPIVOT((c) FOR c_name IN (v1, v2))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM (SELECT a, b, c FROM test) PIVOT(SUM(b) d, COUNT(*) e FOR c IN ('x', 'y'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM AI.FORECAST((SELECT * FROM citibike_trips), data_col => 'num_trips', timestamp_col => 'date', horizon => 30)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => 'num_trips', timestamp_col => 'date', horizon => 30)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM AI.GENERATE_TABLE(MODEL `mydataset.gemini_model`, (SELECT 'Q' AS prompt), STRUCT('name STRING' AS output_schema))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM AI.GENERATE_TEXT(MODEL `mydataset.gemini_model`, TABLE `mydataset.prompt_table`, STRUCT(0.15 AS temperature))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM GAP_FILL(TABLE device_data, ts_column => 'time', bucket_width => INTERVAL '1' MINUTE) ORDER BY time"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM GAP_FILL(TABLE device_data, ts_column => 'time', bucket_width => INTERVAL '1' MINUTE, value_columns => [('signal', 'linear')], ignore_null_values => FALSE) ORDER BY time"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM GAP_FILL(TABLE device_data, ts_column => 'time', bucket_width => INTERVAL '1' MINUTE, value_columns => [('signal', 'locf')]) ORDER BY time"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM GAP_FILL(TABLE device_data, ts_column => 'time', bucket_width => INTERVAL '1' MINUTE, value_columns => [('signal', 'null')], origin => CAST('2023-11-01 09:30:01' AS DATETIME)) ORDER BY time"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.FEATURES_AT_TIME((SELECT 1), num_rows => 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.FEATURES_AT_TIME(TABLE mydataset.feature_table, time => '2022-06-11 10:00:00+00', num_rows => 1, ignore_feature_nulls => TRUE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.FORECAST(MODEL `mydataset.mymodel`, (SELECT * FROM mydataset.query_table), STRUCT())"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.FORECAST(MODEL `mydataset.mymodel`, STRUCT(2 AS horizon))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.FORECAST(MODEL `mydataset.mymodel`, TABLE `mydataset.mybqtable`, STRUCT(2 AS horizon, 4 AS confidence_level))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.GENERATE_EMBEDDING(MODEL mydataset.mymodel, (SELECT label, column1, column2 FROM mydataset.mytable))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.GENERATE_EMBEDDING(MODEL mydataset.mymodel, TABLE mydataset.mytable, STRUCT(TRUE AS flatten_json_output))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.GENERATE_TEXT(MODEL `mydataset.gemini_model`, TABLE `mydataset.prompt_table`, STRUCT(0.15 AS temperature))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.GENERATE_TEXT_EMBEDDING(MODEL mydataset.mymodel, (SELECT label, column1, column2 FROM mydataset.mytable))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.GENERATE_TEXT_EMBEDDING(MODEL mydataset.mymodel, TABLE mydataset.mytable, STRUCT(TRUE AS flatten_json_output))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.PREDICT(MODEL `my_project`.my_dataset.my_model, (SELECT * FROM input_data))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.PREDICT(MODEL my_dataset.vision_model, (SELECT uri, ML.CONVERT_COLOR_SPACE(ML.RESIZE_IMAGE(ML.DECODE_IMAGE(data), 224, 280, TRUE), 'YIQ') AS input FROM my_dataset.object_table WHERE content_type = 'image/jpeg'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.PREDICT(MODEL my_dataset.vision_model, (SELECT uri, ML.RESIZE_IMAGE(ML.DECODE_IMAGE(data), 480, 480, FALSE) AS input FROM my_dataset.object_table))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.PREDICT(MODEL mydataset.mymodel, (SELECT custom_label, column1, column2 FROM mydataset.mytable), STRUCT(0.55 AS threshold))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.PREDICT(MODEL mydataset.mymodel, (SELECT label, column1, column2 FROM mydataset.mytable))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.TRANSLATE(MODEL `mydataset.mymodel`, (SELECT comment AS text_content FROM mydataset.mytable), STRUCT('translate_text' AS translate_mode, 'en' AS target_language_code))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM ML.TRANSLATE(MODEL `mydataset.mytranslatemodel`, TABLE `mydataset.mybqtable`, STRUCT('translate_text' AS translate_mode, 'zh-CN' AS target_language_code))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM Produce UNPIVOT((first_half_sales, second_half_sales) FOR semesters IN ((Q1, Q2) AS 'semester_1', (Q3, Q4) AS 'semester_2'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM Produce UNPIVOT((first_half_sales, second_half_sales) FOR semesters IN ((Q1, Q2) AS 1, (Q3, Q4) AS 2))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM READ_CSV('bla.csv')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM UNNEST(ARRAY<STRUCT<device_id INT64, time DATETIME, signal INT64, state STRING>>[STRUCT(1, DATETIME '2023-11-01 09:34:01', 74, 'INACTIVE'),STRUCT(4, DATETIME '2023-11-01 09:38:01', 80, 'ACTIVE')])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM UNNEST(ARRAY<STRUCT<x INT64>>[])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM UNNEST(['7', '14']) AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM UNNEST([1]) WITH OFFSET"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM UNNEST([1]) WITH OFFSET y"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM UNNEST([STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob', 92), STRUCT('Diana', 95)])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM UNNEST([STRUCT('Alice' AS name, STRUCT(85 AS math, 90 AS english) AS scores), STRUCT('Bob' AS name, STRUCT(92 AS math, 88 AS english) AS scores)])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM UNNEST(x) WITH OFFSET EXCEPT DISTINCT SELECT * FROM UNNEST(y) WITH OFFSET"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM VECTOR_SEARCH((SELECT * FROM mydataset.base_table), 'column_to_search', (SELECT * FROM mydataset.query_table), 'query_column_to_search')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM VECTOR_SEARCH(TABLE mydataset.base_table, 'column_to_search', TABLE mydataset.query_table)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM VECTOR_SEARCH(TABLE mydataset.base_table, 'column_to_search', TABLE mydataset.query_table, 'query_column_to_search', top_k => 2, distance_type => 'cosine', options => '{\"fraction_lists_to_search\":0.15}')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM VECTOR_SEARCH(TABLE mydataset.base_table, 'column_to_search', TABLE mydataset.query_table, query_column_to_search => 'query_column_to_search', top_k => 2, distance_type => 'cosine', options => '{\"fraction_lists_to_search\":0.15}')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM `a.b.com:project-id.mydataset.mytable`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM `a.b.com:project-id.region-us.INFORMATION_SCHEMA.JOBS`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM `domain.com:project-id.mydataset.mytable`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM `domain.com:project-id.region-us.INFORMATION_SCHEMA.JOBS`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM `domain.com:project-id.region-us.INFORMATION_SCHEMA`.JOBS"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM `my-project.my-dataset.my-table`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM `proj.dataset.INFORMATION_SCHEMA.SOME_VIEW`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM a LEFT JOIN b ON a.key = b.key AND a.val IN UNNEST(b.arr)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM a WHERE b IN UNNEST([1, 2, 3])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM a WHERE b NOT IN UNNEST([1, 2, 3])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM a-b c"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM a-b-c"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM a-b-c.mydataset.mytable"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM abc-def-ghi"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM dataset.my_table TABLESAMPLE SYSTEM (10 PERCENT)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM foo AS t0 FOR SYSTEM_TIME AS OF '2026-02-12T23:22:21.743416+00:00'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM foo.bar.25"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM foo.bar.25_"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM foo.bar.25ab c"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM foo.bar.25x a"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM my-project.mydataset.mytable"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM my-table"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM pivot CROSS JOIN foo"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM pro-ject_id.c.d CROSS JOIN foo-bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM proj.region_or_dataset.INFORMATION_SCHEMA.TABLES"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM q UNPIVOT(values FOR quarter IN (b, c))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM region_or_dataset.INFORMATION_SCHEMA.TABLES"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM region_or_dataset.INFORMATION_SCHEMA.TABLES AS some_name"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t AS t(c1, c2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t WHERE EXISTS(SELECT * FROM unnest(nums) AS x WHERE x > 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t, UNNEST(`t2`.`t3`) AS `col`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t1, UNNEST([1, 2]) AS hit WITH OFFSET ANTI JOIN foo"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t1, UNNEST([1, 2]) AS hit WITH OFFSET FULL JOIN foo"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t1, UNNEST([1, 2]) AS hit WITH OFFSET LEFT JOIN foo"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t1, UNNEST([1, 2]) AS hit WITH OFFSET NATURAL JOIN foo"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t1, UNNEST([1, 2]) AS hit WITH OFFSET RIGHT JOIN foo"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t1, UNNEST([1, 2]) AS hit WITH OFFSET SEMI JOIN foo"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t1, UNNEST(`t1`) AS `col`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t1, UNNEST(`t1`.`t2`.`t3`.`t4`) AS `col`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM t1, t2"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET "}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS pos"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM tbl FOR SYSTEM TIME AS OF z"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM tbl FOR SYSTEM_TIME AS OF z"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM test QUALIFY a IS DISTINCT FROM b WINDOW c AS (PARTITION BY d)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM x WHERE x.y >= (SELECT MAX(a) FROM b-c) - 20"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM x-0.a"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM x-0.y"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM x.*"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT * FROM x.y*"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 0xA"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 & 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS at"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo FULL OUTER UNION ALL BY NAME ON (foo, bar) SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo FULL OUTER UNION ALL BY NAME SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo FULL OUTER UNION ALL SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo FULL UNION ALL BY NAME ON (foo, bar) SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo FULL UNION ALL BY NAME SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo FULL UNION ALL SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo INNER UNION ALL SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo LEFT OUTER UNION ALL BY NAME ON (foo, bar) SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo LEFT OUTER UNION ALL BY NAME SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo LEFT OUTER UNION ALL SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo LEFT UNION ALL BY NAME ON (foo, bar) SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo LEFT UNION ALL BY NAME SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo LEFT UNION ALL SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo OUTER UNION ALL BY NAME ON (foo, bar) SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo OUTER UNION ALL BY NAME SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo OUTER UNION ALL SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo UNION ALL BY NAME ON (foo, bar) SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo UNION ALL BY NAME SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS foo UNION ALL SELECT 3 AS foo, 4 AS bar"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS hash"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS x LEFT UNION ALL CORRESPONDING SELECT 2 AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS x UNION ALL CORRESPONDING BY (foo, bar) SELECT 2 AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS x UNION ALL CORRESPONDING SELECT 2 AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS x UNION ALL STRICT CORRESPONDING BY (foo, bar) SELECT 2 AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT 1 AS x UNION ALL STRICT CORRESPONDING SELECT 2 AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT AI.EMBED('hello')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT AI.GENERATE('Write a haiku')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT AI.GENERATE_BOOL(MODEL `mydataset.gemini_model`, 'Is sky blue?')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT AI.SIMILARITY('a', 'b')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ANY_VALUE(fruit HAVING MAX sold) FROM Store"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ANY_VALUE(fruit HAVING MAX sold) FROM fruits"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ANY_VALUE(fruit HAVING MIN sold) FROM Store"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ANY_VALUE(fruit HAVING MIN sold) FROM fruits"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY((SELECT AS STRUCT 1 AS a, 2 AS b) LIMIT 10)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY((SELECT AS STRUCT 1 AS a, 2 AS b))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY(SELECT * FROM foo JOIN bla ON x = y)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY(SELECT AS STRUCT 1 a, 2 b)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY(SELECT AS STRUCT x1 AS x1, x2 AS x2 FROM t) AS array_col"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY(SELECT DISTINCT x FROM UNNEST(some_numbers) AS x) AS unique_numbers"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY(SELECT x FROM UNNEST([0, 1]) AS x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY<FLOAT64>[1, 2, 3]"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_AGG(DISTINCT x IGNORE NULLS ORDER BY x LIMIT 10) AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_AGG(DISTINCT x IGNORE NULLS ORDER BY x) AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_AGG(DISTINCT x ORDER BY x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_AGG(x IGNORE NULLS ORDER BY col1 ASC, col2 DESC)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_AGG(x IGNORE NULLS) AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_AGG(x ORDER BY col1 ASC, col2 DESC)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_AGG(x ORDER BY x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_AGG(x RESPECT NULLS ORDER BY col1 ASC, col2 DESC)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_CONCAT([1])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_CONCAT_AGG(arr LIMIT 2) FROM (SELECT [1, 2] AS arr) AS t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_CONCAT_AGG(arr ORDER BY y DESC LIMIT 2) FROM (SELECT [1, 2] AS arr, 1 AS y) AS t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_CONCAT_AGG(arr ORDER BY y) FROM (SELECT [1, 2] AS arr, 1 AS y) AS t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_CONCAT_AGG(arr) FROM (SELECT [1, 2] AS arr) AS t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_TO_STRING(['cake', 'pie', NULL], '--') AS text"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ARRAY_TO_STRING(['cake', 'pie', NULL], '--', 'MISSING') AS text"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT AS STRUCT 1 AS a, 2 AS b"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT AS STRUCT ARRAY(SELECT AS STRUCT 1 AS b FROM x) AS y FROM z"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT AS VALUE STRUCT(1 AS a, 2 AS b)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT BIGDECIMAL '1'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT BIGNUMERIC '1'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST('1' AS STRING(10)) UNION ALL SELECT CAST('2' AS STRING(10))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST('20201225' AS TIMESTAMP FORMAT 'YYYYMMDD' AT TIME ZONE 'America/New_York')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST('20201225' AS TIMESTAMP FORMAT 'YYYYMMDD')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST('2026-03-24' AS STRING FORMAT ('YYYY'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(1 AS BIGDECIMAL)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(1 AS BIGNUMERIC)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(1 AS BYTEINT)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(1 AS NUMERIC(10, 2))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(CURRENT_DATE AS STRING FORMAT 'DAY') AS current_day"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(STRUCT(1) AS STRUCT<INT64>)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(TIMESTAMP '2008-12-25 00:00:00+00:00' AS STRING FORMAT 'YYYY-MM-DD HH24:MI:SS TZH:TZM' AT TIME ZONE 'Asia/Kolkata') AS date_time_to_string"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(TIMESTAMP '2008-12-25 00:00:00+00:00' AS STRING FORMAT 'YYYY-MM-DD HH24:MI:SS TZH:TZM') AS date_time_to_string"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(col AS STRUCT<fld1 STRUCT<fld2 INT>>).fld1.fld2"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(date AS STRING FORMAT ('YYYY')) FROM (SELECT DATE('2026-03-24') AS date)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(date AS STRING FORMAT ('YYYY-MM-DD'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(date AS TIMESTAMP FORMAT ('YYYY-MM-DD HH24:MI:SS'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(timestamp AS STRING FORMAT ('YYYY-MM-DD') AT TIME ZONE 'UTC')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CAST(x AS DATETIME)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT CONCAT('T.P.', ' ', 'Bar') AS author"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT COSH(1.5)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT COUNT(x RESPECT NULLS)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT COUNTIF(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE(2024, 1, 15)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME('2020-01-01')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME('2020-01-01', 'America/Los_Angeles')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME('2020-01-01', TIME '23:59:59')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME_ADD('2023-01-01T00:00:00', INTERVAL 1 MILLISECOND)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME_DIFF('2023-01-01T00:00:00', '2023-01-01T05:00:00', MILLISECOND)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME_DIFF(DATETIME '2017-10-15 00:00:00', DATETIME '2017-10-14 00:00:00', WEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME_DIFF(DATETIME '2021-02-01 00:00:00', DATETIME '2021-01-31 00:00:00', MONTH)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME_SUB('2023-01-01T00:00:00', INTERVAL 1 MILLISECOND)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME_TRUNC('2023-01-01T01:01:01', HOUR)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME_TRUNC(DATETIME '2008-11-10 14:30:00', WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME_TRUNC(DATETIME '2008-11-10 14:30:00', WEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATETIME_TRUNC(dt, WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF('2024-01-07', '2024-01-06', WEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF('2024-01-15', '2022-04-28', WEEK(SATURDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF('2024-01-15', '2024-01-08', ISOWEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF('2024-01-15', '2024-01-08', WEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF('2024-06-15', '2024-01-08', WEEK(MONDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF('2026-01-15', '2024-01-08', WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF(DATE '2023-05-01', DATE '2024-01-15', ISOWEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF(DATE '2024-01-01', DATE '2024-01-15', DAY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF(DATE '2024-01-01', DATE '2024-01-15', WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF(DATE '2024-09-15', DATE '2024-01-08', WEEK(MONDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_DIFF(d1, d2, WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_SUB(DATE '2008-12-25', INTERVAL 5 DAY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(DATE '2008-11-10', ISOWEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(DATE '2008-11-10', WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(DATE '2008-11-10', WEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(DATE '2015-06-15', ISOYEAR)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(d, WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(date, WEEK(FRIDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(date, WEEK(MONDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(date, WEEK(SATURDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(date, WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(date, WEEK(THURSDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(date, WEEK(TUESDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DATE_TRUNC(date, WEEK(WEDNESDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT DISTINCT AS STRUCT 1 AS a, 2 AS b"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT EXP(1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT EXTRACT(WEEK(THURSDAY) FROM d)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT FORMAT_DATE('%Y%m%d', '2023-12-25')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT FORMAT_DATETIME('%F %T', DATETIME '2023-10-15 14:30:45')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT FORMAT_DATETIME('%Y%m%d %H:%M:%S', DATETIME '2023-12-25 15:30:00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT FORMAT_DATETIME('%Y-%m-%e', DATETIME '2020-09-09 10:15:30')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT FORMAT_DATETIME('%c', DATETIME '2008-12-25 15:30:00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT FORMAT_DATETIME('%x', '2023-12-25 15:30:00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT FORMAT_TIMESTAMP(\"%b-%d-%Y\", TIMESTAMP \"2050-12-25 15:30:55+00\")"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT FORMAT_TIMESTAMP('%F %T', CURRENT_TIMESTAMP(), 'Europe/Berlin') AS ts"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT GENERATE_DATE_ARRAY('2016-10-05', '2016-10-08')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT GENERATE_DATE_ARRAY('2016-10-05', '2016-10-08', INTERVAL '1' MONTH)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT GENERATE_TIMESTAMP_ARRAY('2016-10-05 00:00:00', '2016-10-07 00:00:00', INTERVAL '1' DAY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT GENERATE_UUID()"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT GRANT FROM (SELECT 'input' AS GRANT)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT GREATEST(1, NULL, 3)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT INSTR('foo@example.com', '@')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT INT64(JSON_QUERY(JSON '{\"key\": 2000}', '$.key'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON '\"foo\"' AS json_data"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_EXTRACT_ARRAY('{\"fruits\": [1, \"oranges\"]}', '$.fruits')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_EXTRACT_SCALAR('5')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_EXTRACT_SCALAR('{\"name\": \"Jakob\", \"age\": \"6\"}', '$.age')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_OBJECT('a', 10, 'a', 'foo') AS json_data"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_OBJECT('foo', 10, 'bar', TRUE) AS json_data"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_OBJECT('foo', 10, 'bar', ['a', 'b']) AS json_data"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_OBJECT() AS json_data"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_OBJECT(['a', 'b'], [10, NULL]) AS json_data"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_OBJECT(['a', 'b'], [JSON '10', JSON '\"foo\"']) AS json_data"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_OBJECT(['a', 'b'], [STRUCT(10 AS id, 'Red' AS color), STRUCT(20 AS id, 'Blue' AS color)]) AS json_data"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_OBJECT(['a', 'b'], [TO_JSON(10), TO_JSON(['foo', 'bar'])]) AS json_data"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_QUERY('{\"class\": {\"students\": []}}', '$.class')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_QUERY(foo, '$.class')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_QUERY_ARRAY('{\"fruits\": [1, \"oranges\"]}', '$.fruits')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_VALUE('5')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_VALUE('{\"name\": \"Jakob\", \"age\": \"6\"}', '$.age')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT JSON_VALUE_ARRAY('{\"arr\": [1, \"a\"]}', '$.arr')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONTH)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT LAST_DAY(CAST('2008-11-25' AS DATE), QUARTER)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT LAST_DAY(DATE '2008-11-10', ISOWEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT LAST_DAY(DATE '2008-11-10', WEEK(MONDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT LAST_DAY(DATE '2008-11-10', WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT LAST_DAY(DATE '2008-11-10', WEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT LAST_DAY(d, WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT LAST_VALUE(a IGNORE NULLS) OVER y FROM x WINDOW y AS (PARTITION BY CATEGORY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT LAST_VALUE(x IGNORE NULLS) OVER y AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT LEAST(1, NULL, 3)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT MAKE_INTERVAL(100, 11, 1, 12, 30, 10)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT MAX_BY(name, score) FROM table1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT MD5('abc')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT MIN_BY(product, price) FROM table1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT MOD((SELECT 1), 2)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT MOD(x, 10)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT NOT deterministic FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT PARSE_DATE('%A %b %e %Y', 'Thursday Dec 25 2008')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT PARSE_DATE('%Y%m%d', '20081225')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT PARSE_DATE('%m-%d', '12-25')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT PARSE_DATETIME('%a %b %e %I:%M:%S %Y', 'Thu Dec 25 07:30:00 2008')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT PARSE_TIMESTAMP('%c', 'Thu Dec 25 07:30:00 2008', 'UTC')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT PARSE_TIMESTAMP('%m-%d %H:%M:%S', '12-25 07:30:00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT PERCENTILE_CONT(x, 0.5 RESPECT NULLS) OVER ()"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT RANGE(CAST('2022-10-01 14:53:27 America/Los_Angeles' AS TIMESTAMP), CAST('2022-10-01 16:00:00 America/Los_Angeles' AS TIMESTAMP))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT RANGE(CAST('2022-10-01 14:53:27' AS DATETIME), CAST('2022-10-01 16:00:00' AS DATETIME))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT RANGE(CAST('2022-12-01' AS DATE), CAST('2022-12-31' AS DATE))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT RANGE(NULL, CAST('2022-12-31' AS DATE))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT RANGE<DATE> '[2020-01-01, 2020-12-31)'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT RANGE<DATE> '[UNBOUNDED, 2020-12-31)'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT RANGE<DATETIME> '[2020-01-01 12:00:00, 2020-12-31 12:00:00)'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT RANGE<TIMESTAMP> '[2020-10-01 12:00:00+08, 2020-12-31 12:00:00+08)'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT REGEXP_EXTRACT(abc, 'pattern(group)') FROM table"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT REGEXP_EXTRACT(abc, 'pattern(group)', 1) FROM table"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT REGEXP_EXTRACT(abc, 'pattern(group)', 1, 1) FROM table"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT REGEXP_EXTRACT(abc, 'pattern(group)', 2) FROM table"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT REGEXP_EXTRACT(abc, 'pattern(group)', 2, 3) FROM table"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT REPLACE('apple pie', 'pie', 'cobbler') AS result"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ROUND(2.25) AS value"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ROUND(2.25, 1) AS value"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ROUND(NUMERIC '2.25', 1, 'ROUND_HALF_AWAY_FROM_ZERO') AS value"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ROUND(NUMERIC '2.25', 1, 'ROUND_HALF_EVEN') AS value"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ROW() OVER (y ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) FROM x WINDOW y AS (PARTITION BY CATEGORY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SEARCH(data_to_search, 'search_query')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SEARCH(data_to_search, 'search_query', analyzer => 'PATTERN_ANALYZER')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SEARCH(data_to_search, 'search_query', analyzer => 'PATTERN_ANALYZER', analyzer_options => 'options')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SEARCH(data_to_search, 'search_query', analyzer_options => 'analyzer_options_values')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SEARCH(data_to_search, 'search_query', json_scope => 'JSON_KEYS_AND_VALUES')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SEARCH(data_to_search, 'search_query', json_scope => 'JSON_VALUES', analyzer => 'LOG_ANALYZER')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SPLIT(foo)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 as a, 'abc' AS b), STRUCT(str_col AS abc)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT STRUCT<ARRAY<STRING>>([\"2023-01-17\"])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT STRUCT<STRING>((SELECT 'foo')).*"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT STRUCT<a INT64, b STRUCT<c STRING>>(1, STRUCT('c_str'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SUM(f1) OVER (ORDER BY f2 ASC) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SUM(f1) OVER (ORDER BY f2 DESC) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SUM(x IGNORE NULLS) AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT SUM(x RESPECT NULLS) AS x"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIME('2008-12-25 15:30:00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIME(15, 30, 00)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIME(foo, 'America/Los_Angeles')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP('2008-12-25 15:30:00', 'America/Los_Angeles')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_ADD(TIMESTAMP \"2008-12-25 15:30:00+00\", INTERVAL 10 MINUTE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_DIFF(TIMESTAMP_SECONDS(60), TIMESTAMP_SECONDS(0), minute)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_MICROS(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_MILLIS(2) AS t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_SECONDS(2) AS t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_SUB(TIMESTAMP \"2008-12-25 15:30:00+00\", INTERVAL 10 MINUTE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_SUB(TIMESTAMP \"2008-12-25 15:30:00+00\", INTERVAL col MINUTE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_TRUNC(TIMESTAMP '2008-11-10 14:30:00', WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_TRUNC(TIMESTAMP '2008-11-10 14:30:00', WEEK)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_TRUNC(TIMESTAMP '2008-11-10 14:30:00+00', WEEK(SUNDAY), 'America/New_York')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_TRUNC(TIMESTAMP '2008-11-10 14:30:00+00', WEEK, 'America/New_York')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIMESTAMP_TRUNC(ts, WEEK(SUNDAY))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIME_ADD(CAST('09:05:03' AS TIME), INTERVAL 2 HOUR)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIME_DIFF('12:00:00', '12:30:00', MINUTE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TIME_SUB(CAST('09:05:03' AS TIME), INTERVAL 2 HOUR)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TO_HEX(MD5(some_string))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TO_HEX(SHA1('abc'))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TO_JSON_STRING(STRUCT('Alice' AS name)) AS json_data"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TRANSLATE(MODEL, 'in', 't') FROM (SELECT 'input' AS MODEL)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT TRUE IS TRUE"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT UNIX_DATE(DATE '2008-12-25')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT UNIX_MICROS('2008-12-25 15:30:00+00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT UNIX_MICROS(TIMESTAMP '2008-12-25 15:30:00+00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT UNIX_MILLIS('2008-12-25 15:30:00+00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT UNIX_MILLIS(TIMESTAMP '2008-12-25 15:30:00+00')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT _DBT_MAX_PARTITION FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT `db.t`.`c` FROM `db.t`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT `p.d.UdF`(data) FROM `p.d.t`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT `p.d.UdF`(data).* FROM `p.d.t`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT `p.d.t`.`c`.`f` FROM `p.d.t`"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT `project-id`.udfs.func(call.dir)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT a FROM test WHERE a = 1 GROUP BY a HAVING a = 2 QUALIFY z ORDER BY a LIMIT 10"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT a overlaps"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT a, GROUP_CONCAT(b) FROM table GROUP BY a"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT a, b, c, d, e FROM GAP_FILL(TABLE foo, ts_column => 'b', partitioning_columns => ['a'], value_columns => [('c', 'bar'), ('d', 'baz'), ('e', 'bla')], bucket_width => INTERVAL '1' DAY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT a[1], b[OFFSET(1)], c[ORDINAL(1)], d[SAFE_OFFSET(1)], e[SAFE_ORDINAL(1)]"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT b\"\\x0a$'x'00\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT b'a'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT b'abc'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT cars, apples FROM some_table PIVOT(SUM(total_counts) FOR products IN ('general.cars' AS cars, 'food.apples' AS apples))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT category, ANY_VALUE(product HAVING MAX price), ANY_VALUE(product HAVING MIN cost), ANY_VALUE(supplier) FROM products GROUP BY category"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT col FROM t WHERE _PARTITIONTIME BETWEEN a AND b"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT cola FROM (SELECT CAST('1' AS STRING(10)) AS cola UNION ALL SELECT CAST('2' AS STRING(10)) AS cola)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT color, ARRAY_AGG(id ORDER BY id ASC) AS ids FROM colors GROUP BY 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT color, ARRAY_AGG(id ORDER BY id DESC) AS ids FROM colors GROUP BY 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT foo IN UNNEST(bar) AS bla"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT id, mnth + 1 AS a_mnth FROM t CROSS JOIN UNNEST(GENERATE_DATE_ARRAY(start_month, DATE_TRUNC(CURRENT_DATE, MONTH), INTERVAL '1' MONTH)) AS mnth"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT id, mnth AS a_mnth FROM t CROSS JOIN UNNEST(GENERATE_DATE_ARRAY(start_month, DATE_TRUNC(CURRENT_DATE, MONTH), INTERVAL '1' MONTH)) AS mnth"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT id, mnth FROM t CROSS JOIN UNNEST(GENERATE_DATE_ARRAY(start_month, DATE_TRUNC(CURRENT_DATE, MONTH), INTERVAL '1' MONTH)) AS mnth"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT item, purchases, LAST_VALUE(item) OVER (item_window ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING) AS most_popular FROM Produce WINDOW item_window AS (ORDER BY purchases)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT jsondoc['some_key']"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT label, predicted_label1, predicted_label AS predicted_label2 FROM ML.PREDICT(MODEL mydataset.mymodel2, (SELECT * EXCEPT (predicted_label), predicted_label AS predicted_label1 FROM ML.PREDICT(MODEL mydataset.mymodel1, TABLE mydataset.mytable)))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT name, laps FROM UNNEST([STRUCT('Rudisha' AS name, [23.4, 26.3, 26.4, 26.1] AS laps), STRUCT('Makhloufi' AS name, [24.5, 25.4, 26.6, 26.1] AS laps)])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT participant FROM UNNEST([STRUCT('Rudisha' AS name, [23.4, 26.3, 26.4, 26.1] AS laps)]) AS participant"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT purchases, LAST_VALUE(item) OVER item_window AS most_popular FROM Produce WINDOW item_window AS (PARTITION BY purchases ORDER BY purchases ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT r\"\"\"a\\\"b\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT r\"\"\"ends with \\\"\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT r\"\\t\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT results FROM Coordinates AS c, UNNEST(c.position) AS results"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT results FROM Coordinates, Coordinates.position AS results"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT results FROM Coordinates, `Coordinates.position` AS results"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT t.c1, h.c2, s.c3 FROM t1 AS t, UNNEST(t.t2) AS h, UNNEST(h.t3) AS s"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ts + MAKE_INTERVAL(1, 2, minute => 5, day => 3)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT x, 1 AS y GROUP BY 1 ORDER BY 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT y + 1 FROM x GROUP BY y + 1 ORDER BY 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT y + 1 z FROM x GROUP BY y + 1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT y + 1 z FROM x GROUP BY y + 1 ORDER BY z"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SELECT ~1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SHA1(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SHA256(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"SHA512(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"STRING('2008-12-25 15:30:00', 'America/New_York')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"STRING(a)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"STRING_AGG(DISTINCT a ORDER BY b DESC, c DESC LIMIT 10)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"STRING_AGG(DISTINCT a, ' & ')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"STRING_AGG(DISTINCT v, sep LIMIT 3)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"STRING_AGG(a)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"STRING_AGG(a, ' & ' ORDER BY LENGTH(a))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"STRING_AGG(a, ' & ')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"STRING_AGG(foo, b'|' ORDER BY bar)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"STRUCT(values AS value)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TIME('2008-12-25 15:30:00+08')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TIME('2008-12-25 15:30:00+08', 'America/Los_Angeles')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TIMESTAMP(foo, zone)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TIMESTAMP(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TIMESTAMP_TRUNC(TIMESTAMP '2024-03-15 14:35:00', MINUTE, 'America/New_York')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TIMESTAMP_TRUNC(TIMESTAMP '2024-03-15 14:35:47.123456', DAY)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TIMESTAMP_TRUNC(TIMESTAMP '2024-03-15 14:35:47.123456', DAY, 'America/New_York')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TIMESTAMP_TRUNC(TIMESTAMP '2025-01-01 14:35:47.123456', MINUTE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TO_CODE_POINTS('foo')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TO_HEX(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TO_JSON(9999999999, stringify_wide_numbers => FALSE)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TO_JSON(STRUCT(1 AS id, [10, 20] AS cords))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TO_JSON_STRING(x)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TRANSLATE(x, y, z)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"TRIM(item, '*')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"UPDATE x SET y = NULL"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"UPPER(TO_HEX(x))"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WHILE i < ARRAY_LENGTH(batches) DO SET x = batches[OFFSET(i)]"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH Races AS (SELECT '800M' AS race) SELECT race, name, laps FROM Races AS r CROSS JOIN UNNEST([STRUCT('Rudisha' AS name, [23.4, 26.3, 26.4, 26.1] AS laps)])"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH Races AS (SELECT '800M' AS race) SELECT race, participant FROM Races AS r CROSS JOIN UNNEST([STRUCT('Rudisha' AS name, [23.4, 26.3, 26.4, 26.1] AS laps)]) AS participant"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH cte(c) AS (SELECT * FROM t) SELECT * FROM cte"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH foo AS (SELECT [1, 2, 3] AS array_col) SELECT array_col[offset] FROM foo CROSS JOIN UNNEST(array_col) WITH OFFSET AS offset"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH sample AS (SELECT * FROM UNNEST([TIMESTAMP '2024-03-15 14:35:46', TIMESTAMP '2024-03-16 01:12:03']) AS ts) SELECT ts, TIMESTAMP_TRUNC(ts, DAY, 'America/New_York') AS truncated_ts FROM sample"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH sample AS (SELECT * FROM UNNEST([TIMESTAMP '2024-03-15 14:35:46', TIMESTAMP '2024-03-16 01:12:03']) AS ts) SELECT ts, TIMESTAMP_TRUNC(ts, MINUTE) AS truncated_ts FROM sample"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH sample AS (SELECT * FROM UNNEST([TIMESTAMP '2024-03-15 14:35:46', TIMESTAMP '2024-03-16 01:12:03']) AS ts) SELECT ts, TIMESTAMP_TRUNC(ts, MINUTE, 'America/New_York') AS truncated_ts FROM sample"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH sample AS (SELECT ts FROM UNNEST([TIMESTAMP '2024-03-15 14:35:46', TIMESTAMP '2024-03-16 01:12:03']) AS ts) SELECT ts, TIMESTAMP_TRUNC(ts, DAY) AS truncated_ts FROM sample"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT JSON_EXTRACT(c, '$.x-y') FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT CUME_DIST() OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT CUME_DIST() OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT DENSE_RANK() OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT DENSE_RANK() OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT FIRST_VALUE(col1) OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT FIRST_VALUE(col1) OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT LAG(col1) OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT LAG(col1) OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT LAST_VALUE(col1) OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT LAST_VALUE(col1) OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT LEAD(col1) OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT LEAD(col1) OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT NTH_VALUE(col1, 2) OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT NTH_VALUE(col1, 2) OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT NTILE(4) OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT NTILE(4) OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT PERCENT_RANK() OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT PERCENT_RANK() OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT RANK() OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT RANK() OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT ROW_NUMBER() OVER (PARTITION BY id ORDER BY col1 ASC NULLS LAST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t AS (SELECT 1 AS id, 2 AS col1) SELECT ROW_NUMBER() OVER (PARTITION BY id ORDER BY col1 DESC NULLS FIRST) FROM t"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t1 AS (SELECT ARRAY(SELECT AS STRUCT 1 AS a, 2 AS b) AS array_col) SELECT array_col[0].a, array_col[0].b FROM t1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t1 AS (SELECT ARRAY(SELECT AS STRUCT x1 AS alias_x1, x2 /* test */ FROM t2 WHERE x2 = 4) AS array_col) SELECT array_col[0].alias_x1, array_col[0].x2 FROM t1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"WITH t1 AS (SELECT ARRAY(SELECT AS STRUCT x1 AS alias_x1, x2 /* test */ FROM t2) AS array_col) SELECT array_col[0].alias_x1, array_col[0].x2 FROM t1"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"[1, 2, 3]"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"[a, a(1, 2,3,4444444444444444, tttttaoeunthaoentuhaoentuheoantu, toheuntaoheutnahoeunteoahuntaoeh), b(3, 4,5), c, d, tttttttttttttttteeeeeeeeeeeeeett, 12312312312]"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"assert.true(1 = 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"cast(x as date format 'MM/DD/YYYY')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"cast(x as time format 'YYYY.MM.DD HH:MI:SSTZH')"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"current_datetime"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"current_time"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"r\"\"\"/\\*.*\\*/\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"r\"\"\"a\n\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"r'x\\''"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"r'x\\y'"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"select array_contains([1, 2, 3], 1)"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"x <> \"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"x <> \"\"\"\"\"\""}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"x <> ''"}
+{"dialect":"bigquery","category":"parse: unknown dialect \"bigquery\"","sql":"x <> ''''''"}
 {"dialect":"databricks","category":"gen: canonicalization","sql":"WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT get_json_object(c, '$.x-y') FROM t"}
