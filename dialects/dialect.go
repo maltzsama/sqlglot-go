@@ -611,6 +611,26 @@ type Dialect struct {
 	// names keep their case, so `FROM Coordinates, \`Coordinates.position\`` does not fold
 	// the qualified reference.
 	QualifiedTablesCaseSensitive bool
+	// TimeFormat ports TIME_FORMAT (snowflake's `'YYYY-MM-DD HH24:MI:SS'`).
+	TimeFormat string
+	// UnescapedSequences ports UNESCAPED_SEQUENCES (snowflake maps \a and \v).
+	UnescapedSequences map[string]string
+	// ArrayAggIncludesNulls ports ARRAY_AGG_INCLUDES_NULLS.
+	ArrayAggIncludesNulls *bool
+	// StarIlikeBackslashEscape ports STAR_ILIKE_BACKSLASH_ESCAPE (snowflake True).
+	StarIlikeBackslashEscape bool
+	// JSONExtractRequiresJSONExpression ports JSON_EXTRACT_REQUIRES_JSON_EXPRESSION.
+	JSONExtractRequiresJSONExpression bool
+	// DefaultSamplingMethod ports DEFAULT_SAMPLING_METHOD.
+	DefaultSamplingMethod string
+	// IdentifyPivotStrings ports IDENTIFY_PIVOT_STRINGS (snowflake True).
+	IdentifyPivotStrings bool
+	// DirectedJoins ports DIRECTED_JOINS (snowflake True): `[kind] DIRECTED JOIN`.
+	DirectedJoins bool
+	// RlikeFullMatch ports snowflake RANGE_PARSERS[RLIKE] building RegexpLike(full_match=true).
+	RlikeFullMatch bool
+	// MapIntervalUnits maps an interval unit through DATE_PART_MAPPING (snowflake W -> WEEK).
+	MapIntervalUnits bool
 	// JSONKeyValuePairSep ports JSON_KEY_VALUE_PAIR_SEP (base ":"; bigquery/mysql/snowflake/...
 	// ","): the separator jsonkeyvalue_sql emits between a JSON object key and value.
 	JSONKeyValuePairSep string
@@ -991,6 +1011,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return BigQuery(), nil
 	case "duckdb":
 		return DuckDB(), nil
+	case "snowflake":
+		return Snowflake(), nil
 	case "mysql":
 		return MySQL(), nil
 	case "mariadb":

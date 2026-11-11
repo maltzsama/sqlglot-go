@@ -173,6 +173,23 @@ const (
 	KindDatetimeSub
 	KindTimeAdd
 	KindTimeSub
+	KindArrayPosition
+	KindDotProduct
+	KindManhattanDistance
+	KindMD5NumberLower64
+	KindMD5NumberUpper64
+	KindSkewness
+	KindStrtokToArray
+	KindStuff
+	KindToArray
+	KindBooland
+	KindBoolor
+	KindYearOfWeek
+	KindToBinary
+	KindToBoolean
+	KindToDouble
+	KindToFile
+	KindTimeSlice
 	KindBracket
 	KindLock
 	KindPreWhere
@@ -234,6 +251,7 @@ const (
 	KindShow
 	KindUse
 	KindKill
+	KindUndrop
 	KindDescribe
 	KindLoadData
 	KindTransaction
@@ -856,6 +874,7 @@ const (
 	KindTranslate
 	KindDatetime
 	KindDatetimeTrunc
+	KindTimeDiff
 	KindExplodingGenerateSeries
 	KindExport
 	KindFeaturesAtTime
@@ -1270,6 +1289,23 @@ var argTypes = map[Kind][]argSpec{
 	KindJSONBExtract:          {{"this", true}, {"expression", true}},
 	KindJSONBExtractScalar:    {{"this", true}, {"expression", true}, {"json_type", false}},
 	KindJSONCast:              {{"this", true}, {"to", true}, {"format", false}, {"safe", false}, {"action", false}, {"default", false}},
+	KindArrayPosition:         {{"this", true}, {"expression", true}, {"zero_based", false}},
+	KindDotProduct:            {{"this", true}, {"expression", true}},
+	KindManhattanDistance:     {{"this", true}, {"expression", true}},
+	KindMD5NumberLower64:      defaultArgTypes,
+	KindMD5NumberUpper64:      defaultArgTypes,
+	KindSkewness:              defaultArgTypes,
+	KindStrtokToArray:         {{"this", true}, {"expression", false}},
+	KindStuff:                 {{"this", true}, {"start", true}, {"length", true}, {"expression", true}},
+	KindToArray:               defaultArgTypes,
+	KindBooland:               {{"this", true}, {"expression", true}, {"round_input", false}},
+	KindBoolor:                {{"this", true}, {"expression", true}, {"round_input", false}},
+	KindYearOfWeek:            defaultArgTypes,
+	KindToBinary:              {{"this", true}, {"format", false}, {"safe", false}},
+	KindToBoolean:             {{"this", true}, {"safe", false}},
+	KindToDouble:              {{"this", true}, {"format", false}, {"safe", false}},
+	KindToFile:                {{"this", true}, {"path", false}, {"format", false}, {"safe", false}},
+	KindTimeSlice:             {{"this", true}, {"expression", true}, {"unit", true}, {"kind", false}},
 	// JSONTable/JSONColumnDef/JSONSchema/FormatJson port JSON_TABLE(...) (parser.py:8166;
 	// expressions/json.py:206, expressions/query.py:2022-2042).
 	KindJSONTable:     {{"this", true}, {"schema", true}, {"path", false}, {"error_handling", false}, {"empty_handling", false}},
@@ -1314,6 +1350,7 @@ var argTypes = map[Kind][]argSpec{
 	KindShow:           {{"this", true}, {"history", false}, {"terse", false}, {"target", false}, {"offset", false}, {"starts_with", false}, {"limit", false}, {"from_", false}, {"like", false}, {"where", false}, {"db", false}, {"scope", false}, {"scope_kind", false}, {"full", false}, {"mutex", false}, {"query", false}, {"channel", false}, {"global_", false}, {"log", false}, {"position", false}, {"types", false}, {"privileges", false}, {"using", false}, {"for_table", false}, {"for_group", false}, {"for_user", false}, {"for_role", false}, {"into_outfile", false}, {"json", false}, {"iceberg", false}},
 	KindUse:            {{"this", false}, {"expressions", false}, {"kind", false}},
 	KindKill:           {{"this", true}, {"kind", false}},
+	KindUndrop:         {{"this", true}, {"kind", true}, {"rename", false}},
 	KindDescribe:       {{"this", true}, {"style", false}, {"kind", false}, {"properties", false}, {"expressions", false}, {"wrapped", false}, {"partition", false}, {"format", false}, {"as_json", false}, {"column", false}},
 	KindLoadData:       {{"this", true}, {"local", false}, {"overwrite", false}, {"temp", false}, {"inpath", false}, {"files", false}, {"partition", false}, {"input_format", false}, {"serde", false}},
 	KindTransaction:    {{"this", false}, {"modes", false}, {"mark", false}},
@@ -1649,7 +1686,7 @@ var argTypes = map[Kind][]argSpec{
 	KindDateTrunc:              {{"unit", true}, {"this", true}, {"zone", false}, {"input_type_preserved", false}},
 	KindUnixToStr:              {{"this", true}, {"format", false}},
 	KindTimeToStr:              {{"this", true}, {"format", true}, {"culture", false}, {"zone", false}},
-	KindStarMap:                defaultArgTypes,
+	KindStarMap:                {{"this", false}, {"expressions", false}},
 	KindVarMap:                 {{"keys", true}, {"values", true}},
 	// TSQL cluster.
 	KindExecute:                       {{"this", true}, {"expressions", false}, {"return_status", false}},
@@ -1719,6 +1756,7 @@ var argTypes = map[Kind][]argSpec{
 	KindTranslate:                {{"this", true}, {"from_", true}, {"to", true}},
 	KindDatetime:                 {{"this", true}, {"expression", false}},
 	KindDatetimeTrunc:            {{"this", true}, {"unit", true}, {"zone", false}},
+	KindTimeDiff:                 {{"this", true}, {"expression", true}, {"unit", false}},
 	KindExplodingGenerateSeries:  {{"start", true}, {"end", true}, {"step", false}, {"is_end_exclusive", false}},
 	KindExport:                   {{"this", true}, {"connection", false}, {"options", true}},
 	KindFeaturesAtTime:           {{"this", true}, {"time", false}, {"num_rows", false}, {"ignore_feature_nulls", false}},
@@ -1979,6 +2017,25 @@ var traitsOf = map[Kind]Trait{
 	KindJSONBExtract:          TraitCondition | TraitBinary | TraitFunc,
 	KindJSONBExtractScalar:    TraitCondition | TraitBinary | TraitFunc,
 	KindJSONCast:              TraitCondition | TraitFunc,
+	KindArrayPosition:         TraitCondition | TraitFunc,
+	KindDotProduct:            TraitCondition | TraitFunc,
+	KindManhattanDistance:     TraitCondition | TraitFunc,
+	KindMD5NumberLower64:      TraitCondition | TraitFunc,
+	KindMD5NumberUpper64:      TraitCondition | TraitFunc,
+	KindSkewness:              TraitCondition | TraitFunc,
+	KindStrtokToArray:         TraitCondition | TraitFunc,
+	KindStuff:                 TraitCondition | TraitFunc,
+	KindToArray:               TraitCondition | TraitFunc,
+	KindToVariant:             TraitCondition | TraitFunc,
+	KindBooland:               TraitCondition | TraitFunc,
+	KindBoolor:                TraitCondition | TraitFunc,
+	KindYearOfWeek:            TraitCondition | TraitFunc,
+	KindToBinary:              TraitCondition | TraitFunc,
+	KindToBoolean:             TraitCondition | TraitFunc,
+	KindToDouble:              TraitCondition | TraitFunc,
+	KindToFile:                TraitCondition | TraitFunc,
+	KindTimeSlice:             TraitCondition | TraitFunc,
+	KindLogicalAnd:            TraitCondition | TraitBinary | TraitFunc,
 	// JSONTable(Expression, Func) (expressions/json.py:206); JSONColumnDef/JSONSchema/
 	// FormatJson are plain Expression subclasses with no Func/Condition mixin, so they
 	// get no trait bits (omitted below, matching e.g. KindTableAlias/KindSchema).
@@ -2012,6 +2069,7 @@ var traitsOf = map[Kind]Trait{
 	KindDatetimeSub:             TraitCondition | TraitFunc,
 	KindDatetimeTrunc:           TraitCondition | TraitFunc,
 	KindTimeAdd:                 TraitCondition | TraitFunc,
+	KindTimeDiff:                TraitCondition | TraitFunc,
 	KindTimeSub:                 TraitCondition | TraitFunc,
 	KindGapFill:                 TraitCondition | TraitFunc,
 	KindTranslate:               TraitCondition | TraitFunc,
@@ -2511,6 +2569,28 @@ var className = map[Kind]string{
 	KindGroupConcat:                         "GroupConcat",
 	KindUnnest:                              "Unnest",
 	KindArray:                               "Array",
+	KindArrayAppend:                         "ArrayAppend",
+	KindArrayPrepend:                        "ArrayPrepend",
+	KindArrayPosition:                       "ArrayPosition",
+	KindArrayIntersect:                      "ArrayIntersect",
+	KindDotProduct:                          "DotProduct",
+	KindLogicalAnd:                          "LogicalAnd",
+	KindManhattanDistance:                   "ManhattanDistance",
+	KindPercentileCont:                      "PercentileCont",
+	KindMD5NumberLower64:                    "MD5NumberLower64",
+	KindMD5NumberUpper64:                    "MD5NumberUpper64",
+	KindSkewness:                            "Skewness",
+	KindStrtokToArray:                       "StrtokToArray",
+	KindStuff:                               "Stuff",
+	KindToArray:                             "ToArray",
+	KindBooland:                             "Booland",
+	KindBoolor:                              "Boolor",
+	KindYearOfWeek:                          "YearOfWeek",
+	KindToBinary:                            "ToBinary",
+	KindToBoolean:                           "ToBoolean",
+	KindToDouble:                            "ToDouble",
+	KindToFile:                              "ToFile",
+	KindTimeSlice:                           "TimeSlice",
 	KindBracket:                             "Bracket",
 	KindLock:                                "Lock",
 	KindPreWhere:                            "PreWhere",
@@ -2560,6 +2640,7 @@ var className = map[Kind]string{
 	KindDatetimeSub:                         "DatetimeSub",
 	KindDatetimeTrunc:                       "DatetimeTrunc",
 	KindTimeAdd:                             "TimeAdd",
+	KindTimeDiff:                            "TimeDiff",
 	KindTimeSub:                             "TimeSub",
 	KindExplodingGenerateSeries:             "ExplodingGenerateSeries",
 	KindExport:                              "Export",
@@ -2611,6 +2692,7 @@ var className = map[Kind]string{
 	KindShow:                                "Show",
 	KindUse:                                 "Use",
 	KindKill:                                "Kill",
+	KindUndrop:                              "Undrop",
 	KindDescribe:                            "Describe",
 	KindLoadData:                            "LoadData",
 	KindTransaction:                         "Transaction",
@@ -2820,23 +2902,18 @@ var className = map[Kind]string{
 	KindInOutColumnConstraint:               "InOutColumnConstraint",
 	// presto cluster: class names match the upstream Presto FUNCTIONS canonical class.
 	KindAnyValue:              "AnyValue",
-	KindArrayAppend:           "ArrayAppend",
 	KindArrayConstructCompact: "ArrayConstructCompact",
-	KindArrayIntersect:        "ArrayIntersect",
-	KindArrayPrepend:          "ArrayPrepend",
 	KindAttach:                "Attach",
 	KindAttachOption:          "AttachOption",
 	KindDateBin:               "DateBin",
 	KindUnixSeconds:           "UnixSeconds",
 	KindInstall:               "Install",
-	KindPercentileCont:        "PercentileCont",
 	KindPositionalColumn:      "PositionalColumn",
 	KindSortArray:             "SortArray",
 	KindRegexpFullMatch:       "RegexpFullMatch",
 	KindSummarize:             "Summarize",
 	KindUnpivotColumns:        "UnpivotColumns",
 	KindToVariant:             "ToVariant",
-	KindLogicalAnd:            "LogicalAnd",
 	KindApproxQuantile:        "ApproxQuantile",
 	KindArrayUniqueAgg:        "ArrayUniqueAgg",
 	KindDayOfWeekIso:          "DayOfWeekIso",
@@ -3098,7 +3175,8 @@ var varLenArgs = map[Kind]bool{
 	// presto cluster: MD5Digest is_var_len_args=True (string.py:540).
 	KindMD5Digest: true,
 	// hive cluster: VarMap is_var_len_args=True (array.py:339-341).
-	KindVarMap: true,
+	KindVarMap:  true,
+	KindStarMap: true,
 
 	// ClickHouse cluster: is_var_len_args = True.
 	KindArrayConcat:      true,

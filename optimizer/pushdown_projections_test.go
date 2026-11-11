@@ -19,6 +19,10 @@ func TestPushdownProjectionsFixtures(t *testing.T) {
 		52: "EXPLODE parses as Anonymous (#44)",
 		53: "POSEXPLODE parses as Anonymous (#44)",
 		54: "INLINE parses as Anonymous (#44)",
+		// #40: Snowflake fixtures that only run now that the dialect is registered.
+		46: "OBJECT_CONSTRUCT star expansion is not ported (#40)",
+		48: "OBJECT_INSERT/colon-path pushdown is not ported (#40)",
+		50: "COUNT(* EXCLUDE a) pushdown is not ported (#40)",
 	}
 	checkPassFixturesWith(t, "pushdown_projections.sql", false, gaps, func(e exp.Expression, dialect string) exp.Expression {
 		e = optimizer.QualifyTables(e, "", "", dialect, false, nil, nil, nil)

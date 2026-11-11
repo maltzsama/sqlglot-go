@@ -59,3 +59,4 @@
 498|STARTS_WITH('', 'f')
 499|STARTS_WITH('', '')
 500|STARTS_WITH('foo', '')
+521|SELECT * FROM o ASOF JOIN e MATCH_CONDITION (o.observed_date >= e.metric_date) ON o.id = e.id
