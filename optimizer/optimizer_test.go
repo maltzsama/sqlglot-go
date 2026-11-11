@@ -121,6 +121,13 @@ var optimizeGaps = map[string]string{
 	"selecting all columns from a pivoted CTE source, using alias for the aggregation and generating bigquery": "star expansion through PIVOT (#46)",
 	"unpivoted table source with a single value column, unpivot columns can be qualified":                      "star expansion through UNPIVOT (#46)",
 	"unpivoted table source with multiple value columns":                                                       "star expansion through UNPIVOT (#46)",
+	// #40: fixtures that only run now that snowflake is registered.
+	"selecting all columns from a pivoted source and generating snowflake":                  "star expansion through PIVOT (#46)",
+	"selecting all columns from a pivoted source, pivot has column aliases":                 "star expansion through PIVOT (#46)",
+	"unpivoted table source with a single value column, unpivot columns can't be qualified": "star expansion through UNPIVOT (#46)",
+	"unpivoted derived table source with a single value column":                             "star expansion through UNPIVOT (#46)",
+	"flatten over object_construct":                                                         "ObjectConstruct/flatten rewriting is not ported (#40)",
+	"array_agg within group over":                                                           "ArrayAgg WITHIN GROUP ordering is not ported (#40)",
 }
 
 // TestOptimizeFileSchema ports test_file_schema (tests/test_optimizer.py:1828-1835).

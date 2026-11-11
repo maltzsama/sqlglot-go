@@ -42,3 +42,337 @@
 {"dialect":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"CREATE MACRO tbl (a) AS TABLE (SELECT a AS x), (a, b) AS TABLE (SELECT a AS x, b AS y)"}
 {"dialect":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"CREATE OR REPLACE MACRO foo (a) AS a, (a, b) AS a + b, (a, b, c) AS a + b + c"}
 {"dialect":"duckdb","category":"parse: Required keyword","sql":"SELECT * FROM t1 AS a AT (VERSION => 3) JOIN t2 AS b AT (TIMESTAMP => NOW() - INTERVAL '1' WEEK) ON a.id = b.id"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"\n            SELECT col:\"customer's department\"\n            "}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"\n            SELECT id as \"ID\",\n              f.value AS \"Contact\",\n              f1.value:type AS \"Type\",\n              f1.value:content AS \"Details\"\n            FROM persons p,\n              lateral flatten(input => p.c, path => 'contact') f,\n              lateral flatten(input => f.value:business) f1\n            "}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"\n            SELECT id as \"ID\",\n              value AS \"Contact\"\n            FROM persons p,\n              lateral flatten(input => p.c, path => 'contact')\n            "}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"CAST(x AS GEOGRAPHY)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"CAST(x AS GEOMETRY)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"COPY INTO mytable (col1, col2) FROM 's3://mybucket/data/files' STORAGE_INTEGRATION = \"storage\" ENCRYPTION = (TYPE='NONE' MASTER_KEY='key') FILES = ('file1', 'file2') PATTERN = 'pattern' FILE_FORMAT = (FORMAT_NAME=my_csv_format NULL_IF=('')) PARSE_HEADER = TRUE"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"COPY INTO test (c1) FROM (SELECT $1.c1 FROM @mystage)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"CURRENT_TIMESTAMP - INTERVAL '1 w' AND (1 = 1)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DATE('01-01-2000', 'MM-DD-YYYY')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DATEADD(y, 5, x)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC API INTEGRATION int1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC APPLICATION PACKAGE pkg1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC CATALOG INTEGRATION int1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC COMPUTE POOL pool1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC DATABASE ROLE role1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC DYNAMIC TABLE db.schema.t1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC EXTERNAL VOLUME vol1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC HYBRID TABLE t1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC ICEBERG TABLE db.schema.t1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC MASKING POLICY db.schema.pol1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC MATERIALIZED VIEW my_view"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC NETWORK RULE rule1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC ROW ACCESS POLICY pol1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC SECURITY INTEGRATION int1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESCRIBE db.table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DIV0NULL(a - b, c - d)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"DIV0NULL(foo, bar)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"GETDATE()"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"GET_PATH(json_data, '$id')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"INSERT INTO test VALUES (x'48FAF43B0AFCEF9B63EE3A93EE2AC2')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"INSERT OVERWRITE TABLE t SELECT 1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"LOCALTIMESTAMP"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"LOCALTIMESTAMP()"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"LOCALTIMESTAMP(3)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"MD5_HEX(col)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"NULLIFZERO(foo)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_REPLACE(subject, pattern)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_SUBSTR(subject, pattern, 1, 1, 'e', 0)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_SUBSTR_ALL(subject, pattern, 1, 1, 'e', 0)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"REPLACE(subject, pattern)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT $$a ' \\ \\t \\x21 z $ $$"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT $1:a.b"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * EXCLUDE (a, b) REPLACE (c AS d, E AS F) FROM xxx"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * EXCLUDE a, b FROM xxx"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * EXCLUDE foo RENAME bar AS baz FROM tbl"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM '@mystage'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM (SELECT a FROM @foo)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM @\"mystage\""}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM @mystage"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM @mystage t (c1)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM s WHERE c NOT IN (SELECT * FROM t)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM t, UNNEST(x) WITH ORDINALITY"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM xxx WHERE col ilike '%Don''t%'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT 1 FROM TABLE(GENERATOR(10))"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT 1 FROM TABLE(GENERATOR(10, 5))"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT APPROXIMATE_JACCARD_INDEX(minhash_col)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT APPROX_TOP_K(col) FROM t"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BIT_LENGTH(x'A1B2')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT CURRENT_TIME"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FILE_URL FROM DIRECTORY(@mystage) WHERE SIZE > 100000"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 IGNORE NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 RESPECT NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) IGNORE NULLS OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) RESPECT NULLS OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT GET_PATH(PARSE_JSON('{\"y\": [{\"z\": 1}]}'), 'y[0]:z')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ILIKE(col, 'pattern')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ILIKE(col, 'pattern', '!')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ILIKE(col, 'pattern', '\\\\')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LIKE(col, 'pattern')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LIKE(col, 'pattern', '!')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LIKE(col, 'pattern', '\\\\')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT PARSE_JSON('{\"a\": {\"b c\": \"foo\"}}'):a:\"b c\""}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT PARSE_JSON('{\"fruit\":\"banana\"}'):fruit"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT PARSE_JSON('{\"x\": \"hello\"}'):x LIKE 'hello'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1) AS value"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1, ROUNDING_MODE => 'HALF_AWAY_FROM_ZERO') AS value"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1, ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(ROUNDING_MODE => 'HALF_TO_EVEN', EXPR => 2.25, SCALE => 1) AS value"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25) AS value"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25, , ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT SEARCH(line, 'king', SEARCH_MODE => 'AND', ANALYZER => 'PATTERN_ANALYZER')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT SPACE(3.7)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT SPACE(5)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT SPACE(NULL)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT STDDEV_SAMP(x)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT STDDEV_SAMP(x) OVER (PARTITION BY 1)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT STRTOK('a$b/cg', '$/.')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT STRTOK('ab')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TIMESTAMPFROMPARTS(d, t)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TIMESTAMPNTZFROMPARTS(2013, 4, 5, 12, 00, 00)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(2013, 4, 5, 12, 00, 00, 987654321)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIME('093000', 'HH24MISS')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIMESTAMP(col, 'DD-MM-YYYY HH12:MI:SS') FROM t"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TRY_TO_TIME('093000', 'HH24MISS')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT a:select"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT data:x LIKE 'hello' FROM some_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT p FROM t WHERE p:val NOT IN ('2')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT t.$17:a[0].b[0].c"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT t.$23:a.b"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT v:\"fruit\" FROM vartab"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT v:attr[0].name FROM vartab"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT x'ABCD'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT { 'Manitoba': 'Winnipeg', 'foo': 'bar' } AS province_capital"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT {* EXCLUDE (col1)} FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT {* EXCLUDE (col1, col2)} FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT {* ILIKE 'col1%'} FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT {*} FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT {fn LOG(5)}"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT {my_table.*} FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW ICEBERG TABLES IN db1.schema1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW IMPORTED KEYS IN \"TEST\".\"PUBLIC\".\"foo\""}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW PRIMARY KEYS IN \"TEST\".\"PUBLIC\".\"foo\""}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW SEQUENCES LIKE '_foo%' IN foo"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW TABLES HISTORY IN tpch.public"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW TABLES LIKE 'line%' IN tpch.public"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW TERSE ICEBERG TABLES IN db1.schema1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW TERSE IMPORTED KEYS IN \"TEST\".\"PUBLIC\".\"foo\""}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW TERSE PRIMARY KEYS IN \"TEST\".\"PUBLIC\".\"foo\""}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW TERSE UNIQUE KEYS IN \"TEST\".\"PUBLIC\".\"foo\""}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW UNIQUE KEYS IN \"TEST\".\"PUBLIC\".\"foo\""}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW VIEWS IN foo"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"STRTOK_TO_ARRAY('a b c')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SYSTIMESTAMP()"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TIMESTAMPADD(NANOSECOND, 123456789, '2023-01-01 10:00:00.000000000')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TIMESTAMPDIFF(NANOSECOND, '2023-01-01 10:00:00.000000000', '2023-01-01 10:00:00.123456789')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_DATE('01-01-2000', 'MM-DD-YYYY')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_DATE(x, 'MM-DD-YYYY')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_DECIMAL(expr)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_DECIMAL(expr, fmt)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_DECIMAL(expr, fmt, precision, scale)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_NUMBER(expr, 38)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_NUMBER(expr, 38, 0)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_NUMERIC('123.45')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_NUMERIC('123.45', '999.99')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_NUMERIC('123.45', '999.99', 10, 2)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_TIMESTAMP('2024-01-15 3:00 AM', 'YYYY-MM-DD HH12:MI AM')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_TIMESTAMP('2024-01-15 3:00 AM', 'YYYY-MM-DD HH12:MI PM')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_TIMESTAMP('2024-01-15 3:00 PM', 'YYYY-MM-DD HH12:MI AM')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_TIMESTAMP('2024-01-15 3:00 PM', 'YYYY-MM-DD HH12:MI PM')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DATE('01-01-2000', 'MM-DD-YYYY')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DATE('2013-04-28 20:57 +07', 'YYYY-MM-DD HH24:MI tzh')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DATE('2013-04-28 20:57 +0700', 'YYYY-MM-DD HH24:MI tzhtzm')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DATE('2013-04-28 20:57 +07:00', 'YYYY-MM-DD HH24:MI tzh:tzm')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DATE('2013-04-28T20:57', 'YYYY-MM-DD\"T\"HH24:MI:SS')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DATE('2013-04-28T20:57:01.888', 'yyyy-mm-DDThh24:mi:ss.ff')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DECIMAL('123.45')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DECIMAL('123.45', '999.99')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DECIMAL('123.45', '999.99', 10, 2)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMBER(expr, 38)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMBER(expr, 38, 0)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45', '999.99')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45', '999.99', 10, 2)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"WEEKOFYEAR(tstamp)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"WITH t AS (SELECT PARSE_JSON('{\"a\": [1, 2]}') AS v), s AS (SELECT 1 AS x) SELECT t.v:a[s.x] FROM t, s"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"WITH t AS (SELECT PARSE_JSON('{\"a\": {\"b\": [1, 2]}}') AS v), s AS (SELECT 1 AS x) SELECT t.v:a:b[s.x] FROM t, s"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"WITH t AS (SELECT PARSE_JSON('{\"a\": {\"b\": [{\"r\": {\"d\": 1}}]}}') AS v), s AS (SELECT 0 AS x) SELECT t.v:a.b[s.x].r.d FROM t, s"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"WITH t AS (SELECT PARSE_JSON('{\"a\": {\"b\": [{\"r\": {\"d\": [10, 20, 30]}}]}}') AS v), s AS (SELECT 0 AS x, 2 AS y) SELECT t.v:a.b[s.x].r.d[s.y] FROM t, s"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"WITH t AS (SELECT PARSE_JSON('{\"c\": [{\"r\": 1}]}') AS v), s AS (SELECT 0 AS x) SELECT t.v:c[s.x].r FROM t, s"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"WITH t AS (SELECT PARSE_JSON('{\"c\": [{\"r\": 1}]}') AS v), s AS (SELECT 0 AS x) SELECT t.v:c[s.x]:r FROM t, s"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"WITH t AS (SELECT PARSE_JSON('{\"c\": [{\"r\": {\"d\": 1}}]}') AS v), s AS (SELECT 0 AS x) SELECT t.v:c[s.x].r.d FROM t, s"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"WITH t AS (SELECT PARSE_JSON('{\"c\": [{\"r\": {\"d\": {\"e\": 1}}}]}') AS v), s AS (SELECT 0 AS x) SELECT t.v:c[s.x].r.d.e FROM t, s"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"ZEROIFNULL(foo)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse objects in db1.schema1 starts with 'a' limit 10 from 'b'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse objects in schema db1.schema1 starts with 'a' limit 10 from 'b'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse schemas in database db1 starts with 'a' limit 10 from 'b'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse tables in db1.schema1 starts with 'a' limit 10 from 'b'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse tables in schema db1.schema1 starts with 'a' limit 10 from 'b'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"v:attr[0]:name"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"x:from"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"\n            SELECT\n              uc.user_id,\n              uc.start_ts AS ts,\n              CASE\n                WHEN uc.start_ts::DATE >= '2023-01-01' AND uc.country_code IN ('US') AND uc.user_id NOT IN (\n                  SELECT DISTINCT\n                    _id\n                  FROM\n                    users,\n                    LATERAL FLATTEN(INPUT => PARSE_JSON(flags)) datasource\n                  WHERE datasource.value:name = 'something'\n                )\n                  THEN 'Sample1'\n                  ELSE 'Sample2'\n              END AS entity\n            FROM user_countries AS uc\n            LEFT JOIN (\n              SELECT user_id, MAX(IFF(service_entity IS NULL,1,0)) AS le_null\n              FROM accepted_user_agreements\n              GROUP BY 1\n            ) AS aua\n              ON uc.user_id = aua.user_id\n            "}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"CREATE STORAGE INTEGRATION s3_int\nTYPE=EXTERNAL_STAGE\nSTORAGE_PROVIDER='S3'\nSTORAGE_AWS_ROLE_ARN='arn:aws:iam::001234567890:role/myrole'\nENABLED=TRUE\nSTORAGE_ALLOWED_LOCATIONS=('s3://mybucket1/path1/', 's3://mybucket2/path2/')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT BITSHIFTLEFT(X'002A'::BINARY, 1)"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT BITSHIFTRIGHT(X'002A'::BINARY, 1)"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT CAST('2021-01-01' AS DATE) + INTERVAL '1 DAY'"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT DAYNAME(TO_DATE('2025-01-15'))"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT DAYNAME(TO_TIMESTAMP('2025-02-28 10:30:45'))"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06 11:45:00' AS TIMESTAMP_NTZ))"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06' AS DATE))"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT MONTHNAME(TO_DATE('2025-01-15'))"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT MONTHNAME(TO_TIMESTAMP('2025-02-28 10:30:45'))"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT PARSE_JSON('{\"food\":{\"fruit\":\"banana\"}}'):food.fruit::VARCHAR"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2013-04-05'), TO_TIME('12:00:00'))"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TO_DATE('2019-02-28') + INTERVAL '1 day, 1 year'"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TO_TIME('12:05:00')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TO_TIMESTAMP('2013-04-05 01:02:03')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TRY_TO_TIME('11.15.00')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TRY_TO_TIMESTAMP('2024-01-15 12:30:00.000')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TRY_TO_TIMESTAMP('invalid')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT a:from::STRING, a:from || ' test' "}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT {'test': 'best'}::VARIANT"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"SHA1(X'002A'::BINARY)"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TIMESTAMPDIFF(DAY, CAST('2007-12-25' AS DATE), CAST('2008-12-25' AS DATE))"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(foo::TIMESTAMP, 'YYYY-MM')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(foo::DATE, 'yyyy')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(foo::TIMESTAMP, 'YYYY-MM')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TRY_TO_DATE('2024-01-31')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TRY_TO_TIME('12:30:00')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TRY_TO_TIMESTAMP('2024-01-15 12:30:00')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"WITH t AS (SELECT PARSE_JSON('{\"c\": [{\"r\": {\"d\": 1}}]}') AS v), s AS (SELECT 0 AS x) SELECT t.v:c[s.x]:r:d::varchar FROM t, s"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"WITH t AS (SELECT PARSE_JSON('{\"level1\": {\"level2\": {\"level3\": \"value\"}}}') AS data) SELECT data:     level1  : level2 : level3::VARIANT FROM t"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"a.x:from.b:c.d::int"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"create external table et2(\n  col1 date as (parse_json(metadata$external_table_partition):COL1::date),\n  col2 varchar as (parse_json(metadata$external_table_partition):COL2::varchar),\n  col3 number as (parse_json(metadata$external_table_partition):COL3::number))\n  partition by (col1,col2,col3)\n  location=@s2/logs/\n  partition_type = user_specified\n  file_format = (type = parquet compression = gzip binary_as_text = false)"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"value:values::string::int"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE IF EXISTS foo SET TAG a = 'a', b = 'b', c = 'c'"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE foo ADD COLUMN id INT identity(1, 1)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE foo SET CHANGE_TRACKING=FALSE"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE table1 SET TAG foo.bar = 'baz'"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE tbl SET DATA_RETENTION_TIME_IN_DAYS=1"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE tbl SET DEFAULT_DDL_COLLATION='test'"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE DYNAMIC TABLE dt TARGET_LAG='1 minute' WAREHOUSE=my_wh (id) AS SELECT * FROM bla"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION my_udf(location OBJECT(city VARCHAR, zipcode DECIMAL(38, 0), val ARRAY(BOOLEAN))) RETURNS VARCHAR AS $$ SELECT 'foo' $$"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION repro_fn() RETURNS INT LANGUAGE PYTHON HANDLER = 'fn' RUNTIME_VERSION='3.11' PACKAGES=() AS '\\ndef fn():\\n    return 1\\n'"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE OR REPLACE TABLE x (y NUMBER(38, 0) NOT NULL AUTOINCREMENT START 1 INCREMENT 1 NOORDER)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE OR REPLACE TABLE x (y NUMBER(38, 0) NOT NULL AUTOINCREMENT START 1 INCREMENT 1 ORDER)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE OR REPLACE TEMPORARY TABLE x (y NUMBER IDENTITY(0, 1))"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE STAGE stage1 FILE_FORMAT='format1'"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE STAGE stage1 FILE_FORMAT=(FORMAT_NAME='stage1.format1')"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE STAGE stage1 FILE_FORMAT=(FORMAT_NAME=stage1.format1)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE STAGE stage1 FILE_FORMAT=schema1.format1"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE foo (bar DOUBLE AUTOINCREMENT START 0 INCREMENT 1)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t (c INT) ROW ACCESS POLICY p ON (c)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t (id INT PRIMARY KEY AUTOINCREMENT)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t (id INT WITH MASKING POLICY p USING (c1, c2, c3))"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t (id INT WITH MASKING POLICY p.q.r)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t (id INT WITH PROJECTION POLICY p.q.r)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t (id INT WITH TAG (key1='value_1', key2='value_2'))"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t (id INT) CHANGE_TRACKING=TRUE"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t CHANGE_TRACKING=TRUE DATA_RETENTION_TIME_IN_DAYS=1 (id INT)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE test_table (id NUMERIC NOT NULL AUTOINCREMENT)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE x (y INT AUTOINCREMENT INCREMENT 2 ORDER)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE x (y INT AUTOINCREMENT INCREMENT 2 START 10)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE x (y INT AUTOINCREMENT INCREMENT 2)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE x (y INT AUTOINCREMENT NOORDER)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE x (y INT AUTOINCREMENT ORDER)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE x (y INT AUTOINCREMENT START 10 NOORDER)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE x (y INT AUTOINCREMENT START 10)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE x (y INT AUTOINCREMENT(0, 1) ORDER)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE x (y NUMBER IDENTITY START 0 INCREMENT 1)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TEMPORARY FILE FORMAT fileformat1 TYPE=PARQUET COMPRESSION=auto"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TEMPORARY STAGE stage1 FILE_FORMAT=(TYPE=PARQUET)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TEMPORARY TABLE x (y NUMBER AUTOINCREMENT(0, 1))"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE VIEW my_view CHANGE_TRACKING=TRUE (id) AS SELECT * FROM my_table"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE VIEW v (c) CHANGE_TRACKING=TRUE AS SELECT 1 AS c"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE VIEW v ROW ACCESS POLICY p ON (c) AS SELECT c FROM t"}
+{"dialect":"snowflake","category":"generate: error","sql":"ALTER TABLE table1 CLUSTER BY (name)"}
+{"dialect":"snowflake","category":"generate: error","sql":"CREATE TABLE table1 CLUSTER BY (name1, name2, name3)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"\n            SELECT oldt.* , newt.*\n            FROM my_table BEFORE(STATEMENT => '8e5d0ca9-005e-44e6-b858-a8f5b37c5726') AS oldt\n            FULL OUTER JOIN my_table AT(STATEMENT => '8e5d0ca9-005e-44e6-b858-a8f5b37c5726') AS newt\n            ON oldt.id = newt.id\n            WHERE oldt.id IS NULL OR newt.id IS NULL;\n            "}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"ALTER TABLE tbl SET STAGE_COPY_OPTIONS = (ON_ERROR=SKIP_FILE SIZE_LIMIT=5 PURGE=TRUE MATCH_BY_COLUMN_NAME=CASE_SENSITIVE)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"ALTER TABLE tbl SET STAGE_FILE_FORMAT = (TYPE=CSV FIELD_DELIMITER='|' NULL_IF=('') FIELD_OPTIONALLY_ENCLOSED_BY='\"' TIMESTAMP_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' DATE_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' BINARY_FORMAT=BASE64)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT $1, $2, metadata$filename FROM @mystage (PATTERN => '.*data-100.*')"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM '@external/location' (FILE_FORMAT => 'path.to.csv')"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM (SELECT * FROM '@external/location' (FILE_FORMAT => 'path.to.csv'))"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(foo METRICS a.b, a.c DIMENSIONS a.b, a.c WHERE a.b > '1995-01-01')"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl DIMENSIONS DATE_PART('year', a.b))"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl DIMENSIONS DATE_PART('year', a.b)) ORDER BY foo"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl DIMENSIONS a.b FACTS a.d WHERE a.c > 5)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl DIMENSIONS a.b FACTS a.d WHERE a.c > 5) ORDER BY foo"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl DIMENSIONS a.b METRICS a.b, a.c WHERE a.c > 5)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl DIMENSIONS a.b, a.c METRICS a.b, a.c)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl FACTS a.a)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl FACTS a.a) ORDER BY foo"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl FACTS a.d, a.e)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl FACTS a.d, a.e) ORDER BY foo"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl METRICS a.b, a.c DIMENSIONS a.b WHERE a.c > 5) ORDER BY foo"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl METRICS a.b, a.c DIMENSIONS a.b, a.c) ORDER BY foo"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl METRICS a.b, a.c)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl METRICS a.b, a.c) ORDER BY foo"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM TABLE(model_trained_with_labeled_data!DETECT_ANOMALIES(INPUT_DATA => TABLE(view_with_data_to_analyze), TIMESTAMP_COLNAME => 'date', TARGET_COLNAME => 'sales', CONFIG_OBJECT => OBJECT_CONSTRUCT('prediction_interval', 0.99)))"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table AT (OFFSET => -60 * 5)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table AT (OFFSET => -60 * 5) AS T WHERE T.flag = 'valid'"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table AT (STATEMENT => $query_id_var)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table AT (STATEMENT => '8e5d0ca9-005e-44e6-b858-a8f5b37c5726')"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table AT (TIMESTAMP => 'Fri, 01 May 2015 16:20:00 -0700'::timestamp)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table AT (TIMESTAMP => TO_TIMESTAMP(1432669154242, 3))"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table AT(TIMESTAMP => 'Fri, 01 May 2015 16:20:00 -0700'::timestamp_tz)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table BEFORE (OFFSET => -60 * 5)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table BEFORE (STATEMENT => $query_id_var)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table BEFORE (STATEMENT => '8e5d0ca9-005e-44e6-b858-a8f5b37c5726')"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM my_table BEFORE (TIMESTAMP => 'Fri, 01 May 2015 16:20:00 -0700'::timestamp_tz);"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM table AT (TIMESTAMP => '2024-07-24') UNPIVOT(a FOR b IN (c)) AS pivot_table"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT 1 FROM some_table CHANGES (INFORMATION => APPEND_ONLY) AT (TIMESTAMP => TO_TIMESTAMP_TZ('2024-07-01 00:00:00+00:00')) END (TIMESTAMP => TO_TIMESTAMP_TZ('2024-07-01 14:28:59.999999+00:00'))"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT C1 FROM t1 CHANGES (INFORMATION => APPEND_ONLY) AT (STREAM => 's1') END (TIMESTAMP => $ts2)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT C1 FROM t1 CHANGES (INFORMATION => APPEND_ONLY) BEFORE (STATEMENT => 'STMT_ID') END (TIMESTAMP => $ts2)"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT col1, col2, metric1 FROM SEMANTIC_VIEW(mydb.myschema.my_semantic_view METRICS metric1 DIMENSIONS col1, DATE_TRUNC('MONTH', timestamp_col) AS col2) ORDER BY col1, col2 DESC"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT t.$1, t.$2 FROM @mystage1 (FILE_FORMAT => 'myformat', PATTERN => '.*data.*[.]csv.gz') AS t"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"transform(x, a int -> a + a + 1)"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"GET @\"my_DB\".\"schEMA1\".\"MYstage\" 'file:///dir/tmp.csv'"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"GET @s1/test 'file:///dir/tmp.csv'"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"GET @s1/test file:///dir/tmp.csv PARALLEL=1"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"PUT 'file:///dir/tmp.csv' @\"my_DB\".\"schEMA1\".\"MYstage\""}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"PUT 'file:///dir/tmp.csv' @s1/test"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"PUT file:///dir/tmp.csv @%table"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"PUT file:///dir/tmp.csv @s1/test PARALLEL=1 AUTO_COMPRESS=FALSE source_compression=gzip OVERWRITE=TRUE"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @\"my_DB\".\"schEMA1\".mystage/file.gz"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @\"myschema\".\"mystage\"/file.gz"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @foo/bar (FILE_FORMAT => ds_sandbox.test.my_csv_format, PATTERN => 'test') AS bla"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @foo/bar (PATTERN => 'test', FILE_FORMAT => ds_sandbox.test.my_csv_format) AS bla"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @namespace.%table_name/path/to/file.json.gz"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @namespace.mystage/path/to/file.json.gz"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @test.public.thing/location/somefile.csv( FILE_FORMAT => 'fmt' )"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM DATA AS DATA_L ASOF JOIN DATA AS DATA_R MATCH_CONDITION (DATA_L.VAL > DATA_R.VAL) ON DATA_L.ID = DATA_R.ID"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM x ASOF JOIN y LIMIT MATCH_CONDITION (x.a > y.a)"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM x ASOF JOIN y OFFSET MATCH_CONDITION (x.a > y.a)"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT :1"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT :1 + :2"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT :1, :2"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM FIRST IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM LAST RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT m!PREDICT(INPUT_DATA => {*}) AS p FROM tbl"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT m!PREDICT(INPUT_DATA => {tbl.*}) AS p FROM tbl"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT metadata$filename FROM @s1/"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT model!PREDICT(1)"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT model!mladmin"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT parse_json($1):a.b FROM @mystage2/data1.json.gz"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"USE SECONDARY ROLES ALL"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"USE SECONDARY ROLES NONE"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"USE SECONDARY ROLES a, b, c"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"x.y.z!PREDICT(foo, bar, baz, bla)"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    CREDENTIALS = ()\n    FILE_FORMAT = (TYPE = CSV COMPRESSION = NONE NULL_IF = ('') FIELD_OPTIONALLY_ENCLOSED_BY = '\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    STORAGE_INTEGRATION = S3_INTEGRATION\n    FILE_FORMAT = (TYPE=CSV COMPRESSION=NONE NULL_IF=('') FIELD_OPTIONALLY_ENCLOSED_BY='\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO @my_stage/result/data FROM (SELECT * FROM orderstiny) FILE_FORMAT = (TYPE='csv')"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO MY_DATABASE.MY_SCHEMA.MY_TABLE FROM @MY_DATABASE.MY_SCHEMA.MY_STAGE/my_path FILE_FORMAT = (FORMAT_NAME=MY_DATABASE.MY_SCHEMA.MY_FILE_FORMAT)"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO load1 FROM @%load1/data1/ CREDENTIALS = (AWS_KEY_ID='id' AWS_SECRET_KEY='key' AWS_TOKEN='token') FILES = ('test1.csv', 'test2.csv') FORCE = TRUE"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO temp FROM @random_stage/path/ FILE_FORMAT = (TYPE=CSV FIELD_DELIMITER='|' NULL_IF=('str1', 'str2') FIELD_OPTIONALLY_ENCLOSED_BY='\"' TIMESTAMP_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' DATE_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' BINARY_FORMAT=BASE64) VALIDATION_MODE = 'RETURN_3_ROWS'"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"GET @%table file:///dir/tmp.csv"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT * FROM @~"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT * FROM @~/some/path/to/file.csv"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER($my_function_name)()"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER('my_func')(1, 2)"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER('speed_of_light')()"}

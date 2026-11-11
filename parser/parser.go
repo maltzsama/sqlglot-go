@@ -1841,6 +1841,8 @@ func (p *Parser) parseJoinBase(skipJoinToken bool, parseBracket bool, aliasToken
 	}
 	index := p.index
 	method, side, kind := p.parseJoinParts()
+	// parser.py:4657: Snowflake's DIRECTED join modifier.
+	directed := p.matchTextSeq("DIRECTED")
 	// parsers/tsql.py:406 JOIN_HINTS: `INNER LOOP JOIN` / `HASH JOIN` / `MERGE JOIN`.
 	var joinHint string
 	if p.dialect.Name == "tsql" && p.matchTexts(tsqlJoinHints) {
@@ -1877,6 +1879,9 @@ func (p *Parser) parseJoinBase(skipJoinToken bool, parseBracket bool, aliasToken
 	}
 	if kind != nil {
 		kwargs["kind"] = stringsUpper(kind.Text)
+	}
+	if directed {
+		kwargs["directed"] = true
 	}
 	joinThis := asExpr(kwargs["this"])
 	if p.match(tokens.ON) {
@@ -2222,7 +2227,11 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 			// tokenized by dialects that remap it (e.g. postgres' bare `~`), so this case is
 			// effectively dialect-gated at the tokenizer without needing a check here.
 			p.advance()
-			this = p.parseEscape(p.expression(exp.RegexpLike(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
+			args := exp.Args{"this": this, "expression": p.parseBitwise()}
+			if p.dialect.RlikeFullMatch {
+				args["full_match"] = true
+			}
+			this = p.parseEscape(p.expression(exp.RegexpLike(args), nil, nil))
 		case tokens.IRLIKE:
 			// binary_range_parser(exp.RegexpILike) (parser.py:1191): base `~*` keyword.
 			p.advance()

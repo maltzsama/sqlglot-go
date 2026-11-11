@@ -1055,6 +1055,9 @@ func (g *Generator) joinSQL(e expressions.Expression) string {
 		globalSQL = strings.ToUpper(global)
 	}
 	opSQL := joinNonEmpty(" ", e.Text("method"), globalSQL, side, kind, e.Text("hint"))
+	if truthy(e.Arg("directed")) && g.dialect.DirectedJoins {
+		opSQL = joinNonEmpty(" ", opSQL, "DIRECTED")
+	}
 	matchCond := g.sqlKey(e, "match_condition")
 	if matchCond != "" {
 		matchCond = " MATCH_CONDITION (" + matchCond + ")"
@@ -2979,7 +2982,18 @@ func (g *Generator) intervalSQL(e expressions.Expression) string {
 	unitExpression := e.Arg("unit")
 	unit := ""
 	if truthy(unitExpression) {
-		unit = g.gen(unitExpression)
+		if inner := asExpression(unitExpression); inner != nil && g.dialect.MapIntervalUnits {
+			switch inner.Kind() {
+			case expressions.KindVar, expressions.KindLiteral, expressions.KindColumn:
+				name := strings.ToUpper(inner.Name())
+				if mapped := g.dialect.DatePartMapping[name]; mapped != "" {
+					unit = mapped
+				}
+			}
+		}
+		if unit == "" {
+			unit = g.gen(unitExpression)
+		}
 	}
 	if !g.intervalAllowsPluralForm {
 		if singular, ok := timePartSingulars[unit]; ok {

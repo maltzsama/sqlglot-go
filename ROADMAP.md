@@ -908,3 +908,23 @@ versions, `USING KEY`, JSON-path canonicalization, map-literal keys, and a few D
 rewrites. Newly active optimizer fixture cases are recorded in
 `optimizer/testdata/annotate_gaps.txt`. Regression tests: `duckdb_test.go`.
 
+
+## Snowflake dialect — PARTIAL (issue #40)
+
+Ported the identity-relevant core of
+`.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/snowflake.py`: the uppercase
+identifier normalization, `x'...'` hex strings, `$$` raw strings, `//` comments, `$` parameters,
+the Snowflake keyword remaps (FLOAT→DOUBLE, TIMESTAMP_TZ, MINUS→EXCEPT, SAMPLE, …), `DIRECTED`
+joins, `UNDROP`, the `DATEADD`/`DATEDIFF`/`TIMESTAMPADD` argument order, `DATE_PART`/`EXTRACT`
+normalization, `TO_DATE`/`IFF`/`LISTAGG`, array constructors and list functions, bitwise/aggregate
+function spellings, the Snowflake type map (VARIANT/OBJECT/VARCHAR/TIMESTAMPNTZ), `STRUCT(...)` /
+`MAP(...)` / `ARRAY(...)` type delimiters, `OBJECT_CONSTRUCT`/`OBJECT_KEYS`, the `$` parameter token,
+and `COPY` without a `WITH` wrapper.
+
+Corpus: 1543 `validate_identity` cases from `tests/dialects/test_snowflake.py`, at **1209/1543**. The
+remaining rows are tracked in `testdata/parity_gaps.txt`: stage paths and `GET`/`PUT`, `AT`/`BEFORE`
+time travel, `SEMANTIC_VIEW`, `MATCH_RECOGNIZE`/`MATCH_CONDITION`, `IDENTIFIER` calls, JSON colon
+paths and `GET_PATH`/`FLATTEN` implicit columns, object/map literal keys, COPY parameter metadata,
+ALTER TABLE property statements, and the remaining DDL describe qualifiers. Newly active optimizer
+fixtures are recorded in `optimizeGaps`, `simplify_gaps.txt`, and `annotate_gaps.txt`. Regression
+tests: `snowflake_test.go`.
