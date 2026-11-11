@@ -502,7 +502,7 @@ func compileConfig(cfg TokenizerConfig) TokenizerConfig {
 	}
 	// Ports the Dialect metaclass hook (dialects/dialect.py:297-306): a dialect whose
 	// regular strings or byte strings support backslash escapes (StringEscapes['\\'] /
-	// ByteStringEscapes['\\'] - the Go analogues of STRINGS_SUPPORT_ESCAPED_SEQUENCES /
+	// ByteStringEscapes['\\'] - the Go analogs of STRINGS_SUPPORT_ESCAPED_SEQUENCES /
 	// BYTE_STRINGS_SUPPORT_ESCAPED_SEQUENCES) gets the default UNESCAPED_SEQUENCES table
 	// merged in, so e.g. mysql's `\\` collapses to one backslash and postgres's `e'\n'`
 	// scans to an actual newline. dialect.py:333-336 merges the default table UNDER the

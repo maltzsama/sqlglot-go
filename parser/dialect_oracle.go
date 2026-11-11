@@ -205,11 +205,6 @@ func (p *Parser) parseOracleInto() exp.Expression {
 	}), nil, nil)
 }
 
-// parseOracleConnectWithPrior ports _parse_connect_with_prior (parsers/oracle.py:234-235).
-func (p *Parser) parseOracleConnectWithPrior() exp.Expression {
-	return p.parseAssignment()
-}
-
 // parseOracleInsertTable ports _parse_insert_table (parsers/oracle.py:250-261): Oracle
 // insert targets take an alias without AS, an optional PARTITION, then the column list.
 func (p *Parser) parseOracleInsertTable() exp.Expression {

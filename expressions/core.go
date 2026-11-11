@@ -714,9 +714,7 @@ func (n *Node) WalkWithPrune(bfs bool, prune func(Expression) bool) []Expression
 			continue
 		}
 		if nn, ok := node.(*Node); ok {
-			for _, child := range nn.iterExpressions(true) {
-				stack = append(stack, child)
-			}
+			stack = append(stack, nn.iterExpressions(true)...)
 		}
 	}
 	return out
@@ -730,9 +728,7 @@ func (n *Node) dfs() []Expression {
 		stack = stack[:len(stack)-1]
 		out = append(out, node)
 		if nn, ok := node.(*Node); ok {
-			for _, child := range nn.iterExpressions(true) {
-				stack = append(stack, child)
-			}
+			stack = append(stack, nn.iterExpressions(true)...)
 		}
 	}
 	return out
@@ -786,7 +782,7 @@ func (n *Node) Copy() Expression {
 			value := node.args[key]
 			switch v := value.(type) {
 			case Expression:
-				var copied Expression = v
+				copied := v
 				if child, ok := v.(*Node); ok {
 					childCopy := newEmptyNodeCapacity(child.kind, len(child.argOrder))
 					stack = append(stack, [2]*Node{child, childCopy})
@@ -1315,7 +1311,7 @@ func hashCombine(seed uint64, parts ...any) uint64 {
 	_, _ = h.Write([]byte(strconv.FormatUint(seed, 10)))
 	for _, part := range parts {
 		_, _ = h.Write([]byte("|"))
-		_, _ = h.Write([]byte(fmt.Sprintf("%T:%v", part, part)))
+		_, _ = fmt.Fprintf(h, "%T:%v", part, part)
 	}
 	return h.Sum64()
 }
@@ -1417,12 +1413,13 @@ func toS(node any, verbose bool, level int, reprStr bool) string {
 		reprStr = expr.IsString() || (expr.kind == KindIdentifier && boolArg(expr.args["quoted"]))
 		items := make([]string, 0, len(keys))
 		for _, key := range keys {
-			value := any(nil)
-			if key == "_comments" {
+			var value any
+			switch key {
+			case "_comments":
 				value = expr.comments
-			} else if key == "_type" {
+			case "_type":
 				value = expr.typ
-			} else {
+			default:
 				value = expr.args[key]
 			}
 			items = append(items, fmt.Sprintf("%s=%s", key, toSAny(value, verbose, level+1, reprStr)))

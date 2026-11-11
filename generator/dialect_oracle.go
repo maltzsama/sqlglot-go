@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/maltzsama/sqlglot-go/dialects"
-	"github.com/maltzsama/sqlglot-go/expressions"
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
 
@@ -269,7 +268,7 @@ func unqualifyColumnsDeep(e exp.Expression) exp.Expression {
 		}
 		return e
 	}
-	for _, key := range expressions.ArgKeys(e.Kind()) {
+	for _, key := range exp.ArgKeys(e.Kind()) {
 		switch v := e.Arg(key).(type) {
 		case exp.Expression:
 			e.Set(key, unqualifyColumnsDeep(v))
