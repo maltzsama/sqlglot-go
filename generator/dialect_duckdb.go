@@ -471,9 +471,14 @@ func duckDBUnixToTimeSQL(g *Generator, e expressions.Expression) string {
 			return g.funcCall("MAKE_TIMESTAMP", []any{e.This()}, "(", ")", true)
 		}
 	}
-	// Other scales: divide by 10^scale and convert the seconds.
+	// Other scales: divide by 10^scale and convert the seconds. A compound numerator must
+	// stay grouped, otherwise only its last operand is divided.
+	numerator := e.This()
+	if numerator != nil && numerator.Is(expressions.TraitBinary) {
+		numerator = expressions.Paren(expressions.Args{"this": numerator})
+	}
 	timestamp := expressions.Div(expressions.Args{
-		"this":       e.This(),
+		"this":       numerator,
 		"expression": expressions.Pow(expressions.Args{"this": expressions.LiteralNumber("10"), "expression": scale}),
 	})
 	return g.funcCall("TO_TIMESTAMP", []any{timestamp}, "(", ")", true)
@@ -827,7 +832,11 @@ func duckDBDateDeltaSQL(op string) func(*Generator, expressions.Expression) stri
 				"this": e.This(),
 				"to":   expressions.DTypeTimestampNs.IntoExpr(nil),
 			}))
-			return "MAKE_TIMESTAMP_NS(EPOCH_NS(" + timestampNS + ") " + op + " " + g.gen(value) + ")"
+			delta := g.gen(value)
+			if value != nil && (value.Kind() == expressions.KindAdd || value.Kind() == expressions.KindSub) {
+				delta = "(" + delta + ")"
+			}
+			return "MAKE_TIMESTAMP_NS(EPOCH_NS(" + timestampNS + ") " + op + " " + delta + ")"
 		}
 		if interval == nil || interval.Kind() != expressions.KindInterval {
 			interval = expressions.Interval(expressions.Args{

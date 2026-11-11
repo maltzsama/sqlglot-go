@@ -307,3 +307,35 @@ func TestDuckDBStructCastRendering(t *testing.T) {
 	assertRoundTrip(t, "duckdb", "SELECT CAST({} AS MAP(VARCHAR, INT))", "SELECT CAST(MAP() AS MAP(TEXT, INT))")
 	assertRoundTrip(t, "duckdb", "SELECT CAST({1, 2} AS STRUCT(a INT, b INT))", "SELECT CAST(ROW(1, 2) AS STRUCT(a INT, b INT))")
 }
+
+// TestDuckDBGroupingRegressions pins the review-driven grouping fixes for compound operands.
+func TestDuckDBGroupingRegressions(t *testing.T) {
+	a := exp.Column(exp.Args{"this": exp.ToIdentifier("a")})
+	b := exp.Column(exp.Args{"this": exp.ToIdentifier("b")})
+	c := exp.Column(exp.Args{"this": exp.ToIdentifier("c")})
+
+	unix := exp.UnixToTime(exp.Args{
+		"this":  exp.Add(exp.Args{"this": a, "expression": b}),
+		"scale": exp.LiteralNumber("2"),
+	})
+	got, err := sqlglot.Generate(unix, "duckdb", generator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "TO_TIMESTAMP((a + b) / POWER(10, 2))"; got != want {
+		t.Fatalf("UnixToTime = %q, want %q", got, want)
+	}
+
+	nanos := exp.New(exp.KindDateSub, exp.Args{
+		"this":       a,
+		"expression": exp.Add(exp.Args{"this": b, "expression": c}),
+		"unit":       exp.Var(exp.Args{"this": "NANOSECOND"}),
+	})
+	got, err = sqlglot.Generate(nanos, "duckdb", generator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "MAKE_TIMESTAMP_NS(EPOCH_NS(CAST(a AS TIMESTAMP_NS)) - (b + c))"; got != want {
+		t.Fatalf("nanosecond delta = %q, want %q", got, want)
+	}
+}
