@@ -5,3 +5,40 @@
 {"dialect":"bigquery","category":"gen: canonicalization","sql":"JSON_QUERY_ARRAY(doc, '$. a b c .d')"}
 {"dialect":"bigquery","category":"gen: canonicalization","sql":"JSON_VALUE(doc, '$. a b c .d')"}
 {"dialect":"databricks","category":"gen: canonicalization","sql":"WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT get_json_object(c, '$.x-y') FROM t"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"JSON_EXTRACT_PATH_TEXT(x, '$.family')"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"MAP {1: 'a', 2: 'b'}"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"MAP {[1, 2]: 'a', [3, 4]: 'b'}"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT '{\"foo\": [1, 2, 3]}' -> 'foo' -> 0"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT * FROM (DESCRIBE t)"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT * FROM foo /* bla */: /* baz */ bar /* boo */"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT * FROM foo /* bla */: bar /* baz */"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT ARRAY_LENGTH([0], 1) AS x"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT JSON('{\"fruit\": {\"foo\": \"banana\"}}') -> 'fruit' -> 'foo'"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT JSON('{\"fruit\":\"banana\"}') -> 'fruit'"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY y DESC) FROM t"}
+{"dialect":"duckdb","category":"gen: canonicalization","sql":"WITH _data AS (SELECT [{'a': 1, 'b': 2}, {'a': 2, 'b': 3}] AS col) SELECT t.col['b'] FROM _data, UNNEST(_data.col) AS t(col) WHERE t.col['a'] = 1"}
+{"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a INT, b FLOAT) AS TABLE SELECT a"}
+{"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE IF NOT EXISTS t (cola INT COMMENT 'cola', colb STRING) USING ICEBERG PARTITIONED BY (colb)"}
+{"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE IF NOT EXISTS t (cola INT, colb STRING) USING ICEBERG PARTITIONED BY (colb)"}
+{"dialect":"duckdb","category":"parse: Expected ]","sql":"SELECT UNNEST([*COLUMNS('alias_.*')]) AS column_name"}
+{"dialect":"duckdb","category":"parse: Expected ]","sql":"SELECT [4, 5, 6] AS l, [x FOR x, i IN l IF i = 2] AS filtered"}
+{"dialect":"duckdb","category":"parse: Expected ]","sql":"[x.STRING_SPLIT(' ')[i] FOR x IN ['1', '2', 3] IF x.CONTAINS('1')]"}
+{"dialect":"duckdb","category":"parse: Expecting","sql":"WITH RECURSIVE tbl(a, b) USING KEY (a) AS (SELECT a, b FROM (VALUES (1, 3), (2, 4)) AS t(a, b) UNION SELECT a + 1, b FROM tbl WHERE a < 3) SELECT * FROM tbl"}
+{"dialect":"duckdb","category":"parse: Expecting","sql":"WITH RECURSIVE tbl(a, b) USING KEY (a, b) AS (SELECT a, b FROM (VALUES (1, 3), (2, 4)) AS t(a, b) UNION SELECT a + 1, b FROM tbl WHERE a < 3) SELECT * FROM tbl"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT * FROM my_ducklake.demo AT (VERSION => 2)"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) LIMIT 1 OFFSET 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) LIMIT 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) OFFSET 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 LIMIT 1 OFFSET 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 LIMIT 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 OFFSET 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1) INTERSECT (SELECT 1))"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT COALESCE(*COLUMNS(*)) FROM (SELECT NULL, 2, 3) AS t(a, b, c)"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT COALESCE(*COLUMNS(['a', 'b', 'c'])) AS result FROM (SELECT NULL AS a, 42 AS b, TRUE AS c)"}
+{"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT id, STRUCT_PACK(*COLUMNS('m\\d')) AS measurements FROM many_measurements"}
+{"dialect":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"CREATE MACRO add_x (a, b) AS a + b, (a, b, c) AS a + b + c"}
+{"dialect":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"CREATE MACRO foo (a TINYINT) AS a + 1, (a INT) AS a + 2"}
+{"dialect":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"CREATE MACRO is_maximal (a TINYINT) AS a = 127, (a INT) AS a = 2147483647"}
+{"dialect":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"CREATE MACRO tbl (a) AS TABLE (SELECT a AS x), (a, b) AS TABLE (SELECT a AS x, b AS y)"}
+{"dialect":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"CREATE OR REPLACE MACRO foo (a) AS a, (a, b) AS a + b, (a, b, c) AS a + b + c"}
+{"dialect":"duckdb","category":"parse: Required keyword","sql":"SELECT * FROM t1 AS a AT (VERSION => 3) JOIN t2 AS b AT (TIMESTAMP => NOW() - INTERVAL '1' WEEK) ON a.id = b.id"}

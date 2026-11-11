@@ -62,6 +62,13 @@ func init() {
 	sparkSetParsers["VAR"] = func(p *Parser) exp.Expression { return p.parseSetItemAssignment("VARIABLE") }
 	sparkSetParsers["VARIABLE"] = func(p *Parser) exp.Expression { return p.parseSetItemAssignment("VARIABLE") }
 	sparkSetTrie = newTrie(setParserKeys(sparkSetParsers))
+	// parsers/duckdb.py:272-275 SET_PARSERS adds VARIABLE.
+	duckdbSetParsers = make(map[string]func(*Parser) exp.Expression, len(setParsers)+1)
+	for k, v := range setParsers {
+		duckdbSetParsers[k] = v
+	}
+	duckdbSetParsers["VARIABLE"] = func(p *Parser) exp.Expression { return p.parseSetItemAssignment("VARIABLE") }
+	duckdbSetTrie = newTrie(setParserKeys(duckdbSetParsers))
 }
 
 // setParsers/setTrie port the base SET_PARSERS/SET_TRIE (parser.py:1553-1558, 1855).
@@ -75,8 +82,10 @@ var (
 	postgresSetParsers map[string]func(*Parser) exp.Expression
 	postgresSetTrie    wordTrie
 
-	sparkSetParsers map[string]func(*Parser) exp.Expression
-	sparkSetTrie    wordTrie
+	duckdbSetParsers map[string]func(*Parser) exp.Expression
+	duckdbSetTrie    wordTrie
+	sparkSetParsers  map[string]func(*Parser) exp.Expression
+	sparkSetTrie     wordTrie
 )
 
 func setParserKeys(parsers map[string]func(*Parser) exp.Expression) []string {
@@ -144,6 +153,8 @@ func (p *Parser) parseSetItem() exp.Expression {
 		parsers, trie = postgresSetParsers, postgresSetTrie
 	case "spark", "databricks":
 		parsers, trie = sparkSetParsers, sparkSetTrie
+	case "duckdb":
+		parsers, trie = duckdbSetParsers, duckdbSetTrie
 	}
 	// Capture the index BEFORE findParser (which consumes the dispatch keyword) so a dispatched
 	// special-form parser that fails on a malformed tail can be retreated ATOMICALLY — the whole item,

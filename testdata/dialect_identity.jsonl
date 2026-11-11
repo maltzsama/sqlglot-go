@@ -1438,6 +1438,571 @@
 {"dialect": "doris", "sql": "UPDATE accounts a SET a.balance = a.balance + 100, a.status_code = 'active' WHERE a.account_type = 'savings'", "want": "UPDATE accounts a SET a.balance = a.balance + 100, a.status_code = 'active' WHERE a.account_type = 'savings'", "pretty": false, "identify": false}
 {"dialect": "doris", "sql": "UPDATE employees e SET e.salary = e.salary * 1.1 WHERE e.department = 'IT'", "want": "UPDATE employees e SET e.salary = e.salary * 1.1 WHERE e.department = 'IT'", "pretty": false, "identify": false}
 {"dialect": "doris", "sql": "UPDATE prices p SET p.amount = p.amount * 0.9 WHERE p.product_id IN (SELECT pr.id FROM products AS pr JOIN categories AS c ON pr.category_id = c.id WHERE c.foo = 'Electronics')", "want": "UPDATE prices p SET p.amount = p.amount * 0.9 WHERE p.product_id IN (SELECT pr.id FROM products AS pr JOIN categories AS c ON pr.category_id = c.id WHERE c.foo = 'Electronics')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "\n            SELECT\n                l_returnflag,\n                l_linestatus,\n                sum_qty:        sum(l_quantity),\n                sum_base_price: sum(l_extendedprice),\n                sum_disc_price: sum(l_extendedprice * (1-l_discount)),\n                sum_charge:     sum(l_extendedprice * (1-l_discount) * (1+l_tax)),\n                avg_qty:        avg(l_quantity),\n                avg_price:      avg(l_extendedprice),\n                avg_disc:       avg(l_discount),\n                count_order:    count(*)\n            ", "want": "SELECT l_returnflag, l_linestatus, SUM(l_quantity) AS sum_qty, SUM(l_extendedprice) AS sum_base_price, SUM(l_extendedprice * (1 - l_discount)) AS sum_disc_price, SUM(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge, AVG(l_quantity) AS avg_qty, AVG(l_extendedprice) AS avg_price, AVG(l_discount) AS avg_disc, COUNT(*) AS count_order", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "'red' IN flags", "want": "'red' IN flags", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "'red' IN tbl.flags", "want": "'red' IN tbl.flags", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "(FROM (SELECT 1) t1(c) EXCEPT FROM (SELECT 2) t2(c)) UNION ALL (FROM (SELECT 3) t3(c) EXCEPT FROM (SELECT 4) t4(c))", "want": "(SELECT * FROM (SELECT 1) AS t1(c) EXCEPT SELECT * FROM (SELECT 2) AS t2(c)) UNION ALL (SELECT * FROM (SELECT 3) AS t3(c) EXCEPT SELECT * FROM (SELECT 4) AS t4(c))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "123::CHARACTER VARYING", "want": "CAST(123 AS TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "1d", "want": "1 AS d", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ALTER TABLE \"db\".\"t1\" RENAME TO \"db\".\"t2\"", "want": "ALTER TABLE \"db\".\"t1\" RENAME TO \"t2\"", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ALTER TABLE db.t1 RENAME TO db.t2", "want": "ALTER TABLE db.t1 RENAME TO t2", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ANALYZE", "want": "ANALYZE", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARG_MAX(keyword_name, keyword_category, 3 ORDER BY keyword_name DESC)", "want": "ARG_MAX(keyword_name, keyword_category, 3 ORDER BY keyword_name DESC)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARG_MIN({'d': \"DATE\", 'ts': \"TIMESTAMP\", 'i': \"INT\", 'b': \"BIGINT\", 's': \"VARCHAR\"}, \"DOUBLE\")", "want": "ARG_MIN({'d': \"DATE\", 'ts': \"TIMESTAMP\", 'i': \"INT\", 'b': \"BIGINT\", 's': \"VARCHAR\"}, \"DOUBLE\")", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY((SELECT id FROM t))", "want": "ARRAY((SELECT id FROM t))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY(SELECT id FROM t)", "want": "ARRAY(SELECT id FROM t)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_COMPACT(NULL)", "want": "LIST_FILTER(NULL, _u -> NOT _u IS NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_COMPACT(['a', NULL, 'b', NULL, 'c'])", "want": "LIST_FILTER(['a', NULL, 'b', NULL, 'c'], _u -> NOT _u IS NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_COMPACT([1, NULL, 2, NULL, 3])", "want": "LIST_FILTER([1, NULL, 2, NULL, 3], _u -> NOT _u IS NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_COMPACT([[1, 2], NULL, [3, 4]])", "want": "LIST_FILTER([[1, 2], NULL, [3, 4]], _u -> NOT _u IS NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_COMPACT([])", "want": "LIST_FILTER([], _u -> NOT _u IS NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_CONSTRUCT_COMPACT('a', NULL, 'b', NULL, 'c')", "want": "LIST_FILTER(['a', NULL, 'b', NULL, 'c'], _u -> NOT _u IS NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_CONSTRUCT_COMPACT()", "want": "LIST_FILTER([], _u -> NOT _u IS NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_CONSTRUCT_COMPACT(1, 2, 3, 4, 5)", "want": "LIST_FILTER([1, 2, 3, 4, 5], _u -> NOT _u IS NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_REVERSE_SORT(x)", "want": "ARRAY_REVERSE_SORT(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_SLICE(x, 1, 3, 2)", "want": "ARRAY_SLICE(x, 1, 3, 2)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ARRAY_TO_STRING(arr, delim)", "want": "ARRAY_TO_STRING(arr, delim)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ATTACH ':memory:' AS db_alias", "want": "ATTACH ':memory:' AS db_alias", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ATTACH 'file.db'", "want": "ATTACH 'file.db'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ATTACH 'file.db' (READ_ONLY FALSE, TYPE sqlite)", "want": "ATTACH 'file.db' (READ_ONLY FALSE, TYPE sqlite)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ATTACH 'file.db' (TYPE POSTGRES, SCHEMA 'public')", "want": "ATTACH 'file.db' (TYPE POSTGRES, SCHEMA 'public')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ATTACH 'file.db' AS db_alias (READ_ONLY)", "want": "ATTACH 'file.db' AS db_alias (READ_ONLY)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ATTACH DATABASE 'file.db'", "want": "ATTACH 'file.db'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ATTACH IF NOT EXISTS 'file.db' AS db_alias", "want": "ATTACH IF NOT EXISTS 'file.db' AS db_alias", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(ROW(1, ROW(1)) AS STRUCT(number BIGINT, row STRUCT(number BIGINT)))", "want": "CAST(ROW(1, ROW(1)) AS STRUCT(number BIGINT, row STRUCT(number BIGINT)))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST([STRUCT_PACK(a := 1)] AS STRUCT(a BIGINT)[])", "want": "CAST([{'a': 1}] AS STRUCT(a BIGINT)[])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST([[STRUCT_PACK(a := 1)]] AS STRUCT(a BIGINT)[][])", "want": "CAST([[{'a': 1}]] AS STRUCT(a BIGINT)[][])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(start AS TIMESTAMPTZ) AT TIME ZONE 'America/New_York'", "want": "CAST(start AS TIMESTAMPTZ) AT TIME ZONE 'America/New_York'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS BINARY)", "want": "CAST(x AS BLOB)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS BIT)", "want": "CAST(x AS BIT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS BLOB)", "want": "CAST(x AS BLOB)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS BPCHAR)", "want": "CAST(x AS TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS BYTEA)", "want": "CAST(x AS BLOB)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS CHAR)", "want": "CAST(x AS TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS DATE)", "want": "CAST(x AS DATE)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS DECIMAL(15, 4))", "want": "CAST(x AS DECIMAL(15, 4))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS DECIMAL)", "want": "CAST(x AS DECIMAL(18, 3))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS DOUBLE)", "want": "CAST(x AS DOUBLE)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS FLOAT)", "want": "CAST(x AS REAL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS FLOAT4)", "want": "CAST(x AS REAL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS FOO)", "want": "CAST(x AS FOO)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS HUGEINT)", "want": "CAST(x AS INT128)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS INT1)", "want": "CAST(x AS TINYINT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS INT128)", "want": "CAST(x AS INT128)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS INT16)", "want": "CAST(x AS SMALLINT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS INT32)", "want": "CAST(x AS INT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS INT4)", "want": "CAST(x AS INT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS INT64)", "want": "CAST(x AS BIGINT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS INT8)", "want": "CAST(x AS BIGINT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS INTEGER)", "want": "CAST(x AS INT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS LOGICAL)", "want": "CAST(x AS BOOLEAN)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS NUMERIC(1, 2))", "want": "CAST(x AS DECIMAL(1, 2))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS NUMERIC)", "want": "CAST(x AS DECIMAL(18, 3))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS REAL)", "want": "CAST(x AS REAL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS SIGNED)", "want": "CAST(x AS INT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS STRING)", "want": "CAST(x AS TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS STRUCT(number BIGINT))", "want": "CAST(x AS STRUCT(number BIGINT))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS TEXT)", "want": "CAST(x AS TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS UBIGINT)", "want": "CAST(x AS UBIGINT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS UHUGEINT)", "want": "CAST(x AS UINT128)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS UINTEGER)", "want": "CAST(x AS UINTEGER)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS USMALLINT)", "want": "CAST(x AS USMALLINT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS UTINYINT)", "want": "CAST(x AS UTINYINT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS UUID)", "want": "CAST(x AS UUID)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS VARBINARY)", "want": "CAST(x AS BLOB)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS VARCHAR(5))", "want": "CAST(x AS TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST(x AS VARCHAR)", "want": "CAST(x AS TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CAST({'i': 1, 's': 'foo'} AS STRUCT(\"s\" TEXT, \"i\" INT))", "want": "CAST({'i': 1, 's': 'foo'} AS STRUCT(\"s\" TEXT, \"i\" INT))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "COL::BIGINT[]", "want": "CAST(COL AS BIGINT[])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "COPY (SELECT * FROM \"input.parquet\" USING SAMPLE RESERVOIR (5000 ROWS)) TO 'output.parquet' WITH (FORMAT PARQUET, KV_METADATA {'origin': 'Dagster', 'dagster_run_id': '98c85a11-d05c-4935-bfa2-198214c2204'})", "want": "COPY (SELECT * FROM \"input.parquet\" USING SAMPLE RESERVOIR (5000 ROWS)) TO 'output.parquet' WITH (FORMAT PARQUET, KV_METADATA {'origin': 'Dagster', 'dagster_run_id': '98c85a11-d05c-4935-bfa2-198214c2204'})", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "COPY (SELECT 42 AS a, 'hello' AS b) TO 'query.json' WITH (FORMAT JSON, ARRAY TRUE)", "want": "COPY (SELECT 42 AS a, 'hello' AS b) TO 'query.json' WITH (FORMAT JSON, ARRAY TRUE)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "COPY lineitem (l_orderkey) TO 'orderkey.tbl' WITH (DELIMITER '|')", "want": "COPY lineitem (l_orderkey) TO 'orderkey.tbl' WITH (DELIMITER '|')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "COPY lineitem FROM 'lineitem.ndjson' WITH (FORMAT JSON, DELIMITER ',', AUTO_DETECT TRUE, COMPRESSION SNAPPY, CODEC ZSTD, FORCE_NOT_NULL (col1, col2))", "want": "COPY lineitem FROM 'lineitem.ndjson' WITH (FORMAT JSON, DELIMITER ',', AUTO_DETECT TRUE, COMPRESSION SNAPPY, CODEC ZSTD, FORCE_NOT_NULL (col1, col2))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "COUNT_IF(x)", "want": "COUNT_IF(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE FUNCTION add(a, b) AS a + b", "want": "CREATE FUNCTION add(a, b) AS a + b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE FUNCTION ifelse(a, b, c) AS CASE WHEN a THEN b ELSE c END", "want": "CREATE FUNCTION ifelse(a, b, c) AS CASE WHEN a THEN b ELSE c END", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE FUNCTION my_table_function(a, b) AS TABLE SELECT x, y FROM (VALUES (a, b)) AS tbl(x, y)", "want": "CREATE FUNCTION my_table_function(a, b) AS TABLE SELECT x, y FROM (VALUES (a, b)) AS tbl(x, y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE MACRO add(a, b) AS a + b", "want": "CREATE MACRO add(a, b) AS a + b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE MACRO add_x (a, b) AS a + b, (a, b, c) AS a + b + c", "want": "CREATE MACRO add_x (a, b) AS a + b, (a, b, c) AS a + b + c", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE MACRO foo (a TINYINT) AS a + 1, (a INT) AS a + 2", "want": "CREATE MACRO foo (a TINYINT) AS a + 1, (a INT) AS a + 2", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE MACRO foo(a TINYINT) AS a = 127", "want": "CREATE MACRO foo(a TINYINT) AS a = 127", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE MACRO ifelse(a, b, c) AS CASE WHEN a THEN b ELSE c END", "want": "CREATE MACRO ifelse(a, b, c) AS CASE WHEN a THEN b ELSE c END", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE MACRO is_maximal (a TINYINT) AS a = 127, (a INT) AS a = 2147483647", "want": "CREATE MACRO is_maximal (a TINYINT) AS a = 127, (a INT) AS a = 2147483647", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE MACRO my_table_function(a, b) AS TABLE SELECT x, y FROM (VALUES (a, b)) AS tbl(x, y)", "want": "CREATE MACRO my_table_function(a, b) AS TABLE SELECT x, y FROM (VALUES (a, b)) AS tbl(x, y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE MACRO tbl (a) AS TABLE (SELECT a AS x), (a, b) AS TABLE (SELECT a AS x, b AS y)", "want": "CREATE MACRO tbl (a) AS TABLE (SELECT a AS x), (a, b) AS TABLE (SELECT a AS x, b AS y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE OR REPLACE FUNCTION func(a INT, b FLOAT) AS TABLE SELECT a", "want": "CREATE OR REPLACE FUNCTION func(a INT, b REAL) AS TABLE SELECT a", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE OR REPLACE MACRO foo (a) AS a, (a, b) AS a + b, (a, b, c) AS a + b + c", "want": "CREATE OR REPLACE MACRO foo (a) AS a, (a, b) AS a + b, (a, b, c) AS a + b + c", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE SEQUENCE serial START 101", "want": "CREATE SEQUENCE serial START WITH 101", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE SEQUENCE serial START WITH 1 INCREMENT BY 2", "want": "CREATE SEQUENCE serial START WITH 1 INCREMENT BY 2", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE SEQUENCE serial START WITH 1 MAXVALUE 10 CYCLE", "want": "CREATE SEQUENCE serial START WITH 1 MAXVALUE 10 CYCLE", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE SEQUENCE serial START WITH 1 MAXVALUE 10 NO CYCLE", "want": "CREATE SEQUENCE serial START WITH 1 MAXVALUE 10 NO CYCLE", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE SEQUENCE serial START WITH 99 INCREMENT BY -1 MAXVALUE 99", "want": "CREATE SEQUENCE serial START WITH 99 INCREMENT BY -1 MAXVALUE 99", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE TABLE IF NOT EXISTS t (cola INT COMMENT 'cola', colb STRING) USING ICEBERG PARTITIONED BY (colb)", "want": "CREATE TABLE IF NOT EXISTS t (cola INT, colb TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE TABLE IF NOT EXISTS t (cola INT, colb STRING) USING ICEBERG PARTITIONED BY (colb)", "want": "CREATE TABLE IF NOT EXISTS t (cola INT, colb TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE TABLE color (name ENUM('RED', 'GREEN', 'BLUE'))", "want": "CREATE TABLE color (name ENUM('RED', 'GREEN', 'BLUE'))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE TABLE notes (watermark TEXT)", "want": "CREATE TABLE notes (watermark TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE TABLE t1 AS (FROM t2 SELECT foo1, foo2)", "want": "CREATE TABLE t1 AS (SELECT foo1, foo2 FROM t2)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE TABLE tbl1 (u UNION(num INT, str TEXT))", "want": "CREATE TABLE tbl1 (u UNION(num INT, str TEXT))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CREATE TABLE tbl_summary AS SELECT * FROM (SUMMARIZE tbl)", "want": "CREATE TABLE tbl_summary AS SELECT * FROM (SUMMARIZE tbl)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "CURRENT_LOCALTIMESTAMP()", "want": "LOCALTIMESTAMP", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "DATESUB('YEAR', col, '2020-01-01')", "want": "DATESUB('YEAR', col, '2020-01-01')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "DATE_SUB('YEAR', col, '2020-01-01')", "want": "DATE_SUB('YEAR', col, '2020-01-01')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "DATE_TRUNC('DAY', x)", "want": "DATE_TRUNC('DAY', x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "DAYNAME(x)", "want": "DAYNAME(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "DECODE(x)", "want": "DECODE(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "DELETE FROM t USING (VALUES (1)) AS t1(c), (VALUES (1), (2)) AS t2(c) WHERE t.c = t1.c AND t.c = t2.c", "want": "DELETE FROM t USING (VALUES (1)) AS t1(c), (VALUES (1), (2)) AS t2(c) WHERE t.c = t1.c AND t.c = t2.c", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "DETACH DATABASE IF EXISTS file", "want": "DETACH DATABASE IF EXISTS file", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "DETACH DATABASE db", "want": "DETACH db", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "DETACH IF EXISTS file", "want": "DETACH DATABASE IF EXISTS file", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "DETACH new_database", "want": "DETACH new_database", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EDITDIST3(col1, col2)", "want": "LEVENSHTEIN(col1, col2)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ENCODE(x)", "want": "ENCODE(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EPOCH(x)", "want": "EPOCH(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EPOCH_MS(x)", "want": "EPOCH_MS(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EXTRACT(ISODOW FROM foo)", "want": "EXTRACT(ISODOW FROM foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EXTRACT(ISOYEAR FROM foo)", "want": "EXTRACT(ISOYEAR FROM foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EXTRACT(TIMEZONE_HOUR FROM foo)", "want": "EXTRACT(TIMEZONE_HOUR FROM foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EXTRACT(TIMEZONE_MINUTE FROM foo)", "want": "EXTRACT(TIMEZONE_MINUTE FROM foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EXTRACT(WEEK FROM foo)", "want": "EXTRACT(WEEK FROM foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EXTRACT(WEEKDAY FROM foo)", "want": "EXTRACT(WEEKDAY FROM foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EXTRACT(WEEKOFYEAR FROM foo)", "want": "EXTRACT(WEEK FROM foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "EXTRACT(YEARWEEK FROM foo)", "want": "EXTRACT(YEARWEEK FROM foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FORCE CHECKPOINT db", "want": "FORCE CHECKPOINT db", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FORCE INSTALL httpfs", "want": "FORCE INSTALL httpfs", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FORCE INSTALL httpfs FROM 'https://extensions.duckdb.org'", "want": "FORCE INSTALL httpfs FROM 'https://extensions.duckdb.org'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FORCE INSTALL httpfs FROM community", "want": "FORCE INSTALL httpfs FROM community", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FORMAT('foo')", "want": "FORMAT('foo')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FORMAT('foo', 'foo2', 'foo3')", "want": "FORMAT('foo', 'foo2', 'foo3')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM  x SELECT x UNION SELECT 1", "want": "SELECT x FROM x UNION SELECT 1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM (FROM (SELECT 1) AS t2(c), (SELECT t2.c AS c0))", "want": "SELECT * FROM (SELECT * FROM (SELECT 1) AS t2(c), (SELECT t2.c AS c0))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM (FROM (SELECT 2000 as amount) t GROUP BY amount HAVING SUM(amount) > 1000)", "want": "SELECT * FROM (SELECT * FROM (SELECT 2000 AS amount) AS t GROUP BY amount HAVING SUM(amount) > 1000)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM (FROM a) AS t1 JOIN (FROM b) AS t2 ON t1.x = t2.x JOIN (FROM c) AS t3 ON t2.y = t3.y SELECT t1.x, t2.x, t3.y", "want": "SELECT t1.x, t2.x, t3.y FROM (SELECT * FROM a) AS t1 JOIN (SELECT * FROM b) AS t2 ON t1.x = t2.x JOIN (SELECT * FROM c) AS t3 ON t2.y = t3.y", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM (FROM t1 LEFT JOIN t2 USING (id) SELECT *)", "want": "SELECT * FROM (SELECT * FROM t1 LEFT JOIN t2 USING (id))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM (FROM t1 SELECT foo1, foo2)", "want": "SELECT * FROM (SELECT foo1, foo2 FROM t1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM (FROM t1 UNION FROM t2)", "want": "SELECT * FROM (SELECT * FROM t1 UNION SELECT * FROM t2)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM (FROM tbl)", "want": "SELECT * FROM (SELECT * FROM tbl)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM (FROM tbl_1) AS t1 POSITIONAL JOIN (FROM tbl_2) AS t2 SELECT t1.x AS x1, t2.x AS x2", "want": "SELECT t1.x AS x1, t2.x AS x2 FROM (SELECT * FROM tbl_1) AS t1 POSITIONAL JOIN (SELECT * FROM tbl_2) AS t2", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM t1, t2 SELECT *", "want": "SELECT * FROM t1, t2", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM tbl", "want": "SELECT * FROM tbl", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "FROM_HEX('AA')", "want": "UNHEX('AA')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "INSERT INTO t DEFAULT VALUES RETURNING (c1)", "want": "INSERT INTO t DEFAULT VALUES RETURNING (c1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "INSERT INTO x BY NAME SELECT 1 AS y", "want": "INSERT INTO x BY NAME SELECT 1 AS y", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "INSTALL httpfs", "want": "INSTALL httpfs", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "INSTALL httpfs FROM 'https://extensions.duckdb.org'", "want": "INSTALL httpfs FROM 'https://extensions.duckdb.org'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "INSTALL httpfs FROM community", "want": "INSTALL httpfs FROM community", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ISINF(x)", "want": "ISINF(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ISNAN(x)", "want": "ISNAN(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "JARO_WINKLER_SIMILARITY('hello', 'world')", "want": "JARO_WINKLER_SIMILARITY('hello', 'world')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "JSON_EXTRACT(x, '$.family')", "want": "x -> '$.family'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "JSON_EXTRACT_PATH(x, '$.family')", "want": "x -> '$.family'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "JSON_EXTRACT_PATH_TEXT(x, '$.family')", "want": "x ->> '$.family'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "JSON_EXTRACT_STRING(x, '$.family')", "want": "x ->> '$.family'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "LISTAGG(x, ', ')", "want": "LISTAGG(x, ', ')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "LIST_CONCAT([1, 2], [3, 4])", "want": "LIST_CONCAT([1, 2], [3, 4])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "LIST_CONTAINS([1, 2, NULL], 1)", "want": "ARRAY_CONTAINS([1, 2, NULL], 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "LIST_CONTAINS([1, 2, NULL], NULL)", "want": "ARRAY_CONTAINS([1, 2, NULL], NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "LIST_COSINE_DISTANCE(x, y)", "want": "LIST_COSINE_DISTANCE(x, y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "LIST_DISTANCE(x, y)", "want": "LIST_DISTANCE(x, y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "LIST_HAS_ANY([1, 2, 3], [1,2])", "want": "[1, 2, 3] && [1, 2]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "LIST_REVERSE_SORT(x)", "want": "ARRAY_REVERSE_SORT(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "LIST_SORT(x)", "want": "LIST_SORT(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "MAKE_TIMESTAMP(1667810584123456)", "want": "MAKE_TIMESTAMP(1667810584123456)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "MAKE_TIMESTAMP(1992, 9, 20, 13, 34, 27.123456)", "want": "MAKE_TIMESTAMP(1992, 9, 20, 13, 34, 27.123456)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "MAP {'1': 'a', '2': 'b'}", "want": "MAP {'1': 'a', '2': 'b'}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "MAP {1: 'a', 2: 'b'}", "want": "MAP {1: 'a', 2: 'b'}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "MAP {[1, 2]: 'a', [3, 4]: 'b'}", "want": "MAP {[1, 2]: 'a', [3, 4]: 'b'}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "MERGE INTO people USING (SELECT 1 AS id, 98000.0 AS salary) AS salary_updates USING (id) WHEN MATCHED THEN UPDATE", "want": "MERGE INTO people USING (SELECT 1 AS id, 98000.0 AS salary) AS salary_updates USING (id) WHEN MATCHED THEN UPDATE", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "MERGE INTO people USING (SELECT 1 AS id, 98000.0 AS salary) AS salary_updates USING (id) WHEN MATCHED THEN UPDATE SET salary = salary_updates.salary", "want": "MERGE INTO people USING (SELECT 1 AS id, 98000.0 AS salary) AS salary_updates USING (id) WHEN MATCHED THEN UPDATE SET salary = salary_updates.salary", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "MONTH('2021-03-01')", "want": "MONTH('2021-03-01')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "MONTHNAME(x)", "want": "MONTHNAME(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT (FROM tbl_1 LEFT JOIN tbl_2 USING (id) SELECT *) ON col_1 USING SUM(col_2)", "want": "PIVOT (SELECT * FROM tbl_1 LEFT JOIN tbl_2 USING (id)) ON col_1 USING SUM(col_2)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT Cities ON Country || '_' || Name USING SUM(Population)", "want": "PIVOT Cities ON Country || '_' || Name USING SUM(Population)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT Cities ON Country, Name USING SUM(Population)", "want": "PIVOT Cities ON Country, Name USING SUM(Population)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT Cities ON Year IN (2000, 2010) USING SUM(Population) GROUP BY Country", "want": "PIVOT Cities ON Year IN (2000, 2010) USING SUM(Population) GROUP BY Country", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT Cities ON Year USING FIRST(Population)", "want": "PIVOT Cities ON Year USING FIRST(Population)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT Cities ON Year USING SUM(Population)", "want": "PIVOT Cities ON Year USING SUM(Population)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT Cities ON Year USING SUM(Population) AS total, MAX(Population) AS max GROUP BY Country", "want": "PIVOT Cities ON Year USING SUM(Population) AS total, MAX(Population) AS max GROUP BY Country", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT Cities ON Year USING SUM(Population) GROUP BY Country", "want": "PIVOT Cities ON Year USING SUM(Population) GROUP BY Country", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT Cities ON Year USING SUM(Population) GROUP BY Country, Name", "want": "PIVOT Cities ON Year USING SUM(Population) GROUP BY Country, Name", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT duckdb_functions() ON schema_name USING AVG(LENGTH(function_name))::INTEGER GROUP BY schema_name", "want": "PIVOT DUCKDB_FUNCTIONS() ON schema_name USING CAST(AVG(LENGTH(function_name)) AS INT) GROUP BY schema_name", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "PIVOT_WIDER Cities ON Year USING SUM(Population)", "want": "PIVOT Cities ON Year USING SUM(Population)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "QUANTILE(x, 0.5)", "want": "QUANTILE(x, 0.5)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "REGEXP_FULL_MATCH(x, y, 'i')", "want": "REGEXP_FULL_MATCH(x, y, 'i')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "REGEXP_MATCHES(x, y)", "want": "REGEXP_MATCHES(x, y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "REGEXP_REPLACE(this, pattern, replacement)", "want": "REGEXP_REPLACE(this, pattern, replacement)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "REGEXP_REPLACE(this, pattern, replacement, 'g')", "want": "REGEXP_REPLACE(this, pattern, replacement, 'g')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "REGEXP_REPLACE(this, pattern, replacement, 'gi')", "want": "REGEXP_REPLACE(this, pattern, replacement, 'gi')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "REGEXP_REPLACE(this, pattern, replacement, 'ims')", "want": "REGEXP_REPLACE(this, pattern, replacement, 'ims')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "RESET GLOBAL memory_limit", "want": "RESET GLOBAL memory_limit", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "RESET LOCAL threads", "want": "RESET LOCAL threads", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "RESET SESSION default_collation", "want": "RESET SESSION default_collation", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "RESET SESSION threads", "want": "RESET SESSION threads", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "RESET default_collation", "want": "RESET default_collation", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "RESET memory_limit", "want": "RESET memory_limit", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "RESET threads", "want": "RESET threads", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "ROUND(2.256, 1)", "want": "ROUND(2.256, 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT \"foo\" /* bla */: 1", "want": "SELECT 1 AS \"foo\" /* bla */", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT \"foo\": /* bla */ 1", "want": "SELECT 1 AS \"foo\" /* bla */", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT \"foo\": /* bla */ 1 /* foo */", "want": "SELECT 1 AS \"foo\" /* bla */ /* foo */", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT \"foo\": 1", "want": "SELECT 1 AS \"foo\"", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT \"foo\": 1 /* bla */", "want": "SELECT 1 AS \"foo\" /* bla */", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT #2 AS a, #1 AS b FROM (VALUES (1, 'foo'))", "want": "SELECT #2 AS a, #1 AS b FROM (VALUES (1, 'foo'))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT #2, #1 FROM (VALUES (1, 'foo'))", "want": "SELECT #2, #1 FROM (VALUES (1, 'foo'))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT $$foo$$", "want": "SELECT 'foo'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT $foo", "want": "SELECT $foo", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT $tag$foo$tag$", "want": "SELECT 'foo'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT $\ud83e\udd86$foo$\ud83e\udd86$", "want": "SELECT 'foo'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT '{ \"family\": \"anatidae\", \"species\": [ \"duck\", \"goose\", \"swan\", null ] }' ->> ['$.family', '$.species']", "want": "SELECT '{ \"family\": \"anatidae\", \"species\": [ \"duck\", \"goose\", \"swan\", null ] }' ->> ['$.family', '$.species']", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT '{\"duck\": [1, 2, 3]}' -> '$.duck[#-1]'", "want": "SELECT '{\"duck\": [1, 2, 3]}' -> '$.duck[#-1]'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT '{\"foo\": [1, 2, 3]}' -> 'foo' -> 0", "want": "SELECT '{\"foo\": [1, 2, 3]}' -> '$.foo' -> '$[0]'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT '{\"x\": 1}' -> c FROM t", "want": "SELECT '{\"x\": 1}' -> c FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ($$hello)'world$$)", "want": "SELECT ('hello)''world')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT (@-1) + 1", "want": "SELECT (ABS(-1)) + 1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT (@col) + 1 FROM t", "want": "SELECT (ABS(col)) + 1 FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT (MAP {'x': 1})['x']", "want": "SELECT (MAP {'x': 1})['x']", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ([1,2,3])[:-:-1]", "want": "SELECT ([1, 2, 3])[:-1:-1]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT (x, x + 1, y) FROM (SELECT 1 AS x, 'a' AS y)", "want": "SELECT (x, x + 1, y) FROM (SELECT 1 AS x, 'a' AS y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM 'x.y'", "want": "SELECT * FROM \"x.y\"", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM (DESCRIBE t)", "want": "SELECT * FROM (DESCRIBE t)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM (PIVOT Cities ON Year USING SUM(Population) GROUP BY Country) AS pivot_alias", "want": "SELECT * FROM (PIVOT Cities ON Year USING SUM(Population) GROUP BY Country) AS pivot_alias", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM (SELECT * FROM t) AS t1 TABLESAMPLE (1 ROWS), (SELECT * FROM t) AS t2 TABLESAMPLE (2 ROWS)", "want": "SELECT * FROM (SELECT * FROM t) AS t1 TABLESAMPLE RESERVOIR (1 ROWS), (SELECT * FROM t) AS t2 TABLESAMPLE RESERVOIR (2 ROWS)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM (UNPIVOT monthly_sales ON COLUMNS(* EXCLUDE (empid, dept)) INTO NAME month VALUE sales) AS unpivot_alias", "want": "SELECT * FROM (UNPIVOT monthly_sales ON COLUMNS(* EXCLUDE (empid, dept)) INTO NAME month VALUE sales) AS unpivot_alias", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM GENERATE_SERIES(2, 13, 4)", "want": "SELECT * FROM GENERATE_SERIES(2, 13, 4)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM GLOB(x)", "want": "SELECT * FROM GLOB(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM RANGE(1, 5, 10)", "want": "SELECT * FROM RANGE(1, 5, 10)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM cities PIVOT(SUM(population) FOR year IN (2000, 2010, 2020) GROUP BY country)", "want": "SELECT * FROM cities PIVOT(SUM(population) FOR year IN (2000, 2010, 2020) GROUP BY country)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM example TABLESAMPLE RESERVOIR (3 ROWS) REPEATABLE (82)", "want": "SELECT * FROM example TABLESAMPLE RESERVOIR (3 ROWS) REPEATABLE (82)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM foo /* bla */: /* baz */ bar /* boo */", "want": "SELECT * FROM bar AS foo /* bla */ /* baz */ /* boo */", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM foo /* bla */: bar", "want": "SELECT * FROM bar AS foo /* bla */", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM foo /* bla */: bar /* baz */", "want": "SELECT * FROM bar AS foo /* bla */ /* baz */", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM foo ASOF LEFT JOIN bar ON a = b", "want": "SELECT * FROM foo ASOF LEFT JOIN bar ON a = b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM foo WHERE bar > $baz AND bla = $bob", "want": "SELECT * FROM foo WHERE bar > $baz AND bla = $bob", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM foo: bar", "want": "SELECT * FROM bar AS foo", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM foo: c.db.tbl", "want": "SELECT * FROM c.db.tbl AS foo", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM my_ducklake.demo AT (VERSION => 2)", "want": "SELECT * FROM my_ducklake.demo AT (VERSION => 2)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM r: range(10), v: (VALUES (42)), s: (FROM range(10))", "want": "SELECT * FROM RANGE(0, 10) AS r, (VALUES (42)) AS v, (SELECT * FROM RANGE(0, 10)) AS s", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM t LIMIT 10 PERCENT", "want": "SELECT * FROM t LIMIT 10 PERCENT", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM t LIMIT 10 PERCENT OFFSET 1", "want": "SELECT * FROM t LIMIT 10 PERCENT OFFSET 1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM t LIMIT 10%", "want": "SELECT * FROM t LIMIT 10 PERCENT", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM t LIMIT 10% OFFSET 1", "want": "SELECT * FROM t LIMIT 10 PERCENT OFFSET 1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM t PIVOT(FIRST(t) AS t, FOR quarter IN ('Q1', 'Q2'))", "want": "SELECT * FROM t PIVOT(FIRST(t) AS t FOR quarter IN ('Q1', 'Q2'))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM t PIVOT(SUM(y) FOR foo IN y_enum)", "want": "SELECT * FROM t PIVOT(SUM(y) FOR foo IN y_enum)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM t1 AS a AT (VERSION => 3) JOIN t2 AS b AT (TIMESTAMP => NOW() - INTERVAL '1' WEEK) ON a.id = b.id", "want": "SELECT * FROM t1 AS a AT (VERSION => 3) JOIN t2 AS b AT (TIMESTAMP => NOW() - INTERVAL '1' WEEK) ON a.id = b.id", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM t1 WHERE NOT EXISTS(FROM t2 WHERE t2.id = t1.id)", "want": "SELECT * FROM t1 WHERE NOT EXISTS(SELECT * FROM t2 WHERE t2.id = t1.id)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM tbl TABLESAMPLE RESERVOIR(20%), tbl2 WHERE tbl.i=tbl2.i", "want": "SELECT * FROM tbl TABLESAMPLE RESERVOIR (20 PERCENT), tbl2 WHERE tbl.i = tbl2.i", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM tbl USING SAMPLE 10 PERCENT (bernoulli)", "want": "SELECT * FROM tbl USING SAMPLE BERNOULLI (10 PERCENT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM tbl USING SAMPLE 10%", "want": "SELECT * FROM tbl USING SAMPLE SYSTEM (10 PERCENT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM tbl USING SAMPLE 10% (system, 377)", "want": "SELECT * FROM tbl USING SAMPLE SYSTEM (10 PERCENT) REPEATABLE (377)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM tbl USING SAMPLE 5", "want": "SELECT * FROM tbl USING SAMPLE RESERVOIR (5 ROWS)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM tbl USING SAMPLE reservoir(50 ROWS) REPEATABLE (100)", "want": "SELECT * FROM tbl USING SAMPLE RESERVOIR (50 ROWS) REPEATABLE (100)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM tbl, tbl2 WHERE tbl.i=tbl2.i USING SAMPLE RESERVOIR(20%)", "want": "SELECT * FROM tbl, tbl2 WHERE tbl.i = tbl2.i USING SAMPLE RESERVOIR (20 PERCENT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM x INNER JOIN UNNEST(y) ON TRUE", "want": "SELECT * FROM x INNER JOIN UNNEST(y) ON TRUE", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM x LEFT JOIN UNNEST(y) ON TRUE", "want": "SELECT * FROM x LEFT JOIN UNNEST(y) ON TRUE", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM x LEFT OUTER JOIN UNNEST(y) ON TRUE", "want": "SELECT * FROM x LEFT OUTER JOIN UNNEST(y) ON TRUE", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT * FROM x ORDER BY 1 NULLS LAST", "want": "SELECT * FROM x ORDER BY 1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 AS a$b", "want": "SELECT 1 AS a$b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 AS x UNION ALL BY NAME SELECT 2 AS x", "want": "SELECT 1 AS x UNION ALL BY NAME SELECT 2 AS x", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) LIMIT 1 OFFSET 1) INTERSECT (SELECT 1))", "want": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) LIMIT 1 OFFSET 1) INTERSECT (SELECT 1))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) LIMIT 1) INTERSECT (SELECT 1))", "want": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) LIMIT 1) INTERSECT (SELECT 1))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) OFFSET 1) INTERSECT (SELECT 1))", "want": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) OFFSET 1) INTERSECT (SELECT 1))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 LIMIT 1 OFFSET 1) INTERSECT (SELECT 1))", "want": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 LIMIT 1 OFFSET 1) INTERSECT (SELECT 1))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 LIMIT 1) INTERSECT (SELECT 1))", "want": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 LIMIT 1) INTERSECT (SELECT 1))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 OFFSET 1) INTERSECT (SELECT 1))", "want": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1 OFFSET 1) INTERSECT (SELECT 1))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1) INTERSECT (SELECT 1))", "want": "SELECT 1 FROM (SELECT 1) AS t(c) WHERE ((VALUES (1), (c) ORDER BY 1) INTERSECT (SELECT 1))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 WHERE x > $1", "want": "SELECT 1 WHERE x > $1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1 WHERE x > $name", "want": "SELECT 1 WHERE x > $name", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 1_2E+1_0::FLOAT", "want": "SELECT CAST(12E+10 AS REAL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT 20_000 AS literal", "want": "SELECT 20000 AS literal", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT @(-1)", "want": "SELECT ABS((-1))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT @(-1) + 1", "want": "SELECT ABS((-1) + 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT @col + 1 FROM t", "want": "SELECT ABS(col + 1) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT @col FROM t", "want": "SELECT ABS(col) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ANY_VALUE(sample_column) FROM sample_table", "want": "SELECT ANY_VALUE(sample_column) FROM sample_table", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT APPROX_QUANTILE(a, 0.5) FROM t", "want": "SELECT APPROX_QUANTILE(a, 0.5) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ARRAY[1, 2, 3]", "want": "SELECT [1, 2, 3]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ARRAY[[[1]]]::INT[1][1][1]", "want": "SELECT CAST([[[1]]] AS INT[1][1][1])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ARRAY_AGG(DISTINCT a) FILTER (WHERE a IS NOT NULL)", "want": "SELECT ARRAY_AGG(DISTINCT a) FILTER(WHERE NOT a IS NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ARRAY_AGG(col ORDER BY sort_col) FILTER (WHERE col IS NOT NULL)", "want": "SELECT ARRAY_AGG(col ORDER BY sort_col) FILTER(WHERE NOT col IS NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ARRAY_LENGTH([0], 1) AS x", "want": "SELECT ARRAY_LENGTH([0], 1) AS x", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT AVG(x) FILTER (WHERE TRUE) FROM t", "want": "SELECT AVG(x) FILTER(WHERE TRUE) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT BIT_AND(CAST(val AS DOUBLE)) FROM t", "want": "SELECT BIT_AND(CAST(ROUND(CAST(val AS DOUBLE)) AS INT)) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT BIT_OR(CAST(val AS DECIMAL(10, 2))) FROM t", "want": "SELECT BIT_OR(CAST(CAST(val AS DECIMAL(10, 2)) AS INT)) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT BIT_OR(CAST(val AS FLOAT)) FROM t", "want": "SELECT BIT_OR(CAST(ROUND(CAST(val AS REAL)) AS INT)) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT BIT_XOR(CAST(val AS DECIMAL)) FROM t", "want": "SELECT BIT_XOR(CAST(CAST(val AS DECIMAL(18, 3)) AS INT)) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CARDINALITY(CAST({'a': 1, 'b': 2, 'c': 3} AS MAP(TEXT, DECIMAL(38, 0)))) AS map_size", "want": "SELECT CARDINALITY(CAST({'a': 1, 'b': 2, 'c': 3} AS MAP(TEXT, DECIMAL(38, 0)))) AS map_size", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CASE WHEN 'hello, snowman' IS NULL THEN NULL ELSE ['hello, snowman'] END AS result", "want": "SELECT CASE WHEN 'hello, snowman' IS NULL THEN NULL ELSE ['hello, snowman'] END AS result", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CASE WHEN 4.2 IS NULL THEN NULL ELSE [4.2] END AS result", "want": "SELECT CASE WHEN 4.2 IS NULL THEN NULL ELSE [4.2] END AS result", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CAST('09:05:03' AS TIME) + INTERVAL 2 HOUR", "want": "SELECT CAST('09:05:03' AS TIME) + INTERVAL '2' HOUR", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CAST('12.3456' AS DECIMAL(10, 0))", "want": "SELECT CAST('12.3456' AS DECIMAL(10, 0))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CAST('12.3456' AS DECIMAL(10, 2))", "want": "SELECT CAST('12.3456' AS DECIMAL(10, 2))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CAST('12.3456' AS DECIMAL(38, 0))", "want": "SELECT CAST('12.3456' AS DECIMAL(38, 0))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CAST('2018-01-01 00:00:00' AS DATE) + INTERVAL 3 DAY", "want": "SELECT CAST('2018-01-01 00:00:00' AS DATE) + INTERVAL '3' DAY", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CAST('{\"x\": 1}' AS JSON)", "want": "SELECT CAST('{\"x\": 1}' AS JSON)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CAST(ROW(1, 2) AS ROW(a INTEGER, b INTEGER))", "want": "SELECT CAST(ROW(1, 2) AS STRUCT(a INT, b INT))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CAST(TRIM(CAST(CAST('***apple***' AS BLOB) AS TEXT), CAST(CAST('*' AS BLOB) AS TEXT)) AS BLOB) AS result", "want": "SELECT CAST(TRIM(CAST(CAST('***apple***' AS BLOB) AS TEXT), CAST(CAST('*' AS BLOB) AS TEXT)) AS BLOB) AS result", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COALESCE(*COLUMNS(*)) FROM (SELECT NULL, 2, 3) AS t(a, b, c)", "want": "SELECT COALESCE(*COLUMNS(*)) FROM (SELECT NULL, 2, 3) AS t(a, b, c)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COALESCE(*COLUMNS(['a', 'b', 'c'])) AS result FROM (SELECT NULL AS a, 42 AS b, TRUE AS c)", "want": "SELECT COALESCE(*COLUMNS(['a', 'b', 'c'])) AS result FROM (SELECT NULL AS a, 42 AS b, TRUE AS c)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COALESCE(COLUMNS(['a', 'b', 'c'])) AS result FROM (SELECT NULL AS a, 42 AS b, TRUE AS c)", "want": "SELECT COALESCE(COLUMNS(['a', 'b', 'c'])) AS result FROM (SELECT NULL AS a, 42 AS b, TRUE AS c)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COLUMNS('(id|numbers?)') FROM numbers", "want": "SELECT COLUMNS('(id|numbers?)') FROM numbers", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COLUMNS(*) + COLUMNS(*) FROM numbers", "want": "SELECT COLUMNS(*) + COLUMNS(*) FROM numbers", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COLUMNS(c -> c LIKE '%num%') FROM numbers", "want": "SELECT COLUMNS(c -> c LIKE '%num%') FROM numbers", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CONCAT(COALESCE(['abc'], []), ['bcg'])", "want": "SELECT CONCAT(COALESCE(['abc'], []), ['bcg'])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CONCAT(foo)", "want": "SELECT CONCAT(foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COSH(1.5)", "want": "SELECT COSH(1.5)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COUNT(*) FILTER (WHERE b > 0) FROM t", "want": "SELECT COUNT(*) FILTER(WHERE b > 0) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COUNT(DISTINCT a) FILTER (WHERE b > 0) FROM t", "want": "SELECT COUNT(DISTINCT a) FILTER(WHERE b > 0) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COUNT(t.*) FILTER (WHERE b > 0) FROM t", "want": "SELECT COUNT(t.*) FILTER(WHERE b > 0) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT COUNT_IF(x)", "want": "SELECT COUNT_IF(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CUME_DIST( ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)", "want": "SELECT CUME_DIST( ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CURRENT_DATABASE()", "want": "SELECT CURRENT_DATABASE()", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CURRENT_DATE", "want": "SELECT CURRENT_DATE", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CURRENT_SCHEMA()", "want": "SELECT CURRENT_SCHEMA()", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CURRENT_SCHEMAS(TRUE)", "want": "SELECT CURRENT_SCHEMAS(TRUE)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT CURRENT_TIMESTAMP", "want": "SELECT CURRENT_TIMESTAMP", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT DATEDIFF('day', t1.\"A\", t1.\"B\") FROM \"table\" AS t1", "want": "SELECT DATE_DIFF('DAY', t1.\"A\", t1.\"B\") FROM \"table\" AS t1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT DATE_ADD(CAST('2020-01-01' AS DATE), INTERVAL 1 DAY)", "want": "SELECT CAST('2020-01-01' AS DATE) + INTERVAL '1' DAY", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT DATE_DIFF('day', DATE '2020-01-01', DATE '2020-01-05')", "want": "SELECT DATE_DIFF('DAY', CAST('2020-01-01' AS DATE), CAST('2020-01-05' AS DATE))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT EPOCH_MS(10) AS t", "want": "SELECT EPOCH_MS(10) AS t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT EXP(1)", "want": "SELECT EXP(1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT FIRST_VALUE(c IGNORE NULLS) OVER (PARTITION BY gb ORDER BY ob) FROM t", "want": "SELECT FIRST_VALUE(c IGNORE NULLS) OVER (PARTITION BY gb ORDER BY ob) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT FIRST_VALUE(c RESPECT NULLS) OVER (PARTITION BY gb ORDER BY ob) FROM t", "want": "SELECT FIRST_VALUE(c RESPECT NULLS) OVER (PARTITION BY gb ORDER BY ob) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT FUNCTION", "want": "SELECT FUNCTION", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT GET_BIT(CAST('0110010' AS BIT), 2)", "want": "SELECT GET_BIT(CAST('0110010' AS BIT), 2)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT GET_CURRENT_TIME()", "want": "SELECT CURRENT_TIME", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT GREATEST(1.0, 2.5, NULL, 3.7)", "want": "SELECT GREATEST(1.0, 2.5, NULL, 3.7)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT INTERVAL '1 hour'::VARCHAR", "want": "SELECT CAST(INTERVAL '1' HOUR AS TEXT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT INTERVAL '1 quarter'", "want": "SELECT INTERVAL '1' QUARTER", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ISNAN(x)", "want": "SELECT ISNAN(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON('{\"fruit\": {\"foo\": \"banana\"}}') -> 'fruit' -> 'foo'", "want": "SELECT JSON('{\"fruit\": {\"foo\": \"banana\"}}') -> '$.fruit' -> '$.foo'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON('{\"fruit\":\"banana\"}') -> 'fruit'", "want": "SELECT JSON('{\"fruit\":\"banana\"}') -> '$.fruit'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_ARRAY('a', 'b', 'c')", "want": "SELECT JSON_ARRAY('a', 'b', 'c')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_ARRAY('a', 'b', 'c', 'd', 'e')", "want": "SELECT JSON_ARRAY('a', 'b', 'c', 'd', 'e')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_ARRAY()", "want": "SELECT JSON_ARRAY()", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_ARRAY(NULL)", "want": "SELECT JSON_ARRAY(NULL)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_ARRAY(NULL, 'a', 1)", "want": "SELECT JSON_ARRAY(NULL, 'a', 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_EXTRACT('{\"duck\": [1, 2, 3]}', '/duck/0')", "want": "SELECT '{\"duck\": [1, 2, 3]}' -> '/duck/0'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_EXTRACT(c, '$.k1') = 'v1'", "want": "SELECT (c -> '$.k1') = 'v1'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_EXTRACT(c, '$[*].id')[0:2]", "want": "SELECT (c -> '$[*].id')[0:2]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_EXTRACT_STRING('{ \"family\": \"anatidae\", \"species\": [ \"duck\", \"goose\", \"swan\", null ] }', ['$.family', '$.species'])", "want": "SELECT '{ \"family\": \"anatidae\", \"species\": [ \"duck\", \"goose\", \"swan\", null ] }' ->> ['$.family', '$.species']", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_EXTRACT_STRING(c, '$.k1') = 'v1'", "want": "SELECT (c ->> '$.k1') = 'v1'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT JSON_EXTRACT_STRING(c, '$[*].id')[0:2]", "want": "SELECT (c ->> '$[*].id')[0:2]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LAST_VALUE(x ORDER BY x IGNORE NULLS) OVER (ORDER BY x) FROM t", "want": "SELECT LAST_VALUE(x ORDER BY x IGNORE NULLS) OVER (ORDER BY x) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LAST_VALUE(x ORDER BY x RESPECT NULLS) OVER (ORDER BY x) FROM t", "want": "SELECT LAST_VALUE(x ORDER BY x RESPECT NULLS) OVER (ORDER BY x) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LENGTH(foo)", "want": "SELECT LENGTH(foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST(col) FROM t", "want": "SELECT ARRAY_AGG(col) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_APPLY(RANGE(1, 4), i -> {'f1': LIST_VALUE(1, 2, 3)[i], 'f2': LIST_VALUE(1, 2, 3)[i]})", "want": "SELECT LIST_APPLY(RANGE(1, 4), i -> {'f1': [1, 2, 3][i], 'f2': [1, 2, 3][i]})", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_DISTINCT(col)", "want": "SELECT LIST_DISTINCT(col)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_FILTER([4, 5, 6], x -> x > 4)", "want": "SELECT LIST_FILTER([4, 5, 6], x -> x > 4)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_MAX(values) FROM table1", "want": "SELECT LIST_MAX(values) FROM table1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_MIN(values) FROM table1", "want": "SELECT LIST_MIN(values) FROM table1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_SORT(x, 'ASC')", "want": "SELECT LIST_SORT(x, 'ASC')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_SORT(x, 'ASC', 'NULLS FIRST')", "want": "SELECT LIST_SORT(x, 'ASC', 'NULLS FIRST')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_SORT(x, 'ASC', 'NULLS LAST')", "want": "SELECT LIST_SORT(x, 'ASC', 'NULLS LAST')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_SORT(x, 'DE' || 'SC')", "want": "SELECT LIST_SORT(x, 'DE' || 'SC')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_SORT(x, 'DE' || 'SC', 'NULLS' || ' FIRST')", "want": "SELECT LIST_SORT(x, 'DE' || 'SC', 'NULLS' || ' FIRST')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_SORT(x, 'DESC')", "want": "SELECT LIST_SORT(x, 'DESC')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_SORT(x, 'DESC', 'NULLS FIRST')", "want": "SELECT LIST_SORT(x, 'DESC', 'NULLS FIRST')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_SORT(x, 'DESC', 'NULLS LAST')", "want": "SELECT LIST_SORT(x, 'DESC', 'NULLS LAST')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_SORT(x, 'DESC', 'NULLS' || ' FIRST')", "want": "SELECT LIST_SORT(x, 'DESC', 'NULLS' || ' FIRST')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_TRANSFORM(LIST_FILTER([0, 1, 2, 3, 4, 5], LAMBDA x : x % 2 = 0), LAMBDA y : y * y)", "want": "SELECT LIST_TRANSFORM(LIST_FILTER([0, 1, 2, 3, 4, 5], LAMBDA x : x % 2 = 0), LAMBDA y : y * y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_TRANSFORM(STR_SPLIT_REGEX('abc , dfg ', ','), x -> TRIM(x))", "want": "SELECT LIST_TRANSFORM(STR_SPLIT_REGEX('abc , dfg ', ','), x -> TRIM(x))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_TRANSFORM([5, NULL, 6], (x, y) -> COALESCE(x, y, 0) + 1)", "want": "SELECT LIST_TRANSFORM([5, NULL, 6], (x, y) -> COALESCE(x, y, 0) + 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x : COALESCE(x, 0) + 1)", "want": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x : COALESCE(x, 0) + 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x, y : COALESCE(x, y, 0) + 1)", "want": "SELECT LIST_TRANSFORM([5, NULL, 6], LAMBDA x, y : COALESCE(x, y, 0) + 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_TRANSFORM(nbr, LAMBDA x : x + 1) FROM article AS a", "want": "SELECT LIST_TRANSFORM(nbr, LAMBDA x : x + 1) FROM article AS a", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT LIST_VALUE(1)[i]", "want": "SELECT [1][i]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MACRO", "want": "SELECT MACRO", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MAKE_DATE(2016, 12, 25)", "want": "SELECT MAKE_DATE(2016, 12, 25)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MAKE_DATE(DATE_PART(['year', 'month', 'day'], CURRENT_DATE))", "want": "SELECT MAKE_DATE(DATE_PART(['year', 'month', 'day'], CURRENT_DATE))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MAKE_TIMESTAMP(10) AS t", "want": "SELECT MAKE_TIMESTAMP(10) AS t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MAP {'x': 1}", "want": "SELECT MAP {'x': 1}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MAP(['key1', 'key2', 'key3'], [10, 20, 30])", "want": "SELECT MAP(['key1', 'key2', 'key3'], [10, 20, 30])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MAP_CONCAT(CAST({'a': 1, 'b': 2} AS MAP(TEXT, DECIMAL(38, 0))), MAP {'c': CAST(3 AS DECIMAL(38, 0))})", "want": "SELECT MAP_CONCAT(CAST({'a': 1, 'b': 2} AS MAP(TEXT, DECIMAL(38, 0))), MAP {'c': CAST(3 AS DECIMAL(38, 0))})", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MAP_CONCAT(CAST({'a': 1} AS MAP(TEXT, DECIMAL(38, 0))), MAP {'a': CAST(99 AS DECIMAL(38, 0))})", "want": "SELECT MAP_CONCAT(CAST({'a': 1} AS MAP(TEXT, DECIMAL(38, 0))), MAP {'a': CAST(99 AS DECIMAL(38, 0))})", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MAP_FROM_ENTRIES(LIST_FILTER(MAP_ENTRIES(CAST({'a': 1, 'b': 2, 'c': 3} AS MAP(TEXT, DECIMAL(38, 0)))), x -> NOT x.key IN ('a', 'b')))", "want": "SELECT MAP_FROM_ENTRIES(LIST_FILTER(MAP_ENTRIES(CAST({'a': 1, 'b': 2, 'c': 3} AS MAP(TEXT, DECIMAL(38, 0)))), x -> NOT x.key IN ('a', 'b')))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MIN(COLUMNS(* REPLACE (number + id AS number))), COUNT(COLUMNS(* EXCLUDE (number))) FROM numbers", "want": "SELECT MIN(COLUMNS(* REPLACE (number + id AS number))), COUNT(COLUMNS(* EXCLUDE (number))) FROM numbers", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT MODE(category)", "want": "SELECT MODE(category)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT NTH_VALUE(is_deleted, 2 IGNORE NULLS) OVER (PARTITION BY id) AS nth_is_deleted FROM my_table", "want": "SELECT NTH_VALUE(is_deleted, 2 IGNORE NULLS) OVER (PARTITION BY id) AS nth_is_deleted FROM my_table", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT NTH_VALUE(is_deleted, 2) OVER (PARTITION BY id) AS nth_is_deleted FROM my_table", "want": "SELECT NTH_VALUE(is_deleted, 2) OVER (PARTITION BY id) AS nth_is_deleted FROM my_table", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT NTILE(1 ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)", "want": "SELECT NTILE(1 ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY y DESC) FROM t", "want": "SELECT QUANTILE_CONT(y, 0.25 ORDER BY y DESC) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY y DESC) FROM t", "want": "SELECT QUANTILE_DISC(y, 0.25 ORDER BY y DESC) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT PERCENT_RANK( ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)", "want": "SELECT PERCENT_RANK( ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT QUANTILE_CONT(x, q) FROM t", "want": "SELECT QUANTILE_CONT(x, q) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT QUANTILE_DISC(x, q) FROM t", "want": "SELECT QUANTILE_DISC(x, q) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT RANGE(1, 1)", "want": "SELECT RANGE(1, 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT RANGE(1, 2)", "want": "SELECT RANGE(1, 2)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT RANGE(1, 5)", "want": "SELECT RANGE(1, 5)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT RANGE(1, 5, 2)", "want": "SELECT RANGE(1, 5, 2)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT RANGE(5, 1, -1)", "want": "SELECT RANGE(5, 1, -1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT RANGE(5, 1, 0)", "want": "SELECT RANGE(5, 1, 0)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT RANK( ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)", "want": "SELECT RANK( ORDER BY foo) OVER (ORDER BY 1) FROM (SELECT 1 AS foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REGEXP_EXTRACT(a, 'pattern') FROM t", "want": "SELECT REGEXP_EXTRACT(a, 'pattern') FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REGEXP_EXTRACT(a, 'pattern', 0)", "want": "SELECT REGEXP_EXTRACT(a, 'pattern')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REGEXP_EXTRACT(a, 'pattern', 0, 'i')", "want": "SELECT REGEXP_EXTRACT(a, 'pattern', 0, 'i')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REGEXP_EXTRACT(a, 'pattern', 1, 'i')", "want": "SELECT REGEXP_EXTRACT(a, 'pattern', 1, 'i')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REGEXP_EXTRACT(a, 'pattern', 2, 'i') FROM t", "want": "SELECT REGEXP_EXTRACT(a, 'pattern', 2, 'i') FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 0)", "want": "SELECT REGEXP_EXTRACT_ALL(s, 'pattern')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 0)[2:]", "want": "SELECT REGEXP_EXTRACT_ALL(s, 'pattern')[2:]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 0, 'i')", "want": "SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 0, 'i')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 1)", "want": "SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 1, 'im')", "want": "SELECT REGEXP_EXTRACT_ALL(s, 'pattern', 1, 'im')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REPLACE('apple pie', 'pie', 'cobbler') AS result", "want": "SELECT REPLACE('apple pie', 'pie', 'cobbler') AS result", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT REPLACE(CAST(CAST('apple pie' AS BLOB) AS TEXT), CAST(CAST('pie' AS BLOB) AS TEXT), CAST(CAST('cobbler' AS BLOB) AS TEXT)) AS result", "want": "SELECT REPLACE(CAST(CAST('apple pie' AS BLOB) AS TEXT), CAST(CAST('pie' AS BLOB) AS TEXT), CAST(CAST('cobbler' AS BLOB) AS TEXT)) AS result", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ROW(x, x + 1, y) FROM (SELECT 1 AS x, 'a' AS y)", "want": "SELECT ROW(x, x + 1, y) FROM (SELECT 1 AS x, 'a' AS y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT SHA256('abc')", "want": "SELECT SHA256('abc')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT SPLIT_PART('11.22.33', '.', 1)", "want": "SELECT SPLIT_PART('11.22.33', '.', 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT STAR(tbl, exclude := [foo])", "want": "SELECT STAR(tbl, exclude := [foo])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT STRFTIME(CAST('2020-01-01' AS TIMESTAMP), CONCAT('%Y', '%m'))", "want": "SELECT STRFTIME(CAST('2020-01-01' AS TIMESTAMP), CONCAT('%Y', '%m'))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT SUM(X) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)", "want": "SELECT SUM(X) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT SUM(X) OVER (ORDER BY x)", "want": "SELECT SUM(X) OVER (ORDER BY x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT SUM(x) FILTER (x = 1)", "want": "SELECT SUM(x) FILTER(WHERE x = 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT SUM(x) OVER (ORDER BY x GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW) FROM t", "want": "SELECT SUM(x) OVER (ORDER BY x GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT TIMESTAMP 'foo'", "want": "SELECT CAST('foo' AS TIMESTAMP)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT TODAY()", "want": "SELECT CURRENT_DATE", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT TO_BINARY('test')", "want": "SELECT TO_BINARY('test')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT TO_TIMESTAMP(10) AS t", "want": "SELECT TO_TIMESTAMP(10) AS t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT TO_VARIANT('1')", "want": "SELECT CAST('1' AS VARIANT)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT TRIM('***apple***', '*') AS result", "want": "SELECT TRIM('***apple***', '*') AS result", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT TRY(LOG(0))", "want": "SELECT TRY(LOG(0))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT TRY_STRPTIME('2013-04-28T20:57:01.123456789+07:00', '%Y-%m-%dT%H:%M:%S.%n%z')", "want": "SELECT TRY_STRPTIME('2013-04-28T20:57:01.123456789+07:00', '%Y-%m-%dT%H:%M:%S.%n%z')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT UNNEST([*COLUMNS('alias_.*')]) AS column_name", "want": "SELECT UNNEST([*COLUMNS('alias_.*')]) AS column_name", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT UNNEST([1, 2, 3])", "want": "SELECT UNNEST([1, 2, 3])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT UNNEST([1, 2])", "want": "SELECT UNNEST([1, 2])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT UNNEST(col, recursive := TRUE) FROM t", "want": "SELECT UNNEST(col, recursive := TRUE) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT UUID()", "want": "SELECT UUID()", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT UUIDV7()", "want": "SELECT UUIDV7()", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT ['a', 'b'] AS result", "want": "SELECT ['a', 'b'] AS result", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT [1, 2, 3][1 + 1:LENGTH([1, 2, 3]) + -1]", "want": "SELECT [1, 2, 3][1 + 1:LENGTH([1, 2, 3]) + -1]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT [4, 5, 6] AS l, [x FOR x, i IN l IF i = 2] AS filtered", "want": "SELECT [4, 5, 6] AS l, [x FOR x, i IN l IF i = 2] AS filtered", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT a, LOGICAL_OR(b) FROM foo GROUP BY a", "want": "SELECT a, BOOL_OR(CAST(b AS BOOLEAN)) FROM foo GROUP BY a", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT a.x FROM (SELECT {'x': 1, 'y': 2, 'z': 3} AS a)", "want": "SELECT a.x FROM (SELECT {'x': 1, 'y': 2, 'z': 3} AS a)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT a['x space'] FROM (SELECT {'x space': 1, 'y': 2, 'z': 3} AS a)", "want": "SELECT a['x space'] FROM (SELECT {'x space': 1, 'y': 2, 'z': 3} AS a)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT c, COUNT(*) FILTER (WHERE b > 0) OVER (PARTITION BY c) FROM t", "want": "SELECT c, COUNT(*) FILTER(WHERE b > 0) OVER (PARTITION BY c) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT col FROM t WHERE JSON_EXTRACT_STRING(col, '$.id') NOT IN ('b')", "want": "SELECT col FROM t WHERE NOT (col ->> '$.id') IN ('b')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT df1.*, df2.* FROM df1 POSITIONAL JOIN df2", "want": "SELECT df1.*, df2.* FROM df1 POSITIONAL JOIN df2", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT e'Hello\nworld'", "want": "SELECT e'Hello\\nworld'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT e'\\n'", "want": "SELECT e'\\n'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT e'\\t'", "want": "SELECT e'\\t'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT e'update table_name set a = \\'foo\\' where 1 = 0' AS x FROM tab", "want": "SELECT e'update table_name set a = ''foo'' where 1 = 0' AS x FROM tab", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT e: 1 + 2, f: len('asdf'), s: (SELECT 42)", "want": "SELECT 1 + 2 AS e, LENGTH('asdf') AS f, (SELECT 42) AS s", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT file[256] FROM GLOB('*')", "want": "SELECT file[256] FROM GLOB('*')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT file[:256] FROM GLOB('*')", "want": "SELECT file[:256] FROM GLOB('*')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "want": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC, lname", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT foo: 1", "want": "SELECT 1 AS foo", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT foo: 1, bar: 2, baz: 3", "want": "SELECT 1 AS foo, 2 AS bar, 3 AS baz", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT foo: bar", "want": "SELECT bar AS foo", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT foo: t.col FROM t", "want": "SELECT t.col AS foo FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT i FROM GENERATE_SERIES(12) AS _(i) ORDER BY i ASC", "want": "SELECT i FROM GENERATE_SERIES(0, 12) AS _(i) ORDER BY i ASC", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT i FROM RANGE(5) AS _(i) ORDER BY i ASC", "want": "SELECT i FROM RANGE(0, 5) AS _(i) ORDER BY i ASC", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT id, CARDINALITY(attrs) AS attr_count FROM demo_maps", "want": "SELECT id, CARDINALITY(attrs) AS attr_count FROM demo_maps", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT id, MAP_CONCAT(attrs, MAP {'new_key': 'new_value'}) AS attrs_with_insert FROM demo_maps", "want": "SELECT id, MAP_CONCAT(attrs, MAP {'new_key': 'new_value'}) AS attrs_with_insert FROM demo_maps", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT id, MAP_FROM_ENTRIES(LIST_FILTER(MAP_ENTRIES(attrs), x -> NOT x.key IN (del_key1, del_key2))) AS attrs_after_delete FROM demo_maps", "want": "SELECT id, MAP_FROM_ENTRIES(LIST_FILTER(MAP_ENTRIES(attrs), x -> NOT x.key IN (del_key1, del_key2))) AS attrs_after_delete FROM demo_maps", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT id, STRUCT_PACK(*COLUMNS('m\\d')) AS measurements FROM many_measurements", "want": "SELECT id, {'_0': *COLUMNS('m\\d')} AS measurements FROM many_measurements", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT row", "want": "SELECT row", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT schema_name, function_name, ROW_NUMBER() OVER my_window AS function_rank FROM DUCKDB_FUNCTIONS() WINDOW my_window AS (PARTITION BY schema_name ORDER BY function_name) QUALIFY ROW_NUMBER() OVER my_window < 3", "want": "SELECT schema_name, function_name, ROW_NUMBER() OVER my_window AS function_rank FROM DUCKDB_FUNCTIONS() WINDOW my_window AS (PARTITION BY schema_name ORDER BY function_name) QUALIFY ROW_NUMBER() OVER my_window < 3", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT some_arr[1] AS first FROM blah", "want": "SELECT some_arr[1] AS first FROM blah", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT species, island, COUNT(*) FROM t GROUP BY CUBE (species), CUBE (island)", "want": "SELECT species, island, COUNT(*) FROM t GROUP BY CUBE (species), CUBE (island)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT species, island, COUNT(*) FROM t GROUP BY GROUPING SETS (species), GROUPING SETS (island)", "want": "SELECT species, island, COUNT(*) FROM t GROUP BY GROUPING SETS (species), GROUPING SETS (island)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT species, island, COUNT(*) FROM t GROUP BY ROLLUP (species), ROLLUP (island)", "want": "SELECT species, island, COUNT(*) FROM t GROUP BY ROLLUP (species), ROLLUP (island)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT str[0:1]", "want": "SELECT str[0:1]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT straight_join", "want": "SELECT straight_join", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT tbl.x*1e4+tbl.y FROM tbl", "want": "SELECT tbl.x * 1e4 + tbl.y FROM tbl", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT w::TIMESTAMP_S, x::TIMESTAMP_MS, y::TIMESTAMP_US, z::TIMESTAMP_NS", "want": "SELECT CAST(w AS TIMESTAMP_S), CAST(x AS TIMESTAMP_MS), CAST(y AS TIMESTAMP), CAST(z AS TIMESTAMP_NS)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT x::INT[3][3]", "want": "SELECT CAST(x AS INT[3][3])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT {'a': 1} AS x", "want": "SELECT {'a': 1} AS x", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT {'a': {'b': {'c': 1}}, 'd': {'e': 2}} AS x", "want": "SELECT {'a': {'b': {'c': 1}}, 'd': {'e': 2}} AS x", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT {'key1': 'string', 'key2': 1, 'key3': 12.345}", "want": "SELECT {'key1': 'string', 'key2': 1, 'key3': 12.345}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT {'x': 1, 'y': 2, 'z': 3}", "want": "SELECT {'x': 1, 'y': 2, 'z': 3}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SELECT {'yes': 'duck', 'maybe': 'goose', 'huh': NULL, 'no': 'heron'}", "want": "SELECT {'yes': 'duck', 'maybe': 'goose', 'huh': NULL, 'no': 'heron'}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SET GLOBAL sort_order = 'desc'", "want": "SET GLOBAL sort_order = 'desc'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SET SESSION default_collation = 'nocase'", "want": "SET SESSION default_collation = 'nocase'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SET VARIABLE a = 1", "want": "SET VARIABLE a = 1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SET VARIABLE location_map = (SELECT foo FROM bar)", "want": "SET VARIABLE location_map = (SELECT foo FROM bar)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SET VARIABLE my_var = 30", "want": "SET VARIABLE my_var = 30", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SET VARIABLE my_var TO 30", "want": "SET VARIABLE my_var = 30", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SET memory_limit = '10GB'", "want": "SET memory_limit = '10GB'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SHA1('foo')", "want": "SHA1('foo')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SHA1(x)", "want": "SHA1(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SHA256('foo')", "want": "SHA256('foo')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SHA256(x)", "want": "SHA256(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SHOW ALL TABLES", "want": "SHOW ALL TABLES", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SHOW TABLES", "want": "SHOW TABLES", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SHOW TABLES FROM my_database", "want": "SHOW TABLES FROM my_database", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SHOW TABLES FROM my_database.my_schema", "want": "SHOW TABLES FROM my_database.my_schema", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SHOW TABLES FROM my_schema", "want": "SHOW TABLES FROM my_schema", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STDDEV(a)", "want": "STDDEV(a)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRFTIME(x, '%Y-%m-%d %H:%M:%S')", "want": "STRFTIME(x, '%Y-%m-%d %H:%M:%S')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRFTIME(x, '%y-%-m-%S')", "want": "STRFTIME(x, '%y-%-m-%S')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRING_AGG(x, ', ')", "want": "LISTAGG(x, ', ')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRING_TO_ARRAY(x, 'a')", "want": "STR_SPLIT(x, 'a')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRPTIME(x, '%-m/%-d/%y %-I:%M %p')", "want": "STRPTIME(x, '%-m/%-d/%y %-I:%M %p')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRPTIME(x, '%y-%-m')", "want": "STRPTIME(x, '%y-%-m')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRUCT_EXTRACT(STRUCT_EXTRACT(x, 'y'), 'abc')", "want": "STRUCT_EXTRACT(STRUCT_EXTRACT(x, 'y'), 'abc')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRUCT_EXTRACT(x, 'abc')", "want": "STRUCT_EXTRACT(x, 'abc')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRUCT_PACK(\"a b\" := 1)", "want": "{'a b': 1}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRUCT_PACK(a := 'b')::STRUCT(a TEXT)", "want": "CAST({'a': 'b'} AS STRUCT(a TEXT))", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRUCT_PACK(a := 'b')::json", "want": "CAST({'a': 'b'} AS JSON)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRUCT_PACK(key1 := 'value1', key2 := 42)", "want": "{'key1': 'value1', 'key2': 42}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STRUCT_PACK(x := 1, y := '2')", "want": "{'x': 1, 'y': '2'}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STR_SPLIT(x, 'a')", "want": "STR_SPLIT(x, 'a')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "STR_SPLIT_REGEX(x, 'a')", "want": "STR_SPLIT_REGEX(x, 'a')", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SUMMARIZE SELECT * FROM tbl", "want": "SUMMARIZE SELECT * FROM tbl", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SUMMARIZE TABLE 'https://blobs.duckdb.org/data/Star_Trek-Season_1.csv'", "want": "SUMMARIZE TABLE 'https://blobs.duckdb.org/data/Star_Trek-Season_1.csv'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "SUMMARIZE tbl", "want": "SUMMARIZE tbl", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "TO_TIMESTAMP(x)", "want": "TO_TIMESTAMP(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "TRUNC(3.14)", "want": "TRUNC(3.14)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "UNICODE(foo)", "want": "UNICODE(foo)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "UNION_VALUE(k1 := 1)", "want": "UNION_VALUE(k1 := 1)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "UNNEST(x)", "want": "UNNEST(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "UNPIVOT (SELECT 1 AS col1, 2 AS col2) ON foo, bar", "want": "UNPIVOT (SELECT 1 AS col1, 2 AS col2) ON foo, bar", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "UNPIVOT monthly_sales ON (jan, feb, mar) AS q1, (apr, may, jun) AS q2 INTO NAME quarter VALUE month_1_sales, month_2_sales, month_3_sales", "want": "UNPIVOT monthly_sales ON (jan, feb, mar) AS q1, (apr, may, jun) AS q2 INTO NAME quarter VALUE month_1_sales, month_2_sales, month_3_sales", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "UNPIVOT monthly_sales ON COLUMNS(* EXCLUDE (empid, dept)) INTO NAME month VALUE sales", "want": "UNPIVOT monthly_sales ON COLUMNS(* EXCLUDE (empid, dept)) INTO NAME month VALUE sales", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "UNPIVOT monthly_sales ON jan, feb, mar, apr, may, jun INTO NAME month VALUE sales", "want": "UNPIVOT monthly_sales ON jan, feb, mar, apr, may, jun INTO NAME month VALUE sales", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "VARIANCE(a)", "want": "VARIANCE(a)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "VAR_POP(a)", "want": "VAR_POP(a)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "VAR_POP(x)", "want": "VAR_POP(x)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "VERSION()", "want": "VERSION()", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH 'x' AS (SELECT 1) SELECT * FROM x", "want": "WITH \"x\" AS (SELECT 1) SELECT * FROM x", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH RECURSIVE tbl(a, b) USING KEY (a) AS (SELECT a, b FROM (VALUES (1, 3), (2, 4)) AS t(a, b) UNION SELECT a + 1, b FROM tbl WHERE a < 3) SELECT * FROM tbl", "want": "WITH RECURSIVE tbl(a, b) USING KEY (a) AS (SELECT a, b FROM (VALUES (1, 3), (2, 4)) AS t(a, b) UNION SELECT a + 1, b FROM tbl WHERE a < 3) SELECT * FROM tbl", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH RECURSIVE tbl(a, b) USING KEY (a, b) AS (SELECT a, b FROM (VALUES (1, 3), (2, 4)) AS t(a, b) UNION SELECT a + 1, b FROM tbl WHERE a < 3) SELECT * FROM tbl", "want": "WITH RECURSIVE tbl(a, b) USING KEY (a, b) AS (SELECT a, b FROM (VALUES (1, 3), (2, 4)) AS t(a, b) UNION SELECT a + 1, b FROM tbl WHERE a < 3) SELECT * FROM tbl", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH _data AS (SELECT [{'a': 1, 'b': 2}, {'a': 2, 'b': 3}] AS col) SELECT t.col['b'] FROM _data, UNNEST(_data.col) AS t(col) WHERE t.col['a'] = 1", "want": "WITH _data AS (SELECT [{'a': 1, 'b': 2}, {'a': 2, 'b': 3}] AS col) SELECT t.col['b'] FROM _data JOIN UNNEST(_data.col) AS t(col) ON TRUE WHERE t.col['a'] = 1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH cities(country, name, year, population) AS (SELECT 'NL', 'Amsterdam', 2000, 1005 UNION ALL SELECT 'US', 'Seattle', 2020, 738) PIVOT cities ON year USING SUM(population)", "want": "WITH cities(country, name, year, population) AS (SELECT 'NL', 'Amsterdam', 2000, 1005 UNION ALL SELECT 'US', 'Seattle', 2020, 738) PIVOT cities ON year USING SUM(population)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH cte(x) AS (SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3) SELECT AVG(x) FILTER (WHERE x > 1) FROM cte", "want": "WITH cte(x) AS (SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3) SELECT AVG(x) FILTER(WHERE x > 1) FROM cte", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH pivot_alias AS (PIVOT Cities ON Year USING SUM(Population) GROUP BY Country) SELECT * FROM pivot_alias", "want": "WITH pivot_alias AS (PIVOT Cities ON Year USING SUM(Population) GROUP BY Country) SELECT * FROM pivot_alias", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH t AS (SELECT 1) FROM t", "want": "WITH t AS (SELECT 1) SELECT * FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH t AS (SELECT 1) SELECT * FROM (FROM t)", "want": "WITH t AS (SELECT 1) SELECT * FROM (SELECT * FROM t)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH t AS (SELECT 2 AS c) SELECT RANGE(1, c) FROM t", "want": "WITH t AS (SELECT 2 AS c) SELECT RANGE(1, c) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH t AS (SELECT 5 AS c) SELECT RANGE(1, c) FROM t", "want": "WITH t AS (SELECT 5 AS c) SELECT RANGE(1, c) FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH t AS (SELECT i, i * i * i * i * i AS i5 FROM RANGE(1, 5) t(i)) SELECT * FROM t", "want": "WITH t AS (SELECT i, i * i * i * i * i AS i5 FROM RANGE(1, 5) AS t(i)) SELECT * FROM t", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH t1 AS (FROM (FROM t2 SELECT foo1, foo2)) FROM t1", "want": "WITH t1 AS (SELECT * FROM (SELECT foo1, foo2 FROM t2)) SELECT * FROM t1", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "WITH unpivot_alias AS (UNPIVOT monthly_sales ON COLUMNS(* EXCLUDE (empid, dept)) INTO NAME month VALUE sales) SELECT * FROM unpivot_alias", "want": "WITH unpivot_alias AS (UNPIVOT monthly_sales ON COLUMNS(* EXCLUDE (empid, dept)) INTO NAME month VALUE sales) SELECT * FROM unpivot_alias", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "XOR(a, b)", "want": "XOR(a, b)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "[0, 1, 2]", "want": "[0, 1, 2]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "[x.STRING_SPLIT(' ')[i] FOR x IN ['1', '2', 3] IF x.CONTAINS('1')]", "want": "[x.STRING_SPLIT(' ')[i] FOR x IN ['1', '2', 3] IF x.CONTAINS('1')]", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a !~~ b", "want": "a NOT LIKE b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a !~~* b", "want": "a NOT ILIKE b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a && b", "want": "a && b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a ** b", "want": "POWER(a, b)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a / b", "want": "a / b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a <@ b", "want": "a <@ b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a @> b", "want": "a @> b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a ^ b", "want": "POWER(a, b)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a ^@ b", "want": "STARTS_WITH(a, b)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a ~~ b", "want": "a LIKE b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "a ~~~ b", "want": "a GLOB b", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "cast([[1]] as int[][])", "want": "CAST([[1]] AS INT[][])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "struct_pack(a := 1, b := x)", "want": "{'a': 1, 'b': x}", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "x !~ y", "want": "NOT REGEXP_FULL_MATCH(x, y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "x -> '$.family'", "want": "x -> '$.family'", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "x ~ y", "want": "REGEXP_FULL_MATCH(x, y)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "x::int[3]", "want": "CAST(x AS INT[3])", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "x::timestamp", "want": "CAST(x AS TIMESTAMP)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "x::timestamp with time zone", "want": "CAST(x AS TIMESTAMPTZ)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "x::timestamp without time zone", "want": "CAST(x AS TIMESTAMP)", "pretty": false, "identify": false}
+{"dialect": "duckdb", "sql": "{'x': LIST_VALUE(1)[i]}", "want": "{'x': [1][i]}", "pretty": false, "identify": false}
 {"dialect": "hive", "sql": "\"'x'\"", "want": "'\\'x\\''", "pretty": false, "identify": false}
 {"dialect": "hive", "sql": "'\n'", "want": "'\\n'", "pretty": false, "identify": false}
 {"dialect": "hive", "sql": "'\"x\"'", "want": "'\"x\"'", "pretty": false, "identify": false}

@@ -937,6 +937,13 @@ func (p *Parser) parseSelect(opts ...bool) exp.Expression {
 		return this
 	}
 
+	// parser.py:4030-4037: DuckDB-style FROM-first selects start with FROM. The From is
+	// parsed up front and attached to the SELECT that follows, or to an implicit `SELECT *`.
+	var fromFirst exp.Expression
+	if p.curr.TokenType == tokens.FROM {
+		fromFirst = p.parseFrom(true, false, true)
+	}
+
 	var this exp.Expression
 	if p.match(tokens.SELECT) {
 		comments := p.prevComments
@@ -1005,8 +1012,24 @@ func (p *Parser) parseSelect(opts ...bool) exp.Expression {
 		}
 		if from := p.parseFrom(false, false, false); from != nil {
 			this.Set("from_", from)
+		} else if fromFirst != nil {
+			this.Set("from_", fromFirst)
 		}
 		this = p.parseQueryModifiers(this)
+	} else if fromFirst != nil {
+		this = p.expression(exp.Select(exp.Args{"expressions": []exp.Expression{exp.Star(nil)}}), nil, nil)
+		this.Set("from_", fromFirst)
+		return p.parseQueryModifiers(p.parseSetOperations(this))
+	} else if p.match(tokens.SUMMARIZE) {
+		table := p.match(tokens.TABLE)
+		this = p.parseSelect(true, false, true, false)
+		if this == nil {
+			this = p.parseString()
+		}
+		if this == nil {
+			this = p.parseTable(false, false, nil, false, false, false, false)
+		}
+		return p.expression(exp.Summarize(exp.Args{"this": this, "table": table}), nil, nil)
 	} else if (table || nested) && p.match(tokens.L_PAREN) {
 		comments := p.prevComments
 		this = p.parseWrappedSelect(table)
@@ -1355,7 +1378,25 @@ func (p *Parser) parseTable(schema bool, joins bool, aliasTokens map[tokens.Toke
 		}
 		return table
 	}
+	// parsers/duckdb.py:357-382: a prefix alias on a table, e.g. `FROM foo: bar`.
+	var prefixAlias exp.Expression
+	var prefixComments []string
+	if p.dialect.PrefixAlias && p.next.TokenType == tokens.COLON {
+		prefixAlias = p.parseTableAlias(aliasTokens)
+		p.match(tokens.COLON)
+		prefixComments = p.prevComments
+	}
 	this := p.parseTableCore(schema, joins, aliasTokens, parseBracket, isDBReference, parsePartition, consumePipe)
+	if prefixAlias != nil && this != nil {
+		if tableAlias := prefixAlias; tableAlias != nil && tableAlias.Kind() == exp.KindTableAlias {
+			prefixComments = append(prefixComments, this.PopComments()...)
+			tableAlias.AddComments(append(tableAlias.PopComments(), prefixComments...), false)
+			this.Set("alias", tableAlias)
+			if p.dialect.Name != "clickhouse" {
+				return this
+			}
+		}
+	}
 	if p.dialect.Name != "clickhouse" || this == nil {
 		return this
 	}
@@ -1961,6 +2002,19 @@ func (p *Parser) parseSort(kind exp.Kind, tok tokens.TokenType) exp.Expression {
 }
 
 func (p *Parser) parseExpression() exp.Expression {
+	// parsers/duckdb.py:341-355: a prefix alias, e.g. `foo: 1`.
+	if p.dialect.PrefixAlias && p.next.TokenType == tokens.COLON {
+		alias := p.parseIdVar(false, aliasTokens)
+		p.match(tokens.COLON)
+		comments := p.prevComments
+		this := p.parseAssignment()
+		if this == nil {
+			p.raiseError("Expected expression after prefix alias")
+			return nil
+		}
+		comments = append(comments, this.PopComments()...)
+		return p.expression(exp.AliasExpr(this, alias, false), nil, comments)
+	}
 	this := p.parseAlias(p.parseAssignment(), false)
 	// parsers/clickhouse.py:952-960: `SELECT <expr> APPLY(func)` query modifier chain.
 	if p.dialect.Name == "clickhouse" {
@@ -2138,6 +2192,22 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 			// binary_range_parser(exp.Glob) (parser.py:1188).
 			p.advance()
 			this = p.parseEscape(p.expression(exp.Glob(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
+		case tokens.TILDE:
+			// parsers/duckdb.py:222: RANGE_PARSERS[TILDE] = binary_range_parser(RegexpFullMatch).
+			if p.dialect.RegexpRangeOperators {
+				p.advance()
+				this = p.expression(exp.RegexpFullMatch(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil)
+			} else {
+				matched = false
+			}
+		case tokens.CARET_AT:
+			// parsers/duckdb.py:224: RANGE_PARSERS[CARET_AT] = binary_range_parser(StartsWith).
+			if p.dialect.CaretAtStartsWith {
+				p.advance()
+				this = p.expression(exp.StartsWith(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil)
+			} else {
+				matched = false
+			}
 		case tokens.OVERLAPS:
 			// binary_range_parser(exp.Overlaps) (parser.py:1195). BigQuery removes OVERLAPS
 			// from RANGE_PARSERS (parsers/bigquery.py:368-370), so it stays an alias.
@@ -2200,7 +2270,7 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 			// CONJUNCTION-level entry instead, owned by parseConjunction; base has no `&&`
 			// support upstream either, so this case does nothing (leaves DAMP unconsumed)
 			// for every other dialect.
-			if p.dialectFamily("postgres") {
+			if p.dialectFamily("postgres") || p.dialect.ArrayOverlapsDAMP {
 				p.advance()
 				this = p.parseEscape(p.expression(exp.ArrayOverlaps(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
 			} else {
@@ -2535,17 +2605,36 @@ func (p *Parser) parseFactor() exp.Expression {
 	// EXPONENT is empty for base/mysql/postgres, so parse_method is always _parse_unary
 	// (parser.py:6119-6121); only the first parse_method() call is wrapped in
 	// _parse_at_time_zone, not the ones inside the loop below.
-	this := p.parseAtTimeZone(p.parseUnary())
+	this := p.parseAtTimeZone(p.parseFactorOperand())
 	for constructor, ok := factorTokens[p.curr.TokenType]; ok; constructor, ok = factorTokens[p.curr.TokenType] {
 		tokenType := p.curr.TokenType
 		p.advance()
 		comments := p.prevComments
-		args := exp.Args{"this": this, "expression": p.parseUnary()}
+		args := exp.Args{"this": this, "expression": p.parseFactorOperand()}
 		if tokenType == tokens.SLASH || tokenType == tokens.DIV {
 			args["typed"] = p.dialect.TypedDivision
 			args["safe"] = p.dialect.SafeDivision
 		}
 		this = p.expression(constructor(args), nil, comments)
+	}
+	return this
+}
+
+// parseFactorOperand ports _parse_factor_operand (parser.py:6365-6376): with a dialect
+// EXPONENT table, `**`/`^` bind tighter than `*`/`/`.
+func (p *Parser) parseFactorOperand() exp.Expression {
+	if p.dialect.ExponentOperators {
+		return p.parseExponent()
+	}
+	return p.parseUnary()
+}
+
+func (p *Parser) parseExponent() exp.Expression {
+	this := p.parseUnary()
+	for p.dialect.ExponentOperators && (p.curr.TokenType == tokens.CARET || p.curr.TokenType == tokens.DSTAR) {
+		comments := p.prevComments
+		p.advance()
+		this = p.expression(exp.Pow(exp.Args{"this": this, "expression": p.parseUnary()}), nil, comments)
 	}
 	return this
 }
@@ -3133,6 +3222,15 @@ func (p *Parser) parseParen() exp.Expression {
 }
 
 func (p *Parser) parsePrimary() exp.Expression {
+	if p.dialect.Name == "duckdb" {
+		if positional, ok := p.parseDuckDBPositionalColumn(); ok {
+			return positional
+		}
+		// DuckDB's `@` is the ABS no-paren function, not a parameter placeholder.
+		if p.curr.TokenType == tokens.PARAMETER && p.curr.Text == "@" {
+			return nil
+		}
+	}
 	token := p.curr
 	// Both _parse_primary and _parse_atom (parser.py:6560-6583) dispatch through the single
 	// PRIMARY_PARSERS table; primaryParsers is that shared port (STRING/NUMBER/NULL/TRUE/
@@ -3691,6 +3789,9 @@ func (p *Parser) statementSpanned(this exp.Expression, start, end tokens.Token) 
 // (inside any alias) so the original spelling of an unaliased computed projection is
 // recoverable — e.g. MySQL labels such a column with its verbatim source text.
 func (p *Parser) parseProjection() exp.Expression {
+	if p.dialect.PrefixAlias && p.next.TokenType == tokens.COLON {
+		return p.parseExpression()
+	}
 	projection := p.parseAlias(p.parseSpanned(p.parseAssignment), false)
 	if p.dialect.Name == "clickhouse" {
 		projection = p.applyClickhouseApplyChain(projection)
@@ -3916,7 +4017,11 @@ func (p *Parser) parseWrappedSelect(table bool) exp.Expression {
 		return merge
 	}
 	var this exp.Expression
-	if table {
+	if p.dialect.Name == "duckdb" && (p.curr.TokenType == tokens.PIVOT || p.curr.TokenType == tokens.UNPIVOT) {
+		isUnpivot := p.curr.TokenType == tokens.UNPIVOT
+		p.advance()
+		this = p.parseSimplifiedPivot(isUnpivot)
+	} else if table {
 		this = p.parseTable(false, false, nil, false, false, false, true)
 	} else {
 		this = p.parseSelect(true, false, true, false)
@@ -4118,6 +4223,20 @@ func (p *Parser) parseFunctionArgs(alias bool) []exp.Expression {
 // named-argument `=>` form. Dialect overlays replace individual entries through lambdaFor
 // (parsers/materialize.py overrides the FARROW entry to parse its value as an assignment).
 func (p *Parser) parseLambda(alias bool) exp.Expression {
+	// parsers/duckdb.py:327-338: `LAMBDA x : body` (and the multi-arg form).
+	if p.dialect.LambdaKeyword {
+		index := p.index
+		if p.matchTextSeq("LAMBDA") {
+			params := p.parseCsv(p.parseLambdaArg)
+			if p.match(tokens.COLON) {
+				this := p.replaceLambdaExpressions(p.parseAssignment(), params)
+				return p.expression(exp.Lambda(exp.Args{"this": this, "expressions": params, "colon": true}), nil, nil)
+			}
+			p.retreat(index)
+			return nil
+		}
+	}
+
 	// parser.py:7431: the next token is captured up front (before the fast path can
 	// consume anything), because the single-argument lambda probe below keys on it.
 	nextTokenType := p.next.TokenType

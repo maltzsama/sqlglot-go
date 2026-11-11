@@ -105,16 +105,21 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"ARRAY_ANY":             genericFunction(KindArrayAny),
 	"ARRAY_LENGTH":          genericFunction(KindArraySize),
 	"ARRAY_CONTAINS":        genericFunction(KindArrayContains),
-	"ARRAY_HAS":             genericFunction(KindArrayContains),
-	"INITCAP":               genericFunction(KindInitcap),
-	"SPLIT":                 genericFunction(KindSplit),
-	"REGEXP_LIKE":           genericFunction(KindRegexpLike),
-	"RLIKE":                 genericFunction(KindRegexpLike),
-	"REGEXP_SPLIT":          genericFunction(KindRegexpSplit),
-	"STRUCT_EXTRACT":        genericFunction(KindStructExtract),
-	"STANDARD_HASH":         genericFunction(KindStandardHash),
-	"HEX":                   genericFunction(KindHex),
-	"UNHEX":                 genericFunction(KindUnhex),
+	"TO_VARIANT":            genericFunction(KindToVariant),
+	"ARRAY_COMPACT":         genericFunction(KindArrayCompact),
+	"ARRAY_CONSTRUCT_COMPACT": func(args []Expression) Expression {
+		return ArrayConstructCompact(Args{"expressions": args})
+	},
+	"ARRAY_HAS":      genericFunction(KindArrayContains),
+	"INITCAP":        genericFunction(KindInitcap),
+	"SPLIT":          genericFunction(KindSplit),
+	"REGEXP_LIKE":    genericFunction(KindRegexpLike),
+	"RLIKE":          genericFunction(KindRegexpLike),
+	"REGEXP_SPLIT":   genericFunction(KindRegexpSplit),
+	"STRUCT_EXTRACT": genericFunction(KindStructExtract),
+	"STANDARD_HASH":  genericFunction(KindStandardHash),
+	"HEX":            genericFunction(KindHex),
+	"UNHEX":          genericFunction(KindUnhex),
 	// FROM_BASE(this, expression) (string.py:297-299): upstream registers every Func
 	// subclass's sql_name in FUNCTION_BY_NAME (parser.py:374), so FROM_BASE parses
 	// structurally in every dialect — Redshift renames it to STRTOL on write
