@@ -238,9 +238,13 @@ func spark2JSONFormatSQL(g *Generator, e expressions.Expression) string {
 }
 
 // spark2CastSQL ports cast_sql (generators/spark2.py:221-235). TryCast shares it: upstream's
-// trycast_sql dispatches back into cast_sql with an empty safe prefix, which this port models
+// trycast_sql dispatches back into cast_sql with the TRY_ safe prefix, which this port models
 // by registering the same handler for KindTryCast.
 func spark2CastSQL(g *Generator, e expressions.Expression) string {
+	return spark2CastSQLWithPrefix(g, e, "")
+}
+
+func spark2CastSQLWithPrefix(g *Generator, e expressions.Expression, safePrefix string) string {
 	arg := e.This()
 	isJSONExtract := arg != nil &&
 		(arg.Kind() == expressions.KindJSONExtract || arg.Kind() == expressions.KindJSONExtractScalar) &&
@@ -257,7 +261,7 @@ func spark2CastSQL(g *Generator, e expressions.Expression) string {
 	if isParseJSON(e) {
 		return g.funcCall("TO_JSON", []any{arg}, "(", ")", true)
 	}
-	return g.castSQLWithPrefix(e, "")
+	return g.castSQLWithPrefix(e, safePrefix)
 }
 
 // isParseJSON ports is_parse_json (dialects/dialect.py:1958-1961).
@@ -314,31 +318,41 @@ func spark2BracketSQL(g *Generator, e expressions.Expression) string {
 }
 
 // bracketToElementAtSQL ports bracket_to_element_at_sql (dialects/dialect.py:1218-1227).
-// Upstream's apply_index_offset annotates types and simplifies the shifted index; the
-// generator cannot import the optimizer, so only a literal integer index is shifted. The sole
-// user-reachable safe=False bracket - ELEMENT_AT's offset=1 - cancels the shift, so this is
-// output-identical for parsed SQL.
 func (g *Generator) bracketToElementAtSQL(e expressions.Expression) string {
-	offset := 0
-	switch v := e.Arg("offset").(type) {
-	case int:
-		offset = 1 - v
-	case float64:
-		offset = 1 - int(v)
-	default:
-		offset = 1
-	}
-	exprs := listFromValue(e.Arg("expressions"))
 	var index any
-	if len(exprs) > 0 {
-		index = exprs[0]
-		if offset != 0 && len(exprs) == 1 {
-			if first := asExpression(exprs[0]); first != nil && first.IsInt() {
-				if n, ok := first.ToPy().(int64); ok {
-					index = expressions.LiteralNumber(int(n) + offset)
-				}
-			}
-		}
+	if idx := g.bracketOffsetExpression(e, 1); idx != nil {
+		index = idx
 	}
 	return g.funcCall("ELEMENT_AT", []any{e.This(), index}, "(", ")", true)
+}
+
+// bracketOffsetExpression ports bracket_offset_expressions (generator.py) with
+// apply_index_offset's literal-index shift. Upstream's apply_index_offset annotates types and
+// simplifies the shifted index; the generator cannot import the optimizer, so only a literal
+// integer index is shifted. The sole user-reachable safe brackets - ELEMENT_AT's and
+// TRY_ELEMENT_AT's offset=1 - cancel the shift, so this is output-identical for parsed SQL.
+func (g *Generator) bracketOffsetExpression(e expressions.Expression, indexOffset int) any {
+	offset := indexOffset
+	switch v := e.Arg("offset").(type) {
+	case int:
+		offset = indexOffset - v
+	case float64:
+		offset = indexOffset - int(v)
+	}
+	exprs := listFromValue(e.Arg("expressions"))
+	if len(exprs) == 0 {
+		return nil
+	}
+	if offset == 0 {
+		return exprs[0]
+	}
+	first := asExpression(exprs[0])
+	if first == nil || !first.IsInt() {
+		return exprs[0]
+	}
+	n, ok := first.ToPy().(int64)
+	if !ok {
+		return exprs[0]
+	}
+	return expressions.LiteralNumber(int(n) + offset)
 }

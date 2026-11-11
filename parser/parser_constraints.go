@@ -441,6 +441,13 @@ func (p *Parser) parseGeneratedAsIdentityBase() exp.Expression {
 // (parser.py:7374) and returns the raw base result.
 func (p *Parser) parseGeneratedAsIdentity() exp.Expression {
 	this := p.parseGeneratedAsIdentityBase()
+	// parsers/spark.py:113-120: a GENERATED ... AS (expr) column becomes a computed column.
+	if p.dialectIs("spark2") {
+		if expr := asExpr(this.Arg("expression")); expr != nil {
+			return p.expression(exp.ComputedColumnConstraint(exp.Args{"this": expr}), nil, nil)
+		}
+		return this
+	}
 	switch p.switchDialect() {
 	case "mysql":
 		if p.matchTexts(map[string]bool{"STORED": true, "VIRTUAL": true}) {

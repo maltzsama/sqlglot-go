@@ -26,6 +26,12 @@ func Hive() *Dialect {
 	d.AlterTableSupportsCascade = true
 	// dialects/hive.py:35 INITCAP_DEFAULT_DELIMITER_CHARS (overlays the base set).
 	d.InitcapDefaultDelimiterChars = " \t\n\r\f\v\x1c\x1d\x1e\x1f"
+	// generators/hive.py:246-251 EXPRESSIONS_WITHOUT_NESTED_CTES.
+	d.MoveCTEsToTopLevel = map[exp.Kind]bool{
+		exp.KindInsert:   true,
+		exp.KindSelect:   true,
+		exp.KindSubquery: true,
+	}
 	// generators/hive.py:260-272 TYPE_MAPPING folds these DTypes onto TIMESTAMP; recorded on
 	// the parse side for exp.cast's no-re-cast check (see Dialect.castTypeMapping).
 	d.castTypeMapping = hiveCastTypeFolds(d.castTypeMapping)

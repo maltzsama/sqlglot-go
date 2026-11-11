@@ -3457,6 +3457,14 @@ func (p *Parser) parsePlaceholder() exp.Expression {
 			return p.spanned(placeholder, start, p.prev)
 		}
 	}
+	// parsers/spark.py:105-107 SparkParser.PLACEHOLDER_PARSERS[L_BRACE]: a widget parameter
+	// `{name}`, which keeps its braces on output.
+	if p.dialectIs("spark2") && p.curr.TokenType == tokens.L_BRACE {
+		p.advance()
+		this := p.parseIdVar(true, nil)
+		p.match(tokens.R_BRACE)
+		return p.spanned(p.expression(exp.Placeholder(exp.Args{"this": this, "widget": true}), nil, nil), start, p.prev)
+	}
 	if p.match(tokens.PLACEHOLDER) {
 		if p.dialectFamily("postgres") {
 			return p.spanned(p.expression(exp.Placeholder(exp.Args{"jdbc": true}), &p.prev, nil), start, p.prev)

@@ -247,6 +247,7 @@ const (
 	minPassRedshift    = 171
 	minPassMaterialize = 24
 	minPassRisingWave  = 7
+	minPassSpark       = 227
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
@@ -266,6 +267,7 @@ const (
 	minTotalRedshift    = 171
 	minTotalMaterialize = 24
 	minTotalRisingWave  = 7
+	minTotalSpark       = 227
 )
 
 // TestCorpus is the single round-trip harness for both the base-dialect
@@ -327,6 +329,7 @@ func TestCorpus(t *testing.T) {
 		{"redshift", minPassRedshift, minTotalRedshift},
 		{"materialize", minPassMaterialize, minTotalMaterialize},
 		{"risingwave", minPassRisingWave, minTotalRisingWave},
+		{"spark", minPassSpark, minTotalSpark},
 	}
 	var counts []string
 	for _, floor := range floors {

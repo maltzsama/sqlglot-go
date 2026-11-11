@@ -101,6 +101,88 @@ func moveSchemaColumnsToPartitionedBy(e expressions.Expression) expressions.Expr
 	return e
 }
 
+// movePartitionedByToSchemaColumns ports move_partitioned_by_to_schema_columns
+// (transforms.py:818-838): Spark 3+ uses the datasource CREATE TABLE format, so a PARTITIONED
+// BY schema's column definitions move into the table schema and the property keeps bare names.
+func movePartitionedByToSchemaColumns(e expressions.Expression) expressions.Expression {
+	prop := e.Find(expressions.KindPartitionedByProperty)
+	if prop == nil {
+		return e
+	}
+	propThis := asExpression(prop.Arg("this"))
+	if propThis == nil || propThis.Kind() != expressions.KindSchema {
+		return e
+	}
+	columns := propThis.Expressions()
+	if len(columns) == 0 {
+		return e
+	}
+	for _, col := range columns {
+		if col.Kind() != expressions.KindColumnDef || !truthy(col.Arg("kind")) {
+			return e
+		}
+	}
+
+	names := make([]expressions.Expression, 0, len(columns))
+	for _, col := range columns {
+		names = append(names, expressions.ToIdentifier(col.This().Name()))
+	}
+	schema := asExpression(e.Arg("this"))
+	if schema == nil {
+		return e
+	}
+	for _, col := range columns {
+		schema.Append("expressions", col)
+	}
+	prop.Set("this", expressions.Tuple(expressions.Args{"expressions": names}))
+	return e
+}
+
+// moveCTEsToTopLevel ports move_ctes_to_top_level (transforms.py:672-708): hoist every nested
+// WITH onto the root statement, merging into an existing top-level WITH when present. Dialects
+// that only accept top-level CTEs (Hive, Spark before 3, T-SQL) enable it through
+// Dialect.MoveCTEsToTopLevel.
+func moveCTEsToTopLevel(e expressions.Expression) expressions.Expression {
+	topLevel := asExpression(e.Arg("with_"))
+	for _, inner := range e.FindAll(expressions.KindWith) {
+		if inner.Parent() == e {
+			continue
+		}
+		if topLevel == nil {
+			topLevel = inner.Pop()
+			e.Set("with_", topLevel)
+			continue
+		}
+		if truthy(inner.Arg("recursive")) {
+			topLevel.Set("recursive", true)
+		}
+		parentCTE := inner.FindAncestor(expressions.KindCTE)
+		inner.Pop()
+		innerExpressions := inner.Expressions()
+
+		index := -1
+		if parentCTE != nil {
+			for i, cte := range topLevel.Expressions() {
+				if cte == parentCTE {
+					index = i
+					break
+				}
+			}
+		}
+		if index >= 0 {
+			// Splice the nested CTEs in right before the CTE that contained them.
+			for i, cte := range innerExpressions {
+				topLevel.SetAt("expressions", cte, index+i, false)
+			}
+			continue
+		}
+		for _, cte := range innerExpressions {
+			topLevel.Append("expressions", cte)
+		}
+	}
+	return e
+}
+
 // removeWithinGroupForPercentiles ports remove_within_group_for_percentiles
 // (transforms.py:570-584): `PERCENTILE_*(q) WITHIN GROUP (ORDER BY x)` becomes
 // APPROX_QUANTILE(x, q). Upstream's PERCENTILES tuple is (PercentileCont, PercentileDisc); this

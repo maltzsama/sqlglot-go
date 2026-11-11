@@ -40,6 +40,10 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"DAYOFWEEK_ISO":   genericFunction(KindDayOfWeekIso),
 	"PARSE_JSON":      genericFunction(KindParseJSON),
 	"JSON_FORMAT":     genericFunction(KindJSONFormat),
+	// EXPLODE/EXPLODE_OUTER are UDTF Func subclasses (array.py:238-249); the optimizer's
+	// merge_subqueries refuses to fold a projection that contains one.
+	"EXPLODE":       genericFunction(KindExplode),
+	"EXPLODE_OUTER": genericFunction(KindExplodeOuter),
 	// "LIST" registers exp.List the same way upstream does: FUNCTIONS spreads
 	// exp.FUNCTION_BY_NAME (parser.py:374), which maps every Func subclass's sql_name to
 	// from_arg_list (expressions/__init__.py:50) — so `LIST(1, 2, 3)` parses as exp.List,

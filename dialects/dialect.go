@@ -516,6 +516,14 @@ type Dialect struct {
 	// ArrayFuncsPropagatesNulls ports ARRAY_FUNCS_PROPAGATES_NULLS (dialects/dialect.py): whether
 	// the array functions return NULL when any input array is NULL (Redshift).
 	ArrayFuncsPropagatesNulls bool
+	// MoveCTEsToTopLevel ports EXPRESSIONS_WITHOUT_NESTED_CTES  (generator.py:849); Hive
+	// (generators/hive.py:246-251) lists Insert/Select/Subquery. A root of one of these kinds
+	// hoists every nested WITH before generation (generator.py:986-995). nil disables it, which
+	// matches the empty base set.
+	MoveCTEsToTopLevel map[exp.Kind]bool
+	// DeclareDefaultAssignment ports generator.py:620 DECLARE_DEFAULT_ASSIGNMENT, the token
+	// between a DECLARE item's type and its default value (base "="; bigquery/trino "DEFAULT").
+	DeclareDefaultAssignment string
 	// HasDistinctArrayConstructors ports HAS_DISTINCT_ARRAY_CONSTRUCTORS: ARRAY[...] and
 	// ARRAY(...) are different constructors, so the parser records which one was written.
 	HasDistinctArrayConstructors bool
@@ -623,6 +631,8 @@ func Base() *Dialect {
 		AlterSetWrapped: false,
 		// generator.py:582 ALTER_SET_TYPE = "SET DATA TYPE" (base).
 		AlterSetType: "SET DATA TYPE",
+		// generator.py:620 DECLARE_DEFAULT_ASSIGNMENT = "=" (base).
+		DeclareDefaultAssignment: "=",
 		// dialects/dialect.py:762 INITCAP_DEFAULT_DELIMITER_CHARS (base); hive and spark2
 		// override it (dialects/hive.py:35, dialects/spark2.py:29).
 		InitcapDefaultDelimiterChars: " \t\n\r\f\v!\"#$%&'()*+,\\-./:;<=>?@\\[\\]^_`{|}~",
@@ -899,6 +909,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return RisingWave(), nil
 	case "spark2":
 		return Spark2(), nil
+	case "spark":
+		return Spark(), nil
 	default:
 		return nil, fmt.Errorf("unknown dialect %q", name)
 	}

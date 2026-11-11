@@ -284,6 +284,15 @@ func (p *Parser) setPivotColumns(pivot exp.Expression, aggregations []exp.Expres
 }
 
 func (p *Parser) parsePivotAggregation() exp.Expression {
+	// parsers/spark.py:126-129: Spark 3+ and Databricks accept non-aggregate functions in
+	// PIVOT too, e.g. PIVOT (..., 'foo' AS bar FOR col_to_pivot IN (...)).
+	if p.dialectIs("spark2") {
+		f := p.parseFunction(nil, false, true, false)
+		if f == nil {
+			f = p.parseDisjunction()
+		}
+		return p.parseAlias(f, false)
+	}
 	f := p.parseFunction(nil, false, true, false)
 	if f == nil {
 		if p.prev.TokenType == tokens.COMMA {

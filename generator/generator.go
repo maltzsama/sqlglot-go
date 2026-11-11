@@ -215,7 +215,15 @@ func (g *Generator) Generate(e expressions.Expression) (sql string, err error) {
 }
 
 func (g *Generator) preprocess(e expressions.Expression) expressions.Expression {
-	// Base EXPRESSIONS_WITHOUT_NESTED_CTES is empty and ENSURE_BOOLS is false, so preprocessing is a no-op for slice 2.
+	// generator.py:975-995: a root statement whose dialect disallows nested CTEs gets every
+	// inner WITH hoisted to the top level.
+	if e.Parent() == nil && g.dialect.MoveCTEsToTopLevel[e.Kind()] {
+		for _, with := range e.FindAll(expressions.KindWith) {
+			if with.Parent() != e {
+				return moveCTEsToTopLevel(e)
+			}
+		}
+	}
 	return e
 }
 

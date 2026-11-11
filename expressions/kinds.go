@@ -817,6 +817,7 @@ const (
 	KindCosineDistance
 	KindDateSub
 	KindExplode
+	KindExplodeOuter
 	KindFarmFingerprint
 	KindIsNan
 	KindJarowinklerSimilarity
@@ -1604,6 +1605,7 @@ var argTypes = map[Kind][]argSpec{
 	KindCosineDistance:           {{"this", true}, {"expression", true}},
 	KindDateSub:                  {{"this", true}, {"expression", true}, {"unit", false}},
 	KindExplode:                  {{"this", true}, {"expressions", false}},
+	KindExplodeOuter:             {{"this", true}, {"expressions", false}},
 	KindFarmFingerprint:          {{"expressions", true}},
 	KindIsNan:                    {{"this", true}},
 	KindJarowinklerSimilarity:    {{"this", true}, {"expression", true}, {"case_insensitive", false}, {"integer_scale", false}},
@@ -2047,6 +2049,7 @@ var traitsOf = map[Kind]Trait{
 	KindCosineDistance:           TraitCondition | TraitFunc,
 	KindDateSub:                  TraitCondition | TraitFunc,
 	KindExplode:                  TraitCondition | TraitFunc | TraitUDTF | TraitDerivedTable,
+	KindExplodeOuter:             TraitCondition | TraitFunc | TraitUDTF | TraitDerivedTable,
 	KindFarmFingerprint:          TraitCondition | TraitFunc,
 	KindIsNan:                    TraitCondition | TraitFunc,
 	KindJarowinklerSimilarity:    TraitCondition | TraitFunc,
@@ -2672,6 +2675,7 @@ var className = map[Kind]string{
 	KindCosineDistance:           "CosineDistance",
 	KindDateSub:                  "DateSub",
 	KindExplode:                  "Explode",
+	KindExplodeOuter:             "ExplodeOuter",
 	KindFarmFingerprint:          "FarmFingerprint",
 	KindIsNan:                    "IsNan",
 	KindJarowinklerSimilarity:    "JarowinklerSimilarity",

@@ -72,6 +72,11 @@ func init() {
 		},
 		expressions.KindDataType: (*Generator).hiveDataTypeSQL,
 		expressions.KindTryCast:  func(g *Generator, e expressions.Expression) string { return g.castSQLWithPrefix(e, "") },
+		// generators/hive.py:300 `exp.If: if_sql()` — Hive renders the three-argument IF
+		// form rather than a CASE.
+		expressions.KindIf: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("IF", []any{e.This(), e.Arg("true"), e.Arg("false")}, "(", ")", true)
+		},
 		// generators/hive.py:367 `exp.Trim: trim_sql` imports dialect.py:1822's TRIM grammar
 		// form (this port's trimSQLStandard), not the LTRIM/RTRIM call form.
 		expressions.KindTrim:           (*Generator).trimSQLStandard,
