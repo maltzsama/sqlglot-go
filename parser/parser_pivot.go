@@ -226,11 +226,17 @@ func (p *Parser) parsePivot() exp.Expression {
 // alias_or_name and the aggregation alias goes last; the flags are recorded on the node as
 // upstream does.
 func (p *Parser) setPivotColumns(pivot exp.Expression, aggregations []exp.Expression) {
-	// _pivot_column_names (parser.py:5509-5510).
+	// _pivot_column_names (parser.py:5509-5510), overridden by Spark2Parser
+	// (parsers/spark2.py:106-109): PIVOT_COLUMN_NAMING "agg_name_if_multiple" gives a single
+	// aggregation no suffix names at all; otherwise each aliased aggregation contributes its
+	// alias.
+	pivotColumnNaming := p.dialect.PivotColumnNaming
 	var names []string
-	for _, agg := range aggregations {
-		if alias := agg.Alias(); alias != "" {
-			names = append(names, alias)
+	if pivotColumnNaming != "agg_name_if_multiple" || len(aggregations) != 1 {
+		for _, agg := range aggregations {
+			if alias := agg.Alias(); alias != "" {
+				names = append(names, alias)
+			}
 		}
 	}
 
@@ -274,7 +280,7 @@ func (p *Parser) setPivotColumns(pivot exp.Expression, aggregations []exp.Expres
 	pivot.Set("columns", columns)
 	pivot.Set("identify_pivot_strings", false)
 	pivot.Set("prefixed_pivot_columns", false)
-	pivot.Set("pivot_column_naming", "agg_name_if_aliased")
+	pivot.Set("pivot_column_naming", pivotColumnNaming)
 }
 
 func (p *Parser) parsePivotAggregation() exp.Expression {

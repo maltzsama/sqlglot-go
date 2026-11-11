@@ -43,13 +43,7 @@ func init() {
 		expressions.KindUsingProperty: func(g *Generator, e expressions.Expression) string {
 			return "USING " + e.Text("kind") + " " + g.sqlKey(e, "this")
 		},
-		expressions.KindFileFormatProperty: func(g *Generator, e expressions.Expression) string {
-			this := strings.ToUpper(e.Name())
-			if t := e.This(); t != nil && t.Kind() == expressions.KindInputOutputFormat {
-				this = g.gen(t)
-			}
-			return "STORED AS " + this
-		},
+		expressions.KindFileFormatProperty: hiveFileFormatPropertySQL,
 		expressions.KindInputOutputFormat: func(g *Generator, e expressions.Expression) string {
 			var p []string
 			for _, a := range []struct{ k, p string }{{"input_format", "INPUTFORMAT "}, {"output_format", "OUTPUTFORMAT "}} {
@@ -76,8 +70,11 @@ func init() {
 			}
 			return s
 		},
-		expressions.KindDataType:       (*Generator).hiveDataTypeSQL,
-		expressions.KindTryCast:        func(g *Generator, e expressions.Expression) string { return g.castSQLWithPrefix(e, "") },
+		expressions.KindDataType: (*Generator).hiveDataTypeSQL,
+		expressions.KindTryCast:  func(g *Generator, e expressions.Expression) string { return g.castSQLWithPrefix(e, "") },
+		// generators/hive.py:367 `exp.Trim: trim_sql` imports dialect.py:1822's TRIM grammar
+		// form (this port's trimSQLStandard), not the LTRIM/RTRIM call form.
+		expressions.KindTrim:           (*Generator).trimSQLStandard,
 		expressions.KindApproxDistinct: hiveCall("APPROX_COUNT_DISTINCT", "this"),
 		expressions.KindRegexpLike:     func(g *Generator, e expressions.Expression) string { return g.binary(e, "RLIKE") },
 		expressions.KindIgnoreNulls: func(g *Generator, e expressions.Expression) string {
@@ -164,6 +161,17 @@ func hiveCall(name string, keys ...string) func(*Generator, expressions.Expressi
 	}
 }
 
+// hiveFileFormatPropertySQL ports fileformatproperty_sql (generators/hive.py:604-611):
+// STORED AS <input/output format | uppercase name>. Spark2 reuses it when hive_format is set
+// (generators/spark2.py:237-241).
+func hiveFileFormatPropertySQL(g *Generator, e expressions.Expression) string {
+	this := strings.ToUpper(e.Name())
+	if t := e.This(); t != nil && t.Kind() == expressions.KindInputOutputFormat {
+		this = g.gen(t)
+	}
+	return "STORED AS " + this
+}
+
 // hiveFormatTimeLiteral is Generator.format_time under Hive's INVERSE_TIME_MAPPING.
 func hiveFormatTimeLiteral(e expressions.Expression) any {
 	format := asExpression(e.Arg("format"))
@@ -209,6 +217,14 @@ func (g *Generator) hiveToDateSQL(e expressions.Expression) string {
 		switch p.Kind() {
 		case expressions.KindDateDiff, expressions.KindDay, expressions.KindMonth, expressions.KindYear:
 			return g.sqlKey(e, "this")
+		}
+		// Spark2Generator.TS_OR_DS_EXPRESSIONS (generators/spark2.py:130-136) extends Hive's
+		// list with these four; Spark and Databricks inherit it.
+		if g.isDialect("spark2") {
+			switch p.Kind() {
+			case expressions.KindDayOfMonth, expressions.KindDayOfWeek, expressions.KindDayOfYear, expressions.KindWeekOfYear:
+				return g.sqlKey(e, "this")
+			}
 		}
 	}
 	return g.funcCall("TO_DATE", []any{e.This()}, "(", ")", true)

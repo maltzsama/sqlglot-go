@@ -30,6 +30,16 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"ARRAY": func(args []Expression) Expression {
 		return newNode(KindArray, Args{"expressions": args})
 	},
+	// exp.Struct (array.py:355): var-len arguments land in "expressions". Every dialect's
+	// parser maps STRUCT, so `STRUCT(1, 2)` is a Struct node rather than Anonymous.
+	"STRUCT": func(args []Expression) Expression {
+		return newNode(KindStruct, Args{"expressions": args})
+	},
+	"ARRAY_SUM":       genericFunction(KindArraySum),
+	"ARRAY_TO_STRING": genericFunction(KindArrayToString),
+	"DAYOFWEEK_ISO":   genericFunction(KindDayOfWeekIso),
+	"PARSE_JSON":      genericFunction(KindParseJSON),
+	"JSON_FORMAT":     genericFunction(KindJSONFormat),
 	// "LIST" registers exp.List the same way upstream does: FUNCTIONS spreads
 	// exp.FUNCTION_BY_NAME (parser.py:374), which maps every Func subclass's sql_name to
 	// from_arg_list (expressions/__init__.py:50) — so `LIST(1, 2, 3)` parses as exp.List,

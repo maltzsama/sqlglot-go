@@ -121,6 +121,14 @@ func init() {
 func (p *Parser) parseHiveAlterTableChange() exp.Expression {
 	p.match(tokens.COLUMN)
 	this := p.parseField(true, nil, false)
+	// parsers/hive.py:228-229: spark2's CHANGE_COLUMN_ALTER_SYNTAX accepts
+	// `CHANGE COLUMN a TYPE <type>` as an ALTER COLUMN (parsers/spark2.py:23).
+	if p.dialect.ChangeColumnAlterSyntax && p.matchTextSeq("TYPE") {
+		return p.expression(exp.AlterColumn(exp.Args{
+			"this":  this,
+			"dtype": p.parseTypes(false, true, true, false),
+		}), nil, nil)
+	}
 	columnNew := p.parseField(true, nil, false)
 	dtype := p.parseTypes(false, true, true, true)
 	var comment any = false
@@ -450,6 +458,15 @@ func (p *Parser) parseDropPartition(exists any) exp.Expression {
 // parseDropColumn ports _parse_drop_column (parser.py:8737-8741): re-matches DROP (retreated
 // into position by parseAlterTableDrop) and reuses the top-level parseDrop grammar.
 func (p *Parser) parseDropColumn() exp.Expression {
+	// parsers/spark2.py:99-104: Spark2Parser replaces the base grammar - only
+	// `DROP COLUMNS <schema>` is structured, every other DROP action returns nil and the
+	// enclosing ALTER therefore falls back to Command passthrough (verified upstream).
+	if p.dialectIs("spark2") {
+		if p.matchTextSeq("DROP", "COLUMNS") {
+			return p.expression(exp.Drop(exp.Args{"this": p.parseSchema(nil), "kind": "COLUMNS"}), nil, nil)
+		}
+		return nil
+	}
 	if !p.match(tokens.DROP) {
 		return nil
 	}

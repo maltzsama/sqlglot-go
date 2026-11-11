@@ -3971,8 +3971,13 @@ func (p *Parser) parseFunctionCall(functions map[string]func([]exp.Expression) e
 			function = functions[upper]
 		}
 		knownFunction := function != nil && !anonymous && !opaque
-		alias := !knownFunction
+		// parser.py:1554 + 7257: FUNCTIONS_WITH_ALIASED_ARGS = {"STRUCT"}. Its arguments
+		// still accept `x AS y` aliases and are folded into PropertyEQ key/value pairs.
+		alias := !knownFunction || upper == "STRUCT"
 		args := p.parseFunctionArgs(alias)
+		if alias && knownFunction {
+			args = p.kvToPropEQ(args)
+		}
 		if knownFunction {
 			// A dialect FUNCTIONS builder may consume/reorder its argument list (TSQL
 			// HASHBYTES pops the hash-kind argument), so the raw arity check would flag a
