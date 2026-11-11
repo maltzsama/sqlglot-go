@@ -15,7 +15,6 @@ func Install(args Args) Expression          { return newNode(KindInstall, args) 
 func PercentileCont(args Args) Expression   { return newNode(KindPercentileCont, args) }
 func PositionalColumn(args Args) Expression { return newNode(KindPositionalColumn, args) }
 func SortArray(args Args) Expression        { return newNode(KindSortArray, args) }
-func Length(args Args) Expression           { return newNode(KindLength, args) }
 func RegexpFullMatch(args Args) Expression  { return newNode(KindRegexpFullMatch, args) }
 func Summarize(args Args) Expression        { return newNode(KindSummarize, args) }
 func UnpivotColumns(args Args) Expression   { return newNode(KindUnpivotColumns, args) }

@@ -15,7 +15,7 @@ third-party dependencies** (Go stdlib only).
 This repository is a maintained, independent continuation of `ridi-oss/sqlglot-go` (forked at its
 v0.38.0 release). It tracks upstream sqlglot **v30.17.0** and extends the original base/MySQL/Postgres
 port with TSQL, ClickHouse, Oracle, StarRocks, Doris, Presto, Trino, Hive, Athena, Redshift,
-Materialize, RisingWave, Spark, Databricks, and BigQuery.
+Materialize, RisingWave, Spark, Databricks, BigQuery, and DuckDB.
 
 ## Scope — what this is (and isn't)
 

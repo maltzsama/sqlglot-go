@@ -2471,7 +2471,10 @@ func (g *Generator) extractSQL(e expressions.Expression) string {
 			thisExpr = expressions.Var(expressions.Args{"this": mapped})
 		}
 	}
-	this := g.gen(thisExpr)
+	this := g.sqlKey(e, "this")
+	if thisExpr != nil {
+		this = g.gen(thisExpr)
+	}
 	expressionSQL := g.sqlKey(e, "expression")
 	return "EXTRACT(" + this + " FROM " + expressionSQL + ")"
 }

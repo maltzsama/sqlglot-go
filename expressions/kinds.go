@@ -155,7 +155,6 @@ const (
 	KindAttachOption
 	KindDateBin
 	KindDatetimeDiff
-	KindHavingMax
 	KindIntDiv
 	KindJSONExtractArray
 	KindJSONValueArray
@@ -856,12 +855,7 @@ const (
 	KindGapFill
 	KindTranslate
 	KindDatetime
-	KindDatetimeAdd
-	KindDatetimeDiff
-	KindDatetimeSub
 	KindDatetimeTrunc
-	KindTimeAdd
-	KindTimeSub
 	KindExplodingGenerateSeries
 	KindExport
 	KindFeaturesAtTime
@@ -873,14 +867,10 @@ const (
 	KindGenerateTable
 	KindGenerateText
 	KindInt64
-	KindIntDiv
 	KindJSONBool
-	KindJSONExtractArray
 	KindJSONKeysAtDepth
 	KindJSONStripNulls
-	KindJSONValueArray
 	KindLowerHex
-	KindMakeInterval
 	KindMLForecast
 	KindMLTranslate
 	KindNetFunc
@@ -1244,7 +1234,6 @@ var argTypes = map[Kind][]argSpec{
 	KindAttachOption:          {{"this", true}, {"expression", false}},
 	KindDateBin:               {{"this", true}, {"expression", true}, {"unit", false}, {"zone", false}, {"origin", false}},
 	KindDatetimeDiff:          {{"this", true}, {"expression", true}, {"unit", false}, {"date_part_boundary", false}},
-	KindHavingMax:             {{"this", true}, {"expression", true}, {"max", true}},
 	KindIntDiv:                {{"this", true}, {"expression", true}},
 	KindJSONExtractArray:      {{"this", true}, {"expression", false}},
 	KindJSONValueArray:        {{"this", true}, {"expression", false}},
@@ -1729,12 +1718,7 @@ var argTypes = map[Kind][]argSpec{
 	KindGapFill:                  {{"this", true}, {"ts_column", true}, {"bucket_width", true}, {"partitioning_columns", false}, {"value_columns", false}, {"origin", false}, {"ignore_nulls", false}},
 	KindTranslate:                {{"this", true}, {"from_", true}, {"to", true}},
 	KindDatetime:                 {{"this", true}, {"expression", false}},
-	KindDatetimeAdd:              {{"this", true}, {"expression", true}, {"unit", false}},
-	KindDatetimeDiff:             {{"this", true}, {"expression", true}, {"unit", false}, {"date_part_boundary", false}},
-	KindDatetimeSub:              {{"this", true}, {"expression", true}, {"unit", false}},
 	KindDatetimeTrunc:            {{"this", true}, {"unit", true}, {"zone", false}},
-	KindTimeAdd:                  {{"this", true}, {"expression", true}, {"unit", false}},
-	KindTimeSub:                  {{"this", true}, {"expression", true}, {"unit", false}},
 	KindExplodingGenerateSeries:  {{"start", true}, {"end", true}, {"step", false}, {"is_end_exclusive", false}},
 	KindExport:                   {{"this", true}, {"connection", false}, {"options", true}},
 	KindFeaturesAtTime:           {{"this", true}, {"time", false}, {"num_rows", false}, {"ignore_feature_nulls", false}},
@@ -1746,14 +1730,10 @@ var argTypes = map[Kind][]argSpec{
 	KindGenerateTable:            {{"this", true}, {"expression", false}, {"params_struct", false}},
 	KindGenerateText:             {{"this", true}, {"expression", false}, {"params_struct", false}},
 	KindInt64:                    defaultArgTypes,
-	KindIntDiv:                   {{"this", true}, {"expression", true}},
 	KindJSONBool:                 defaultArgTypes,
-	KindJSONExtractArray:         {{"this", true}, {"expression", false}},
 	KindJSONKeysAtDepth:          {{"this", true}, {"expression", false}, {"mode", false}},
 	KindJSONStripNulls:           {{"this", true}, {"expression", false}, {"include_arrays", false}, {"remove_empty", false}},
-	KindJSONValueArray:           {{"this", true}, {"expression", false}},
 	KindLowerHex:                 {{"this", true}, {"case", false}},
-	KindMakeInterval:             {{"year", false}, {"month", false}, {"week", false}, {"day", false}, {"hour", false}, {"minute", false}, {"second", false}},
 	KindMLForecast:               {{"this", true}, {"expression", false}, {"params_struct", false}},
 	KindMLTranslate:              {{"this", true}, {"expression", true}, {"params_struct", true}},
 	KindNetFunc:                  defaultArgTypes,
@@ -2029,7 +2009,6 @@ var traitsOf = map[Kind]Trait{
 	KindByteLength:              TraitCondition | TraitFunc,
 	KindDatetime:                TraitCondition | TraitFunc,
 	KindDatetimeAdd:             TraitCondition | TraitFunc,
-	KindDatetimeDiff:            TraitCondition | TraitFunc,
 	KindDatetimeSub:             TraitCondition | TraitFunc,
 	KindDatetimeTrunc:           TraitCondition | TraitFunc,
 	KindTimeAdd:                 TraitCondition | TraitFunc,
@@ -2046,14 +2025,10 @@ var traitsOf = map[Kind]Trait{
 	KindGenerateTable:           TraitCondition | TraitFunc,
 	KindGenerateText:            TraitCondition | TraitFunc,
 	KindInt64:                   TraitCondition | TraitFunc,
-	KindIntDiv:                  TraitCondition | TraitBinary,
 	KindJSONBool:                TraitCondition | TraitFunc,
-	KindJSONExtractArray:        TraitCondition | TraitFunc,
 	KindJSONKeysAtDepth:         TraitCondition | TraitFunc,
 	KindJSONStripNulls:          TraitCondition | TraitFunc,
-	KindJSONValueArray:          TraitCondition | TraitFunc,
 	KindLowerHex:                TraitCondition | TraitFunc,
-	KindMakeInterval:            TraitCondition | TraitFunc,
 	KindMLForecast:              TraitCondition | TraitFunc,
 	KindMLTranslate:             TraitCondition | TraitFunc,
 	KindNetFunc:                 TraitCondition | TraitFunc,
@@ -2852,12 +2827,6 @@ var className = map[Kind]string{
 	KindAttach:                "Attach",
 	KindAttachOption:          "AttachOption",
 	KindDateBin:               "DateBin",
-	KindDatetimeDiff:          "DatetimeDiff",
-	KindHavingMax:             "HavingMax",
-	KindIntDiv:                "IntDiv",
-	KindJSONExtractArray:      "JSONExtractArray",
-	KindJSONValueArray:        "JSONValueArray",
-	KindMakeInterval:          "MakeInterval",
 	KindUnixSeconds:           "UnixSeconds",
 	KindInstall:               "Install",
 	KindPercentileCont:        "PercentileCont",
@@ -2868,10 +2837,6 @@ var className = map[Kind]string{
 	KindUnpivotColumns:        "UnpivotColumns",
 	KindToVariant:             "ToVariant",
 	KindLogicalAnd:            "LogicalAnd",
-	KindDatetimeAdd:           "DatetimeAdd",
-	KindDatetimeSub:           "DatetimeSub",
-	KindTimeAdd:               "TimeAdd",
-	KindTimeSub:               "TimeSub",
 	KindApproxQuantile:        "ApproxQuantile",
 	KindArrayUniqueAgg:        "ArrayUniqueAgg",
 	KindDayOfWeekIso:          "DayOfWeekIso",

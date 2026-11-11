@@ -261,3 +261,42 @@ func TestDuckDBCanonicalizations(t *testing.T) {
 
 // ensure the generator import is referenced even if a helper changes.
 var _ = generator.Options{}
+
+// TestDuckDBReviewRegressions pins the review-driven fixes: JSON extraction path arguments,
+// typed JSON arrays, the null-safe array-overlap branch, MAKE_INTERVAL, DATE_DIFF units and
+// ordered ARRAY_AGG within group.
+func TestDuckDBReviewRegressions(t *testing.T) {
+	assertRoundTrip(t, "duckdb", "SELECT DATE_DIFF('day', a, b)", "SELECT DATE_DIFF('DAY', a, b)")
+	assertRoundTrip(t, "duckdb", "SELECT DATE_DIFF(unit_col, a, b)", "SELECT DATE_DIFF(unit_col, a, b)")
+	assertRoundTrip(t, "duckdb",
+		"SELECT ARRAY_AGG(x) WITHIN GROUP (ORDER BY y)",
+		"SELECT ARRAY_AGG(x ORDER BY y)")
+
+	// The extra JSON path arguments are kept on the node's expressions arg.
+	expr, err := sqlglot.ParseOne("SELECT JSON_EXTRACT_PATH(x, 'a', 'b')", "duckdb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	extract := expr.Expressions()[0]
+	if extract == nil || len(extract.Expressions()) != 1 {
+		t.Fatalf("expected one extra JSON path argument, got %s", expr.ToS())
+	}
+
+	// A prefix alias without an expression is a parse error, not a panic.
+	if _, err := sqlglot.ParseOne("SELECT foo:", "duckdb"); err == nil {
+		t.Fatal("expected a parse error for a prefix alias without an expression")
+	}
+
+	// MAKE_INTERVAL renders a real INTERVAL literal.
+	intervalExpr, err := sqlglot.ParseOne("MAKE_INTERVAL(year => 1, month => 2)", "bigquery")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := sqlglot.Generate(intervalExpr, "duckdb", generator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "INTERVAL '1 YEAR 2 MONTH'"; got != want {
+		t.Fatalf("MAKE_INTERVAL = %q, want %q", got, want)
+	}
+}

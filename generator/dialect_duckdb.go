@@ -257,9 +257,19 @@ func (g *Generator) arrowJSONExtractBinary(e expressions.Expression, op string) 
 }
 
 // duckDBArrowJSONExtractArray ports _json_extract_value_array_sql
-// (generators/duckdb.py:1003-1008).
+// (generators/duckdb.py:1003-1008): the JSON extraction is cast to ARRAY<STRING> for a
+// JSON_VALUE_ARRAY and ARRAY<JSON> for a JSON_EXTRACT_ARRAY.
 func duckDBArrowJSONExtractArray(g *Generator, e expressions.Expression) string {
-	return g.funcCall("JSON_EXTRACT_STRING", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+	extract := expressions.JSONExtract(expressions.Args{"this": e.This(), "expression": e.Arg("expression")})
+	typeName := "ARRAY<JSON>"
+	if e.Kind() == expressions.KindJSONValueArray {
+		typeName = "ARRAY<STRING>"
+	}
+	to, err := expressions.DataTypeBuild(typeName, "duckdb", false, false, nil)
+	if err != nil {
+		return g.gen(extract)
+	}
+	return g.gen(expressions.Cast(expressions.Args{"this": extract, "to": to}))
 }
 
 // duckDBArrayAppendSQL ports array_append_sql (dialects/dialect.py array_append_sql).
@@ -288,24 +298,31 @@ func duckDBArrayContainsSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("ARRAY_CONTAINS", []any{e.This(), e.Arg("expression")}, "(", ")", true)
 }
 
-// duckDBArrayOverlapsSQL ports _array_overlaps_sql (generators/duckdb.py:565-607) for the
-// non-null-safe form.
+// duckDBArrayOverlapsSQL ports _array_overlaps_sql (generators/duckdb.py:565-606). The
+// null-safe form also treats a shared NULL as an overlap.
 func duckDBArrayOverlapsSQL(g *Generator, e expressions.Expression) string {
-	if truthy(e.Arg("null_safe")) {
+	if !truthy(e.Arg("null_safe")) {
 		return g.binary(e, "&&")
 	}
-	return g.binary(e, "&&")
+	arr1 := g.sqlKey(e, "this")
+	arr2 := g.sqlKey(e, "expression")
+	return "(" + arr1 + " && " + arr2 + ") OR (ARRAY_LENGTH(" + arr1 + ") <> LIST_COUNT(" + arr1 +
+		") AND ARRAY_LENGTH(" + arr2 + ") <> LIST_COUNT(" + arr2 + "))"
 }
 
-// duckDBMakeIntervalSQL ports no_make_interval_sql (dialects/dialect.py) with sep=" ".
+// duckDBMakeIntervalSQL ports no_make_interval_sql (dialects/dialect.py:2523-2531) with
+// sep=" ": each value is paired with its unit inside an INTERVAL literal.
 func duckDBMakeIntervalSQL(g *Generator, e expressions.Expression) string {
 	args := make([]string, 0, 7)
 	for _, key := range []string{"year", "month", "week", "day", "hour", "minute", "second"} {
-		if value := e.Arg(key); value != nil {
-			args = append(args, g.gen(value))
+		if value := asExpression(e.Arg(key)); value != nil {
+			if value.Kind() == expressions.KindKwarg {
+				value = asExpression(value.Arg("expression"))
+			}
+			args = append(args, g.gen(value)+" "+strings.ToUpper(key))
 		}
 	}
-	return strings.Join(args, " ")
+	return "INTERVAL '" + strings.Join(args, " ") + "'"
 }
 
 // duckDBGroupConcatSQL ports the GroupConcat lambda (generators/duckdb.py:1657) with
@@ -428,7 +445,7 @@ func duckDBUnixSecondsSQL(g *Generator, e expressions.Expression) string {
 // form.
 func duckDBDateDiffSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("DATE_DIFF", []any{
-		g.gen(expressions.LiteralString(strings.ToUpper(e.Text("unit")))),
+		duckDBDiffUnit(asExpression(e.Arg("unit"))),
 		e.Arg("expression"),
 		e.This(),
 	}, "(", ")", true)
@@ -437,7 +454,7 @@ func duckDBDateDiffSQL(g *Generator, e expressions.Expression) string {
 // duckDBTsOrDsDiffSQL ports the TsOrDsDiff lambda (generators/duckdb.py:1748-1752).
 func duckDBTsOrDsDiffSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("DATE_DIFF", []any{
-		g.gen(expressions.LiteralString(strings.ToUpper(e.Text("unit")))),
+		duckDBDiffUnit(asExpression(e.Arg("unit"))),
 		e.Arg("expression"),
 		e.This(),
 	}, "(", ")", true)
@@ -446,7 +463,7 @@ func duckDBTsOrDsDiffSQL(g *Generator, e expressions.Expression) string {
 // duckDBTimestampTruncSQL ports timestamptrunc_sql (generators/duckdb.py:4462-...): DuckDB
 // renders DATE_TRUNC(<unit string>, <this>).
 func duckDBTimestampTruncSQL(g *Generator, e expressions.Expression) string {
-	unit := unitToStrValue(asExpression(e.Arg("unit")))
+	unit := duckDBDiffUnit(asExpression(e.Arg("unit")))
 	return g.funcCall("DATE_TRUNC", []any{unit, e.This()}, "(", ")", true)
 }
 
@@ -768,7 +785,17 @@ func duckDBDateDeltaSQL(op string) func(*Generator, expressions.Expression) stri
 func duckDBWithinGroupSQL(g *Generator, e expressions.Expression) string {
 	funcExpr := asExpression(e.This())
 	if funcExpr != nil && funcExpr.Kind() == expressions.KindArrayAgg {
-		return g.gen(funcExpr)
+		// generators/duckdb.py:3200-3226: DuckDB requires ORDER BY inside the aggregate, so
+		// move the WITHIN GROUP order into the ArrayAgg argument.
+		order := asExpression(e.Arg("expression"))
+		if order == nil || order.Kind() != expressions.KindOrder || funcExpr.This() == nil {
+			return g.gen(funcExpr)
+		}
+		funcExpr.Set("this", expressions.Order(expressions.Args{
+			"this":        funcExpr.This().Copy(),
+			"expressions": order.Expressions(),
+		}))
+		return g.functionFallbackSQL(funcExpr)
 	}
 	order := asExpression(e.Arg("expression"))
 	if funcExpr != nil && (funcExpr.Kind() == expressions.KindPercentileCont || funcExpr.Kind() == expressions.KindPercentileDisc) {
@@ -822,4 +849,17 @@ func duckDBStarSQL(g *Generator, e expressions.Expression) string {
 		replace = g.seg("REPLACE") + " (" + replace + ")"
 	}
 	return "*" + except + replace
+}
+
+// duckDBDiffUnit renders a DATE_DIFF unit: a Var/Literal unit is uppercased and quoted, any
+// other expression is kept, and an absent unit defaults to DAY.
+func duckDBDiffUnit(unit expressions.Expression) any {
+	if unit == nil {
+		return expressions.LiteralString("DAY")
+	}
+	switch unit.Kind() {
+	case expressions.KindVar, expressions.KindLiteral:
+		return expressions.LiteralString(strings.ToUpper(unit.Name()))
+	}
+	return unit
 }

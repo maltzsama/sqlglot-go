@@ -567,9 +567,6 @@ type Dialect struct {
 	HexLowercase bool
 	// HexFunc ports generator.py HEX_FUNC (base "HEX"; bigquery "TO_HEX").
 	HexFunc string
-	// UUIDIsStringType ports UUID_IS_STRING_TYPE (bigquery True): annotate_types treats UUID as
-	// a text type.
-	UUIDIsStringType bool
 	// JSONExtractScalarScalarOnly ports JSON_EXTRACT_SCALAR_SCALAR_ONLY (bigquery True): the
 	// parser records scalar_only on the JSONExtractScalar node.
 	JSONExtractScalarScalarOnly bool

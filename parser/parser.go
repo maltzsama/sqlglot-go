@@ -2008,9 +2008,11 @@ func (p *Parser) parseExpression() exp.Expression {
 		p.match(tokens.COLON)
 		comments := p.prevComments
 		this := p.parseAssignment()
-		if this != nil {
-			comments = append(comments, this.PopComments()...)
+		if this == nil {
+			p.raiseError("Expected expression after prefix alias")
+			return nil
 		}
+		comments = append(comments, this.PopComments()...)
 		return p.expression(exp.AliasExpr(this, alias, false), nil, comments)
 	}
 	this := p.parseAlias(p.parseAssignment(), false)

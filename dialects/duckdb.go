@@ -199,7 +199,13 @@ func duckDBFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expressio
 		return exp.JSONArray(exp.Args{"expressions": args})
 	}
 	out["JSON_EXTRACT_PATH"] = func(args []exp.Expression) exp.Expression {
-		return exp.FromArgList(exp.KindJSONExtract, args)
+		// parser.build_extract_json_with_path: extra path args land in `expressions`, not in
+		// the next positional arg slot.
+		built := exp.New(exp.KindJSONExtract, exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1)})
+		if len(args) > 2 {
+			built.Set("expressions", args[2:])
+		}
+		return built
 	}
 	out["JSON_EXTRACT_STRING"] = func(args []exp.Expression) exp.Expression {
 		return exp.FromArgList(exp.KindJSONExtractScalar, args)
