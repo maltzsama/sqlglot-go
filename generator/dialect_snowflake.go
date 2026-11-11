@@ -102,9 +102,19 @@ func init() {
 		expressions.KindStrPosition:        snowflakeStrPositionSQL,
 		expressions.KindLocaltime:          func(*Generator, expressions.Expression) string { return "LOCALTIME" },
 		expressions.KindLocaltimestamp:     func(*Generator, expressions.Expression) string { return "LOCALTIMESTAMP" },
-		expressions.KindCurrentTimestamp: func(*Generator, expressions.Expression) string {
+		expressions.KindCurrentTimestamp: func(g *Generator, e expressions.Expression) string {
+			if e.Arg("this") != nil {
+				return g.funcCall("CURRENT_TIMESTAMP", []any{e.Arg("this")}, "(", ")", true)
+			}
 			return "CURRENT_TIMESTAMP()"
 		},
+		expressions.KindXor: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("BOOLXOR", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+		},
+		expressions.KindBoolnot: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("BOOLNOT", []any{e.This()}, "(", ")", true)
+		},
+		expressions.KindJSONObject:  snowflakeJSONObjectSQL,
 		expressions.KindTableSample: snowflakeTableSampleSQL,
 		expressions.KindExtract:     snowflakeExtractSQL,
 		expressions.KindDate:        snowflakeDateSQL,
@@ -147,7 +157,13 @@ func snowflakeArrayContainsSQL(g *Generator, e expressions.Expression) string {
 
 // snowflakeArrayPositionSQL ports the ArrayPosition lambda (generators/snowflake.py:669-673).
 func snowflakeArrayPositionSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("ARRAY_POSITION", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+	return g.funcCall("ARRAY_POSITION", []any{e.Arg("expression"), e.This()}, "(", ")", true)
+}
+
+// snowflakeJSONObjectSQL ports the JSONObject lambda (generators/snowflake.py:507):
+// OBJECT_CONSTRUCT_KEEP_NULL over the flattened key/value pairs.
+func snowflakeJSONObjectSQL(g *Generator, e expressions.Expression) string {
+	return g.funcCall("OBJECT_CONSTRUCT_KEEP_NULL", listToAny(e.Expressions()), "(", ")", true)
 }
 
 // snowflakeIfSQL ports if_sql for Snowflake's IFF.

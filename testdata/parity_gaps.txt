@@ -67,8 +67,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC ROW ACCESS POLICY pol1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC SECURITY INTEGRATION int1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESCRIBE db.table"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DIV0(a - b, c - d)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DIV0(foo, bar)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DIV0NULL(a - b, c - d)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DIV0NULL(foo, bar)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"GETDATE()"}
@@ -80,7 +78,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"LOCALTIMESTAMP(3)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"MD5_HEX(col)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"NULLIFZERO(foo)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"OBJECT_CONSTRUCT_KEEP_NULL('key_1', 'one', 'key_2', NULL)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_REPLACE(subject, pattern)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_SUBSTR(subject, pattern, 1, 1, 'e', 0)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_SUBSTR_ALL(subject, pattern, 1, 1, 'e', 0)"}
@@ -102,17 +99,7 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT 1 FROM TABLE(GENERATOR(10, 5))"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT APPROXIMATE_JACCARD_INDEX(minhash_col)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT APPROX_TOP_K(col) FROM t"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ARRAY_POSITION(2, ARRAY_CONSTRUCT(1, 2, 3))"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BITAND(a, b, 'LEFT')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BITOR(a, b, 'LEFT')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BITXOR(a, b, 'LEFT')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BIT_AND(a, b, 'LEFT')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BIT_LENGTH(x'A1B2')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BIT_OR(a, b, 'RIGHT')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BIT_XOR(a, b, 'LEFT')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BOOLNOT(0)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BOOLXOR(2, 0)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BOOLXOR(2, 0.3)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT CURRENT_TIME"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FILE_URL FROM DIRECTORY(@mystage) WHERE SIZE > 100000"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 IGNORE NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
@@ -250,7 +237,6 @@
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT a:from::STRING, a:from || ' test' "}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT {'test': 'best'}::VARIANT"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SHA1(X'002A'::BINARY)"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"TIMEDIFF(DAY, CAST('2007-12-25' AS DATE), CAST('2008-12-25' AS DATE))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"TIMESTAMPDIFF(DAY, CAST('2007-12-25' AS DATE), CAST('2008-12-25' AS DATE))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(foo::TIMESTAMP, 'YYYY-MM')"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(foo::DATE, 'yyyy')"}

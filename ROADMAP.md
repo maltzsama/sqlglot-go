@@ -921,7 +921,7 @@ function spellings, the Snowflake type map (VARIANT/OBJECT/VARCHAR/TIMESTAMPNTZ)
 `MAP(...)` / `ARRAY(...)` type delimiters, `OBJECT_CONSTRUCT`/`OBJECT_KEYS`, the `$` parameter token,
 and `COPY` without a `WITH` wrapper.
 
-Corpus: 1543 `validate_identity` cases from `tests/dialects/test_snowflake.py`, at **1195/1543**. The
+Corpus: 1543 `validate_identity` cases from `tests/dialects/test_snowflake.py`, at **1209/1543**. The
 remaining rows are tracked in `testdata/parity_gaps.txt`: stage paths and `GET`/`PUT`, `AT`/`BEFORE`
 time travel, `SEMANTIC_VIEW`, `MATCH_RECOGNIZE`/`MATCH_CONDITION`, `IDENTIFIER` calls, JSON colon
 paths and `GET_PATH`/`FLATTEN` implicit columns, object/map literal keys, COPY parameter metadata,

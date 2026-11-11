@@ -183,6 +183,7 @@ const (
 	KindStuff
 	KindToArray
 	KindBooland
+	KindBoolnot
 	KindBoolor
 	KindYearOfWeek
 	KindToBinary
@@ -1306,6 +1307,7 @@ var argTypes = map[Kind][]argSpec{
 	KindToDouble:              {{"this", true}, {"format", false}, {"safe", false}},
 	KindToFile:                {{"this", true}, {"path", false}, {"format", false}, {"safe", false}},
 	KindTimeSlice:             {{"this", true}, {"expression", true}, {"unit", true}, {"kind", false}},
+	KindBoolnot:               {{"this", true}, {"round_input", false}},
 	// JSONTable/JSONColumnDef/JSONSchema/FormatJson port JSON_TABLE(...) (parser.py:8166;
 	// expressions/json.py:206, expressions/query.py:2022-2042).
 	KindJSONTable:     {{"this", true}, {"schema", true}, {"path", false}, {"error_handling", false}, {"empty_handling", false}},
@@ -2036,6 +2038,7 @@ var traitsOf = map[Kind]Trait{
 	KindToFile:                TraitCondition | TraitFunc,
 	KindTimeSlice:             TraitCondition | TraitFunc,
 	KindLogicalAnd:            TraitCondition | TraitBinary | TraitFunc,
+	KindBoolnot:               TraitCondition | TraitFunc,
 	// JSONTable(Expression, Func) (expressions/json.py:206); JSONColumnDef/JSONSchema/
 	// FormatJson are plain Expression subclasses with no Func/Condition mixin, so they
 	// get no trait bits (omitted below, matching e.g. KindTableAlias/KindSchema).
@@ -2584,6 +2587,7 @@ var className = map[Kind]string{
 	KindStuff:                               "Stuff",
 	KindToArray:                             "ToArray",
 	KindBooland:                             "Booland",
+	KindBoolnot:                             "Boolnot",
 	KindBoolor:                              "Boolor",
 	KindYearOfWeek:                          "YearOfWeek",
 	KindToBinary:                            "ToBinary",

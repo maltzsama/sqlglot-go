@@ -124,3 +124,25 @@ func TestSnowflakeDescribe(t *testing.T) {
 
 // ensure the generator import is referenced even if a helper changes.
 var _ = generator.Options{}
+
+// TestSnowflakeReviewRegressions pins the review-driven fixes: DIV0 null/grouping semantics,
+// OBJECT_CONSTRUCT_KEEP_NULL, Boolean XOR/NOT, the bitwise padding argument, TIMEDIFF,
+// CURRENT_TIMESTAMP precision and ARRAY_POSITION argument order.
+func TestSnowflakeReviewRegressions(t *testing.T) {
+	cases := map[string]string{
+		"SELECT DIV0(NULL, 0)":                         "SELECT IFF(0 = 0 AND NOT NULL IS NULL, 0, NULL / 0)",
+		"SELECT DIV0(a - b, c - d)":                    "SELECT IFF((c - d) = 0 AND NOT (a - b) IS NULL, 0, (a - b) / (c - d))",
+		"SELECT OBJECT_CONSTRUCT_KEEP_NULL('k', NULL)": "SELECT OBJECT_CONSTRUCT_KEEP_NULL('k', NULL)",
+		"SELECT OBJECT_CONSTRUCT('k', NULL)":           "SELECT OBJECT_CONSTRUCT('k', NULL)",
+		"SELECT BOOLXOR(2, 0)":                         "SELECT BOOLXOR(2, 0)",
+		"SELECT BOOLNOT(x)":                            "SELECT BOOLNOT(x)",
+		"SELECT BITAND(a, b, 'pad')":                   "SELECT BITAND(a, b, 'pad')",
+		"SELECT TIMEDIFF(HOUR, a, b)":                  "SELECT DATEDIFF(HOUR, a, b)",
+		"SELECT CURRENT_TIMESTAMP(3)":                  "SELECT CURRENT_TIMESTAMP(3)",
+		"SELECT ARRAY_CONTAINS('x', arr)":              "SELECT ARRAY_CONTAINS('x', arr)",
+		"SELECT ARRAY_POSITION('x', arr)":              "SELECT ARRAY_POSITION('x', arr)",
+	}
+	for sql, want := range cases {
+		assertRoundTrip(t, "snowflake", sql, want)
+	}
+}

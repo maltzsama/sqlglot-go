@@ -61,6 +61,7 @@ func Snowflake() *Dialect {
 	d.IdentifyPivotStrings = true
 	d.ParameterToken = "$"
 	d.StructDelimiter = [2]string{"(", ")"}
+	d.JSONKeyValuePairSep = ","
 	d.DirectedJoins = true
 	d.CopyParamsAreWrapped = false
 	d.MapIntervalUnits = true
@@ -184,7 +185,7 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return exp.TimestampDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": seqGet(args, 0)})
 	}
 	out["TIMEDIFF"] = func(args []exp.Expression) exp.Expression {
-		return exp.TimeDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": seqGet(args, 0)})
+		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": seqGet(args, 0)})
 	}
 	out["CHARINDEX"] = func(args []exp.Expression) exp.Expression {
 		return exp.StrPosition(exp.Args{
@@ -192,10 +193,18 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		})
 	}
 	out["DIV0"] = func(args []exp.Expression) exp.Expression {
+		lhs := snowflakeWrapBinary(seqGet(args, 0))
+		rhs := snowflakeWrapBinary(seqGet(args, 1))
+		cond := exp.And(exp.Args{
+			"this": exp.EQ(exp.Args{"this": rhs, "expression": exp.LiteralNumber("0")}),
+			"expression": exp.Not(exp.Args{"this": exp.Is(exp.Args{
+				"this": lhs, "expression": exp.Null(),
+			})}),
+		})
 		return exp.If(exp.Args{
-			"this":  exp.EQ(exp.Args{"this": seqGet(args, 1), "expression": exp.LiteralNumber("0")}),
+			"this":  cond,
 			"true":  exp.LiteralNumber("0"),
-			"false": exp.Div(exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1)}),
+			"false": exp.Div(exp.Args{"this": lhs, "expression": rhs}),
 		})
 	}
 	out["IFF"] = exp.FromArgListFunc(exp.KindIf)
@@ -206,7 +215,11 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return exp.StarMap(exp.Args{"expressions": args})
 	}
 	out["OBJECT_CONSTRUCT_KEEP_NULL"] = func(args []exp.Expression) exp.Expression {
-		return exp.StarMap(exp.Args{"expressions": args})
+		pairs := make([]exp.Expression, 0, len(args)/2)
+		for i := 0; i+1 < len(args); i += 2 {
+			pairs = append(pairs, exp.JSONKeyValue(exp.Args{"this": args[i], "expression": args[i+1]}))
+		}
+		return exp.JSONObject(exp.Args{"expressions": pairs})
 	}
 	out["ARRAY_CONSTRUCT"] = func(args []exp.Expression) exp.Expression {
 		return exp.Array(exp.Args{"expressions": args})
@@ -246,10 +259,18 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	out["BITXOR_AGG"] = exp.FromArgListFunc(exp.KindBitwiseXorAgg)
 	out["BIT_XOR_AGG"] = exp.FromArgListFunc(exp.KindBitwiseXorAgg)
 	out["BIT_XORAGG"] = exp.FromArgListFunc(exp.KindBitwiseXorAgg)
-	out["BOOLAND"] = exp.FromArgListFunc(exp.KindBooland)
-	out["BOOLOR"] = exp.FromArgListFunc(exp.KindBoolor)
-	out["BOOLNOT"] = func(args []exp.Expression) exp.Expression { return exp.Not(exp.Args{"this": seqGet(args, 0)}) }
-	out["BOOLXOR"] = snowflakeBitwiseBuilder(exp.KindBitwiseXor)
+	out["BOOLAND"] = func(args []exp.Expression) exp.Expression {
+		return exp.Booland(exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1), "round_input": true})
+	}
+	out["BOOLOR"] = func(args []exp.Expression) exp.Expression {
+		return exp.Boolor(exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1), "round_input": true})
+	}
+	out["BOOLNOT"] = func(args []exp.Expression) exp.Expression {
+		return exp.Boolnot(exp.Args{"this": seqGet(args, 0), "round_input": true})
+	}
+	out["BOOLXOR"] = func(args []exp.Expression) exp.Expression {
+		return exp.Xor(exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1), "round_input": true})
+	}
 	out["DAYOFWEEKISO"] = exp.FromArgListFunc(exp.KindDayOfWeekIso)
 	out["DAYOFYEAR"] = exp.FromArgListFunc(exp.KindDayOfYear)
 	out["WEEKISO"] = exp.FromArgListFunc(exp.KindWeekOfYear)
@@ -274,8 +295,23 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 // snowflakeBitwiseBuilder ports _build_bitwise (parsers/snowflake.py:133-152).
 func snowflakeBitwiseBuilder(kind exp.Kind) func([]exp.Expression) exp.Expression {
 	return func(args []exp.Expression) exp.Expression {
-		return exp.New(kind, exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1)})
+		built := exp.New(kind, exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1)})
+		if len(args) == 3 {
+			switch kind {
+			case exp.KindBitwiseAnd, exp.KindBitwiseOr, exp.KindBitwiseXor:
+				built.Set("padside", args[2])
+			}
+		}
+		return built
 	}
+}
+
+// snowflakeWrapBinary ports exp._wrap(expr, exp.Binary): parenthesize a binary operand.
+func snowflakeWrapBinary(e exp.Expression) exp.Expression {
+	if e != nil && e.Is(exp.TraitBinary) {
+		return exp.Paren(exp.Args{"this": e})
+	}
+	return e
 }
 
 // snowflakeBinaryBuilder builds a this/expression binary-function node.

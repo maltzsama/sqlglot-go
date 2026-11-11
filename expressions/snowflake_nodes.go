@@ -23,3 +23,5 @@ func Undrop(args Args) Expression { return newNode(KindUndrop, args) }
 
 func TimeAdd(args Args) Expression  { return newNode(KindTimeAdd, args) }
 func TimeDiff(args Args) Expression { return newNode(KindTimeDiff, args) }
+
+func Boolnot(args Args) Expression { return newNode(KindBoolnot, args) }
