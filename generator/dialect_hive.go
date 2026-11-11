@@ -33,7 +33,9 @@ func init() {
 		},
 		expressions.KindProperties: (*Generator).hivePropertiesSQL,
 		expressions.KindProperty: func(g *Generator, e expressions.Expression) string {
-			return g.gen(expressions.LiteralString(e.Name())) + "=" + g.sqlKey(e, "value")
+			// dialect.py:1317-1318 property_sql: a dotted key keeps its raw form, any other key
+			// is quoted.
+			return g.propertyName(e, true) + "=" + g.sqlKey(e, "value")
 		},
 		expressions.KindExternalProperty:       func(*Generator, expressions.Expression) string { return "EXTERNAL" },
 		expressions.KindLocationProperty:       hivePrefix("LOCATION "),
@@ -62,16 +64,9 @@ func init() {
 		},
 		expressions.KindAlterSet:    (*Generator).hiveAlterSetSQL,
 		expressions.KindAlterColumn: (*Generator).hiveAlterColumnSQL,
-		expressions.KindColumnDef: func(g *Generator, e expressions.Expression) string {
-			s := g.columnDefSQL(e)
-			if p := e.Parent(); p != nil && p.Kind() == expressions.KindDataType && expressions.IsType(p, expressions.DTypeStruct) {
-				column := g.sqlKey(e, "this")
-				s = strings.Replace(s, column+" ", column+": ", 1)
-			}
-			return s
-		},
-		expressions.KindDataType: (*Generator).hiveDataTypeSQL,
-		expressions.KindTryCast:  func(g *Generator, e expressions.Expression) string { return g.castSQLWithPrefix(e, "") },
+		expressions.KindColumnDef:   hiveColumnDefSQL,
+		expressions.KindDataType:    (*Generator).hiveDataTypeSQL,
+		expressions.KindTryCast:     func(g *Generator, e expressions.Expression) string { return g.castSQLWithPrefix(e, "") },
 		// generators/hive.py:300 `exp.If: if_sql()` — Hive renders the three-argument IF
 		// form rather than a CASE.
 		expressions.KindIf: func(g *Generator, e expressions.Expression) string {
@@ -154,6 +149,17 @@ func init() {
 		}
 	}
 	registerDialectDispatch("hive", handlers)
+}
+
+// hiveColumnDefSQL ports columndef_sql (generators/hive.py:466-472): a struct's field names
+// are separated by a colon instead of a space.
+func hiveColumnDefSQL(g *Generator, e expressions.Expression) string {
+	s := g.columnDefSQL(e)
+	if p := e.Parent(); p != nil && p.Kind() == expressions.KindDataType && expressions.IsType(p, expressions.DTypeStruct) {
+		column := g.sqlKey(e, "this")
+		s = strings.Replace(s, column+" ", column+": ", 1)
+	}
+	return s
 }
 
 func hiveCall(name string, keys ...string) func(*Generator, expressions.Expression) string {

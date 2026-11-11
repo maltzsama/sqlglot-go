@@ -142,7 +142,7 @@ func (p *Parser) parseSetItem() exp.Expression {
 		parsers, trie = mysqlSetParsers, mysqlSetTrie
 	case "postgres":
 		parsers, trie = postgresSetParsers, postgresSetTrie
-	case "spark":
+	case "spark", "databricks":
 		parsers, trie = sparkSetParsers, sparkSetTrie
 	}
 	// Capture the index BEFORE findParser (which consumes the dispatch keyword) so a dispatched

@@ -790,6 +790,7 @@ var columnFastBailTokens = map[tokens.TokenType]bool{
 	tokens.DOTCOLON:    true,
 	tokens.DOTCARET:    true,
 	tokens.DCOLON:      true,
+	tokens.QDCOLON:     true,
 	tokens.ARROW:       true,
 	tokens.DARROW:      true,
 	tokens.HASH_ARROW:  true,

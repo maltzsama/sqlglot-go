@@ -69,10 +69,24 @@ type Dialect struct {
 	SafeDivision            bool
 	SupportsColumnJoinMarks bool
 	ColonIsVariantExtract   bool
-	NullOrdering            string
-	SupportsOrderByAll      bool
-	TryCastRequiresString   *bool
-	DatePartMapping         map[string]string
+	// ColonChainIsSingleExtract ports COLON_CHAIN_IS_SINGLE_EXTRACT (parser.py:1880, base True;
+	// databricks overrides to False): whether x:y:z is one extraction with a merged path.
+	ColonChainIsSingleExtract bool
+	// The JSON_PATH_* generator flags (generator.py:505-561) control how a JSONPath renders.
+	// QuoteJSONPath wraps the whole path in the dialect's quote characters (base True).
+	QuoteJSONPath bool
+	// JSONPathKeyQuotedForcesBrackets renders a quoted key as ["key"] even when it would be a
+	// safe identifier (base False; databricks True).
+	JSONPathKeyQuotedForcesBrackets bool
+	// JSONPathSingleQuoteEscape uses backslash-escaped single quotes for a bracketed key
+	// (base False).
+	JSONPathSingleQuoteEscape bool
+	// JSONPathBracketedKeySupported allows the ["key"] form (base True).
+	JSONPathBracketedKeySupported bool
+	NullOrdering                  string
+	SupportsOrderByAll            bool
+	TryCastRequiresString         *bool
+	DatePartMapping               map[string]string
 	// TimeMapping / InverseTimeMapping port TIME_MAPPING (dialects/dialect.py:447) and the
 	// metaclass-generated INVERSE_TIME_MAPPING (dialect.py:261-271): the dialect's TO_CHAR-style
 	// pattern table (parse side, consumed by build_formatted_time) and its inverse (generate
@@ -540,18 +554,23 @@ func Base() *Dialect {
 		SafeToEliminateDoubleNegation:   true,
 		ArrayConcatIsVarLen:             true,
 		StarExcludeRequiresDerivedTable: true,
-		QuoteStart:                      "'",
-		QuoteEnd:                        "'",
-		IdentifierStart:                 "\"",
-		IdentifierEnd:                   "\"",
-		TokenizerConfig:                 tokens.BaseConfig(),
-		NormalizationStrategy:           Lowercase,
-		DPipeIsStringConcat:             true,
-		NullOrdering:                    "nulls_are_small",
-		DatePartMapping:                 datePartMapping,
-		ValidIntervalUnits:              validIntervalUnits(datePartMapping),
-		SupportsUserDefinedTypes:        true,
-		SupportsFixedSizeArrays:         false,
+		// parser.py:1880 COLON_CHAIN_IS_SINGLE_EXTRACT = True (base).
+		ColonChainIsSingleExtract: true,
+		// generator.py:505-561 JSON_PATH_* / QUOTE_JSON_PATH defaults.
+		QuoteJSONPath:                 true,
+		JSONPathBracketedKeySupported: true,
+		QuoteStart:                    "'",
+		QuoteEnd:                      "'",
+		IdentifierStart:               "\"",
+		IdentifierEnd:                 "\"",
+		TokenizerConfig:               tokens.BaseConfig(),
+		NormalizationStrategy:         Lowercase,
+		DPipeIsStringConcat:           true,
+		NullOrdering:                  "nulls_are_small",
+		DatePartMapping:               datePartMapping,
+		ValidIntervalUnits:            validIntervalUnits(datePartMapping),
+		SupportsUserDefinedTypes:      true,
+		SupportsFixedSizeArrays:       false,
 		// Accept a bare string as a table name/alias by default (upstream is unconditional here);
 		// postgres/mysql override to false to match their real engines. See the field doc.
 		StringTableIdentifiers: true,
@@ -911,6 +930,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return Spark2(), nil
 	case "spark":
 		return Spark(), nil
+	case "databricks":
+		return Databricks(), nil
 	default:
 		return nil, fmt.Errorf("unknown dialect %q", name)
 	}

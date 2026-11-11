@@ -818,12 +818,16 @@ const (
 	KindDateSub
 	KindExplode
 	KindExplodeOuter
+	KindEnviromentProperty
+	KindStream
 	KindFarmFingerprint
 	KindIsNan
 	KindJarowinklerSimilarity
+	KindJSONPath
 	KindJSONPathKey
 	KindJSONPathRoot
 	KindJSONPathSubscript
+	KindJSONPathWildcard
 	KindMap
 	KindMedian
 	KindNullif
@@ -1606,12 +1610,16 @@ var argTypes = map[Kind][]argSpec{
 	KindDateSub:                  {{"this", true}, {"expression", true}, {"unit", false}},
 	KindExplode:                  {{"this", true}, {"expressions", false}},
 	KindExplodeOuter:             {{"this", true}, {"expressions", false}},
+	KindEnviromentProperty:       {{"expressions", true}},
+	KindStream:                   {{"this", true}},
 	KindFarmFingerprint:          {{"expressions", true}},
 	KindIsNan:                    {{"this", true}},
 	KindJarowinklerSimilarity:    {{"this", true}, {"expression", true}, {"case_insensitive", false}, {"integer_scale", false}},
+	KindJSONPath:                 {{"expressions", false}},
 	KindJSONPathKey:              {{"this", true}, {"quoted", false}},
 	KindJSONPathRoot:             {},
 	KindJSONPathSubscript:        {{"this", true}},
+	KindJSONPathWildcard:         {},
 	KindMap:                      {{"keys", false}, {"values", false}},
 	KindMedian:                   {{"this", true}},
 	KindNullif:                   {{"this", true}, {"expression", true}},
@@ -2676,12 +2684,16 @@ var className = map[Kind]string{
 	KindDateSub:                  "DateSub",
 	KindExplode:                  "Explode",
 	KindExplodeOuter:             "ExplodeOuter",
+	KindEnviromentProperty:       "EnviromentProperty",
+	KindStream:                   "Stream",
 	KindFarmFingerprint:          "FarmFingerprint",
 	KindIsNan:                    "IsNan",
 	KindJarowinklerSimilarity:    "JarowinklerSimilarity",
+	KindJSONPath:                 "JSONPath",
 	KindJSONPathKey:              "JSONPathKey",
 	KindJSONPathRoot:             "JSONPathRoot",
 	KindJSONPathSubscript:        "JSONPathSubscript",
+	KindJSONPathWildcard:         "JSONPathWildcard",
 	KindMap:                      "Map",
 	KindMedian:                   "Median",
 	KindNullif:                   "Nullif",

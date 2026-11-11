@@ -105,19 +105,26 @@ func (p *Parser) parseHiveTransform() exp.Expression {
 }
 
 func (p *Parser) parseHiveQuantileFunction(kind exp.Kind) exp.Expression {
-	var firstArg exp.Expression
-	if p.match(tokens.DISTINCT) {
-		firstArg = p.expression(exp.Distinct(exp.Args{
-			"expressions": []exp.Expression{p.parseLambda(false)},
-		}), nil, nil)
-	} else {
+	return p.parseDistinctArgFunction(kind, 0)
+}
+
+// parseDistinctArgFunction ports _parse_distinct_arg_function (parser.py:10109-10122): the
+// optional DISTINCT prefix wraps the argument at distinctIndex.
+func (p *Parser) parseDistinctArgFunction(kind exp.Kind, distinctIndex int) exp.Expression {
+	isDistinct := p.match(tokens.DISTINCT)
+	if !isDistinct {
 		p.match(tokens.ALL)
-		firstArg = p.parseLambda(false)
 	}
 
-	args := []exp.Expression{firstArg}
+	args := []exp.Expression{p.parseLambda(false)}
 	if p.match(tokens.COMMA) {
 		args = append(args, p.parseFunctionArgs(false)...)
+	}
+
+	if isDistinct && distinctIndex >= 0 && distinctIndex < len(args) && args[distinctIndex] != nil {
+		args[distinctIndex] = p.expression(exp.Distinct(exp.Args{
+			"expressions": []exp.Expression{args[distinctIndex]},
+		}), nil, nil)
 	}
 	return exp.FromArgList(kind, args)
 }

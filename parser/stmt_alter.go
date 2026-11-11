@@ -41,7 +41,10 @@ var (
 func init() {
 	alterParsers = map[string]func(*Parser) []exp.Expression{
 		"ADD": (*Parser).parseAlterTableAdd,
-		"AS":  func(p *Parser) []exp.Expression { return ensureListExpr(p.parseSelect()) },
+		"CLUSTER BY": func(p *Parser) []exp.Expression {
+			return ensureListExpr(p.parseClusterProperty())
+		},
+		"AS": func(p *Parser) []exp.Expression { return ensureListExpr(p.parseSelect()) },
 		"ALTER": func(p *Parser) []exp.Expression {
 			return ensureListExpr(p.parseAlterTableAlter())
 		},

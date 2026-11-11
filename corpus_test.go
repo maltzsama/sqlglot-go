@@ -248,6 +248,7 @@ const (
 	minPassMaterialize = 24
 	minPassRisingWave  = 7
 	minPassSpark       = 227
+	minPassDatabricks  = 175
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
@@ -268,6 +269,7 @@ const (
 	minTotalMaterialize = 24
 	minTotalRisingWave  = 7
 	minTotalSpark       = 227
+	minTotalDatabricks  = 176
 )
 
 // TestCorpus is the single round-trip harness for both the base-dialect
@@ -330,6 +332,7 @@ func TestCorpus(t *testing.T) {
 		{"materialize", minPassMaterialize, minTotalMaterialize},
 		{"risingwave", minPassRisingWave, minTotalRisingWave},
 		{"spark", minPassSpark, minTotalSpark},
+		{"databricks", minPassDatabricks, minTotalDatabricks},
 	}
 	var counts []string
 	for _, floor := range floors {
