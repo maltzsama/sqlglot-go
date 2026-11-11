@@ -3,6 +3,8 @@ package sqlglot_test
 import (
 	"testing"
 
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/generator"
 )
 
@@ -144,5 +146,21 @@ func TestSnowflakeReviewRegressions(t *testing.T) {
 	}
 	for sql, want := range cases {
 		assertRoundTrip(t, "snowflake", sql, want)
+	}
+}
+
+// TestSnowflakeTimeDiffRenderer ensures a TimeDiff node produces Snowflake's DATEDIFF form.
+func TestSnowflakeTimeDiffRenderer(t *testing.T) {
+	expr := exp.TimeDiff(exp.Args{
+		"this":       exp.Column(exp.Args{"this": exp.ToIdentifier("b")}),
+		"expression": exp.Column(exp.Args{"this": exp.ToIdentifier("a")}),
+		"unit":       exp.Var(exp.Args{"this": "HOUR"}),
+	})
+	got, err := sqlglot.Generate(expr, "snowflake", generator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "DATEDIFF(HOUR, a, b)"; got != want {
+		t.Fatalf("TimeDiff = %q, want %q", got, want)
 	}
 }

@@ -91,6 +91,7 @@ func init() {
 		expressions.KindTimestampAdd:       snowflakeDateDeltaSQL("TIMESTAMPADD"),
 		expressions.KindTimestampSub:       snowflakeDateDeltaSQL("TIMESTAMPADD"),
 		expressions.KindTimestampDiff:      snowflakeDateDeltaSQL("TIMESTAMPDIFF"),
+		expressions.KindTimeDiff:           snowflakeDateDeltaSQL("DATEDIFF"),
 		expressions.KindTsOrDsAdd:          snowflakeDateDeltaSQL("DATEADD"),
 		expressions.KindTsOrDsDiff:         snowflakeDateDeltaSQL("DATEDIFF"),
 		expressions.KindDateTrunc:          snowflakeDateTruncSQL,
