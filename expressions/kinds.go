@@ -66,6 +66,7 @@ const (
 	KindIntersect
 	KindSubquery
 	KindHaving
+	KindHavingMax
 	KindQualify
 	// KindConnect/KindPrior (query.py:526-531): START WITH ... CONNECT BY hierarchical
 	// query clause and its PRIOR operand marker.
@@ -486,6 +487,7 @@ const (
 	// exp.Variadic (query.py:2099 - a plain `pass` Expression, no Func/Condition mixin,
 	// so it gets no traitsOf row below, mirroring KindLambda/KindTableAlias).
 	KindCurrentDate
+	KindCurrentDatetime
 	KindCurrentTime
 	KindCurrentSchema
 	KindDayOfMonth
@@ -762,7 +764,6 @@ const (
 	KindForClause
 	KindJSONArrayAgg
 	KindConvert
-	KindTimeFromParts
 	KindTimestampFromParts
 	KindDateFromParts
 	KindSplitPart
@@ -818,6 +819,57 @@ const (
 	KindDateSub
 	KindExplode
 	KindExplodeOuter
+	KindApproxTopK
+	KindAIForecast
+	KindAIEmbed
+	KindAIGenerate
+	KindAISimilarity
+	KindByteLength
+	KindContains
+	KindGapFill
+	KindTranslate
+	KindDatetime
+	KindDatetimeAdd
+	KindDatetimeDiff
+	KindDatetimeSub
+	KindDatetimeTrunc
+	KindTimeAdd
+	KindTimeSub
+	KindExplodingGenerateSeries
+	KindExport
+	KindFeaturesAtTime
+	KindForIn
+	KindGenerateBool
+	KindGenerateDouble
+	KindGenerateEmbedding
+	KindGenerateInt
+	KindGenerateTable
+	KindGenerateText
+	KindInt64
+	KindIntDiv
+	KindJSONBool
+	KindJSONExtractArray
+	KindJSONKeysAtDepth
+	KindJSONStripNulls
+	KindJSONValueArray
+	KindLowerHex
+	KindMakeInterval
+	KindMLForecast
+	KindMLTranslate
+	KindNetFunc
+	KindNormalize
+	KindParseTime
+	KindPredict
+	KindSafeFunc
+	KindTime
+	KindTimestamp
+	KindTimeFromParts
+	KindTsOrDsToDatetime
+	KindTsOrDsToTime
+	KindTsOrDsToTimestamp
+	KindUnixDate
+	KindVectorSearch
+	KindWeekStart
 	KindEnviromentProperty
 	KindStream
 	KindString
@@ -1071,6 +1123,7 @@ var argTypes = map[Kind][]argSpec{
 	KindIntersect:           withQueryModifiers(argSpec{"with_", false}, argSpec{"this", true}, argSpec{"expression", true}, argSpec{"distinct", false}, argSpec{"by_name", false}, argSpec{"side", false}, argSpec{"kind", false}, argSpec{"on", false}),
 	KindSubquery:            withQueryModifiers(argSpec{"this", true}, argSpec{"alias", false}, argSpec{"with_", false}),
 	KindHaving:              {{"this", true}},
+	KindHavingMax:           {{"this", false}, {"expression", true}, {"max", false}},
 	KindQualify:             {{"this", true}},
 	KindConnect:             {{"start", false}, {"connect", true}, {"nocycle", false}},
 	KindPrior:               defaultArgTypes,
@@ -1340,8 +1393,8 @@ var argTypes = map[Kind][]argSpec{
 	// (temporal.py:452-469, key order preserved); TimeStrToDate/TimeStrToUnix are `pass`
 	// (temporal.py:464,472) and so fall back to Expression's default {"this": True} - spelled
 	// out explicitly here (defaultArgTypes) rather than omitted, matching e.g. KindPragma above.
-	KindStrToDate:     {{"this", true}, {"format", false}, {"safe", false}},
-	KindStrToTime:     {{"this", true}, {"format", true}, {"zone", false}, {"safe", false}, {"target_type", false}},
+	KindStrToDate:     {{"this", true}, {"format", false}, {"safe", false}, {"default_year", false}},
+	KindStrToTime:     {{"this", true}, {"format", true}, {"zone", false}, {"safe", false}, {"target_type", false}, {"default_year", false}},
 	KindStrToUnix:     {{"this", false}, {"format", false}},
 	KindTimeStrToDate: defaultArgTypes,
 	KindTimeStrToTime: {{"this", true}, {"zone", false}},
@@ -1392,19 +1445,20 @@ var argTypes = map[Kind][]argSpec{
 	KindTriggerEvent:              {{"this", true}, {"columns", false}},
 	KindTriggerReferencing:        {{"old", false}, {"new", false}},
 	// dialect-funcs cluster (see the Kind block comment above for exact upstream lines).
-	KindCurrentDate:   {{"this", false}},
-	KindCurrentTime:   {{"this", false}},
-	KindCurrentSchema: {{"this", false}},
-	KindDayOfMonth:    defaultArgTypes,
-	KindDayOfWeek:     defaultArgTypes,
-	KindDayOfYear:     defaultArgTypes,
-	KindWeekOfYear:    defaultArgTypes,
-	KindLower:         defaultArgTypes,
-	KindUpper:         defaultArgTypes,
-	KindLength:        {{"this", true}, {"binary", false}, {"encoding", false}},
-	KindTrunc:         {{"this", true}, {"decimals", false}, {"fractions_supported", false}},
-	KindOverlay:       {{"this", true}, {"expression", true}, {"from_", true}, {"for_", false}},
-	KindVariadic:      defaultArgTypes,
+	KindCurrentDate:     {{"this", false}},
+	KindCurrentDatetime: {{"this", false}},
+	KindCurrentTime:     {{"this", false}},
+	KindCurrentSchema:   {{"this", false}},
+	KindDayOfMonth:      defaultArgTypes,
+	KindDayOfWeek:       defaultArgTypes,
+	KindDayOfYear:       defaultArgTypes,
+	KindWeekOfYear:      defaultArgTypes,
+	KindLower:           defaultArgTypes,
+	KindUpper:           defaultArgTypes,
+	KindLength:          {{"this", true}, {"binary", false}, {"encoding", false}},
+	KindTrunc:           {{"this", true}, {"decimals", false}, {"fractions_supported", false}},
+	KindOverlay:         {{"this", true}, {"expression", true}, {"from_", true}, {"for_", false}},
+	KindVariadic:        defaultArgTypes,
 	// slice-strings cluster: Slice (core.py:2017-2018) - this/expression/step all optional.
 	// National (query.py:585-586) has no arg_types override, i.e. inherits the base
 	// Expression default (mirroring e.g. KindLogicalOr above).
@@ -1611,6 +1665,56 @@ var argTypes = map[Kind][]argSpec{
 	KindDateSub:                  {{"this", true}, {"expression", true}, {"unit", false}},
 	KindExplode:                  {{"this", true}, {"expressions", false}},
 	KindExplodeOuter:             {{"this", true}, {"expressions", false}},
+	KindApproxTopK:               {{"this", true}, {"expression", false}, {"counters", false}},
+	KindAIForecast:               {{"this", true}, {"data_col", false}, {"timestamp_col", false}, {"model", false}, {"id_cols", false}, {"horizon", false}, {"forecast_end_timestamp", false}, {"confidence_level", false}, {"output_historical_time_series", false}, {"context_window", false}},
+	KindAIEmbed:                  {{"expressions", true}},
+	KindAIGenerate:               {{"expressions", true}},
+	KindAISimilarity:             {{"expressions", true}},
+	KindByteLength:               defaultArgTypes,
+	KindContains:                 {{"this", true}, {"expression", true}, {"json_scope", false}},
+	KindGapFill:                  {{"this", true}, {"ts_column", true}, {"bucket_width", true}, {"partitioning_columns", false}, {"value_columns", false}, {"origin", false}, {"ignore_nulls", false}},
+	KindTranslate:                {{"this", true}, {"from_", true}, {"to", true}},
+	KindDatetime:                 {{"this", true}, {"expression", false}},
+	KindDatetimeAdd:              {{"this", true}, {"expression", true}, {"unit", false}},
+	KindDatetimeDiff:             {{"this", true}, {"expression", true}, {"unit", false}, {"date_part_boundary", false}},
+	KindDatetimeSub:              {{"this", true}, {"expression", true}, {"unit", false}},
+	KindDatetimeTrunc:            {{"this", true}, {"unit", true}, {"zone", false}},
+	KindTimeAdd:                  {{"this", true}, {"expression", true}, {"unit", false}},
+	KindTimeSub:                  {{"this", true}, {"expression", true}, {"unit", false}},
+	KindExplodingGenerateSeries:  {{"start", true}, {"end", true}, {"step", false}, {"is_end_exclusive", false}},
+	KindExport:                   {{"this", true}, {"connection", false}, {"options", true}},
+	KindFeaturesAtTime:           {{"this", true}, {"time", false}, {"num_rows", false}, {"ignore_feature_nulls", false}},
+	KindForIn:                    {{"this", true}, {"expression", true}},
+	KindGenerateBool:             {{"this", true}, {"expression", false}, {"params_struct", false}},
+	KindGenerateDouble:           {{"this", true}, {"expression", false}, {"params_struct", false}},
+	KindGenerateEmbedding:        {{"this", true}, {"expression", true}, {"params_struct", false}, {"is_text", false}},
+	KindGenerateInt:              {{"this", true}, {"expression", false}, {"params_struct", false}},
+	KindGenerateTable:            {{"this", true}, {"expression", false}, {"params_struct", false}},
+	KindGenerateText:             {{"this", true}, {"expression", false}, {"params_struct", false}},
+	KindInt64:                    defaultArgTypes,
+	KindIntDiv:                   {{"this", true}, {"expression", true}},
+	KindJSONBool:                 defaultArgTypes,
+	KindJSONExtractArray:         {{"this", true}, {"expression", false}},
+	KindJSONKeysAtDepth:          {{"this", true}, {"expression", false}, {"mode", false}},
+	KindJSONStripNulls:           {{"this", true}, {"expression", false}, {"include_arrays", false}, {"remove_empty", false}},
+	KindJSONValueArray:           {{"this", true}, {"expression", false}},
+	KindLowerHex:                 {{"this", true}, {"case", false}},
+	KindMakeInterval:             {{"year", false}, {"month", false}, {"week", false}, {"day", false}, {"hour", false}, {"minute", false}, {"second", false}},
+	KindMLForecast:               {{"this", true}, {"expression", false}, {"params_struct", false}},
+	KindMLTranslate:              {{"this", true}, {"expression", true}, {"params_struct", true}},
+	KindNetFunc:                  defaultArgTypes,
+	KindNormalize:                {{"this", true}, {"form", false}, {"is_casefold", false}},
+	KindParseTime:                {{"this", true}, {"format", true}},
+	KindPredict:                  {{"this", true}, {"expression", true}, {"params_struct", false}},
+	KindSafeFunc:                 defaultArgTypes,
+	KindTime:                     {{"this", false}, {"zone", false}},
+	KindTimestamp:                {{"this", false}, {"zone", false}, {"with_tz", false}},
+	KindTsOrDsToDatetime:         defaultArgTypes,
+	KindTsOrDsToTime:             {{"this", true}, {"format", false}, {"safe", false}},
+	KindTsOrDsToTimestamp:        defaultArgTypes,
+	KindUnixDate:                 defaultArgTypes,
+	KindVectorSearch:             {{"this", true}, {"column_to_search", true}, {"query_table", true}, {"query_column_to_search", false}, {"top_k", false}, {"distance_type", false}, {"options", false}},
+	KindWeekStart:                defaultArgTypes,
 	KindEnviromentProperty:       {{"expressions", true}},
 	KindStream:                   {{"this", true}},
 	KindString:                   {{"this", true}, {"zone", false}},
@@ -1835,36 +1939,85 @@ var traitsOf = map[Kind]Trait{
 	// (expressions/json.py:160,171); JSONKeyValue/OnCondition/JSONValue are plain Expression
 	// subclasses with no Func/Condition mixin, so they get no trait bits (omitted below,
 	// matching the JSONTable comment above).
-	KindJSONObject:     TraitCondition | TraitFunc,
-	KindJSONObjectAgg:  TraitCondition | TraitFunc | TraitAggFunc,
-	KindArrayAgg:       TraitCondition | TraitFunc | TraitAggFunc,
-	KindArraySize:      TraitCondition | TraitFunc,
-	KindArrayAll:       TraitCondition | TraitFunc,
-	KindArrayAny:       TraitCondition | TraitFunc,
-	KindArrayContains:  TraitCondition | TraitBinary | TraitFunc | TraitPredicate,
-	KindInitcap:        TraitCondition | TraitFunc,
-	KindSplit:          TraitCondition | TraitFunc,
-	KindRegexpLike:     TraitCondition | TraitBinary | TraitFunc | TraitPredicate,
-	KindRegexpSplit:    TraitCondition | TraitFunc,
-	KindStructExtract:  TraitCondition | TraitFunc,
-	KindStandardHash:   TraitCondition | TraitFunc,
-	KindHex:            TraitCondition | TraitFunc,
-	KindMD5:            TraitCondition | TraitFunc,
-	KindStPoint:        TraitCondition | TraitFunc,
-	KindStDistance:     TraitCondition | TraitFunc,
-	KindGenerateSeries: TraitCondition | TraitFunc,
-	KindDate:           TraitCondition | TraitFunc,
-	KindAddMonths:      TraitCondition | TraitFunc,
-	KindDateAdd:        TraitCondition | TraitFunc,
-	KindDateDiff:       TraitCondition | TraitFunc,
-	KindCreate:         TraitDDL,
-	KindInsert:         TraitDDL | TraitDML,
-	KindUpdate:         TraitDML,
-	KindDelete:         TraitDML,
-	KindMerge:          TraitDML,
-	KindCTE:            TraitDerivedTable,
-	KindLateral:        TraitUDTF | TraitDerivedTable,
-	KindValues:         TraitUDTF | TraitDerivedTable,
+	KindJSONObject:              TraitCondition | TraitFunc,
+	KindJSONObjectAgg:           TraitCondition | TraitFunc | TraitAggFunc,
+	KindArrayAgg:                TraitCondition | TraitFunc | TraitAggFunc,
+	KindArraySize:               TraitCondition | TraitFunc,
+	KindArrayAll:                TraitCondition | TraitFunc,
+	KindArrayAny:                TraitCondition | TraitFunc,
+	KindArrayContains:           TraitCondition | TraitBinary | TraitFunc | TraitPredicate,
+	KindInitcap:                 TraitCondition | TraitFunc,
+	KindSplit:                   TraitCondition | TraitFunc,
+	KindRegexpLike:              TraitCondition | TraitBinary | TraitFunc | TraitPredicate,
+	KindRegexpSplit:             TraitCondition | TraitFunc,
+	KindStructExtract:           TraitCondition | TraitFunc,
+	KindStandardHash:            TraitCondition | TraitFunc,
+	KindHex:                     TraitCondition | TraitFunc,
+	KindApproxTopK:              TraitCondition | TraitFunc | TraitAggFunc,
+	KindAIForecast:              TraitCondition | TraitFunc,
+	KindAIEmbed:                 TraitCondition | TraitFunc,
+	KindAIGenerate:              TraitCondition | TraitFunc,
+	KindAISimilarity:            TraitCondition | TraitFunc,
+	KindByteLength:              TraitCondition | TraitFunc,
+	KindDatetime:                TraitCondition | TraitFunc,
+	KindDatetimeAdd:             TraitCondition | TraitFunc,
+	KindDatetimeDiff:            TraitCondition | TraitFunc,
+	KindDatetimeSub:             TraitCondition | TraitFunc,
+	KindDatetimeTrunc:           TraitCondition | TraitFunc,
+	KindTimeAdd:                 TraitCondition | TraitFunc,
+	KindTimeSub:                 TraitCondition | TraitFunc,
+	KindGapFill:                 TraitCondition | TraitFunc,
+	KindTranslate:               TraitCondition | TraitFunc,
+	KindContains:                TraitCondition | TraitFunc,
+	KindExplodingGenerateSeries: TraitCondition | TraitFunc,
+	KindFeaturesAtTime:          TraitCondition | TraitFunc,
+	KindGenerateBool:            TraitCondition | TraitFunc,
+	KindGenerateDouble:          TraitCondition | TraitFunc,
+	KindGenerateEmbedding:       TraitCondition | TraitFunc,
+	KindGenerateInt:             TraitCondition | TraitFunc,
+	KindGenerateTable:           TraitCondition | TraitFunc,
+	KindGenerateText:            TraitCondition | TraitFunc,
+	KindInt64:                   TraitCondition | TraitFunc,
+	KindIntDiv:                  TraitCondition | TraitBinary,
+	KindJSONBool:                TraitCondition | TraitFunc,
+	KindJSONExtractArray:        TraitCondition | TraitFunc,
+	KindJSONKeysAtDepth:         TraitCondition | TraitFunc,
+	KindJSONStripNulls:          TraitCondition | TraitFunc,
+	KindJSONValueArray:          TraitCondition | TraitFunc,
+	KindLowerHex:                TraitCondition | TraitFunc,
+	KindMakeInterval:            TraitCondition | TraitFunc,
+	KindMLForecast:              TraitCondition | TraitFunc,
+	KindMLTranslate:             TraitCondition | TraitFunc,
+	KindNetFunc:                 TraitCondition | TraitFunc,
+	KindNormalize:               TraitCondition | TraitFunc,
+	KindParseTime:               TraitCondition | TraitFunc,
+	KindPredict:                 TraitCondition | TraitFunc,
+	KindSafeFunc:                TraitCondition | TraitFunc,
+	KindTime:                    TraitCondition | TraitFunc,
+	KindTimestamp:               TraitCondition | TraitFunc,
+	KindTsOrDsToDatetime:        TraitCondition | TraitFunc,
+	KindTsOrDsToTime:            TraitCondition | TraitFunc,
+	KindTsOrDsToTimestamp:       TraitCondition | TraitFunc,
+	KindUnixDate:                TraitCondition | TraitFunc,
+	KindVectorSearch:            TraitCondition | TraitFunc,
+	KindWeekStart:               TraitCondition | TraitFunc,
+	KindMD5:                     TraitCondition | TraitFunc,
+	KindStPoint:                 TraitCondition | TraitFunc,
+	KindStDistance:              TraitCondition | TraitFunc,
+	KindGenerateSeries:          TraitCondition | TraitFunc,
+	KindGenerateDateArray:       TraitCondition | TraitFunc,
+	KindDate:                    TraitCondition | TraitFunc,
+	KindAddMonths:               TraitCondition | TraitFunc,
+	KindDateAdd:                 TraitCondition | TraitFunc,
+	KindDateDiff:                TraitCondition | TraitFunc,
+	KindCreate:                  TraitDDL,
+	KindInsert:                  TraitDDL | TraitDML,
+	KindUpdate:                  TraitDML,
+	KindDelete:                  TraitDML,
+	KindMerge:                   TraitDML,
+	KindCTE:                     TraitDerivedTable,
+	KindLateral:                 TraitUDTF | TraitDerivedTable,
+	KindValues:                  TraitUDTF | TraitDerivedTable,
 	// KindLambda (query.py:646) is a plain Expression, so it gets no row here (matching e.g.
 	// KindTableAlias above).
 	KindReplace:   TraitCondition | TraitFunc,
@@ -1911,18 +2064,19 @@ var traitsOf = map[Kind]Trait{
 	// KindVariadic is deliberately omitted: exp.Variadic is a plain `pass` Expression with
 	// no Func/Condition mixin upstream (query.py:2099), so it gets no trait bits, matching
 	// e.g. KindTableAlias/KindLambda above.
-	KindCurrentDate:   TraitCondition | TraitFunc,
-	KindCurrentTime:   TraitCondition | TraitFunc,
-	KindCurrentSchema: TraitCondition | TraitFunc,
-	KindDayOfMonth:    TraitCondition | TraitFunc,
-	KindDayOfWeek:     TraitCondition | TraitFunc,
-	KindDayOfYear:     TraitCondition | TraitFunc,
-	KindWeekOfYear:    TraitCondition | TraitFunc,
-	KindLower:         TraitCondition | TraitFunc,
-	KindUpper:         TraitCondition | TraitFunc,
-	KindLength:        TraitCondition | TraitFunc,
-	KindTrunc:         TraitCondition | TraitFunc,
-	KindOverlay:       TraitCondition | TraitFunc,
+	KindCurrentDate:     TraitCondition | TraitFunc,
+	KindCurrentDatetime: TraitCondition | TraitFunc,
+	KindCurrentTime:     TraitCondition | TraitFunc,
+	KindCurrentSchema:   TraitCondition | TraitFunc,
+	KindDayOfMonth:      TraitCondition | TraitFunc,
+	KindDayOfWeek:       TraitCondition | TraitFunc,
+	KindDayOfYear:       TraitCondition | TraitFunc,
+	KindWeekOfYear:      TraitCondition | TraitFunc,
+	KindLower:           TraitCondition | TraitFunc,
+	KindUpper:           TraitCondition | TraitFunc,
+	KindLength:          TraitCondition | TraitFunc,
+	KindTrunc:           TraitCondition | TraitFunc,
+	KindOverlay:         TraitCondition | TraitFunc,
 	// slice-strings cluster: both KindSlice (`class Slice(Expression)`, core.py:2017) and
 	// KindNational (`class National(Expression)`, query.py:585) are plain Expression subclasses
 	// with no Condition mixin upstream, so neither gets a traitsOf row (matching e.g. KindLambda
@@ -2235,6 +2389,7 @@ var className = map[Kind]string{
 	KindIntersect:                           "Intersect",
 	KindSubquery:                            "Subquery",
 	KindHaving:                              "Having",
+	KindHavingMax:                           "HavingMax",
 	KindQualify:                             "Qualify",
 	KindConnect:                             "Connect",
 	KindPrior:                               "Prior",
@@ -2347,6 +2502,56 @@ var className = map[Kind]string{
 	KindStructExtract:                       "StructExtract",
 	KindStandardHash:                        "StandardHash",
 	KindHex:                                 "Hex",
+	KindApproxTopK:                          "ApproxTopK",
+	KindAIForecast:                          "AIForecast",
+	KindAIEmbed:                             "AIEmbed",
+	KindAIGenerate:                          "AIGenerate",
+	KindAISimilarity:                        "AISimilarity",
+	KindByteLength:                          "ByteLength",
+	KindContains:                            "Contains",
+	KindGapFill:                             "GapFill",
+	KindTranslate:                           "Translate",
+	KindDatetime:                            "Datetime",
+	KindDatetimeAdd:                         "DatetimeAdd",
+	KindDatetimeDiff:                        "DatetimeDiff",
+	KindDatetimeSub:                         "DatetimeSub",
+	KindDatetimeTrunc:                       "DatetimeTrunc",
+	KindTimeAdd:                             "TimeAdd",
+	KindTimeSub:                             "TimeSub",
+	KindExplodingGenerateSeries:             "ExplodingGenerateSeries",
+	KindExport:                              "Export",
+	KindFeaturesAtTime:                      "FeaturesAtTime",
+	KindForIn:                               "ForIn",
+	KindGenerateBool:                        "GenerateBool",
+	KindGenerateDouble:                      "GenerateDouble",
+	KindGenerateEmbedding:                   "GenerateEmbedding",
+	KindGenerateInt:                         "GenerateInt",
+	KindGenerateTable:                       "GenerateTable",
+	KindGenerateText:                        "GenerateText",
+	KindInt64:                               "Int64",
+	KindIntDiv:                              "IntDiv",
+	KindJSONBool:                            "JSONBool",
+	KindJSONExtractArray:                    "JSONExtractArray",
+	KindJSONKeysAtDepth:                     "JSONKeysAtDepth",
+	KindJSONStripNulls:                      "JSONStripNulls",
+	KindJSONValueArray:                      "JSONValueArray",
+	KindLowerHex:                            "LowerHex",
+	KindMakeInterval:                        "MakeInterval",
+	KindMLForecast:                          "MLForecast",
+	KindMLTranslate:                         "MLTranslate",
+	KindNetFunc:                             "NetFunc",
+	KindNormalize:                           "Normalize",
+	KindParseTime:                           "ParseTime",
+	KindPredict:                             "Predict",
+	KindSafeFunc:                            "SafeFunc",
+	KindTime:                                "Time",
+	KindTimestamp:                           "Timestamp",
+	KindTsOrDsToDatetime:                    "TsOrDsToDatetime",
+	KindTsOrDsToTime:                        "TsOrDsToTime",
+	KindTsOrDsToTimestamp:                   "TsOrDsToTimestamp",
+	KindUnixDate:                            "UnixDate",
+	KindVectorSearch:                        "VectorSearch",
+	KindWeekStart:                           "WeekStart",
 	KindMD5:                                 "MD5",
 	KindStPoint:                             "StPoint",
 	KindStDistance:                          "StDistance",
@@ -2488,6 +2693,7 @@ var className = map[Kind]string{
 	KindTriggerEvent:                        "TriggerEvent",
 	KindTriggerReferencing:                  "TriggerReferencing",
 	KindCurrentDate:                         "CurrentDate",
+	KindCurrentDatetime:                     "CurrentDatetime",
 	KindCurrentTime:                         "CurrentTime",
 	KindCurrentSchema:                       "CurrentSchema",
 	KindDayOfMonth:                          "DayOfMonth",

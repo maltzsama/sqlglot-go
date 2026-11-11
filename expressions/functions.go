@@ -53,19 +53,22 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"LIST": func(args []Expression) Expression {
 		return newNode(KindList, Args{"expressions": args})
 	},
-	"ABS":             genericFunction(KindAbs),
-	"AVG":             genericFunction(KindAvg),
-	"SUM":             genericFunction(KindSum),
-	"SQRT":            genericFunction(KindSqrt),
-	"LN":              genericFunction(KindLn),
-	"EXP":             genericFunction(KindExp),
-	"MIN":             genericFunction(KindMin),
-	"MAX":             genericFunction(KindMax),
-	"ROUND":           genericFunction(KindRound),
-	"LOG":             genericFunction(KindLog),
-	"POW":             genericFunction(KindPow),
-	"POWER":           genericFunction(KindPow),
-	"SUBSTR":          genericFunction(KindSubstring),
+	"ABS":    genericFunction(KindAbs),
+	"AVG":    genericFunction(KindAvg),
+	"SUM":    genericFunction(KindSum),
+	"SQRT":   genericFunction(KindSqrt),
+	"LN":     genericFunction(KindLn),
+	"EXP":    genericFunction(KindExp),
+	"MIN":    genericFunction(KindMin),
+	"MAX":    genericFunction(KindMax),
+	"ROUND":  genericFunction(KindRound),
+	"LOG":    genericFunction(KindLog),
+	"POW":    genericFunction(KindPow),
+	"POWER":  genericFunction(KindPow),
+	"SUBSTR": genericFunction(KindSubstring),
+	// LOWER/UPPER fold a nested HEX/LowerHex into LowerHex/Hex (parser.py:98-107).
+	"LOWER":           buildLower,
+	"UPPER":           buildUpper,
 	"CEILING":         genericFunction(KindCeil),
 	"PERCENTILE_DISC": genericFunction(KindPercentileDisc),
 	"GROUP_CONCAT":    genericFunction(KindGroupConcat),
@@ -159,7 +162,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"COALESCE":            coalesceFunction(),
 	"IFNULL":              coalesceFunction(),
 	"NVL":                 coalesceFunction(),
-	"GENERATE_DATE_ARRAY": FromArgListFunc(KindGenerateDateArray),
+	"GENERATE_DATE_ARRAY": buildGenerateDateArray,
 	"GREATEST": func(args []Expression) Expression {
 		m := Args{"ignore_nulls": true}
 		if len(args) > 0 {
@@ -245,7 +248,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"BITWISE_XOR_AGG":     genericFunction(KindBitwiseXorAgg),
 	"BITWISE_COUNT":       genericFunction(KindBitwiseCount),
 	"TIMESTAMPDIFF":       genericFunction(KindTimestampDiff),
-	"TIMESTAMP_DIFF":      genericFunction(KindTimestampDiff),
+	"TIMESTAMP_DIFF":      buildTimestampDiff,
 	"SAFE_ADD":            genericFunction(KindSafeAdd),
 	"SAFE_DIVIDE":         genericFunction(KindSafeDivide),
 	"SAFE_MULTIPLY":       genericFunction(KindSafeMultiply),
@@ -447,3 +450,47 @@ func Getbit(args Args) Expression           { return newNode(KindGetbit, args) }
 func DateFromUnixDate(args Args) Expression { return newNode(KindDateFromUnixDate, args) }
 func ReadParquet(args Args) Expression      { return newNode(KindReadParquet, args) }
 func Format(args Args) Expression           { return newNode(KindFormat, args) }
+
+// buildLower ports build_lower (parser.py:98-101): LOWER over a Hex (or LowerHex) simplifies to
+// LowerHex.
+func buildLower(args []Expression) Expression {
+	arg := seqGetExpr(args, 0)
+	if arg != nil && (arg.Kind() == KindHex || arg.Kind() == KindLowerHex) {
+		return LowerHex(Args{"this": arg.This()})
+	}
+	return Lower(Args{"this": arg})
+}
+
+// buildUpper ports build_upper (parser.py:104-107): UPPER over a Hex simplifies to Hex.
+func buildUpper(args []Expression) Expression {
+	arg := seqGetExpr(args, 0)
+	if arg != nil && arg.Kind() == KindHex {
+		return Hex(Args{"this": arg.This()})
+	}
+	return newNode(KindUpper, Args{"this": arg})
+}
+
+// seqGetExpr mirrors sqlglot.helper.seq_get for the builder helpers in this file.
+func seqGetExpr(args []Expression, i int) Expression {
+	if i < 0 || i >= len(args) {
+		return nil
+	}
+	return args[i]
+}
+
+// buildGenerateDateArray ports parser.py:406-410: the step defaults to INTERVAL '1' DAY.
+func buildGenerateDateArray(args []Expression) Expression {
+	step := seqGetExpr(args, 2)
+	if step == nil {
+		step = Interval(Args{"this": LiteralString("1"), "unit": Var(Args{"this": "DAY"})})
+	}
+	return GenerateDateArray(Args{"start": seqGetExpr(args, 0), "end": seqGetExpr(args, 1), "step": step})
+}
+
+// buildTimestampDiff ports TimestampDiff(Expression, Func, TimeUnit) (expressions/temporal.py:
+// 136): the TimeUnit mixin uppercases the unit into a Var.
+func buildTimestampDiff(args []Expression) Expression {
+	built := FromArgList(KindTimestampDiff, args)
+	built.Set("unit", TimeUnitVar(asExpression(built.Arg("unit"))))
+	return built
+}

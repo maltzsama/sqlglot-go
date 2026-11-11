@@ -530,6 +530,63 @@ type Dialect struct {
 	// ArrayFuncsPropagatesNulls ports ARRAY_FUNCS_PROPAGATES_NULLS (dialects/dialect.py): whether
 	// the array functions return NULL when any input array is NULL (Redshift).
 	ArrayFuncsPropagatesNulls bool
+	// LogBaseFirst ports generator.py LOG_BASE_FIRST (base True; bigquery False): whether the
+	// LOG base precedes the value in the canonical node and is swapped when rendering.
+	LogBaseFirst bool
+	// HexLowercase ports HEX_LOWERCASE (bigquery True): HEX renders lowercase hex digits.
+	HexLowercase bool
+	// HexFunc ports generator.py HEX_FUNC (base "HEX"; bigquery "TO_HEX").
+	HexFunc string
+	// UUIDIsStringType ports UUID_IS_STRING_TYPE (bigquery True): annotate_types treats UUID as
+	// a text type.
+	UUIDIsStringType bool
+	// JSONExtractScalarScalarOnly ports JSON_EXTRACT_SCALAR_SCALAR_ONLY (bigquery True): the
+	// parser records scalar_only on the JSONExtractScalar node.
+	JSONExtractScalarScalarOnly bool
+	// JSONPathSingleDotIsWildcard ports JSON_PATH_SINGLE_DOT_IS_WILDCARD (bigquery True); the
+	// JSONPath tokenizer is not ported yet, so the flag is recorded only.
+	JSONPathSingleDotIsWildcard bool
+	// LeastGreatestIgnoresNulls ports LEAST_GREATEST_IGNORES_NULLS (base True; bigquery False):
+	// recorded on the parsed Least/Greatest nodes.
+	LeastGreatestIgnoresNulls bool
+	// DefaultNullType ports DEFAULT_NULL_TYPE (bigquery BIGINT): the type annotate_types gives a
+	// bare NULL.
+	DefaultNullType exp.DType
+	// FormatMapping / InverseFormatMapping port FORMAT_MAPPING (bigquery) and its reverse,
+	// the datetime-format tables used by the format_time inversions.
+	FormatMapping        map[string]string
+	InverseFormatMapping map[string]string
+	// SetOpExplicitDistinct ports bigquery's SET_OP_DISTINCT_BY_DEFAULT = None for every set
+	// operation: DISTINCT/ALL must always be rendered explicitly.
+	SetOpExplicitDistinct bool
+	// IgnoreNullsInFunc ports IGNORE_NULLS_IN_FUNC (base False; bigquery True): IGNORE/RESPECT
+	// NULLS renders inside the aggregate call rather than after it.
+	IgnoreNullsInFunc bool
+	// IgnoreNullsBeforeOrder ports IGNORE_NULLS_BEFORE_ORDER (base True): when the aggregate has
+	// ORDER BY/LIMIT modifiers, the inline IGNORE NULLS goes before them.
+	IgnoreNullsBeforeOrder bool
+	// UnnestWithOrdinality ports UNNEST_WITH_ORDINALITY (base True; bigquery False).
+	UnnestWithOrdinality bool
+	// InUnnestOpBare ports in_unnest_op (generator.py: in_unnest_op defaults to a wrapped
+	// SELECT; bigquery renders the bare UNNEST expression).
+	InUnnestOpBare bool
+	// SupportsTableAliasColumns ports SUPPORTS_TABLE_ALIAS_COLUMNS (base True; bigquery False):
+	// a table alias column list is dropped when false.
+	SupportsTableAliasColumns bool
+	// QualifyBeforeWindow ports bigquery's AFTER_HAVING_MODIFIER_TRANSFORMS order: QUALIFY is
+	// rendered before the WINDOW clause (base renders WINDOW first).
+	QualifyBeforeWindow bool
+	// WildcardTableParts ports bigquery's _parse_table_parts override, which always forwards
+	// wildcard=True (parsers/bigquery.py:451) so `x.*` / `x.y*` join the last part.
+	WildcardTableParts bool
+	// QualifiedTablesCaseSensitive ports BigQuery.normalize_identifier
+	// (dialects/bigquery.py:132-159): under CASE_INSENSITIVE, UDF names and qualified table
+	// names keep their case, so `FROM Coordinates, \`Coordinates.position\`` does not fold
+	// the qualified reference.
+	QualifiedTablesCaseSensitive bool
+	// JSONKeyValuePairSep ports JSON_KEY_VALUE_PAIR_SEP (base ":"; bigquery/mysql/snowflake/...
+	// ","): the separator jsonkeyvalue_sql emits between a JSON object key and value.
+	JSONKeyValuePairSep string
 	// MoveCTEsToTopLevel ports EXPRESSIONS_WITHOUT_NESTED_CTES  (generator.py:849); Hive
 	// (generators/hive.py:246-251) lists Insert/Select/Subquery. A root of one of these kinds
 	// hoists every nested WITH before generation (generator.py:986-995). nil disables it, which
@@ -554,6 +611,14 @@ func Base() *Dialect {
 		SafeToEliminateDoubleNegation:   true,
 		ArrayConcatIsVarLen:             true,
 		StarExcludeRequiresDerivedTable: true,
+		// generator.py LOG_BASE_FIRST = True, HEX_FUNC = "HEX" (base).
+		LogBaseFirst:              true,
+		HexFunc:                   "HEX",
+		IgnoreNullsBeforeOrder:    true,
+		UnnestWithOrdinality:      true,
+		SupportsTableAliasColumns: true,
+		// dialects/dialect.py LEAST_GREATEST_IGNORES_NULLS = True (base).
+		LeastGreatestIgnoresNulls: true,
 		// parser.py:1880 COLON_CHAIN_IS_SINGLE_EXTRACT = True (base).
 		ColonChainIsSingleExtract: true,
 		// generator.py:505-561 JSON_PATH_* / QUOTE_JSON_PATH defaults.
@@ -893,6 +958,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 	switch strings.ToLower(strings.TrimSpace(name)) {
 	case "", "base":
 		return Base(), nil
+	case "bigquery":
+		return BigQuery(), nil
 	case "mysql":
 		return MySQL(), nil
 	case "mariadb":
@@ -1379,6 +1446,24 @@ func (d *Dialect) NormalizeIdentifier(e exp.Expression) exp.Expression {
 		return e
 	}
 
+	// dialects/bigquery.py:132-159: a UDF name or a qualified table keeps its case.
+	if d.QualifiedTablesCaseSensitive && s == CaseInsensitive {
+		parent := e.Parent()
+		for parent != nil && parent.Kind() == exp.KindDot {
+			parent = parent.Parent()
+		}
+		isTable := false
+		if parent != nil && parent.Kind() == exp.KindUserDefinedFunction {
+			isTable = true
+		} else if parent != nil && parent.Kind() == exp.KindTable && parent.Arg("schema") != nil {
+			quotedTable, _ := parent.MetaGet("quoted_table").(bool)
+			maybeColumn, _ := parent.MetaGet("maybe_column").(bool)
+			isTable = quotedTable || !maybeColumn
+		}
+		if isTable {
+			return e
+		}
+	}
 	// Upstream strategies: ASCII-only fold; quoted identifiers are protected unless the
 	// strategy is case-insensitive (see DEVIATIONS.md §1.1).
 	quoted, _ := e.Arg("quoted").(bool)

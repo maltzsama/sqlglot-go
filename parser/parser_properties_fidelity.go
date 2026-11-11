@@ -52,6 +52,10 @@ func (p *Parser) parseWrappedProperties() []exp.Expression {
 // subset, followed by the generic key=value fallback. Unsupported registry entries are not
 // registered, so they consume nothing and the enclosing CREATE degrades to Command.
 func (p *Parser) parseProperty() exp.Expression {
+	// parsers/bigquery.py:543-548: NOT DETERMINISTIC becomes a VOLATILE stability property.
+	if p.dialect.Name == "bigquery" && p.matchTextSeq("NOT", "DETERMINISTIC") {
+		return p.expression(exp.StabilityProperty(exp.Args{"this": exp.LiteralString("VOLATILE")}), nil, nil)
+	}
 	if p.matchTexts(p.propertyParserKeys()) {
 		return p.propertyParser(stringsUpper(p.prev.Text))(p, false)
 	}

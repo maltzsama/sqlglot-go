@@ -859,8 +859,18 @@ func (p *Parser) parseSetOperation(this exp.Expression, consumePipe bool) exp.Ex
 	// Upstream stores by_name only when matched (parser.py:5738-5742 uses `... or None`),
 	// so leave it nil when absent (like symmetric/siblings) rather than storing False.
 	var byName any
-	if p.matchTextSeq("BY", "NAME") {
+	if p.matchTextSeq("BY", "NAME") || p.matchTextSeq("STRICT", "CORRESPONDING") {
 		byName = true
+	}
+	if p.matchTextSeq("CORRESPONDING") {
+		byName = true
+		if side == nil && kind == nil {
+			kind = "INNER"
+		}
+	}
+	var onColumnList []exp.Expression
+	if byName != nil && p.matchTexts(map[string]bool{"ON": true, "BY": true}) {
+		onColumnList = p.parseWrappedCsv(func() exp.Expression { return p.parseColumn() })
 	}
 	expression := p.parseSelect(true, false, true, false)
 	// Wrap VALUES operands in selects (parser.py:5941-5945, v30.17.0), for consistency with
@@ -878,6 +888,7 @@ func (p *Parser) parseSetOperation(this exp.Expression, consumePipe bool) exp.Ex
 		"expression": expression,
 		"side":       side,
 		"kind":       kind,
+		"on":         onColumnList,
 	}), nil, comments)
 }
 
@@ -936,6 +947,14 @@ func (p *Parser) parseSelect(opts ...bool) exp.Expression {
 			all = p.match(tokens.ALL)
 			matchedDistinct = p.matchSet(distinctTokens) || (p.dialect.Name == "oracle" && p.match(tokens.UNIQUE))
 		}
+		var kind any
+		if p.match(tokens.ALIAS) {
+			if p.matchTexts(map[string]bool{"STRUCT": true, "VALUE": true}) {
+				kind = stringsUpper(p.prev.Text)
+			} else {
+				p.retreat(p.index - 1)
+			}
+		}
 		var distinct exp.Expression
 		if matchedDistinct {
 			args := exp.Args{}
@@ -970,6 +989,9 @@ func (p *Parser) parseSelect(opts ...bool) exp.Expression {
 		}
 		if top != nil {
 			selectArgs["limit"] = top
+		}
+		if kind != nil {
+			selectArgs["kind"] = kind
 		}
 		if len(operationModifiers) > 0 {
 			selectArgs["operation_modifiers"] = operationModifiers
@@ -1532,6 +1554,7 @@ func (p *Parser) parseTableParts(schema bool, isDBReference bool, wildcard bool,
 	// this arg to "schema"; the local can't be named "schema" here as that is already the
 	// schema-position bool param).
 	var schemaPart exp.Expression
+	wildcard = wildcard || p.dialect.WildcardTableParts
 	table := p.parseTablePart(schema)
 	for p.match(tokens.DOT) {
 		if catalog != nil {
@@ -1542,6 +1565,17 @@ func (p *Parser) parseTableParts(schema bool, isDBReference bool, wildcard bool,
 			table = p.parseTablePart(schema)
 			if table == nil {
 				table = exp.Identifier(exp.Args{"this": "", "quoted": false})
+			}
+		}
+	}
+	// parser.py:4925-4934: a wildcard table suffix (`x.y*`, `x.*`) joins the last part.
+	// BigQuery always parses table parts with wildcard=true (parsers/bigquery.py:451).
+	if wildcard && p.isConnected() && (table == nil || table.Kind() == exp.KindIdentifier) {
+		if p.match(tokens.STAR) {
+			if table != nil {
+				table.Set("this", table.Name()+"*")
+			} else {
+				table = exp.Identifier(exp.Args{"this": "*", "quoted": false})
 			}
 		}
 	}
@@ -1562,10 +1596,21 @@ func (p *Parser) parseTableParts(schema bool, isDBReference bool, wildcard bool,
 	if pivots := p.parsePivots(); pivots != nil {
 		result.Set("pivots", pivots)
 	}
+	if overrides, ok := dialectParserOverrides[p.parserOverrideKey()]; ok && overrides.TableParts != nil {
+		return overrides.TableParts(p, result)
+	}
 	return result
 }
 
 func (p *Parser) parseTablePart(schema bool) exp.Expression {
+	this := p.parseTablePartBase(schema)
+	if overrides, ok := dialectParserOverrides[p.parserOverrideKey()]; ok && overrides.TablePart != nil {
+		return overrides.TablePart(p, schema, this)
+	}
+	return this
+}
+
+func (p *Parser) parseTablePartBase(schema bool) exp.Expression {
 	// Table-valued function sources (parser.py:4664-4670), e.g. `FROM generate_series(1, 10)`
 	// or `FROM JSON_TABLE(...)`: outside schema position, a function call takes priority over
 	// a plain identifier so the parsed Func node becomes exp.Table's "this" arg.
@@ -2094,7 +2139,12 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 			p.advance()
 			this = p.parseEscape(p.expression(exp.Glob(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
 		case tokens.OVERLAPS:
-			// binary_range_parser(exp.Overlaps) (parser.py:1195).
+			// binary_range_parser(exp.Overlaps) (parser.py:1195). BigQuery removes OVERLAPS
+			// from RANGE_PARSERS (parsers/bigquery.py:368-370), so it stays an alias.
+			if p.dialect.Name == "bigquery" {
+				matched = false
+				break
+			}
 			p.advance()
 			this = p.parseEscape(p.expression(exp.Overlaps(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
 		case tokens.RLIKE:
@@ -2797,6 +2847,9 @@ func (p *Parser) parseColumn() exp.Expression {
 	if column != nil && p.dialect.ColonIsVariantExtract {
 		column = p.parseColonAsVariantExtract(column)
 	}
+	if overrides, ok := dialectParserOverrides[p.parserOverrideKey()]; ok && overrides.Column != nil {
+		column = overrides.Column(p, column)
+	}
 	return column
 }
 
@@ -2944,6 +2997,18 @@ var jsonOperatorTokens = map[tokens.TokenType]bool{
 }
 
 func (p *Parser) parseColumnOps(this exp.Expression) exp.Expression {
+	// parsers/bigquery.py:773-799 _parse_column_ops override: SAFE./NET. qualified calls are
+	// re-parsed in non-anonymous mode so their dedicated node (and AI./ML. custom signatures)
+	// apply; every other dialect runs the base grammar only.
+	funcIndex := p.index + 1
+	this = p.parseColumnOpsBase(this)
+	if overrides, ok := dialectParserOverrides[p.parserOverrideKey()]; ok && overrides.ColumnOps != nil {
+		return overrides.ColumnOps(p, this, funcIndex)
+	}
+	return this
+}
+
+func (p *Parser) parseColumnOpsBase(this exp.Expression) exp.Expression {
 	for bracketsTokens[p.curr.TokenType] {
 		this = p.parseBracket(this)
 	}
@@ -2977,7 +3042,15 @@ func (p *Parser) parseColumnOps(this exp.Expression) exp.Expression {
 			// which uses _parse_field(any_token=True, anonymous_func=True) so a following
 			// "(" lets the field parse as a function call (e.g. x.y.FOO()).
 			dot := p.isConnected() && p.prev.TokenType == tokens.DOT
-			field = p.parseField(true, nil, true)
+			if overrides, ok := dialectParserOverrides[p.parserOverrideKey()]; ok && overrides.QualifiedFunc != nil {
+				if parsed, handled := overrides.QualifiedFunc(p, this); handled {
+					field = parsed
+				} else {
+					field = p.parseField(true, nil, true)
+				}
+			} else {
+				field = p.parseField(true, nil, true)
+			}
 			// v30.17.0 (parser.py:7022-7028): in `t.true` / `t.null` the member is an
 			// Identifier, not a Boolean/Null literal.
 			if dot && field != nil && (field.Kind() == exp.KindNull || field.Kind() == exp.KindBoolean) {
@@ -4089,14 +4162,25 @@ func (p *Parser) parseLambda(alias bool) exp.Expression {
 		this = p.parseSelectOrExpression(alias)
 	}
 
-	// Upstream also threads this through _parse_having_max (BigQuery's ARRAY_AGG(x HAVING
-	// MAX y)) between the two _parse_respect_or_ignore_nulls calls; that's out of this
-	// part's scope (no exp.HavingMax Kind ported), so it's omitted here - a no-op for every
-	// dialect that doesn't parse a HAVING MAX/MIN clause at this position anyway.
 	this = p.parseRespectOrIgnoreNulls(this)
+	this = p.parseHavingMax(this)
 	this = p.parseOrder(this, false)
 	this = p.parseRespectOrIgnoreNulls(this)
 	return p.parseLimit(this, false, false)
+}
+
+// parseHavingMax ports _parse_having_max (parser.py:8595-8604): `x HAVING MAX|MIN y`.
+func (p *Parser) parseHavingMax(this exp.Expression) exp.Expression {
+	if !p.match(tokens.HAVING) {
+		return this
+	}
+	p.matchTexts(map[string]bool{"MAX": true, "MIN": true})
+	max := stringsUpper(p.prev.Text) != "MIN"
+	return p.expression(exp.HavingMax(exp.Args{
+		"this":       this,
+		"expression": p.parseColumn(),
+		"max":        max,
+	}), nil, nil)
 }
 
 func (p *Parser) parseSelectOrExpression(alias bool) exp.Expression {

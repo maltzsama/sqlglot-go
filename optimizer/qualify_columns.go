@@ -412,16 +412,6 @@ func expandAliasRefsInScope(scope *Scope, resolver *Resolver, dialect *dialects.
 						}
 					}
 				}
-			} else if dialect.ProjectionAliasesShadowSourceNames && (isGroupBy || isHaving || isQualify) {
-				columnTable := column.Text("table")
-				if table != nil {
-					columnTable = table.Name()
-				}
-				if projections[columnTable] {
-					column.Replace(exp.ToIdentifier(column.Name()))
-					replaced = true
-					return
-				}
 			}
 
 			if table != nil && (!hasAlias || skipReplace) {
@@ -496,6 +486,33 @@ func expandAliasRefsInScope(scope *Scope, resolver *Resolver, dialect *dialects.
 	if dialect.SupportsAliasRefsInJoinConditions {
 		for _, join := range expressionsFor(expression, "joins") {
 			replaceColumns(join, false, false)
+		}
+	}
+
+	// qualify_columns.py:456-478: BigQuery's GROUP BY/HAVING/QUALIFY qualifiers that collide
+	// with a projection alias are kept qualified but marked, so column_parts renders the bare
+	// name (the qualifier would resolve to the projection, not the source).
+	if dialect.ProjectionAliasesShadowSourceNames {
+		projections := map[string]bool{}
+		for _, projection := range expression.Selects() {
+			if name := projection.AliasOrName(); name != "" {
+				projections[name] = true
+			}
+		}
+		for _, key := range []string{"group", "having", "qualify"} {
+			clause := asExpression(expression.Arg(key))
+			if clause == nil {
+				continue
+			}
+			for _, column := range clause.FindAll(exp.KindColumn) {
+				tableArg := asExpression(column.Arg("table"))
+				if tableArg == nil || column.Arg("schema") != nil {
+					continue
+				}
+				if projections[tableArg.Name()] {
+					column.Set("shadow", true)
+				}
+			}
 		}
 	}
 

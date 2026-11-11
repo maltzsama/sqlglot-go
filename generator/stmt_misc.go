@@ -108,6 +108,20 @@ func (g *Generator) loadDataSQL(e expressions.Expression) string {
 	if boolValue(e.Arg("overwrite")) {
 		overwrite = " OVERWRITE"
 	}
+	// generator.py:3044-3054: the FROM FILES branch takes precedence over INPATH.
+	if files := asExpression(e.Arg("files")); files != nil {
+		filesSQL := "FILES(" + g.expressions(exprsOptions{expression: files, flat: true}) + ")"
+		this := g.sqlKey(e, "this")
+		switch {
+		case boolValue(e.Arg("overwrite")):
+			this = " " + this
+		case boolValue(e.Arg("temp")):
+			this = " INTO TEMP TABLE " + this
+		default:
+			this = " INTO TABLE " + this
+		}
+		return "LOAD DATA" + overwrite + this + " FROM " + filesSQL
+	}
 	local := ""
 	if boolValue(e.Arg("local")) {
 		local = " LOCAL"

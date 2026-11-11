@@ -20,10 +20,10 @@ func TestPushdownProjectionsFixtures(t *testing.T) {
 		53: "POSEXPLODE parses as Anonymous (#44)",
 		54: "INLINE parses as Anonymous (#44)",
 	}
-	checkPassFixturesWith(t, "pushdown_projections.sql", false, gaps, func(e exp.Expression, _ string) exp.Expression {
-		e = optimizer.QualifyTables(e, "", "", "", false, nil, nil, nil)
-		e = optimizer.QualifyColumns(e, schema, true, true, &infer, false, "")
-		return optimizer.PushdownProjections(e, schema, true, "", nil)
+	checkPassFixturesWith(t, "pushdown_projections.sql", false, gaps, func(e exp.Expression, dialect string) exp.Expression {
+		e = optimizer.QualifyTables(e, "", "", dialect, false, nil, nil, nil)
+		e = optimizer.QualifyColumns(e, schema, true, true, &infer, false, dialect)
+		return optimizer.PushdownProjections(e, schema, true, dialect, nil)
 	})
 }
 

@@ -117,6 +117,10 @@ var optimizeGaps = map[string]string{
 	"decorrelate subquery and transpile ArrayAny correctly when generating spark": "subquery decorrelation for the ArrayAny rewrite is not ported",
 	"SELECT TRANSFORM ... Spark clause when schema is provided":                   "qualify aliases a TRANSFORM projection instead of exposing its schema columns",
 	"SELECT TRANSFORM ... Spark clause when schema is not provided":               "qualify aliases a TRANSFORM projection instead of exposing its key/value columns",
+	// #41: fixtures that only run now that bigquery is registered.
+	"selecting all columns from a pivoted CTE source, using alias for the aggregation and generating bigquery": "star expansion through PIVOT (#46)",
+	"unpivoted table source with a single value column, unpivot columns can be qualified":                      "star expansion through UNPIVOT (#46)",
+	"unpivoted table source with multiple value columns":                                                       "star expansion through UNPIVOT (#46)",
 }
 
 // TestOptimizeFileSchema ports test_file_schema (tests/test_optimizer.py:1828-1835).

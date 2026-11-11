@@ -543,26 +543,51 @@ func (p *Parser) parseCast(strict bool, safe any) exp.Expression {
 		p.matchTextSeq("ON", "CONVERSION", "ERROR")
 	}
 	// parser.py:8141-8164: CAST(x AS <type> ..., <format>) folds a temporal CAST into
-	// StrToDate/StrToTime with the dialect-mapped format.
+	// StrToDate/StrToTime with the dialect-mapped format; any other target keeps the raw
+	// format (and an optional AT TIME ZONE) on the Cast.
+	var castFormat exp.Expression
 	if p.match(tokens.FORMAT) || p.match(tokens.COMMA) {
 		fmtString := p.parseWrapped(p.parseString, true)
+		fmtNode := fmtString
+		if fmtNode != nil {
+			fmtNode = p.parseAtTimeZone(fmtNode)
+		}
 		if to == nil {
 			to = exp.DTypeUnknown.IntoExpr(nil)
 		}
 		if dt, ok := to.Arg("this").(exp.DType); ok && temporalCastDType(dt) {
 			format := ""
 			if fmtString != nil {
-				format = dialects.OracleFormatTime(fmtString.Name())
+				// parser.py:8151-8156: FORMAT_MAPPING when the dialect has one, else TIME_MAPPING.
+				if len(p.dialect.FormatMapping) > 0 {
+					format = fmtString.Name()
+					if converted, ok := dialects.FormatTime(format, p.dialect.FormatMapping); ok {
+						format = converted
+					}
+				} else {
+					// Dialects whose TIME_MAPPING is not wired onto the Dialect value (Oracle) rely
+					// on the dedicated converter; base/MySQL leave the format unchanged.
+					format = dialects.OracleFormatTime(fmtString.Name())
+				}
 			}
 			kind := exp.KindStrToTime
 			if dt == exp.DTypeDate {
 				kind = exp.KindStrToDate
 			}
-			return p.expression(exp.New(kind, exp.Args{
+			built := exp.New(kind, exp.Args{
 				"this":   this,
 				"format": exp.LiteralString(format),
-			}), nil, nil)
+			})
+			if safe != nil {
+				built.Set("safe", safe)
+			}
+			// parser.py:8162-8163: the AT TIME ZONE zone becomes StrToTime's zone.
+			if fmtNode != nil && fmtNode.Kind() == exp.KindAtTimeZone {
+				built.Set("zone", fmtNode.Arg("zone"))
+			}
+			return p.expression(built, nil, nil)
 		}
+		castFormat = fmtNode
 	} else if to == nil {
 		p.raiseError("Expected TYPE after CAST")
 	} else if exp.IsType(to, exp.DTypeChar) && (p.match(tokens.CHARACTER_SET) || p.matchTextSeq("CHARACTER", "SET")) {
@@ -574,6 +599,9 @@ func (p *Parser) parseCast(strict bool, safe any) exp.Expression {
 		to = exp.DTypeCharacterSet.IntoExpr(exp.Args{"kind": p.parseVarOrString(false)})
 	}
 	args := exp.Args{"this": this, "to": to, "default": default_, "action": p.parseVarFromOptions(castActions, false)}
+	if castFormat != nil {
+		args["format"] = castFormat
+	}
 	if safe != nil {
 		args["safe"] = safe
 	}

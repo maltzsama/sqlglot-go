@@ -1,1 +1,7 @@
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"JSON_EXTRACT(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"JSON_EXTRACT_ARRAY(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"JSON_EXTRACT_SCALAR(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"JSON_QUERY(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"JSON_QUERY_ARRAY(doc, '$. a b c .d')"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"JSON_VALUE(doc, '$. a b c .d')"}
 {"dialect":"databricks","category":"gen: canonicalization","sql":"WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT get_json_object(c, '$.x-y') FROM t"}
