@@ -104,6 +104,7 @@ Same-dialect round-trip parity against the ported upstream identity corpus
 | Databricks | `databricks` | 175/176 |
 | BigQuery | `bigquery` | 683/689 |
 | Spark 2 | `spark2` | n/a (no upstream fixture; exercised through Spark) |
+| DuckDB | `duckdb` | 528/565 |
 | RisingWave | `risingwave` | 7/7 |
 
 ## Quick start

@@ -2465,7 +2465,13 @@ func (g *Generator) jsonTableSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) extractSQL(e expressions.Expression) string {
-	this := g.gen(e.Arg("this"))
+	thisExpr := asExpression(e.Arg("this"))
+	if g.dialect.NormalizeExtractDateParts && thisExpr != nil {
+		if mapped := g.dialect.DatePartMapping[strings.ToUpper(thisExpr.Name())]; mapped != "" {
+			thisExpr = expressions.Var(expressions.Args{"this": mapped})
+		}
+	}
+	this := g.gen(thisExpr)
 	expressionSQL := g.sqlKey(e, "expression")
 	return "EXTRACT(" + this + " FROM " + expressionSQL + ")"
 }

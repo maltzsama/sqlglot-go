@@ -69,7 +69,7 @@ func (p *Parser) parseTableSample(asModifier bool) exp.Expression {
 		seed = p.parseWrapped(p.parseNumber, false)
 	}
 
-	return p.expression(exp.TableSample(exp.Args{
+	sample := p.expression(exp.TableSample(exp.Args{
 		"method":             method,
 		"bucket_numerator":   bucketNumerator,
 		"bucket_denominator": bucketDenominator,
@@ -78,4 +78,14 @@ func (p *Parser) parseTableSample(asModifier bool) exp.Expression {
 		"size":               size,
 		"seed":               seed,
 	}), nil, nil)
+	// parsers/duckdb.py:384-394: default the sampling method from the size form.
+	if p.dialect.Name == "duckdb" && method == nil {
+		switch {
+		case size != nil:
+			sample.Set("method", exp.Var(exp.Args{"this": "RESERVOIR"}))
+		default:
+			sample.Set("method", exp.Var(exp.Args{"this": "SYSTEM"}))
+		}
+	}
+	return sample
 }

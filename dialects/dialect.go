@@ -393,6 +393,36 @@ type Dialect struct {
 	// so the generator can rename the columns when a statement is written under a dialect that
 	// names them differently (generator.py:2534-2546).
 	PivotColumnNaming string
+	// ConcatWsCoalesce ports CONCAT_WS_COALESCE (base False; duckdb True): CONCAT_WS ignores
+	// NULL arguments.
+	ConcatWsCoalesce bool
+	// StrictJSONPathSyntax ports STRICT_JSON_PATH_SYNTAX (base True; duckdb False): whether a
+	// bare `$` path may omit its brackets/quotes.
+	StrictJSONPathSyntax bool
+	// NumbersCanBeUnderscoreSeparated ports NUMBERS_CAN_BE_UNDERSCORE_SEPARATED (duckdb True).
+	NumbersCanBeUnderscoreSeparated bool
+	// UUIDIsStringType ports UUID_IS_STRING_TYPE (base True; duckdb False): annotate_types treats
+	// UUID as a UUID type rather than text.
+	UUIDIsStringType bool
+	// MapKeysAreArbitraryExpressions ports MAP_KEYS_ARE_ARBITRARY_EXPRESSIONS (duckdb True): a
+	// MAP constructor accepts arbitrary key/value expressions.
+	MapKeysAreArbitraryExpressions bool
+	// NormalizeExtractDateParts ports NORMALIZE_EXTRACT_DATE_PARTS (base False; duckdb True):
+	// EXTRACT's date part is folded through DATE_PART_MAPPING before rendering.
+	NormalizeExtractDateParts bool
+	// ExponentOperators ports a non-empty EXPONENT table (duckdb's `**`/`^` -> Pow).
+	ExponentOperators bool
+	// RegexpRangeOperators ports duckdb's RANGE_PARSERS[TILDE] = RegexpFullMatch.
+	RegexpRangeOperators bool
+	// CaretAtStartsWith ports duckdb's RANGE_PARSERS[CARET_AT] = StartsWith.
+	CaretAtStartsWith bool
+	// ArrayOverlapsDAMP ports duckdb's RANGE_PARSERS[DAMP] = ArrayOverlaps.
+	ArrayOverlapsDAMP bool
+	// PrefixAlias ports DuckDB's `alias: expression` / `FROM alias: table` prefix aliases
+	// (parsers/duckdb.py:341-364).
+	PrefixAlias bool
+	// LambdaKeyword ports DuckDB's `LAMBDA x : expr` lambda form (parsers/duckdb.py:327-338).
+	LambdaKeyword bool
 	// ZoneAwareTimestampConstructor ports the parser flag ZONE_AWARE_TIMESTAMP_CONSTRUCTOR
 	// (parser.py:1831, default False; parsers/presto.py:61 overrides to True). Consumed at
 	// parser.py:6186-6191 when parsing a typed-literal CAST: for a TIMESTAMP-typed literal whose
@@ -706,7 +736,9 @@ func Base() *Dialect {
 		ChangeColumnAlterSyntax: false,
 		// parser.py:1846 PIVOT_COLUMN_NAMING = "agg_name_if_aliased" (base); spark2 overrides
 		// to "agg_name_if_multiple" (parsers/spark2.py:24).
-		PivotColumnNaming: "agg_name_if_aliased",
+		PivotColumnNaming:    "agg_name_if_aliased",
+		StrictJSONPathSyntax: true,
+		UUIDIsStringType:     true,
 		// generator.py:400 ALTER_TABLE_INCLUDE_COLUMN_KEYWORD = True (base).
 		AlterTableIncludeColumnKeyword: true,
 		// generator.py:412 COMPUTED_COLUMN_WITH_TYPE = True (base).
@@ -960,6 +992,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return Base(), nil
 	case "bigquery":
 		return BigQuery(), nil
+	case "duckdb":
+		return DuckDB(), nil
 	case "mysql":
 		return MySQL(), nil
 	case "mariadb":

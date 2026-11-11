@@ -884,3 +884,27 @@ JSON-path rewrites (e.g. `JSON_EXTRACT(doc, '$. a b c .d')` → `$[' a b c '].d`
 deferred JSONPath tokenizer (DEVIATIONS §1.27). Regression tests: `bigquery_test.go`. The newly
 running optimizer fixtures that do not pass yet are recorded in `optimizeGaps` and
 `optimizer/testdata/annotate_gaps.txt`.
+
+## DuckDB dialect — DONE (issue #39)
+
+Ported from `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/duckdb.py`: the
+case-insensitive identifier strategy, `e'...'` byte strings, `$` heredocs and parameters, `//`/`**`/
+`^@`/`@>`/`<@` operators, the `ATTACH`/`DETACH`/`INSTALL`/`FORCE`/`SUMMARIZE`/`PIVOT`/`UNPIVOT`
+statement parsers, prefix aliases (`foo: 1`, `FROM foo: t`), `LAMBDA x : body`, `#N` positional
+columns, `MAP` constructors, `SET VARIABLE`, the simplified `PIVOT ... ON ... USING ...` and
+`UNPIVOT ... INTO NAME ... VALUE ...` forms, leading `FROM` selects, and the `EXCLUDE` star modifier.
+
+Generator: the `DECIMAL(18, 3)` default and TEXT precision strip, `STRUCT(...)`/`MAP(...)`/`T[n]`
+type rendering, the interval binary-op canonicalization (`CAST(...) + INTERVAL '1' DAY`),
+`LIST_SORT`/`ARRAY_REVERSE_SORT`, `LIST_FILTER`/`LIST_TRANSFORM`, `LISTAGG`, `STR_SPLIT`,
+`REGEXP_EXTRACT` argument order, `SHA256`, `POWER`/`REGEXP_FULL_MATCH`/`STARTS_WITH`/`XOR` operator
+functions, `USING SAMPLE ... REPEATABLE`, `COPY` without `INTO`, JSON arrow extraction with
+parenthesization, `SET VARIABLE name = value`, and the bit-aggregate integer coercion.
+
+Corpus: 565 `validate_identity` cases from `tests/dialects/test_duckdb.py`, at **528/565**. The
+remaining rows are tracked in `testdata/parity_gaps.txt`: `COLUMNS(*)` star expansion, `VALUES`
+query modifiers, multi-clause `CREATE MACRO`, list comprehensions, `AT (VERSION => ...)` table
+versions, `USING KEY`, JSON-path canonicalization, map-literal keys, and a few DDL property
+rewrites. Newly active optimizer fixture cases are recorded in
+`optimizer/testdata/annotate_gaps.txt`. Regression tests: `duckdb_test.go`.
+

@@ -10,6 +10,12 @@ func init() {
 // tablesample_keyword parameter is only ever supplied by the pipe-syntax caller (out of
 // scope for this port), so the trailing keyword always falls back to TablesampleKeywords.
 func (g *Generator) tablesampleSQL(e expressions.Expression) string {
+	return g.tableSampleSQLWithKeyword(e, g.dialect.TablesampleKeywords)
+}
+
+// tableSampleSQLWithKeyword is tablesampleSQL with an explicit keyword override (the
+// per-dialect overrides that pass tablesample_keyword, e.g. DuckDB's derived-table form).
+func (g *Generator) tableSampleSQLWithKeyword(e expressions.Expression, keyword string) string {
 	method := g.sqlKey(e, "method")
 	if method != "" && g.dialect.TablesampleWithMethod {
 		method += " "
@@ -46,5 +52,5 @@ func (g *Generator) tablesampleSQL(e expressions.Expression) string {
 		expr = "(" + expr + ")"
 	}
 
-	return " " + g.dialect.TablesampleKeywords + " " + method + expr + seed
+	return " " + keyword + " " + method + expr + seed
 }
