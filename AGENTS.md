@@ -54,11 +54,11 @@ correctness rationale (matches the DB) or an explicit, tracked feature decision 
 MySQL + Postgres — **1876/1876** base-corpus cases (base 980/980, MySQL 428/428, Postgres 468/468),
 and every registered dialect meets its floor in the per-dialect corpus
 (`testdata/dialect_identity.jsonl`, 6721 records); the open rows are the Databricks
-`GET_JSON_OBJECT` path rewrite, six BigQuery JSON-path rewrites, and 334 Snowflake cases
-(`testdata/parity_gaps.txt`). AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
+`GET_JSON_OBJECT` path rewrite, six BigQuery JSON-path rewrites, 37 DuckDB cases, and 334
+Snowflake cases (`testdata/parity_gaps.txt`). AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
 `exp.Command` where upstream builds a structured node (`fidelity_test.go` +
 `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
-Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery, and Snowflake: the
+Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery, DuckDB, and Snowflake: the
 tokenizer, the AST + node model, the parser, the generator (`Expression → SQL`),
 `schema.MappingSchema` + `DataType.build`, the `qualify` pass (qualify_tables → normalize_identifiers →
 qualify_columns → quote_identifiers → validate), `traverse_scope` + the full `Scope` API, and the
