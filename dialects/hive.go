@@ -1,6 +1,7 @@
 package dialects
 
 import (
+	"maps"
 	"strings"
 
 	exp "github.com/maltzsama/sqlglot-go/expressions"
@@ -23,6 +24,17 @@ func Hive() *Dialect {
 	d.SafeDivision = true
 	d.NormalizationStrategy = CaseInsensitive
 	d.AlterTableSupportsCascade = true
+	// dialects/hive.py:35 INITCAP_DEFAULT_DELIMITER_CHARS (overlays the base set).
+	d.InitcapDefaultDelimiterChars = " \t\n\r\f\v\x1c\x1d\x1e\x1f"
+	// generators/hive.py:246-251 EXPRESSIONS_WITHOUT_NESTED_CTES.
+	d.MoveCTEsToTopLevel = map[exp.Kind]bool{
+		exp.KindInsert:   true,
+		exp.KindSelect:   true,
+		exp.KindSubquery: true,
+	}
+	// generators/hive.py:260-272 TYPE_MAPPING folds these DTypes onto TIMESTAMP; recorded on
+	// the parse side for exp.cast's no-re-cast check (see Dialect.castTypeMapping).
+	d.castTypeMapping = hiveCastTypeFolds(d.castTypeMapping)
 	// parsers/hive.py:53-61 parser flags.
 	d.AlterTablePartitions = true
 	d.ValuesFollowedByParen = false
@@ -109,6 +121,24 @@ func Hive() *Dialect {
 	}
 	d.TokenizerConfig = tokens.CompileConfig(cfg)
 	return d
+}
+
+// hiveCastTypeFolds are Hive's TYPE_MAPPING entries that render a DType as "TIMESTAMP"
+// (generators/hive.py:260-272); see Dialect.castTypeMapping.
+func hiveCastTypeFolds(base map[exp.DType]string) map[exp.DType]string {
+	out := maps.Clone(base)
+	if out == nil {
+		out = map[exp.DType]string{}
+	}
+	for _, dt := range []exp.DType{
+		exp.DTypeDatetime,
+		exp.DTypeTime,
+		exp.DTypeTimestampNtz,
+		exp.DTypeTimestampTz,
+	} {
+		out[dt] = "TIMESTAMP"
+	}
+	return out
 }
 
 // hiveSeqGet ports sqlglot.helper.seq_get: args[i] or nil when out of range.

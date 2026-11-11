@@ -1356,6 +1356,9 @@ func (p *Parser) parseTable(schema bool, joins bool, aliasTokens map[tokens.Toke
 func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.TokenType]bool, parseBracket bool, isDBReference bool, parsePartition bool, consumePipe bool) exp.Expression {
 	// Divergence from upstream: skip _parse_table's fast path in this slice so
 	// subquery detection always runs before table-part parsing.
+	if s := p.parseStreamTable(); s != nil {
+		return s
+	}
 	if l := p.parseLateral(); l != nil {
 		return l
 	}
@@ -2789,6 +2792,10 @@ func (p *Parser) parseColumn() exp.Expression {
 	if column != nil && p.dialect.SupportsColumnJoinMarks && p.match(tokens.JOIN_MARKER) {
 		column.Set("join_mark", true)
 	}
+	// parser.py:6824-6825: the `variant:key` accessor chain, databricks only.
+	if column != nil && p.dialect.ColonIsVariantExtract {
+		column = p.parseColonAsVariantExtract(column)
+	}
 	return column
 }
 
@@ -2917,9 +2924,14 @@ var columnOperators = map[tokens.TokenType]columnOpFunc{
 	tokens.PLACEHOLDER: func(p *Parser, this, key exp.Expression) exp.Expression {
 		return p.expression(exp.JSONBContains(exp.Args{"this": this, "expression": key}), nil, nil)
 	},
+	// COLUMN_OPERATORS[TokenType.QDCOLON] (parsers/databricks.py:50-55): `?::` is a safe cast.
+	// Gated to databricks in parseColumnOps, since base has no QDCOLON operator.
+	tokens.QDCOLON: func(p *Parser, this, to exp.Expression) exp.Expression {
+		return p.buildCast(false, exp.Args{"this": this, "to": to})
+	},
 }
 
-var castColumnOperators = map[tokens.TokenType]bool{tokens.DCOLON: true, tokens.DOTCOLON: true}
+var castColumnOperators = map[tokens.TokenType]bool{tokens.DCOLON: true, tokens.DOTCOLON: true, tokens.QDCOLON: true}
 
 // jsonOperatorTokens mirrors the JSON_OPERATORS key set (parsers/postgres.py:205-219,
 // v30.17.0). Under JSONOperatorsAreBinary these leave the accessor tier (parseColumnOps)
@@ -2940,7 +2952,8 @@ func (p *Parser) parseColumnOps(this exp.Expression) exp.Expression {
 		// parsers/clickhouse.py:412-413 removes PLACEHOLDER from COLUMN_OPERATORS, so `?`
 		// never binds as the postgres jsonb-contains operator there.
 		if !ok || (p.dialect.JSONOperatorsAreBinary && jsonOperatorTokens[opToken]) ||
-			(p.dialect.Name == "clickhouse" && opToken == tokens.PLACEHOLDER) {
+			(p.dialect.Name == "clickhouse" && opToken == tokens.PLACEHOLDER) ||
+			(opToken == tokens.QDCOLON && !p.dialectIs("databricks")) {
 			break
 		}
 		p.advance()
@@ -3457,6 +3470,14 @@ func (p *Parser) parsePlaceholder() exp.Expression {
 			return p.spanned(placeholder, start, p.prev)
 		}
 	}
+	// parsers/spark.py:105-107 SparkParser.PLACEHOLDER_PARSERS[L_BRACE]: a widget parameter
+	// `{name}`, which keeps its braces on output.
+	if p.dialectIs("spark2") && p.curr.TokenType == tokens.L_BRACE {
+		p.advance()
+		this := p.parseIdVar(true, nil)
+		p.match(tokens.R_BRACE)
+		return p.spanned(p.expression(exp.Placeholder(exp.Args{"this": this, "widget": true}), nil, nil), start, p.prev)
+	}
 	if p.match(tokens.PLACEHOLDER) {
 		if p.dialectFamily("postgres") {
 			return p.spanned(p.expression(exp.Placeholder(exp.Args{"jdbc": true}), &p.prev, nil), start, p.prev)
@@ -3495,7 +3516,7 @@ func (p *Parser) parseQueryParameter() exp.Expression {
 // parseParameter ports _parse_parameter (parser.py:8586-8588): the leading `@` is already
 // consumed; the following identifier/var becomes the parameter's `this` (mysql `@var1`).
 func (p *Parser) parseParameter() exp.Expression {
-	if p.dialect.Name == "hive" {
+	if p.dialectIs("hive") {
 		// parsers/hive.py:264-271: `${this[:expression]}`.
 		p.match(tokens.L_BRACE)
 		this := p.parseIdentifier()
@@ -3971,8 +3992,13 @@ func (p *Parser) parseFunctionCall(functions map[string]func([]exp.Expression) e
 			function = functions[upper]
 		}
 		knownFunction := function != nil && !anonymous && !opaque
-		alias := !knownFunction
+		// parser.py:1554 + 7257: FUNCTIONS_WITH_ALIASED_ARGS = {"STRUCT"}. Its arguments
+		// still accept `x AS y` aliases and are folded into PropertyEQ key/value pairs.
+		alias := !knownFunction || upper == "STRUCT"
 		args := p.parseFunctionArgs(alias)
+		if alias && knownFunction {
+			args = p.kvToPropEQ(args)
+		}
 		if knownFunction {
 			// A dialect FUNCTIONS builder may consume/reorder its argument list (TSQL
 			// HASHBYTES pops the hash-kind argument), so the raw arity check would flag a

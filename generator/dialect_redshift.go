@@ -78,6 +78,10 @@ func redshiftDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindStartsWith: func(g *Generator, e exp.Expression) string {
 			return g.gen(e.This()) + " LIKE " + g.sqlKey(e, "expression") + " || '%'"
 		},
+		// generators/redshift.py:56-70: Redshift drops Postgres' exp.Getbit transform, so
+		// the node falls through to the base functionFallbackSQL (GETBIT(...)) instead of
+		// Postgres' getbit_sql (GET_BIT(...)).
+		exp.KindGetbit:        (*Generator).functionFallbackSQL,
 		exp.KindStringToArray: clickhouseRename("SPLIT_TO_ARRAY"),
 		exp.KindTableSample: func(g *Generator, e exp.Expression) string {
 			// no_tablesample_sql (dialects/dialect.py:1291-1293).

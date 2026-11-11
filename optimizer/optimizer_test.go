@@ -109,6 +109,14 @@ var optimizeGaps = map[string]string{
 	"pivoted source with explicit selections where one of them is excluded & selected at the same time": "star expansion through PIVOT (#46)",
 	"pivoted source with implicit selections":                                                           "star expansion through PIVOT (#46)",
 	"unpivoted table source, unpivot has column aliases":                                                "star expansion through UNPIVOT (#46)",
+	// #35: merge_subqueries folds the EXPLODE_OUTER projection subquery into the outer SELECT;
+	// upstream's eliminate_subqueries keeps it as a top-level CTE.
+	"explode_outer": "merge_subqueries folds an explode projection instead of keeping a CTE (#35 follow-up)",
+	// #35: fixtures that only run now that spark is registered.
+	"selecting all columns from a pivoted source and generating spark":            "star expansion through PIVOT (#46)",
+	"decorrelate subquery and transpile ArrayAny correctly when generating spark": "subquery decorrelation for the ArrayAny rewrite is not ported",
+	"SELECT TRANSFORM ... Spark clause when schema is provided":                   "qualify aliases a TRANSFORM projection instead of exposing its schema columns",
+	"SELECT TRANSFORM ... Spark clause when schema is not provided":               "qualify aliases a TRANSFORM projection instead of exposing its key/value columns",
 }
 
 // TestOptimizeFileSchema ports test_file_schema (tests/test_optimizer.py:1828-1835).

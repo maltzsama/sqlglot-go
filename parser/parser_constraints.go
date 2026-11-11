@@ -441,6 +441,13 @@ func (p *Parser) parseGeneratedAsIdentityBase() exp.Expression {
 // (parser.py:7374) and returns the raw base result.
 func (p *Parser) parseGeneratedAsIdentity() exp.Expression {
 	this := p.parseGeneratedAsIdentityBase()
+	// parsers/spark.py:113-120: a GENERATED ... AS (expr) column becomes a computed column.
+	if p.dialectIs("spark2") {
+		if expr := asExpr(this.Arg("expression")); expr != nil {
+			return p.expression(exp.ComputedColumnConstraint(exp.Args{"this": expr}), nil, nil)
+		}
+		return this
+	}
 	switch p.switchDialect() {
 	case "mysql":
 		if p.matchTexts(map[string]bool{"STORED": true, "VIRTUAL": true}) {
@@ -633,7 +640,12 @@ func (p *Parser) parsePrimaryKeyPart() exp.Expression {
 		return p.parseOrdered(nil)
 	}
 	if p.dialect.Name != "mysql" {
-		return p.parseField(false, nil, false)
+		this := p.parseField(false, nil, false)
+		// parsers/databricks.py:71-76: a PRIMARY KEY column marked TIMESERIES.
+		if p.dialectIs("databricks") && this != nil && p.matchTextSeq("TIMESERIES") {
+			return p.expression(exp.TimeseriesKey(exp.Args{"this": this}), nil, nil)
+		}
+		return this
 	}
 	this := p.parseIdVar(true, nil)
 	if !p.match(tokens.L_PAREN) {

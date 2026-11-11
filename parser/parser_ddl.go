@@ -897,7 +897,13 @@ func init() {
 				return p.expression(exp.AutoIncrementProperty(exp.Args{"this": this}), nil, nil)
 			})
 		},
-		"CALLED": func(p *Parser, _ bool) exp.Expression { return p.parseCalledOnNullInputProperty() },
+		"CALLED":     func(p *Parser, _ bool) exp.Expression { return p.parseCalledOnNullInputProperty() },
+		"CLUSTER BY": func(p *Parser, _ bool) exp.Expression { return p.parseClusterProperty() },
+		"ENVIRONMENT": func(p *Parser, _ bool) exp.Expression {
+			return p.expression(exp.EnviromentProperty(exp.Args{
+				"expressions": p.parseWrappedCsv(func() exp.Expression { return p.parseAssignment() }),
+			}), nil, nil)
+		},
 		"CHARSET": func(p *Parser, isDefault bool) exp.Expression {
 			return p.parseCharacterSet(isDefault)
 		},

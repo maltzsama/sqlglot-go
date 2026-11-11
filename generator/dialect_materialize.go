@@ -45,52 +45,7 @@ func materializeUnsupported(_ *Generator, _ exp.Expression) string { return "" }
 // Upstream's preprocess re-dispatches through the "<key>_sql" lookup after the transforms;
 // this port calls createSQL directly to avoid re-entering gen.
 func materializeCreate(g *Generator, e exp.Expression) string {
-	return g.createSQL(materializeCtasWithTmpTables(materializeRemoveUniqueConstraints(e)))
-}
-
-// materializeRemoveUniqueConstraints ports remove_unique_constraints (transforms.py:758-764):
-// pop every UNIQUE column constraint wrapper from the CREATE body.
-func materializeRemoveUniqueConstraints(e exp.Expression) exp.Expression {
-	for _, constraint := range e.FindAll(exp.KindUniqueColumnConstraint) {
-		if parent := constraint.Parent(); parent != nil {
-			parent.Pop()
-		}
-	}
-	return e
-}
-
-// materializeCtasWithTmpTables ports ctas_with_tmp_tables_to_create_tmp_view
-// (transforms.py:767-795): CREATE TABLE with a TEMPORARY property and a body becomes
-// CREATE TEMPORARY VIEW. Upstream builds a bare exp.Create carrying only kind/this/
-// expression, so the temporary properties (and every other CREATE modifier) are dropped.
-func materializeCtasWithTmpTables(e exp.Expression) exp.Expression {
-	if e.Text("kind") != "TABLE" {
-		return e
-	}
-
-	temporary := false
-	if properties := asExpression(e.Arg("properties")); properties != nil {
-		for _, prop := range properties.Expressions() {
-			if prop.Kind() == exp.KindTemporaryProperty {
-				temporary = true
-				break
-			}
-		}
-	}
-	if !temporary {
-		return e
-	}
-
-	// `if expression.expression:` — an Expression is always truthy, so only a missing body
-	// (a plain CREATE TABLE) falls through unchanged (upstream: tmp_storage_provider(e)).
-	if body := asExpression(e.Arg("expression")); body != nil {
-		return exp.Create(exp.Args{
-			"kind":       "TEMPORARY VIEW",
-			"this":       e.Arg("this"),
-			"expression": body,
-		})
-	}
-	return e
+	return g.createSQL(ctasWithTmpTablesToCreateTmpView(removeUniqueConstraints(e), false))
 }
 
 // materializeDataType ports datatype_sql (generators/materialize.py:35-45): LIST renders

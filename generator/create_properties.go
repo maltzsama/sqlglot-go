@@ -35,6 +35,8 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindUnloggedProperty:          propertyLocationPostCreate,
 	expressions.KindAutoIncrementProperty:     propertyLocationPostSchema,
 	expressions.KindCalledOnNullInputProperty: propertyLocationPostSchema,
+	expressions.KindClusterProperty:           propertyLocationPostSchema,
+	expressions.KindEnviromentProperty:        propertyLocationPostSchema,
 	// generator.py:709/799 — the WITH(...) wrapper is rendered by the property itself
 	// (withsystemversioningproperty_sql, when with_ is set), not by the container.
 	expressions.KindDataDeletionProperty:         propertyLocationPostSchema,
@@ -227,6 +229,26 @@ func (g *Generator) propertyName(e expressions.Expression, stringKey bool) strin
 		return "'" + strings.ReplaceAll(name, "'", "''") + "'"
 	}
 	return name
+}
+
+// enviromentPropertySQL ports the EnviromentProperty transform (generator.py:185): the
+// CREATE FUNCTION environment option list, e.g. `ENVIRONMENT (dependencies = '...')`.
+func (g *Generator) enviromentPropertySQL(e expressions.Expression) string {
+	return "ENVIRONMENT (" + g.expressions(exprsOptions{expression: e, flat: true}) + ")"
+}
+
+// stringSQL ports string_sql (generator.py:5848-5860): STRING(x) is a cast to VARCHAR, with the
+// BigQuery zone argument wrapped in a UTC-sourced ConvertTimezone first.
+func (g *Generator) stringSQL(e expressions.Expression) string {
+	this := e.This()
+	if zone := asExpression(e.Arg("zone")); zone != nil {
+		this = expressions.ConvertTimezone(expressions.Args{
+			"source_tz": expressions.LiteralString("UTC"),
+			"target_tz": zone,
+			"timestamp": this,
+		})
+	}
+	return g.gen(expressions.Cast(expressions.Args{"this": this, "to": expressions.DTypeVarchar.IntoExpr(nil)}))
 }
 
 // propertySQL ports property_sql (generator.py:2083-2092).

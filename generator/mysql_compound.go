@@ -113,33 +113,27 @@ func (g *Generator) caseBlockSQL(e expressions.Expression) string {
 	return b.String()
 }
 
-// DECLARE a[, b]... type [DEFAULT expr] (§15.6.4.1). Items share one type/default.
+// DECLARE a[, b]... type [<DECLARE_DEFAULT_ASSIGNMENT> expr] (generator.py:6074-6089). Items
+// share one type/default.
 func (g *Generator) declareSQL(e expressions.Expression) string {
-	items := e.Expressions()
-	if len(items) == 0 {
-		return "DECLARE"
+	replace := ""
+	if boolValue(e.Arg("replace")) {
+		replace = "OR REPLACE "
 	}
-	names := make([]string, 0, len(items))
-	for _, it := range items {
-		names = append(names, g.sqlKey(it, "this"))
-	}
-	sql := "DECLARE " + strings.Join(names, ", ")
-	if kind := g.sqlKey(items[0], "kind"); kind != "" {
-		sql += " " + kind
-	}
-	if dflt := g.sqlKey(items[0], "default"); dflt != "" {
-		sql += " DEFAULT " + dflt
-	}
-	return sql
+	return "DECLARE " + replace + g.expressions(exprsOptions{expression: e, flat: true})
 }
 
 func (g *Generator) declareItemSQL(e expressions.Expression) string {
-	sql := g.sqlKey(e, "this")
-	if kind := g.sqlKey(e, "kind"); kind != "" {
+	sql := g.expressions(exprsOptions{expression: e, key: "this"})
+	kind := g.sqlKey(e, "kind")
+	if k := asExpression(e.Arg("kind")); k != nil && k.Kind() == expressions.KindSchema {
+		kind = "TABLE " + kind
+	}
+	if kind != "" {
 		sql += " " + kind
 	}
 	if dflt := g.sqlKey(e, "default"); dflt != "" {
-		sql += " DEFAULT " + dflt
+		sql += " " + g.dialect.DeclareDefaultAssignment + " " + dflt
 	}
 	return sql
 }

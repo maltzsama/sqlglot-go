@@ -124,6 +124,12 @@ var parserOverrideParents = map[string]string{
 	"redshift":    "postgres",
 	"materialize": "postgres",
 	"risingwave":  "postgres",
+	// Spark chain: Spark2Parser extends HiveParser (parsers/spark2.py:21), SparkParser
+	// extends Spark2Parser (parsers/spark.py:15) and DatabricksParser extends SparkParser
+	// (parsers/databricks.py).
+	"spark2":     "hive",
+	"spark":      "spark2",
+	"databricks": "spark",
 }
 
 // overrideChain lists the override keys from the parser's own key up through its parents.

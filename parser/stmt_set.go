@@ -52,6 +52,16 @@ func init() {
 	// returns on the first terminal, and `SESSION` is already one (the base assignment scope), so
 	// they're handled inside parseSetItemAssignment's SESSION branch instead.
 	postgresSetTrie = newTrie(setParserKeys(postgresSetParsers))
+
+	// sparkSetParsers ports parsers/spark.py:50-53 SparkParser.SET_PARSERS: the base table plus
+	// VAR/VARIABLE, both building the VARIABLE-kind assignment.
+	sparkSetParsers = make(map[string]func(*Parser) exp.Expression, len(setParsers)+2)
+	for k, v := range setParsers {
+		sparkSetParsers[k] = v
+	}
+	sparkSetParsers["VAR"] = func(p *Parser) exp.Expression { return p.parseSetItemAssignment("VARIABLE") }
+	sparkSetParsers["VARIABLE"] = func(p *Parser) exp.Expression { return p.parseSetItemAssignment("VARIABLE") }
+	sparkSetTrie = newTrie(setParserKeys(sparkSetParsers))
 }
 
 // setParsers/setTrie port the base SET_PARSERS/SET_TRIE (parser.py:1553-1558, 1855).
@@ -64,6 +74,9 @@ var (
 
 	postgresSetParsers map[string]func(*Parser) exp.Expression
 	postgresSetTrie    wordTrie
+
+	sparkSetParsers map[string]func(*Parser) exp.Expression
+	sparkSetTrie    wordTrie
 )
 
 func setParserKeys(parsers map[string]func(*Parser) exp.Expression) []string {
@@ -129,6 +142,8 @@ func (p *Parser) parseSetItem() exp.Expression {
 		parsers, trie = mysqlSetParsers, mysqlSetTrie
 	case "postgres":
 		parsers, trie = postgresSetParsers, postgresSetTrie
+	case "spark", "databricks":
+		parsers, trie = sparkSetParsers, sparkSetTrie
 	}
 	// Capture the index BEFORE findParser (which consumes the dispatch keyword) so a dispatched
 	// special-form parser that fails on a malformed tail can be retreated ATOMICALLY — the whole item,

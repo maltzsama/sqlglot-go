@@ -13,6 +13,11 @@ func (g *Generator) parseJSONSQL(e expressions.Expression) string {
 		return "CAST(" + g.sqlKey(e, "this") + " AS JSON)"
 	case g.isDialect("presto"):
 		return g.funcCall("JSON_PARSE", []any{e.Arg("this"), e.Arg("expression")}, "(", ")", true)
+	case g.isDialect("spark2") && !g.isDialect("databricks"):
+		// Spark2Generator.PARSE_JSON_NAME is None (generators/spark2.py:115), so PARSE_JSON
+		// degrades to its argument - Spark parses it inline. Spark inherits the None; Databricks
+		// restores "PARSE_JSON" (generators/databricks.py:21), hence the exclusion.
+		return g.sqlKey(e, "this")
 	}
 	return g.funcCall("PARSE_JSON", []any{e.Arg("this"), e.Arg("expression")}, "(", ")", true)
 }

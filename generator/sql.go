@@ -121,8 +121,6 @@ var timePartSingulars = map[string]string{
 	"YEARS":        "YEAR",
 }
 
-const initcapDefaultDelimiterChars = " \t\n\r\f\v!\"#$%&'()*+,\\-./:;<=>?@\\[\\]^_`{|}~"
-
 func (g *Generator) expressionSQL(e expressions.Expression) string { return g.sqlKey(e, "this") }
 
 func (g *Generator) nullSQL(e expressions.Expression) string { return "NULL" }
@@ -1855,7 +1853,12 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 	if expressionSQL != "" {
 		expressionSQL = begin + g.sep() + expressionSQL
 		// PG rejects `AS BEGIN ATOMIC`: the SQL-standard body replaces the AS clause.
-		if !atomicBody {
+		// generator.py:1359-1363 additionally suppresses the AS when CREATE_FUNCTION_RETURN_AS
+		// is False and the body is an exp.Return; this port's parser never builds a Return body,
+		// so only the flag half of that condition is expressible here.
+		body := asExpression(e.Arg("expression"))
+		returnAS := g.dialect.CreateFunctionReturnAs || body == nil || body.Kind() != expressions.KindReturn
+		if !atomicBody && returnAS {
 			postAliasSQL := g.renderProperties(
 				g.propertiesExpression(propertyLocations[propertyLocationPostAlias], e),
 				"", ", ", "", false,
@@ -2521,7 +2524,9 @@ func (g *Generator) arraySizeSQL(e expressions.Expression) string {
 
 func (g *Generator) initcapSQL(e expressions.Expression) string {
 	delimiters := asExpression(e.Arg("expression"))
-	if delimiters != nil && delimiters.IsString() && delimiters.Name() == initcapDefaultDelimiterChars {
+	// generator.py:6246-6260: a delimiters argument equal to the dialect's default set is
+	// dropped, so round-tripping `INITCAP(x)` never grows a redundant argument.
+	if delimiters != nil && delimiters.IsString() && delimiters.Name() == g.dialect.InitcapDefaultDelimiterChars {
 		delimiters = nil
 	}
 	return g.funcCall("INITCAP", []any{e.Arg("this"), delimiters}, "(", ")", true)
@@ -3065,4 +3070,35 @@ func (g *Generator) hintSQL(e expressions.Expression) string {
 		sep = " "
 	}
 	return " /*+ " + strings.TrimSpace(g.expressions(exprsOptions{expression: e, sep: sep})) + " */"
+}
+
+// joinHintSQL ports joinhint_sql (generator.py:4816-4819): `<NAME>(<flat exprs>)`, e.g.
+// MERGE(t1, t2) inside an optimizer hint.
+func (g *Generator) joinHintSQL(e expressions.Expression) string {
+	return g.sqlKey(e, "this") + "(" + g.expressions(exprsOptions{expression: e, flat: true}) + ")"
+}
+
+// queryTransformSQL ports querytransform_sql (generator.py:4959-4972): Hive's
+// `TRANSFORM(<exprs>) USING '<script>' [AS schema]`, with the optional ROW FORMAT /
+// RECORDWRITER / RECORDREADER fragments around it.
+func (g *Generator) queryTransformSQL(e expressions.Expression) string {
+	args := make([]any, 0, len(e.Expressions()))
+	for _, x := range e.Expressions() {
+		args = append(args, x)
+	}
+	var b strings.Builder
+	b.WriteString(g.funcCall("TRANSFORM", args, "(", ")", true))
+	for _, part := range []struct{ key, prefix string }{
+		{"row_format_before", " "},
+		{"record_writer", " RECORDWRITER "},
+		{"command_script", " USING "},
+		{"schema", " AS "},
+		{"row_format_after", " "},
+		{"record_reader", " RECORDREADER "},
+	} {
+		if value := g.sqlKey(e, part.key); value != "" {
+			b.WriteString(part.prefix + value)
+		}
+	}
+	return b.String()
 }

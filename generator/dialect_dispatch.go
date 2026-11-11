@@ -29,6 +29,12 @@ var (
 		"trino":        "presto",
 		"athena-trino": "trino",
 		"athena-hive":  "hive",
+		// Spark chain: Spark2 subclasses Hive, Spark subclasses Spark2, Databricks
+		// subclasses Spark (dialects/spark2.py:9, dialects/spark.py:11, dialects/
+		// databricks.py:17).
+		"spark2":     "hive",
+		"spark":      "spark2",
+		"databricks": "spark",
 	}
 )
 

@@ -334,6 +334,13 @@ Cross-cutting rules for the SET/SHOW family:
 - Known approximation: the port has no PG reserved-word table (upstream leaves it empty), so a few
   keyword-shaped names over/under-accept — all fail-safe (documented per-site in the parsers).
 
+### 1.27 Databricks `GET_JSON_OBJECT` path stays verbatim
+Upstream parses the path literal with the JSONPath tokenizer (`Dialect.to_json_path` →
+`jsonpath.py`) and re-renders it, so `GET_JSON_OBJECT(c, '$.x-y')` becomes
+`GET_JSON_OBJECT(c, '$["x-y"]')`. The JSONPath tokenizer is not ported, so the path expression is
+kept verbatim and that statement round-trips unchanged. The row is tracked in
+`testdata/parity_gaps.txt`. Guarding test: `TestDatabricksJSON`.
+
 ---
 
 ## 2. Cross-dialect-only deviations (never affect same-dialect round-trip)
@@ -342,7 +349,9 @@ Cross-dialect transpilation is out of scope. The Presto/Trino/Hive/Athena genera
 same-dialect surface of upstream's `TRANSFORMS`/`TYPE_MAPPING`/`PROPERTIES_LOCATION`
 (`generator/dialect_{presto,trino,hive,athena}.go`); the transpile-only `Select` preprocess chain
 (eliminate_qualify/distinct_on, explode_projection_to_unnest, semi/anti joins) and transforms whose
-source nodes only other dialects build are not. Several Presto functions still parse as `Anonymous`
+source nodes only other dialects build are not. The Spark 2, Spark and Databricks generators follow
+the same rule: their shared `Select` preprocess chain (eliminate_qualify, eliminate_distinct_on,
+unnest_to_explode, any_to_exists) stays unported, and no identity-corpus case observes it. Several Presto functions still parse as `Anonymous`
 (`DATE_FORMAT`, `DATE_PARSE`, `TO_CHAR`, `DATE_TRUNC`, `REGEXP_*`, `LOCALTIME[STAMP]`, `CONCAT_WS`)
 — lineage still sees column args; same-dialect `.sql()` echoes them.
 
@@ -355,6 +364,9 @@ None change `.sql()`:
 - `parseTable` fast-path skip (parse-order optimization).
 - `IsWrapper` uses the `truthy` helper (no nil args stored).
 - `matchTextSeq` retreat has no debug logger.
+- `bracket_to_element_at_sql` / the Spark `TRY_ELEMENT_AT` path shift only a literal integer index;
+  upstream's `apply_index_offset` additionally annotates types and simplifies. The parsed safe
+  brackets carry offset=1, which cancels the shift, so `.sql()` is unchanged.
 
 ---
 

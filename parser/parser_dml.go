@@ -114,6 +114,11 @@ func (p *Parser) parseInsert() exp.Expression {
 	}
 	conflict := p.parseOnConflict()
 	returning = firstExpression(returning, p.parseReturning())
+	// parser.py:3683: a trailing `TABLE <name>` is the multi-table insert source.
+	var source exp.Expression
+	if p.match(tokens.TABLE) {
+		source = p.parseTable(false, false, nil, false, false, false, false)
+	}
 	args := exp.Args{
 		"hint":        hint,
 		"overwrite":   overwrite,
@@ -132,6 +137,7 @@ func (p *Parser) parseInsert() exp.Expression {
 		"settings":    settings,
 		"expression":  expression,
 		"conflict":    conflict,
+		"source":      source,
 	}
 	// mysql-replace is a Go-only extension: upstream v30.12.0 leaves statement-leading
 	// REPLACE raw via dialects/mysql.py:154, while this port structures the supported grammar.

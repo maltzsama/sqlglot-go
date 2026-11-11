@@ -69,10 +69,24 @@ type Dialect struct {
 	SafeDivision            bool
 	SupportsColumnJoinMarks bool
 	ColonIsVariantExtract   bool
-	NullOrdering            string
-	SupportsOrderByAll      bool
-	TryCastRequiresString   *bool
-	DatePartMapping         map[string]string
+	// ColonChainIsSingleExtract ports COLON_CHAIN_IS_SINGLE_EXTRACT (parser.py:1880, base True;
+	// databricks overrides to False): whether x:y:z is one extraction with a merged path.
+	ColonChainIsSingleExtract bool
+	// The JSON_PATH_* generator flags (generator.py:505-561) control how a JSONPath renders.
+	// QuoteJSONPath wraps the whole path in the dialect's quote characters (base True).
+	QuoteJSONPath bool
+	// JSONPathKeyQuotedForcesBrackets renders a quoted key as ["key"] even when it would be a
+	// safe identifier (base False; databricks True).
+	JSONPathKeyQuotedForcesBrackets bool
+	// JSONPathSingleQuoteEscape uses backslash-escaped single quotes for a bracketed key
+	// (base False).
+	JSONPathSingleQuoteEscape bool
+	// JSONPathBracketedKeySupported allows the ["key"] form (base True).
+	JSONPathBracketedKeySupported bool
+	NullOrdering                  string
+	SupportsOrderByAll            bool
+	TryCastRequiresString         *bool
+	DatePartMapping               map[string]string
 	// TimeMapping / InverseTimeMapping port TIME_MAPPING (dialects/dialect.py:447) and the
 	// metaclass-generated INVERSE_TIME_MAPPING (dialect.py:261-271): the dialect's TO_CHAR-style
 	// pattern table (parse side, consumed by build_formatted_time) and its inverse (generate
@@ -118,6 +132,12 @@ type Dialect struct {
 	// generators/mysql.py:148): base wraps an aliased/derived VALUES table constructor in
 	// parentheses (`(VALUES (1, 2)) AS t`), MySQL emits it bare (`VALUES (1, 2) AS t`).
 	WrapDerivedValues bool
+	// CreateFunctionReturnAs ports the generator flag of the same name (generator.py:324,
+	// default True; generators/spark2.py:214 overrides to False): whether a CREATE FUNCTION
+	// body is introduced by `AS`. Upstream gates it on the body being an exp.Return
+	// (generator.py:1363), a node this port's parser never builds, so the gate is currently
+	// unreachable - it is kept so the flag itself stays a faithful port.
+	CreateFunctionReturnAs bool
 	// ValuesAsTable ports the generator flag of the same name (generator.py:397,
 	// generators/mysql.py:139): base renders a table-source VALUES as a VALUES constructor,
 	// MySQL rewrites it into a series of SELECT unions (`(SELECT 1 AS a, ...) AS t`). A VALUES
@@ -219,6 +239,22 @@ type Dialect struct {
 	// AlterSetType ports the generator flag of the same name (generator.py:582): the syntax
 	// to use when altering the type of a column via ALTER SET.
 	AlterSetType string
+	// InitcapDefaultDelimiterChars ports INITCAP_DEFAULT_DELIMITER_CHARS (dialects/dialect.py:
+	// 762): the delimiter set an INITCAP call is considered to be using the default with, so
+	// the generator can drop a redundant delimiters argument (generator.py:6246-6260). hive
+	// (dialects/hive.py:35) and spark2 (dialects/spark2.py:29) override it.
+	InitcapDefaultDelimiterChars string
+	// castTypeMapping is the slice of this dialect's TYPE_MAPPING (generators/<dialect>.py, a
+	// Generator class attribute upstream) that a parse-time exp.cast call can observe: the
+	// DTypes the dialect renders as "TIMESTAMP". Upstream's cast() reaches into
+	// generator_class.TYPE_MAPPING for its types_are_equivalent half
+	// (expressions/builders.py:494-503); this port keeps TYPE_MAPPING in the generator
+	// package because that is where upstream declares it, so the parse side carries the folds
+	// its own cast builders can ask about. Only the spark2 FROM_UTC/TO_UTC_TIMESTAMP builders
+	// call exp.cast today, and they always ask for TIMESTAMP, so that is the only fold family
+	// recorded. nil means "no folds", i.e. an exact target match only - which is what base
+	// does for every type a parse-side builder can request.
+	castTypeMapping map[exp.DType]string
 	// SupportsDropAlterIcebergProperty ports the generator flag of the same name (generator.py:
 	// 619): whether DROP/ALTER can carry the ICEBERG keyword (e.g. Snowflake's `DROP ICEBERG
 	// TABLE a.b`; DuckDB overrides to False and just emits `DROP TABLE a.b`).
@@ -341,6 +377,22 @@ type Dialect struct {
 	// (e.g. `SELECT values`, `values.c`). MySQL overrides to False (parsers/mysql.py:303),
 	// since MySQL treats VALUES specially even without a following paren.
 	ValuesFollowedByParen bool
+	// TrimPatternFirst ports the parser flag of the same name (parser.py:1860, default False;
+	// parsers/spark2.py:22 overrides to True): in `TRIM(<pattern> FROM <expr>)` the FROM token,
+	// not the position, decides whether the first argument is the pattern. Consumed by
+	// parseTrim (parser/parser_functions.go).
+	TrimPatternFirst bool
+	// ChangeColumnAlterSyntax ports the parser flag of the same name (parsers/hive.py:60,
+	// default False; parsers/spark2.py:23 overrides to True): whether Hive's
+	// `CHANGE COLUMN a b <type>` accepts the `TYPE` keyword before the new type. Consumed by
+	// parseHiveAlterTableChange (parser/stmt_alter.go).
+	ChangeColumnAlterSyntax bool
+	// PivotColumnNaming ports the parser flag of the same name (parser.py:1846, default
+	// "agg_name_if_aliased"; parsers/spark2.py:24 overrides to "agg_name_if_multiple"): which
+	// aggregation-name rule the PIVOT output-column inference uses. Recorded on the Pivot node
+	// so the generator can rename the columns when a statement is written under a dialect that
+	// names them differently (generator.py:2534-2546).
+	PivotColumnNaming string
 	// ZoneAwareTimestampConstructor ports the parser flag ZONE_AWARE_TIMESTAMP_CONSTRUCTOR
 	// (parser.py:1831, default False; parsers/presto.py:61 overrides to True). Consumed at
 	// parser.py:6186-6191 when parsing a typed-literal CAST: for a TIMESTAMP-typed literal whose
@@ -478,6 +530,14 @@ type Dialect struct {
 	// ArrayFuncsPropagatesNulls ports ARRAY_FUNCS_PROPAGATES_NULLS (dialects/dialect.py): whether
 	// the array functions return NULL when any input array is NULL (Redshift).
 	ArrayFuncsPropagatesNulls bool
+	// MoveCTEsToTopLevel ports EXPRESSIONS_WITHOUT_NESTED_CTES  (generator.py:849); Hive
+	// (generators/hive.py:246-251) lists Insert/Select/Subquery. A root of one of these kinds
+	// hoists every nested WITH before generation (generator.py:986-995). nil disables it, which
+	// matches the empty base set.
+	MoveCTEsToTopLevel map[exp.Kind]bool
+	// DeclareDefaultAssignment ports generator.py:620 DECLARE_DEFAULT_ASSIGNMENT, the token
+	// between a DECLARE item's type and its default value (base "="; bigquery/trino "DEFAULT").
+	DeclareDefaultAssignment string
 	// HasDistinctArrayConstructors ports HAS_DISTINCT_ARRAY_CONSTRUCTORS: ARRAY[...] and
 	// ARRAY(...) are different constructors, so the parser records which one was written.
 	HasDistinctArrayConstructors bool
@@ -494,18 +554,23 @@ func Base() *Dialect {
 		SafeToEliminateDoubleNegation:   true,
 		ArrayConcatIsVarLen:             true,
 		StarExcludeRequiresDerivedTable: true,
-		QuoteStart:                      "'",
-		QuoteEnd:                        "'",
-		IdentifierStart:                 "\"",
-		IdentifierEnd:                   "\"",
-		TokenizerConfig:                 tokens.BaseConfig(),
-		NormalizationStrategy:           Lowercase,
-		DPipeIsStringConcat:             true,
-		NullOrdering:                    "nulls_are_small",
-		DatePartMapping:                 datePartMapping,
-		ValidIntervalUnits:              validIntervalUnits(datePartMapping),
-		SupportsUserDefinedTypes:        true,
-		SupportsFixedSizeArrays:         false,
+		// parser.py:1880 COLON_CHAIN_IS_SINGLE_EXTRACT = True (base).
+		ColonChainIsSingleExtract: true,
+		// generator.py:505-561 JSON_PATH_* / QUOTE_JSON_PATH defaults.
+		QuoteJSONPath:                 true,
+		JSONPathBracketedKeySupported: true,
+		QuoteStart:                    "'",
+		QuoteEnd:                      "'",
+		IdentifierStart:               "\"",
+		IdentifierEnd:                 "\"",
+		TokenizerConfig:               tokens.BaseConfig(),
+		NormalizationStrategy:         Lowercase,
+		DPipeIsStringConcat:           true,
+		NullOrdering:                  "nulls_are_small",
+		DatePartMapping:               datePartMapping,
+		ValidIntervalUnits:            validIntervalUnits(datePartMapping),
+		SupportsUserDefinedTypes:      true,
+		SupportsFixedSizeArrays:       false,
 		// Accept a bare string as a table name/alias by default (upstream is unconditional here);
 		// postgres/mysql override to false to match their real engines. See the field doc.
 		StringTableIdentifiers: true,
@@ -523,6 +588,9 @@ func Base() *Dialect {
 		// generator.py:320 WRAP_DERIVED_VALUES = True (base); MySQL overrides to False
 		// (generators/mysql.py:148).
 		WrapDerivedValues: true,
+		// generator.py:324 CREATE_FUNCTION_RETURN_AS = True (base); spark2 overrides to False
+		// (generators/spark2.py:214).
+		CreateFunctionReturnAs: true,
 		// generator.py:397 VALUES_AS_TABLE = True (base); MySQL overrides to False
 		// (generators/mysql.py:139), rewriting table-source VALUES into SELECT unions.
 		ValuesAsTable:        true,
@@ -565,6 +633,15 @@ func Base() *Dialect {
 		AlterRenameRequiresColumn: true,
 		// parser.py:1822 ALTER_TABLE_PARTITIONS = False (base); only Hive overrides to True.
 		AlterTablePartitions: false,
+		// parser.py:1860 TRIM_PATTERN_FIRST = False (base); spark2 overrides to True
+		// (parsers/spark2.py:22).
+		TrimPatternFirst: false,
+		// parsers/hive.py:60 CHANGE_COLUMN_ALTER_SYNTAX = False (base); spark2 overrides to
+		// True (parsers/spark2.py:23).
+		ChangeColumnAlterSyntax: false,
+		// parser.py:1846 PIVOT_COLUMN_NAMING = "agg_name_if_aliased" (base); spark2 overrides
+		// to "agg_name_if_multiple" (parsers/spark2.py:24).
+		PivotColumnNaming: "agg_name_if_aliased",
 		// generator.py:400 ALTER_TABLE_INCLUDE_COLUMN_KEYWORD = True (base).
 		AlterTableIncludeColumnKeyword: true,
 		// generator.py:412 COMPUTED_COLUMN_WITH_TYPE = True (base).
@@ -573,6 +650,11 @@ func Base() *Dialect {
 		AlterSetWrapped: false,
 		// generator.py:582 ALTER_SET_TYPE = "SET DATA TYPE" (base).
 		AlterSetType: "SET DATA TYPE",
+		// generator.py:620 DECLARE_DEFAULT_ASSIGNMENT = "=" (base).
+		DeclareDefaultAssignment: "=",
+		// dialects/dialect.py:762 INITCAP_DEFAULT_DELIMITER_CHARS (base); hive and spark2
+		// override it (dialects/hive.py:35, dialects/spark2.py:29).
+		InitcapDefaultDelimiterChars: " \t\n\r\f\v!\"#$%&'()*+,\\-./:;<=>?@\\[\\]^_`{|}~",
 		// generator.py:619 SUPPORTS_DROP_ALTER_ICEBERG_PROPERTY = True (base).
 		SupportsDropAlterIcebergProperty: true,
 		// generator.py:335 SINGLE_STRING_INTERVAL = False (base); postgres overrides to True
@@ -844,6 +926,12 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return Materialize(), nil
 	case "risingwave":
 		return RisingWave(), nil
+	case "spark2":
+		return Spark2(), nil
+	case "spark":
+		return Spark(), nil
+	case "databricks":
+		return Databricks(), nil
 	default:
 		return nil, fmt.Errorf("unknown dialect %q", name)
 	}
@@ -1397,6 +1485,24 @@ func (d *Dialect) GenerateValuesAliases(values exp.Expression) []exp.Expression 
 		aliases = append(aliases, exp.ToIdentifier(fmt.Sprintf("_col_%d", i)))
 	}
 	return aliases
+}
+
+// castTargetsEquivalent ports the types_are_equivalent half of exp.cast
+// (expressions/builders.py:494-499): whether the dialect's TYPE_MAPPING renders both target
+// DTypes as the same type name, in which case a parse-time exp.cast call keeps the existing
+// cast instead of nesting a second one. The mapping itself is declared on the Generator class
+// upstream; see the castTypeMapping field comment for why the parse side carries its own copy.
+func (d *Dialect) castTargetsEquivalent(from, to exp.DType) bool {
+	return d.castTypeName(from) == d.castTypeName(to)
+}
+
+// castTypeName resolves a DType through the dialect's parse-side TYPE_MAPPING folds, falling
+// back to the DType's own name - the .value fallback of expressions/builders.py:497-499.
+func (d *Dialect) castTypeName(dt exp.DType) string {
+	if name, ok := d.castTypeMapping[dt]; ok {
+		return name
+	}
+	return string(dt)
 }
 
 // (helper kept in the dialects package for the Oracle builders)

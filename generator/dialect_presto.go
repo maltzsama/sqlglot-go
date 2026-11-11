@@ -64,7 +64,7 @@ func init() {
 		},
 		exp.KindInitcap: func(g *Generator, e exp.Expression) string {
 			// presto.py:50-58.
-			if d := asExpression(e.Arg("expression")); d != nil && (!d.IsString() || d.Name() != initcapDefaultDelimiterChars) {
+			if d := asExpression(e.Arg("expression")); d != nil && (!d.IsString() || d.Name() != g.dialect.InitcapDefaultDelimiterChars) {
 				g.unsupported("INITCAP does not support custom delimiters")
 			}
 			return "REGEXP_REPLACE(" + g.sqlKey(e, "this") + ", '(\\w)(\\w*)', x -> UPPER(x[1]) || LOWER(x[2]))"

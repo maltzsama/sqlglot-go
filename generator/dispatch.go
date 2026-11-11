@@ -67,6 +67,13 @@ func init() {
 	dispatch[expressions.KindLimit] = (*Generator).limitSQL
 	dispatch[expressions.KindOffset] = (*Generator).offsetSQL
 	dispatch[expressions.KindHint] = (*Generator).hintSQL
+	dispatch[expressions.KindJoinHint] = (*Generator).joinHintSQL
+	dispatch[expressions.KindQueryTransform] = (*Generator).queryTransformSQL
+	dispatch[expressions.KindStream] = func(g *Generator, e expressions.Expression) string {
+		return "STREAM " + g.sqlKey(e, "this")
+	}
+	dispatch[expressions.KindEnviromentProperty] = (*Generator).enviromentPropertySQL
+	dispatch[expressions.KindString] = (*Generator).stringSQL
 	dispatch[expressions.KindBlock] = (*Generator).blockSQL
 	dispatch[expressions.KindWhileBlock] = (*Generator).whileBlockSQL
 	dispatch[expressions.KindEndStatement] = (*Generator).endStatementSQL
