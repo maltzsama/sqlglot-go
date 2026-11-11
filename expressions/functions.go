@@ -83,10 +83,11 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"GROUP_CONCAT":    genericFunction(KindGroupConcat),
 	// LAG/LEAD(this[, offset[, default]]) window functions (aggregate.py:150-163); FromArgList
 	// maps args positionally onto {this, offset, default} per KindLag/KindLead's arg_types.
-	"FIRST_VALUE": genericFunction(KindFirstValue),
-	"LAST_VALUE":  genericFunction(KindLastValue),
-	"LAG":         genericFunction(KindLag),
-	"LEAD":        genericFunction(KindLead),
+	"APPROX_QUANTILES": genericFunction(KindApproxQuantiles),
+	"FIRST_VALUE":      genericFunction(KindFirstValue),
+	"LAST_VALUE":       genericFunction(KindLastValue),
+	"LAG":              genericFunction(KindLag),
+	"LEAD":             genericFunction(KindLead),
 	// LISTAGG is deliberately NOT registered here: upstream only maps it in Oracle/Snowflake/
 	// etc.'s FUNCTIONS (never base's), so base LISTAGG(x) must fall through to Anonymous and
 	// round-trip verbatim (parity_gaps.txt:10,11 - WITHIN GROUP attaches generically via the

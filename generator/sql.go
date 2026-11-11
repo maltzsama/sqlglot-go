@@ -2602,7 +2602,41 @@ func (g *Generator) lowerHexSQL(e expressions.Expression) string {
 	return text
 }
 
-func (g *Generator) arrayAggSQL(e expressions.Expression) string { return g.functionFallbackSQL(e) }
+// arrayAggSQL ports arrayagg_sql (generator.py:5747-5753): when the source dialect excludes
+// NULLs from ARRAY_AGG, the target re-adds them with a FILTER over the non-NULL input.
+func (g *Generator) arrayAggSQL(e expressions.Expression) string {
+	sql := g.functionFallbackSQL(e)
+	includesNulls := true
+	if g.dialect.ArrayAggIncludesNulls != nil {
+		includesNulls = *g.dialect.ArrayAggIncludesNulls
+	}
+	if !includesNulls || !truthy(e.Arg("nulls_excluded")) {
+		return sql
+	}
+	column := asExpression(e.This())
+	if column != nil && column.Kind() == expressions.KindOrder {
+		column = column.This()
+	}
+	if parent := e.Parent(); parent != nil && parent.Kind() == expressions.KindFilter && column != nil {
+		if cond := asExpression(parent.Arg("expression")); cond != nil {
+			notNull := expressions.Not(expressions.Args{
+				"this": expressions.Is(expressions.Args{"this": column.Copy(), "expression": expressions.Null()}),
+			})
+			cond.Replace(expressions.And(expressions.Args{"this": cond.Copy(), "expression": notNull}))
+		}
+		return sql
+	}
+	// generator.py:5741-5745: only a column input gets the filter, and DISTINCT is rendered
+	// without propagating the keyword into FILTER.
+	if column != nil && column.Find(expressions.KindColumn) != nil {
+		columnSQL := g.gen(column)
+		if column.Kind() == expressions.KindDistinct {
+			columnSQL = g.expressions(exprsOptions{expression: column, flat: true})
+		}
+		sql += " FILTER(WHERE " + columnSQL + " IS NOT NULL)"
+	}
+	return sql
+}
 
 // arraySizeSQL ports arraysize_sql (generator.py:5798-5811). ARRAY_SIZE_DIM_REQUIRED
 // (generator.py:588, generators/postgres.py:254) is nil/false for base (drop a `1`
