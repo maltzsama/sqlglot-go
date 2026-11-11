@@ -43,7 +43,7 @@ func (g *Generator) jsonPathKeySQL(e expressions.Expression) string {
 
 	name := e.Name()
 	quoted := boolValue(e.Arg("quoted"))
-	if !(quoted && g.dialect.JSONPathKeyQuotedForcesBrackets) && isSafeJSONPathKey(name) {
+	if (!quoted || !g.dialect.JSONPathKeyQuotedForcesBrackets) && isSafeJSONPathKey(name) {
 		return "." + name
 	}
 

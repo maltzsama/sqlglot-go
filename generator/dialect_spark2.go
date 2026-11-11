@@ -151,7 +151,7 @@ func spark2RegexpReplaceSQL(g *Generator, e expressions.Expression) string {
 // spark2SHA2SQL ports the SHA2Digest lambda (generators/spark2.py:192-194): the bit length
 // defaults to 256.
 func spark2SHA2SQL(g *Generator, e expressions.Expression) string {
-	var length any = e.Arg("length")
+	length := e.Arg("length")
 	if length == nil {
 		length = expressions.LiteralNumber("256")
 	}
