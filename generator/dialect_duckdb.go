@@ -207,9 +207,34 @@ func duckDBArraySQL(g *Generator, e expressions.Expression) string {
 
 // duckDBStructSQL ports _struct_sql (generators/duckdb.py:607-651).
 func duckDBStructSQL(g *Generator, e expressions.Expression) string {
+	ancestorCast := e.FindAncestor(expressions.KindCast, expressions.KindSelect)
+	if ancestorCast != nil && ancestorCast.Kind() == expressions.KindSelect {
+		ancestorCast = nil
+	}
+
+	// generators/duckdb.py:611-614: an empty struct cast works with MAP().
 	if len(e.Expressions()) == 0 {
+		if ancestorCast != nil {
+			if to := asExpression(ancestorCast.Arg("to")); to != nil && expIsType(to, expressions.DTypeMap) {
+				return "MAP()"
+			}
+		}
 		return "{}"
 	}
+
+	// generators/duckdb.py:623-630: a positional struct under a STRUCT cast is rendered as
+	// ROW(...), because DuckDB requires matching field names in a named-struct cast.
+	isInlineStruct := e.Find(expressions.KindPropertyEQ) == nil && ancestorCast != nil
+	if isInlineStruct {
+		isInlineStruct = false
+		for _, dataType := range ancestorCast.FindAll(expressions.KindDataType) {
+			if expIsType(dataType, expressions.DTypeStruct) {
+				isInlineStruct = true
+				break
+			}
+		}
+	}
+
 	args := make([]string, 0, len(e.Expressions()))
 	for i, expr := range e.Expressions() {
 		isPropertyEq := expr.Kind() == expressions.KindPropertyEQ
@@ -218,7 +243,10 @@ func duckDBStructSQL(g *Generator, e expressions.Expression) string {
 		if isPropertyEq {
 			value = asExpression(expr.Arg("expression"))
 		}
-		_ = value
+		if isInlineStruct {
+			args = append(args, g.gen(value))
+			continue
+		}
 		var key string
 		switch {
 		case this != nil && this.Kind() == expressions.KindIdentifier:
@@ -229,6 +257,9 @@ func duckDBStructSQL(g *Generator, e expressions.Expression) string {
 			key = g.gen(expressions.LiteralString("_" + duckDBItoa(i)))
 		}
 		args = append(args, key+": "+g.gen(value))
+	}
+	if isInlineStruct {
+		return "ROW(" + strings.Join(args, ", ") + ")"
 	}
 	return "{" + strings.Join(args, ", ") + "}"
 }
@@ -292,10 +323,17 @@ func duckDBArrayConcatSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("LIST_CONCAT", args, "(", ")", true)
 }
 
-// duckDBArrayContainsSQL ports _array_contains_sql (generators/duckdb.py:549-562) for the
-// non-null-check form.
+// duckDBArrayContainsSQL ports _array_contains_sql (generators/duckdb.py:549-562): with
+// check_null, a NULL needle is handled by comparing the array's full and non-NULL counts.
 func duckDBArrayContainsSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("ARRAY_CONTAINS", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+	this := g.sqlKey(e, "this")
+	expr := g.sqlKey(e, "expression")
+	funcSQL := "ARRAY_CONTAINS(" + this + ", " + expr + ")"
+	if !truthy(e.Arg("check_null")) {
+		return funcSQL
+	}
+	return "IF(" + expr + " IS NULL, NULLIF(ARRAY_LENGTH(" + this + ") <> LIST_COUNT(" + this +
+		"), FALSE), " + funcSQL + ")"
 }
 
 // duckDBArrayOverlapsSQL ports _array_overlaps_sql (generators/duckdb.py:565-606). The
@@ -433,7 +471,12 @@ func duckDBUnixToTimeSQL(g *Generator, e expressions.Expression) string {
 			return g.funcCall("MAKE_TIMESTAMP", []any{e.This()}, "(", ")", true)
 		}
 	}
-	return g.functionFallbackSQL(e)
+	// Other scales: divide by 10^scale and convert the seconds.
+	timestamp := expressions.Div(expressions.Args{
+		"this":       e.This(),
+		"expression": expressions.Pow(expressions.Args{"this": expressions.LiteralNumber("10"), "expression": scale}),
+	})
+	return g.funcCall("TO_TIMESTAMP", []any{timestamp}, "(", ")", true)
 }
 
 // duckDBUnixSecondsSQL ports the UnixSeconds lambda (generators/duckdb.py:1768).
@@ -734,6 +777,7 @@ func duckDBTableSampleSQL(g *Generator, e expressions.Expression) string {
 	if e.Arg("size") != nil {
 		method := asExpression(e.Arg("method"))
 		if method != nil && !strings.EqualFold(method.Name(), "RESERVOIR") {
+			g.unsupported("Sampling method " + method.Name() + " is not supported with a discrete sample count, defaulting to reservoir sampling")
 			e.Set("method", expressions.Var(expressions.Args{"this": "RESERVOIR"}))
 		}
 	}
@@ -770,10 +814,25 @@ func duckDBLogicalSQL(name string) func(*Generator, expressions.Expression) stri
 func duckDBDateDeltaSQL(op string) func(*Generator, expressions.Expression) string {
 	return func(g *Generator, e expressions.Expression) string {
 		interval := asExpression(e.Arg("expression"))
+		unit := asExpression(e.Arg("unit"))
+		// generators/duckdb.py:330-350: DuckDB has no INTERVAL ... NANOSECOND, so route the
+		// delta through EPOCH_NS/MAKE_TIMESTAMP_NS.
+		if unit != nil && (unit.Kind() == expressions.KindVar || unit.Kind() == expressions.KindLiteral) &&
+			strings.EqualFold(unit.Name(), "NANOSECOND") {
+			value := interval
+			if interval != nil && interval.Kind() == expressions.KindInterval {
+				value = asExpression(interval.Arg("this"))
+			}
+			timestampNS := g.gen(expressions.Cast(expressions.Args{
+				"this": e.This(),
+				"to":   expressions.DTypeTimestampNs.IntoExpr(nil),
+			}))
+			return "MAKE_TIMESTAMP_NS(EPOCH_NS(" + timestampNS + ") " + op + " " + g.gen(value) + ")"
+		}
 		if interval == nil || interval.Kind() != expressions.KindInterval {
 			interval = expressions.Interval(expressions.Args{
 				"this": interval,
-				"unit": unitToVarValue(asExpression(e.Arg("unit"))),
+				"unit": unitToVarValue(unit),
 			})
 		}
 		return g.sqlKey(e, "this") + " " + op + " " + g.gen(interval)

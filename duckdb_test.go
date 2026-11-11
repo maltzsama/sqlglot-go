@@ -300,3 +300,10 @@ func TestDuckDBReviewRegressions(t *testing.T) {
 		t.Fatalf("MAKE_INTERVAL = %q, want %q", got, want)
 	}
 }
+
+// TestDuckDBStructCastRendering pins the review-driven struct-cast fixes: an empty struct
+// under a MAP cast renders MAP(), and a positional struct under a STRUCT cast renders ROW().
+func TestDuckDBStructCastRendering(t *testing.T) {
+	assertRoundTrip(t, "duckdb", "SELECT CAST({} AS MAP(VARCHAR, INT))", "SELECT CAST(MAP() AS MAP(TEXT, INT))")
+	assertRoundTrip(t, "duckdb", "SELECT CAST({1, 2} AS STRUCT(a INT, b INT))", "SELECT CAST(ROW(1, 2) AS STRUCT(a INT, b INT))")
+}
