@@ -73,6 +73,7 @@ func init() {
 		return "STREAM " + g.sqlKey(e, "this")
 	}
 	dispatch[expressions.KindEnviromentProperty] = (*Generator).enviromentPropertySQL
+	dispatch[expressions.KindString] = (*Generator).stringSQL
 	dispatch[expressions.KindBlock] = (*Generator).blockSQL
 	dispatch[expressions.KindWhileBlock] = (*Generator).whileBlockSQL
 	dispatch[expressions.KindEndStatement] = (*Generator).endStatementSQL

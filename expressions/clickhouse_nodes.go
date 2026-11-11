@@ -34,6 +34,7 @@ func Rand(args Args) Expression                   { return newNode(KindRand, arg
 func StartsWith(args Args) Expression             { return newNode(KindStartsWith, args) }
 func Stream(args Args) Expression                 { return newNode(KindStream, args) }
 func EnviromentProperty(args Args) Expression     { return newNode(KindEnviromentProperty, args) }
+func String(args Args) Expression                 { return newNode(KindString, args) }
 func EndsWith(args Args) Expression               { return newNode(KindEndsWith, args) }
 func EuclideanDistance(args Args) Expression      { return newNode(KindEuclideanDistance, args) }
 func TimestampSub(args Args) Expression           { return newNode(KindTimestampSub, args) }

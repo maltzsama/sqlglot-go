@@ -42,6 +42,8 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"JSON_FORMAT":     genericFunction(KindJSONFormat),
 	// EXPLODE/EXPLODE_OUTER are UDTF Func subclasses (array.py:238-249); the optimizer's
 	// merge_subqueries refuses to fold a projection that contains one.
+	// STRING is exp.String, rendered as a VARCHAR cast (string.py:216, generator.py:5848).
+	"STRING":        genericFunction(KindString),
 	"EXPLODE":       genericFunction(KindExplode),
 	"EXPLODE_OUTER": genericFunction(KindExplodeOuter),
 	// "LIST" registers exp.List the same way upstream does: FUNCTIONS spreads

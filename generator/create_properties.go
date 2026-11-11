@@ -237,6 +237,20 @@ func (g *Generator) enviromentPropertySQL(e expressions.Expression) string {
 	return "ENVIRONMENT (" + g.expressions(exprsOptions{expression: e, flat: true}) + ")"
 }
 
+// stringSQL ports string_sql (generator.py:5848-5860): STRING(x) is a cast to VARCHAR, with the
+// BigQuery zone argument wrapped in a UTC-sourced ConvertTimezone first.
+func (g *Generator) stringSQL(e expressions.Expression) string {
+	this := e.This()
+	if zone := asExpression(e.Arg("zone")); zone != nil {
+		this = expressions.ConvertTimezone(expressions.Args{
+			"source_tz": expressions.LiteralString("UTC"),
+			"target_tz": zone,
+			"timestamp": this,
+		})
+	}
+	return g.gen(expressions.Cast(expressions.Args{"this": this, "to": expressions.DTypeVarchar.IntoExpr(nil)}))
+}
+
 // propertySQL ports property_sql (generator.py:2083-2092).
 func (g *Generator) propertySQL(e expressions.Expression) string {
 	if e.Kind() == expressions.KindProperty {

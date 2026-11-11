@@ -820,6 +820,7 @@ const (
 	KindExplodeOuter
 	KindEnviromentProperty
 	KindStream
+	KindString
 	KindFarmFingerprint
 	KindIsNan
 	KindJarowinklerSimilarity
@@ -1612,6 +1613,7 @@ var argTypes = map[Kind][]argSpec{
 	KindExplodeOuter:             {{"this", true}, {"expressions", false}},
 	KindEnviromentProperty:       {{"expressions", true}},
 	KindStream:                   {{"this", true}},
+	KindString:                   {{"this", true}, {"zone", false}},
 	KindFarmFingerprint:          {{"expressions", true}},
 	KindIsNan:                    {{"this", true}},
 	KindJarowinklerSimilarity:    {{"this", true}, {"expression", true}, {"case_insensitive", false}, {"integer_scale", false}},
@@ -2092,6 +2094,7 @@ var traitsOf = map[Kind]Trait{
 	KindFlatten:          TraitCondition | TraitFunc,
 	KindArrayToString:    TraitCondition | TraitFunc,
 	KindRowNumber:        TraitCondition | TraitFunc,
+	KindString:           TraitCondition | TraitFunc,
 	KindStringToArray:    TraitCondition | TraitFunc,
 	KindConvertToCharset: TraitCondition | TraitFunc,
 	KindToChar:           TraitCondition | TraitFunc,
@@ -2686,6 +2689,7 @@ var className = map[Kind]string{
 	KindExplodeOuter:             "ExplodeOuter",
 	KindEnviromentProperty:       "EnviromentProperty",
 	KindStream:                   "Stream",
+	KindString:                   "String",
 	KindFarmFingerprint:          "FarmFingerprint",
 	KindIsNan:                    "IsNan",
 	KindJarowinklerSimilarity:    "JarowinklerSimilarity",
