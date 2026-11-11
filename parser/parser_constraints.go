@@ -538,10 +538,7 @@ func (p *Parser) parseUnique() exp.Expression {
 // trailing option list shared by FOREIGN KEY/PRIMARY KEY/UNIQUE/REFERENCES.
 func (p *Parser) parseKeyConstraintOptions() []string {
 	var options []string
-	for {
-		if !p.curr.IsValid() {
-			break
-		}
+	for p.curr.IsValid() {
 		if p.match(tokens.ON) {
 			on := ""
 			if tok := p.advanceAny(false); tok != nil {

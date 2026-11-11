@@ -88,7 +88,7 @@ func (p *Parser) parseDescribe() exp.Expression {
 }
 
 // parseDescribeStructured is the tryParse body for parseDescribe; it returns nil
-// (signalling the caller to degrade to Command) for any leftover trailing tokens.
+// (signaling the caller to degrade to Command) for any leftover trailing tokens.
 func (p *Parser) parseDescribeStructured() exp.Expression {
 	var kind any
 	if p.matchSet(creatables) {

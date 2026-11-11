@@ -338,10 +338,9 @@ func expandUsing(scope *Scope, resolver *Resolver) map[string][]string {
 						coalesceArgs = append(coalesceArgs, exp.Column_(column.Name(), table, nil, nil, nil))
 					}
 					replacement := coalesce(coalesceArgs)
+					// TODO(slice 4c): STRUCT/PropertyEQ USING replacement for the non-SELECT parent.
 					if parent := column.Parent(); parent != nil && parent.Kind() == exp.KindSelect {
 						replacement = exp.AliasExpr(replacement, column.Name(), false)
-					} else {
-						// TODO(slice 4c): STRUCT/PropertyEQ USING replacement.
 					}
 					scope.Replace(column, replacement)
 				}
@@ -369,6 +368,7 @@ func expandAliasRefsInScope(scope *Scope, resolver *Resolver, dialect *dialects.
 	}
 	replaced := false
 
+	//nolint:staticcheck // S1021: a recursive closure needs the two-step declaration.
 	var replaceColumns func(node exp.Expression, resolveTable bool, literalIndex bool)
 	replaceColumns = func(node exp.Expression, resolveTable bool, literalIndex bool) {
 		if node == nil {
@@ -684,7 +684,7 @@ func convertColumnsToDots(scope *Scope, resolver *Resolver) {
 			root := parts[0]
 			parts = parts[1:]
 
-			var columnTableExpression any = columnTable
+			var columnTableExpression any
 			if root.Kind() == exp.KindIdentifier && selectedSources[root.Name()] {
 				columnTableExpression = root
 				if len(parts) == 0 {
@@ -826,9 +826,8 @@ func expandStarsInScope(scope *Scope, resolver *Resolver, usingColumnTables map[
 					addRenameColumns(expression.This(), tableKeys, renameColumns)
 					ilikePattern = addILikeColumns(expression.This())
 				}
-			} else if expression.Kind() == exp.KindDot {
-				// TODO(slice 4c): struct star expansion for BigQuery/RisingWave.
 			}
+			// TODO(slice 4c): struct star expansion for exp.KindDot (BigQuery/RisingWave).
 		}
 
 		if len(tables) == 0 {

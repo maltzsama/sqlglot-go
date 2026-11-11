@@ -325,7 +325,7 @@ func (c *TokenizerCore) advance(i int, alnum bool) {
 	char := c.char
 
 	if char == '\n' || char == '\r' {
-		if !(char == '\r' && c.peek == '\n') {
+		if char != '\r' || c.peek != '\n' {
 			c.col = i
 			c.line++
 		}
@@ -792,11 +792,12 @@ func (c *TokenizerCore) scanString(start string) bool {
 		}
 		end = format.End
 		tokenType = format.TokenType
-		if tokenType == HEX_STRING {
+		switch tokenType {
+		case HEX_STRING:
 			base = 16
-		} else if tokenType == BIT_STRING {
+		case BIT_STRING:
 			base = 2
-		} else if tokenType == HEREDOC_STRING {
+		case HEREDOC_STRING:
 			c.advance(1, false)
 			tag := ""
 			if string(c.char) != end {
@@ -884,7 +885,7 @@ func (c *TokenizerCore) extractString(delimiter string, escapes map[rune]bool, r
 	if delimSize == 1 {
 		pos := c.current - 1
 		end := indexRuneFrom(c.input, delimRunes[0], pos, c.size)
-		if end != -1 && (end+1 >= c.size || c.input.at(end+1) != delimRunes[0] || !escapes[delimRunes[0]]) && (!(len(c.unescapedSequences) > 0 || escapes['\\']) || indexRuneFrom(c.input, '\\', pos, end) == -1) {
+		if end != -1 && (end+1 >= c.size || c.input.at(end+1) != delimRunes[0] || !escapes[delimRunes[0]]) && ((len(c.unescapedSequences) == 0 && !escapes['\\']) || indexRuneFrom(c.input, '\\', pos, end) == -1) {
 			newlines := countRune(c.input, '\n', pos, end)
 			if newlines > 0 {
 				c.line += newlines
@@ -1026,7 +1027,7 @@ func ParseIntPython(value string, base int) (*big.Int, bool) {
 		ch := s[i]
 		if ch == '_' {
 			// A '_' is valid only between two digits or immediately after the base prefix.
-			if prevUnderscore || (!seenDigit && !(i == 0 && afterPrefix)) {
+			if prevUnderscore || (!seenDigit && (i != 0 || !afterPrefix)) {
 				return nil, false
 			}
 			prevUnderscore = true

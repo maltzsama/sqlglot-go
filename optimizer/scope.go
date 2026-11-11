@@ -237,7 +237,7 @@ func buildScope(expression exp.Expression) *Scope {
 	// set). Only return the last scope as the build root when it actually IS the root scope for
 	// this DML statement; otherwise signal "no root scope" with nil. Non-DML roots are
 	// unaffected (a SELECT's last scope is its root scope).
-	if isDMLRootKind(expression.Kind()) && !(isDMLRootScope(scope) && scope.Expression == expression) {
+	if isDMLRootKind(expression.Kind()) && (!isDMLRootScope(scope) || scope.Expression != expression) {
 		return nil
 	}
 	return scope
@@ -943,7 +943,7 @@ func _traverseTables(scope *Scope, out *[]*Scope, mode scopeTraversalMode) {
 		}
 
 		var lateralSources map[string]any
-		scopeType := ScopeTypeDerivedTable
+		var scopeType ScopeType
 		var scopes *[]*Scope
 
 		if expression.Is(exp.TraitUDTF) {

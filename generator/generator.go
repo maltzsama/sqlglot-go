@@ -332,7 +332,7 @@ func isNilExpression(e expressions.Expression) bool {
 		return true
 	}
 	v := reflect.ValueOf(e)
-	return v.Kind() == reflect.Ptr && v.IsNil()
+	return v.Kind() == reflect.Pointer && v.IsNil()
 }
 
 func (g *Generator) sqlKey(e expressions.Expression, key string) string {

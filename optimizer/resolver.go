@@ -291,19 +291,6 @@ func (r *Resolver) getTableNameFromSources(columnName string, sourceColumns map[
 	return r.getUnambiguousColumns(sourceColumns, order)[columnName]
 }
 
-func (r *Resolver) getTableNameFromSourcesRecover(columnName string, sourceColumns map[string][]string, order []string) (tableName string) {
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			if _, ok := recovered.(*sqlerrors.OptimizeError); ok {
-				tableName = ""
-				return
-			}
-			panic(recovered)
-		}
-	}()
-	return r.getTableNameFromSources(columnName, sourceColumns, order)
-}
-
 func (r *Resolver) getTableNameFromJoinContextRecover(columnName string, joinContext exp.Expression) (tableName string) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
@@ -416,19 +403,4 @@ func (r *Resolver) getUnambiguousColumns(sourceColumns map[string][]string, orde
 		}
 	}
 	return unambiguousColumns
-}
-
-func (r *Resolver) structFieldNames(colType exp.Expression) []string {
-	// TODO(slice 4c): port resolver.py:359-367 once TypeAnnotator/DataType inference is live.
-	return nil
-}
-
-func (r *Resolver) getUnnestColumnType(column exp.Expression, scope *Scope) exp.Expression {
-	// TODO(slice 4c): port resolver.py:369-392.
-	return nil
-}
-
-func (r *Resolver) getColumnTypeFromScope(source any, column exp.Expression) exp.Expression {
-	// TODO(slice 4c): port resolver.py:394-419.
-	return nil
 }

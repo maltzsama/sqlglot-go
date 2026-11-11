@@ -465,7 +465,7 @@ func DataTypeBuild(dtype any, dialect DialectType, udt bool, copyValue bool, kwa
 			return applyKwargs(DataType(Args{"this": DTypeUserDefined, "kind": v}), kwargs), nil
 		}
 	}
-	return nil, fmt.Errorf("Invalid data type: %T. Expected str or DType", dtype)
+	return nil, fmt.Errorf("invalid data type: %T (want string or DType)", dtype)
 }
 
 func DataTypeFromStr(dtype string, dialect DialectType, udt bool, kwargs Args) (Expression, error) {

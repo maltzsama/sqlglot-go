@@ -832,7 +832,7 @@ var datePartMapping = map[string]string{
 	"DECADES":            "DECADE",
 	"MIL":                "MILLENNIUM",
 	"MILS":               "MILLENNIUM",
-	"MILLENIA":           "MILLENNIUM",
+	"MILLENIA":           "MILLENNIUM", //nolint:misspell // upstream spells the SQL interval unit MILLENIA
 	"C":                  "CENTURY",
 	"CENT":               "CENTURY",
 	"CENTS":              "CENTURY",
