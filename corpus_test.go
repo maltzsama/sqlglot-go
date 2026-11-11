@@ -233,6 +233,7 @@ func writeGaps(fails map[gapKey]string) error {
 // burndown list. Pass and total floors are monotonic: raise them, never lower them.
 const (
 	minPassBase        = 980
+	minPassBigQuery    = 683
 	minPassMySQL       = 428
 	minPassPostgres    = 468
 	minPassAthena      = 51
@@ -254,6 +255,7 @@ const (
 // Total floors catch dropped failing records that pass floors cannot detect.
 const (
 	minTotalBase        = 980
+	minTotalBigQuery    = 689
 	minTotalMySQL       = 428
 	minTotalPostgres    = 468
 	minTotalAthena      = 51
@@ -317,6 +319,7 @@ func TestCorpus(t *testing.T) {
 		minTotal int
 	}{
 		{"", minPassBase, minTotalBase},
+		{"bigquery", minPassBigQuery, minTotalBigQuery},
 		{"mysql", minPassMySQL, minTotalMySQL},
 		{"postgres", minPassPostgres, minTotalPostgres},
 		{"athena", minPassAthena, minTotalAthena},

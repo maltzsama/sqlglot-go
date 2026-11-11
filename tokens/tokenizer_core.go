@@ -917,12 +917,21 @@ func (c *TokenizerCore) extractString(delimiter string, escapes map[rune]bool, r
 		}
 
 		isValidCustomEscape := len(c.escapeFollowChars) > 0 && c.char == '\\' && !c.escapeFollowChars[c.peek]
-		if (c.stringEscapesAllowedInRawStrings || !rawString) && escapes[c.char] && (string(c.peek) == delimiter || escapes[c.peek] || isValidCustomEscape) && (!c.isQuote(c.char) || c.char == c.peek) {
-			if string(c.peek) == delimiter {
+		// tokenizer_core.py:1175-1189: an escaped quote before the closing delimiter (e.g. the
+		// \" in """a\""""") must be consumed here, so the delimiter check below doesn't see it
+		// and terminate the string early.
+		escapedDelimiter := string(c.peek) == delimiter || (delimSize > 1 && c.peek == delimRunes[0] && c.isQuote(c.peek))
+		if (c.stringEscapesAllowedInRawStrings || !rawString) && escapes[c.char] && (escapedDelimiter || escapes[c.peek] || isValidCustomEscape) && (!c.isQuote(c.char) || c.char == c.peek) {
+			switch {
+			case escapedDelimiter:
+				if rawString {
+					text += string(c.char) + string(c.peek)
+				} else {
+					text += string(c.peek)
+				}
+			case isValidCustomEscape && c.char != c.peek:
 				text += string(c.peek)
-			} else if isValidCustomEscape && c.char != c.peek {
-				text += string(c.peek)
-			} else {
+			default:
 				text += string(c.char) + string(c.peek)
 			}
 

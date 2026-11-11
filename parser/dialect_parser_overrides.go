@@ -60,6 +60,20 @@ type dialectParserOverrideSet struct {
 	// 34-37): the dialect has no T-SQL/MySQL hint grammar, so `FROM a WITH (...)` must not
 	// swallow the connector properties that follow the table.
 	DisableTableHints bool
+	// ColumnOps overrides _parse_column_ops (parsers/bigquery.py:773-799): it receives the
+	// parsed expression and the function-index token position.
+	ColumnOps func(*Parser, exp.Expression, int) exp.Expression
+	// TablePart overrides _parse_table_part (parsers/bigquery.py:402-425): it receives the
+	// base-parsed part (possibly nil).
+	TablePart func(*Parser, bool, exp.Expression) exp.Expression
+	// TableParts post-processes a parsed Table (parsers/bigquery.py:427-518).
+	TableParts func(*Parser, exp.Expression) exp.Expression
+	// Column post-processes a parsed Column (parsers/bigquery.py:518-536).
+	Column func(*Parser, exp.Expression) exp.Expression
+	// QualifiedFunc parses the field after a DOT when the qualifier is a known function
+	// namespace (BigQuery's AI./ML. custom signatures, parsers/bigquery.py:790-799). It runs
+	// before the anonymous fallback so the FUNCTION_PARSERS signature applies.
+	QualifiedFunc func(*Parser, exp.Expression) (exp.Expression, bool)
 }
 
 var dialectParserOverrides = map[string]dialectParserOverrideSet{}

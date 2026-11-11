@@ -34,9 +34,7 @@ func (p *Parser) parseKill() exp.Expression {
 	return p.expression(exp.Kill(exp.Args{"this": this, "kind": kind}), nil, nil)
 }
 
-// parseLoad ports _parse_load (parser.py:3653-3678). The `FROM FILES (...)`
-// branch (files=...) is not ported: no corpus case exercises it, and Hive's
-// LOAD DATA doesn't otherwise combine INPATH with FROM FILES.
+// parseLoad ports _parse_load (parser.py:3797-3822).
 func (p *Parser) parseLoad() exp.Expression {
 	if !p.matchTextSeq("DATA") {
 		return p.parseAsCommand(p.prev)
@@ -53,6 +51,11 @@ func (p *Parser) parseLoad() exp.Expression {
 	}
 
 	this := p.parseTable(true, false, nil, false, false, false, false)
+	// parser.py:3808-3816: FROM FILES (<properties>).
+	var files exp.Expression
+	if p.matchTextSeq("FROM", "FILES") {
+		files = p.expression(exp.Properties(exp.Args{"expressions": p.parseWrappedProperties()}), nil, nil)
+	}
 	partition := p.parsePartition()
 	var inputFormat exp.Expression
 	if p.matchTextSeq("INPUTFORMAT") {
@@ -69,6 +72,7 @@ func (p *Parser) parseLoad() exp.Expression {
 		"overwrite":    overwrite,
 		"temp":         temp,
 		"inpath":       inpath,
+		"files":        files,
 		"partition":    partition,
 		"input_format": inputFormat,
 		"serde":        serde,

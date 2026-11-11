@@ -137,6 +137,7 @@ var idVarTokens = map[tokens.TokenType]bool{
 	tokens.DYNAMIC:                 true,
 	tokens.VOID:                    true,
 	tokens.ALL:                     true,
+	tokens.GRANT:                   true,
 	tokens.ANTI:                    true,
 	tokens.ANY:                     true,
 	tokens.APPLY:                   true,

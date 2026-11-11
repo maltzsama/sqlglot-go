@@ -755,10 +755,21 @@ func dateLiteral(d pyDate, targetType exp.Expression) exp.Expression {
 	return buildCast(literalString(d.String()), to)
 }
 
-// truncUnit ports _trunc_unit (simplify.py:517-525); WeekStart joins once it has a kind.
-func truncUnit(unit exp.Expression) string {
+// weekStartDayToDOW ports WEEK_START_DAY_TO_DOW (dialects/dialect.py:2098-2106).
+var weekStartDayToDOW = map[string]int{
+	"MONDAY": 1, "TUESDAY": 2, "WEDNESDAY": 3, "THURSDAY": 4,
+	"FRIDAY": 5, "SATURDAY": 6, "SUNDAY": 7,
+}
+
+// truncUnit ports _trunc_unit (simplify.py:517-525): BigQuery's WEEK(<day>) resolves to
+// "week" when the chosen day matches the dialect's WEEK_OFFSET, else it is unsupported.
+func truncUnit(unit exp.Expression, dialect *dialects.Dialect) string {
 	if isClass(unit, "WeekStart") {
-		panic(errUnsupportedUnit{unit.Name()})
+		dow, ok := weekStartDayToDOW[strings.ToUpper(unit.Name())]
+		if !ok || dow != ((dialect.WeekOffset%7)+7)%7+1 {
+			panic(errUnsupportedUnit{unit.Name()})
+		}
+		return "week"
 	}
 	return strings.ToLower(unit.Name())
 }
@@ -1874,7 +1885,7 @@ func (s *Simplifier) simplifyDatetruncInner(expression exp.Expression) exp.Expre
 		truncType := extractType(this)
 		date, ok := extractDate(this)
 		if unit := asExpression(expression.Arg("unit")); ok && unit != nil {
-			return dateLiteral(datetimeFloor(date, truncUnit(unit), s.dialect.WeekOffset), truncType)
+			return dateLiteral(datetimeFloor(date, truncUnit(unit, s.dialect), s.dialect.WeekOffset), truncType)
 		}
 		return expression
 	}
@@ -1890,7 +1901,7 @@ func (s *Simplifier) simplifyDatetruncInner(expression exp.Expression) exp.Expre
 			return expression
 		}
 		truncArg := l.This()
-		unit := truncUnit(asExpression(l.Arg("unit")))
+		unit := truncUnit(asExpression(l.Arg("unit")), s.dialect)
 		date, ok := extractDate(r)
 		if !ok {
 			return expression
@@ -1913,7 +1924,7 @@ func (s *Simplifier) simplifyDatetruncInner(expression exp.Expression) exp.Expre
 				return expression
 			}
 		}
-		unit := truncUnit(asExpression(l.Arg("unit")))
+		unit := truncUnit(asExpression(l.Arg("unit")), s.dialect)
 		var ranges [][2]pyDate
 		for _, r := range rs {
 			date, ok := extractDate(r)

@@ -489,6 +489,8 @@ func (p *Parser) parseMatchAgainst() exp.Expression {
 func init() {
 	// OVERLAY is a base FUNCTION_PARSERS entry (parser.py:1511) - not dialect-gated.
 	functionParsers["OVERLAY"] = (*Parser).parseOverlay
+	// GAP_FILL is a base FUNCTION_PARSERS entry (parser.py:1575).
+	functionParsers["GAP_FILL"] = (*Parser).parseGapFill
 	// MATCH is a base FUNCTION_PARSERS entry (parser.py:1508) - not dialect-gated. Used
 	// mainly in MySQL full-text search; the base generator renders MATCH(...) AGAINST(...)
 	// and postgres overrides matchAgainstSQL to the `@@` form.
@@ -510,4 +512,15 @@ func init() {
 	noParenFunctionParsers["VARIADIC"] = func(p *Parser) exp.Expression {
 		return p.expression(exp.Variadic(exp.Args{"this": p.parseBitwise()}), nil, nil)
 	}
+}
+
+// parseGapFill ports _parse_gap_fill (parser.py:8097-8105): TABLE <table>, followed by the
+// named arguments.
+func (p *Parser) parseGapFill() exp.Expression {
+	p.match(tokens.TABLE)
+	this := p.parseTable(false, false, nil, false, false, false, false)
+	p.match(tokens.COMMA)
+	args := []exp.Expression{this}
+	args = append(args, p.parseCsv(func() exp.Expression { return p.parseLambda(false) })...)
+	return p.validateExpression(exp.FromArgList(exp.KindGapFill, args), exprArgs(args))
 }

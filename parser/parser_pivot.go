@@ -86,6 +86,15 @@ func (p *Parser) parseUnnest(withAlias bool) exp.Expression {
 	if withAlias {
 		alias = p.parseTableAlias(nil)
 	}
+	// parser.py:5197-5203: with UNNEST_COLUMN_ONLY (BigQuery) the alias name becomes the sole
+	// column of the alias.
+	if alias != nil && p.dialect.UnnestColumnOnly {
+		if columns, _ := alias.Arg("columns").([]exp.Expression); len(columns) > 0 {
+			p.raiseError("Unexpected extra column alias in unnest.")
+		}
+		alias.Set("columns", []exp.Expression{asExpr(alias.Arg("this"))})
+		alias.Set("this", nil)
+	}
 	// parser.py:5205-5207: with WITH ORDINALITY, a surplus alias column names the ordinal.
 	if alias != nil && offset != nil {
 		if columns, _ := alias.Arg("columns").([]exp.Expression); len(expressions) < len(columns) {
@@ -97,7 +106,7 @@ func (p *Parser) parseUnnest(withAlias bool) exp.Expression {
 	// accepts it in every dialect. See DEVIATIONS §1.21.
 	if offset == nil && !p.dialectFamily("postgres") && p.matchPair(tokens.WITH, tokens.OFFSET, true) {
 		p.match(tokens.ALIAS)
-		offset = p.parseIdVar(false, nil)
+		offset = p.parseIdVar(false, tableAliasTokens)
 		if offset == nil {
 			offset = exp.ToIdentifier("offset", false)
 		}

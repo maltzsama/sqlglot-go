@@ -15,7 +15,7 @@ third-party dependencies** (Go stdlib only).
 This repository is a maintained, independent continuation of `ridi-oss/sqlglot-go` (forked at its
 v0.38.0 release). It tracks upstream sqlglot **v30.17.0** and extends the original base/MySQL/Postgres
 port with TSQL, ClickHouse, Oracle, StarRocks, Doris, Presto, Trino, Hive, Athena, Redshift,
-Materialize, and RisingWave.
+Materialize, RisingWave, Spark, Databricks, and BigQuery.
 
 ## Scope — what this is (and isn't)
 
@@ -102,6 +102,7 @@ Same-dialect round-trip parity against the ported upstream identity corpus
 | Materialize | `materialize` | 24/24 |
 | Spark | `spark` | 227/227 |
 | Databricks | `databricks` | 175/176 |
+| BigQuery | `bigquery` | 683/689 |
 | Spark 2 | `spark2` | n/a (no upstream fixture; exercised through Spark) |
 | RisingWave | `risingwave` | 7/7 |
 

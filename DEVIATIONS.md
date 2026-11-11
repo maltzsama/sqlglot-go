@@ -334,12 +334,13 @@ Cross-cutting rules for the SET/SHOW family:
 - Known approximation: the port has no PG reserved-word table (upstream leaves it empty), so a few
   keyword-shaped names over/under-accept — all fail-safe (documented per-site in the parsers).
 
-### 1.27 Databricks `GET_JSON_OBJECT` path stays verbatim
-Upstream parses the path literal with the JSONPath tokenizer (`Dialect.to_json_path` →
-`jsonpath.py`) and re-renders it, so `GET_JSON_OBJECT(c, '$.x-y')` becomes
-`GET_JSON_OBJECT(c, '$["x-y"]')`. The JSONPath tokenizer is not ported, so the path expression is
-kept verbatim and that statement round-trips unchanged. The row is tracked in
-`testdata/parity_gaps.txt`. Guarding test: `TestDatabricksJSON`.
+### 1.27 JSONPath tokenizer deferred (`GET_JSON_OBJECT`, BigQuery JSON functions)
+Upstream parses path literals with the JSONPath tokenizer (`Dialect.to_json_path` → `jsonpath.py`)
+and re-renders them, so `GET_JSON_OBJECT(c, '$.x-y')` becomes `GET_JSON_OBJECT(c, '$["x-y"]')` and
+BigQuery rewrites `JSON_EXTRACT(doc, '$. a b c .d')` to `JSON_EXTRACT(doc, '$[' a b c '].d')`. The
+JSONPath tokenizer is not ported, so path expressions are kept verbatim and round-trip unchanged.
+The rows are tracked in `testdata/parity_gaps.txt` (one Databricks, six BigQuery). Guarding tests:
+`TestDatabricksJSON`, `TestBigQueryJSONFunctions`.
 
 ---
 

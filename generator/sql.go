@@ -204,6 +204,24 @@ func (g *Generator) dotSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) columnParts(e expressions.Expression) string {
+	// generator.py:1153-1156: a shadowed qualifier renders as the bare name (BigQuery's
+	// GROUP BY/HAVING/QUALIFY would otherwise resolve it to the projection alias).
+	if truthy(e.Arg("shadow")) && g.dialect.ProjectionAliasesShadowSourceNames {
+		return g.sqlKey(e, "this")
+	}
+	// generator.py column_parts override (bigquery): a `dataset.table`.name reference keeps its
+	// quoted table path.
+	if truthy(e.MetaGet("quoted_column")) {
+		parts := e.Parts()
+		if len(parts) > 1 {
+			names := make([]string, 0, len(parts)-1)
+			for _, part := range parts[:len(parts)-1] {
+				names = append(names, part.Name())
+			}
+			tablePath := g.gen(expressions.Identifier(expressions.Args{"this": strings.Join(names, "."), "quoted": true}))
+			return tablePath + "." + g.sqlKey(e, "this")
+		}
+	}
 	parts := []string{}
 	for _, key := range []string{"catalog", "schema", "table", "this"} {
 		if v := e.Arg(key); truthy(v) {
@@ -404,8 +422,14 @@ func (g *Generator) parameterSQL(e expressions.Expression) string {
 
 // rawStringSQL ports rawstring_sql (generator.py:1653-1659): a raw/heredoc string is
 // re-emitted as an ordinary quoted string literal (e.g. postgres `$$doc$$` -> `'doc'`).
+// rawStringSQL ports rawstring_sql (generator.py:1684-1690).
 func (g *Generator) rawStringSQL(e expressions.Expression) string {
-	return g.quoteStart + g.escapeStr(e.Text("this")) + g.quoteEnd
+	text := e.Text("this")
+	if g.dialect.TokenizerConfig.StringEscapes['\\'] {
+		text = strings.ReplaceAll(text, "\\", "\\\\")
+	}
+	text = g.escapeStrOpts(text, escapeStrOptions{escapeBackslash: false})
+	return g.quoteStart + text + g.quoteEnd
 }
 
 // fileFormatPropertySQL renders the FileFormatProperty node as `FORMAT=<fmt>`, matching
@@ -460,10 +484,13 @@ func (g *Generator) pivotAliasSQL(e expressions.Expression) string {
 	if parent != nil {
 		pivot = parent.Parent()
 	}
-	if pivot != nil && pivot.Kind() == expressions.KindPivot && boolValue(pivot.Arg("unpivot")) && alias != nil &&
-		g.dialect.UnpivotAliasesAreIdentifiers {
-		if alias.Kind() != expressions.KindIdentifier && alias.Kind() == expressions.KindLiteral {
-			alias.Replace(expressions.ToIdentifier(alias.OutputName()))
+	if pivot != nil && pivot.Kind() == expressions.KindPivot && boolValue(pivot.Arg("unpivot")) && alias != nil {
+		if g.dialect.UnpivotAliasesAreIdentifiers {
+			if alias.Kind() == expressions.KindLiteral {
+				alias.Replace(expressions.ToIdentifier(alias.OutputName()))
+			}
+		} else if alias.Kind() == expressions.KindIdentifier {
+			alias.Replace(expressions.LiteralString(alias.OutputName()))
 		}
 	}
 	return g.aliasSQL(e)
@@ -645,10 +672,17 @@ func (g *Generator) queryModifiers(e expressions.Expression, sqls ...string) str
 	}
 	parts = append(parts, g.sqlKey(e, "prewhere"), g.sqlKey(e, "where"), g.sqlKey(e, "connect"), g.sqlKey(e, "group"), g.sqlKey(e, "having"))
 	parts = append(parts, g.sqlKey(e, "cluster"), g.sqlKey(e, "distribute"), g.sqlKey(e, "sort"))
+	qualify := g.sqlKey(e, "qualify")
+	if g.dialect.QualifyBeforeWindow {
+		parts = append(parts, qualify)
+	}
 	if truthy(e.Arg("windows")) {
 		parts = append(parts, g.seg("WINDOW ")+g.expressions(exprsOptions{expression: e, key: "windows", flat: true}))
 	}
-	parts = append(parts, g.sqlKey(e, "qualify"), g.sqlKey(e, "order"))
+	if !g.dialect.QualifyBeforeWindow {
+		parts = append(parts, qualify)
+	}
+	parts = append(parts, g.sqlKey(e, "order"))
 	parts = append(parts, g.offsetLimitModifiers(e, fetch, limit)...)
 	parts = append(parts, g.afterLimitModifiers(e)...)
 	parts = append(parts, g.optionsModifier(e), g.sqlKey(e, "for_"))
@@ -1130,7 +1164,15 @@ func (g *Generator) setOperationSQL(e expressions.Expression) string {
 		distinct = true
 	}
 	distinctOrAll := ""
-	if hasDistinct && !distinct {
+	if g.dialect.SetOpExplicitDistinct {
+		// BigQuery's SET_OP_DISTINCT_BY_DEFAULT is None for every operation, so DISTINCT/ALL is
+		// always spelled out (generator.py:1865-1875).
+		if distinct {
+			distinctOrAll = " DISTINCT"
+		} else {
+			distinctOrAll = " ALL"
+		}
+	} else if hasDistinct && !distinct {
 		distinctOrAll = " ALL"
 	}
 	sideKind := joinNonEmpty(" ", e.Text("side"), e.Text("kind"))
@@ -1284,6 +1326,9 @@ func (g *Generator) inSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) inUnnestOp(unnest expressions.Expression) string {
+	if g.dialect.InUnnestOpBare {
+		return g.gen(unnest)
+	}
 	return "(SELECT " + g.gen(unnest) + ")"
 }
 
@@ -1454,6 +1499,29 @@ func (g *Generator) respectNullsSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) embedIgnoreNulls(e expressions.Expression, text string) string {
+	// generator.py:5396-5423: with IGNORE_NULLS_IN_FUNC the modifier moves inside the aggregate
+	// call, before any HAVING MAX/ORDER BY/LIMIT modifiers when IGNORE_NULLS_BEFORE_ORDER.
+	if g.dialect.IgnoreNullsInFunc && !truthy(e.Meta()["inline"]) {
+		if g.dialect.IgnoreNullsBeforeOrder {
+			var mod expressions.Expression
+			for _, kind := range []expressions.Kind{expressions.KindHavingMax, expressions.KindOrder, expressions.KindLimit} {
+				if found := e.Find(kind); found != nil {
+					mod = found
+					break
+				}
+			}
+			if mod != nil && mod.This() != nil {
+				inner := expressions.New(e.Kind(), expressions.Args{"this": mod.This().Copy(), "inline": true})
+				mod.This().Replace(inner)
+				return g.sqlKey(e, "this")
+			}
+		}
+		if agg := e.Find(expressions.TraitAggFunc); agg != nil {
+			aggSQL := g.genNoComment(agg)
+			aggSQL = strings.TrimSuffix(aggSQL, ")") + " " + text + ")"
+			return g.maybeComment(aggSQL, nil, agg.Comments(), false)
+		}
+	}
 	return g.sqlKey(e, "this") + " " + text
 }
 
@@ -2498,7 +2566,28 @@ func (g *Generator) anonymousSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) hexSQL(e expressions.Expression) string {
-	return g.funcCall("HEX", []any{e.Arg("this")}, "(", ")", true)
+	name := "HEX"
+	if g.dialect.HexFunc != "" {
+		name = g.dialect.HexFunc
+	}
+	text := g.funcCall(name, []any{e.Arg("this")}, "(", ")", true)
+	if g.dialect.HexLowercase {
+		text = g.funcCall("LOWER", []any{text}, "(", ")", true)
+	}
+	return text
+}
+
+// lowerHexSQL ports lowerhex_sql (generator.py:2027-2032).
+func (g *Generator) lowerHexSQL(e expressions.Expression) string {
+	name := "HEX"
+	if g.dialect.HexFunc != "" {
+		name = g.dialect.HexFunc
+	}
+	text := g.funcCall(name, []any{e.Arg("this")}, "(", ")", true)
+	if !g.dialect.HexLowercase {
+		text = g.funcCall("LOWER", []any{text}, "(", ")", true)
+	}
+	return text
 }
 
 func (g *Generator) arrayAggSQL(e expressions.Expression) string { return g.functionFallbackSQL(e) }
@@ -2616,7 +2705,7 @@ func unitToStrValue(unit expressions.Expression) expressions.Expression {
 func unitToVarValue(unit expressions.Expression) expressions.Expression {
 	if unit != nil {
 		switch unit.Kind() {
-		case expressions.KindVar, expressions.KindPlaceholder, expressions.KindColumn:
+		case expressions.KindVar, expressions.KindPlaceholder, expressions.KindColumn, expressions.KindWeekStart:
 			return unit
 		}
 	}
@@ -2631,7 +2720,14 @@ func unitToVarValue(unit expressions.Expression) expressions.Expression {
 }
 
 func (g *Generator) logSQL(e expressions.Expression) string {
-	return g.funcCall("LOG", []any{e.Arg("this"), e.Arg("expression")}, "(", ")", true)
+	// generator.py:4624-4637: with LOG_BASE_FIRST=False (BigQuery) the base is rendered first,
+	// so the canonical this/expression pair is swapped.
+	this := e.Arg("this")
+	expr := asExpression(e.Arg("expression"))
+	if !g.dialect.LogBaseFirst {
+		this, expr = expr, asExpression(this)
+	}
+	return g.funcCall("LOG", []any{this, expr}, "(", ")", true)
 }
 
 func (g *Generator) pivotSQL(e expressions.Expression) string {
@@ -2808,13 +2904,15 @@ func (g *Generator) unnestSQL(e expressions.Expression) string {
 	offset := e.Arg("offset")
 
 	// Base UNNEST_WITH_ORDINALITY = true: fold a WITH OFFSET AS <col> (offset is an
-	// Expression) into the alias column list and clear the offset (generator.py:3444-3447).
-	if offsetExpr := asExpression(offset); aliasExpr != nil && offsetExpr != nil {
-		aliasExpr.Append("columns", offsetExpr)
-		// Clear only the ARG, not the local: upstream keeps `offset` truthy so WITH
-		// ORDINALITY still emits after folding WITH OFFSET AS <col> into the alias
-		// (generator.py:3444-3447 vs 3456-3457).
-		e.Set("offset", nil)
+	// Expression) into the alias column list and clear the offset (generator.py:3475-3484).
+	if g.dialect.UnnestWithOrdinality {
+		if offsetExpr := asExpression(offset); aliasExpr != nil && offsetExpr != nil {
+			aliasExpr.Append("columns", offsetExpr)
+			// Clear only the ARG, not the local: upstream keeps `offset` truthy so WITH
+			// ORDINALITY still emits after folding WITH OFFSET AS <col> into the alias
+			// (generator.py:3475-3484 vs 3493-3494).
+			e.Set("offset", nil)
+		}
 	}
 
 	// Base UNNEST_COLUMN_ONLY = false, so the else branch is taken for base.
@@ -2831,10 +2929,17 @@ func (g *Generator) unnestSQL(e expressions.Expression) string {
 	}
 
 	// WITH ORDINALITY is emitted whenever offset is set, independent of the alias
-	// (generator.py:3456-3457) -- keep this outside the alias check.
+	// (generator.py:3493-3494). Without UNNEST_WITH_ORDINALITY (BigQuery) a WITH OFFSET keeps
+	// its own AS <col> after the alias (generator.py:3495-3501).
 	suffix := alias
-	if truthy(offset) {
-		suffix = " WITH ORDINALITY" + alias
+	if g.dialect.UnnestWithOrdinality {
+		if truthy(offset) {
+			suffix = " WITH ORDINALITY" + alias
+		}
+	} else if offsetExpr := asExpression(offset); offsetExpr != nil {
+		suffix = alias + " WITH OFFSET AS " + g.gen(offsetExpr)
+	} else if truthy(offset) {
+		suffix = alias + " WITH OFFSET"
 	}
 	return "UNNEST(" + args + ")" + suffix
 }
@@ -2916,6 +3021,16 @@ func (g *Generator) intervalSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) tableParts(e expressions.Expression) string {
+	// generator.py table_parts override (bigquery): a dotted reference parsed as one quoted
+	// path keeps the whole path quoted (`proj.dataset.table`).
+	if truthy(e.MetaGet("quoted_table")) {
+		parts := e.Parts()
+		names := make([]string, 0, len(parts))
+		for _, part := range parts {
+			names = append(names, part.Name())
+		}
+		return g.gen(expressions.Identifier(expressions.Args{"this": strings.Join(names, "."), "quoted": true}))
+	}
 	parts := []string{}
 	for _, key := range []string{"catalog", "schema", "this"} {
 		if v := e.Arg(key); v != nil {
@@ -3010,7 +3125,12 @@ func (g *Generator) tableAliasSQL(e expressions.Expression) string {
 	alias := g.sqlKey(e, "this")
 	columns := g.expressions(exprsOptions{expression: e, key: "columns", flat: true})
 	if columns != "" {
-		columns = "(" + columns + ")"
+		if !g.dialect.SupportsTableAliasColumns {
+			g.unsupported("Named columns are not supported in table alias.")
+			columns = ""
+		} else {
+			columns = "(" + columns + ")"
+		}
 	}
 	if alias == "" && !g.dialect.UnnestColumnOnly {
 		alias = g.nextNameSQL()

@@ -856,3 +856,31 @@ Corpus: 227 `spark` and 176 `databricks` `validate_identity` cases from
 row is the `GET_JSON_OBJECT` path rewrite, which needs the deferred JSONPath tokenizer
 (DEVIATIONS §1.27). Regression tests: `spark2_test.go`, `spark_test.go`, `databricks_test.go`.
 The two newly-running optimizer fixtures that do not pass yet are recorded in `optimizeGaps`.
+
+## BigQuery dialect — DONE (issue #41)
+
+Ported 1:1 from
+`.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/bigquery.py`: the camel-case and
+`SUPPORTS_USER_DEFINED_TYPES=False` flags, the backtick/`"""` tokenizer with `0x` hex strings,
+`CURRENT_DATETIME`, and the TIMESTAMP→TIMESTAMPTZ / DATETIME / BYTES keyword remaps.
+
+Parser: dashed and numeric table names, the wildcard table suffix (`x.*`, `x.y*`), quoted-path
+table/column splitting with `quoted_table`/`quoted_column`, INFORMATION_SCHEMA view merging,
+`OPTIONS (...)` properties, so the generated output is `OPTIONS` rather than `WITH`, the no-paren CSV
+`CLUSTER BY` property, `NOT DETERMINISTIC`, the SAFE./NET. qualified-call re-parse, AI./ML. custom
+signatures (GAP_FILL, FORECAST, VECTOR_SEARCH, GENERATE_*), EXPORT DATA, FOR ... DO, LOAD DATA ...
+FROM FILES, `SELECT AS STRUCT`, set-op `BY NAME`/`CORRESPONDING`/`ON`, `UNNEST ... WITH OFFSET`, the
+`HAVING MAX`/`HAVING MIN` aggregate modifier, and CAST `FORMAT`/`AT TIME ZONE`.
+
+Generator: the INTERVAL forms (`DATE_ADD(x, INTERVAL '1' DAY)`), `TO_HEX`/`LOWER(TO_HEX(·))`,
+`LOG` base ordering, `STRING_AGG`, sorted `JSON_OBJECT` pairs with `,`, the `_alias_ordered_group`
+GROUP BY alias rewrite, `IGNORE NULLS` inside aggregates, UNPIVOT alias literals,
+`IGNORE_NULLS_IN_FUNC`, `EXCEPT/INTERSECT ... DISTINCT` always explicit, `RENAME TO` without the
+dataset, precision stripping on CAST, the reserved-keyword quoting set, and the BigQuery type map.
+
+Corpus: 689 `validate_identity` cases from `tests/dialects/test_bigquery.py`
+(`scripts/extract_dialect_corpus.py --dialects bigquery`), at **683/689**. The six open rows are
+JSON-path rewrites (e.g. `JSON_EXTRACT(doc, '$. a b c .d')` → `$[' a b c '].d`), which need the
+deferred JSONPath tokenizer (DEVIATIONS §1.27). Regression tests: `bigquery_test.go`. The newly
+running optimizer fixtures that do not pass yet are recorded in `optimizeGaps` and
+`optimizer/testdata/annotate_gaps.txt`.
