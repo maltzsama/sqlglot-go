@@ -42,20 +42,6 @@ func nameSequence(prefix string) func() string {
 	}
 }
 
-func ensureList[T any](value any) []T {
-	if value == nil {
-		return nil
-	}
-	switch v := value.(type) {
-	case []T:
-		return v
-	case T:
-		return []T{v}
-	default:
-		return nil
-	}
-}
-
 func isTraversable(expression exp.Expression) bool {
 	return expression != nil && (expression.Is(exp.TraitQuery) || expression.Is(exp.TraitDDL) || expression.Is(exp.TraitDML))
 }

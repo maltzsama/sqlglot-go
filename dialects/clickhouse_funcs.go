@@ -47,7 +47,7 @@ func clickhouseBuildDateDelta(kind exp.Kind, defaultUnit string, supportsTimezon
 // clickhouseBuildLike ports build_like (dialects/dialect.py:2444-2454).
 func clickhouseBuildLike(kind exp.Kind, notLike bool) func([]exp.Expression) exp.Expression {
 	return func(args []exp.Expression) exp.Expression {
-		var like exp.Expression = exp.New(kind, exp.Args{
+		like := exp.New(kind, exp.Args{
 			"this":       clickhouseSeqGet(args, 0),
 			"expression": clickhouseSeqGet(args, 1),
 		})

@@ -22,7 +22,7 @@ var tablesampleSeedTexts = map[string]bool{"SEED": true, "REPEATABLE": true}
 // three dialects too, so the trailing `if not method and self.DEFAULT_SAMPLING_METHOD` fallback
 // is omitted.
 func (p *Parser) parseTableSample(asModifier bool) exp.Expression {
-	if !p.match(tokens.TABLE_SAMPLE) && !(asModifier && p.matchTextSeq("USING", "SAMPLE")) {
+	if !p.match(tokens.TABLE_SAMPLE) && (!asModifier || !p.matchTextSeq("USING", "SAMPLE")) {
 		return nil
 	}
 

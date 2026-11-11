@@ -50,7 +50,7 @@ func asMapping(s any) (*Mapping, error) {
 	case *Mapping:
 		return v, nil
 	default:
-		return nil, fmt.Errorf("Invalid schema mapping provided: %T", s)
+		return nil, fmt.Errorf("invalid schema mapping provided: %T", s)
 	}
 }
 
@@ -68,7 +68,7 @@ func ensureColumnMapping(mapping any) (*Mapping, error) {
 		for _, item := range strings.Split(v, ",") {
 			parts := strings.SplitN(item, ":", 2)
 			if len(parts) != 2 {
-				return nil, fmt.Errorf("Invalid mapping provided: %T", mapping)
+				return nil, fmt.Errorf("invalid mapping provided: %T", mapping)
 			}
 			out.Set(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
 		}
@@ -80,7 +80,7 @@ func ensureColumnMapping(mapping any) (*Mapping, error) {
 		}
 		return out, nil
 	default:
-		return nil, fmt.Errorf("Invalid mapping provided: %T", mapping)
+		return nil, fmt.Errorf("invalid mapping provided: %T", mapping)
 	}
 }
 

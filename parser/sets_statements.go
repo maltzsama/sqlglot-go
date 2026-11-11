@@ -30,7 +30,7 @@ var transactionCharacteristics = optionsType{
 	"ISOLATION": {
 		{"LEVEL", "REPEATABLE", "READ"},
 		{"LEVEL", "READ", "COMMITTED"},
-		{"LEVEL", "READ", "UNCOMITTED"},
+		{"LEVEL", "READ", "UNCOMITTED"}, //nolint:misspell // upstream spells the isolation level UNCOMITTED
 		{"LEVEL", "SERIALIZABLE"},
 	},
 	"READ": {{"WRITE"}, {"ONLY"}},

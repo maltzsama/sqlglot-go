@@ -148,7 +148,7 @@ var trinoJSONQueryOptions = optionsType{
 }
 
 func (p *Parser) parseJSONQueryQuote() exp.Expression {
-	if !(p.matchTextSeq("KEEP", "QUOTES") || p.matchTextSeq("OMIT", "QUOTES")) {
+	if !p.matchTextSeq("KEEP", "QUOTES") && !p.matchTextSeq("OMIT", "QUOTES") {
 		return nil
 	}
 

@@ -2418,12 +2418,13 @@ func (g *Generator) trimSQL(e expressions.Expression) string {
 func (g *Generator) trimSQLBase(e expressions.Expression) string {
 	trimType := g.sqlKey(e, "position")
 	funcName := "TRIM"
-	if trimType == "LEADING" {
+	switch trimType {
+	case "LEADING":
 		funcName = "LTRIM"
-	} else if trimType == "TRAILING" {
+	case "TRAILING":
 		funcName = "RTRIM"
 	}
-	var this any = e.Arg("this")
+	this := e.Arg("this")
 	// Upstream's _parse_bitwise folds a trailing COLLATE into a Collate node wrapping the operand
 	// it follows (verified against sqlglot v30.12.0), so upstream's trim_sql re-renders the
 	// COLLATE for free out of `this` and never reads a separate collation arg. This port has no
@@ -2514,7 +2515,7 @@ func (g *Generator) arraySizeSQL(e expressions.Expression) string {
 			dim = expressions.LiteralNumber(1)
 		}
 	} else if dim != nil {
-		if !(dim.IsInt() && dim.Name() == "1") {
+		if !dim.IsInt() || dim.Name() != "1" {
 			g.unsupported("Cannot transpile dimension argument for ARRAY_LENGTH")
 		}
 		dim = nil
@@ -2631,11 +2632,6 @@ func unitToVarValue(unit expressions.Expression) expressions.Expression {
 
 func (g *Generator) logSQL(e expressions.Expression) string {
 	return g.funcCall("LOG", []any{e.Arg("this"), e.Arg("expression")}, "(", ")", true)
-}
-
-func (g *Generator) pivotInValueAliases(e expressions.Expression) []expressions.Expression {
-	// Base parse and generate use the same pivot naming settings; parser_class attributes are slice-5 work.
-	return nil
 }
 
 func (g *Generator) pivotSQL(e expressions.Expression) string {

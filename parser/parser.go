@@ -843,9 +843,10 @@ func (p *Parser) parseSetOperation(this exp.Expression, consumePipe bool) exp.Ex
 	}
 	tokenType := p.prev.TokenType
 	constructor := exp.Union
-	if tokenType == tokens.EXCEPT {
+	switch tokenType {
+	case tokens.EXCEPT:
 		constructor = exp.Except
-	} else if tokenType == tokens.INTERSECT {
+	case tokens.INTERSECT:
 		constructor = exp.Intersect
 	}
 	comments := p.prev.Comments
@@ -1796,7 +1797,7 @@ func (p *Parser) parseJoinBase(skipJoinToken bool, parseBracket bool, aliasToken
 		kwargs["on"] = p.parseDisjunction()
 	} else if p.match(tokens.USING) {
 		kwargs["using"] = p.parseUsingIdentifiers()
-	} else if method == nil && !outerApply && !crossApply && (joinThis == nil || joinThis.Kind() != exp.KindUnnest) && !(kind != nil && kind.TokenType == tokens.CROSS) {
+	} else if method == nil && !outerApply && !crossApply && (joinThis == nil || joinThis.Kind() != exp.KindUnnest) && (kind == nil || kind.TokenType != tokens.CROSS) {
 		// Nested-join fallback (parser.py:4524-4541): a trailing ON/USING may belong to an
 		// outer join wrapping further joins nested on this join's `this`, e.g.
 		// `a JOIN b JOIN c USING (id) USING (id)` attaches the second USING to the `a JOIN b`
@@ -3948,8 +3949,8 @@ func (p *Parser) parseFunctionCall(functions map[string]func([]exp.Expression) e
 		// MOD/DATABASE/SCHEMA) - everywhere else the token is already tokens.VAR and funcTokens
 		// (which includes VAR) already covers it, so this is a no-op for the vast majority of
 		// FunctionByName/Functions entries.
-	} else if !funcTokens[tokenType] && !p.dialect.ExtraFuncTokens[tokenType] && !(tokenType == tokens.VALUES && p.dialect.ValuesIsFunction) &&
-		!(tokenType == tokens.CHARACTER_SET && p.dialect.CharsetIsFunction) &&
+	} else if !funcTokens[tokenType] && !p.dialect.ExtraFuncTokens[tokenType] && (tokenType != tokens.VALUES || !p.dialect.ValuesIsFunction) &&
+		(tokenType != tokens.CHARACTER_SET || !p.dialect.CharsetIsFunction) &&
 		!skipNoParen &&
 		p.dialect.Functions[upper] == nil && exp.FunctionByName[upper] == nil {
 		return nil
@@ -4411,7 +4412,7 @@ func (p *Parser) parseLimitOptions() exp.Expression {
 	rows := p.matchSet(map[tokens.TokenType]bool{tokens.ROW: true, tokens.ROWS: true})
 	p.matchTextSeq("ONLY")
 	withTies := p.matchTextSeq("WITH", "TIES")
-	if !(percent || rows || withTies) {
+	if !percent && !rows && !withTies {
 		return nil
 	}
 	return p.expression(exp.LimitOptions(exp.Args{"percent": percent, "rows": rows, "with_ties": withTies}), nil, nil)
@@ -4504,7 +4505,7 @@ func (p *Parser) parseWindow(this exp.Expression, alias bool) exp.Expression {
 	if alias {
 		p.match(tokens.ALIAS)
 	} else {
-		if !p.match(tokens.OVER) && !(p.dialect.Name == "oracle" && p.match(tokens.KEEP)) {
+		if !p.match(tokens.OVER) && (p.dialect.Name != "oracle" || !p.match(tokens.KEEP)) {
 			return this
 		}
 		over = stringsUpper(p.prev.Text)

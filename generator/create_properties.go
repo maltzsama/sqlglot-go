@@ -341,9 +341,9 @@ func (g *Generator) sequencePropertiesSQL(e expressions.Expression) string {
 	}
 
 	var cacheStr string
-	switch cache := e.Arg("cache"); {
-	case cache == nil:
-	case cache == true:
+	switch cache := e.Arg("cache"); cache {
+	case nil:
+	case true:
 		cacheStr = " CACHE"
 	default:
 		// `self._parse_number() or True` (parser.py:2751) never stores False, so the
