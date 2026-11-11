@@ -122,3 +122,20 @@ func TestHllVarArgs(t *testing.T) {
 		t.Fatalf("HLL expressions count = %d, want 2", got)
 	}
 }
+
+// TestConcatWsVarArgs guards the var-len key placement: ConcatWs declares safe/coalesce
+// after its variable-length "expressions" arg (string.py:79-81), so CONCAT_WS('-', x, y)
+// must collect the separator and every operand under "expressions" rather than pushing
+// them into the trailing flag args.
+func TestConcatWsVarArgs(t *testing.T) {
+	expression := parseOne(t, "CONCAT_WS('-', x, y)")
+	if expression.Kind() != exp.KindConcatWs {
+		t.Fatalf("kind = %v, want ConcatWs", expression.Kind())
+	}
+	if got := len(expression.Expressions()); got != 3 {
+		t.Fatalf("CONCAT_WS expressions count = %d, want 3", got)
+	}
+	if expression.Arg("safe") != nil || expression.Arg("coalesce") != nil {
+		t.Fatalf("CONCAT_WS leaked a positional arg into a flag: safe=%v coalesce=%v", expression.Arg("safe"), expression.Arg("coalesce"))
+	}
+}

@@ -26,6 +26,12 @@ var sqlNameOverrides = map[expressions.Kind]string{
 	expressions.KindDayOfWeekIso: "DAYOFWEEK_ISO",
 	// TSQL cluster: _sql_names[0] for JSONArrayAgg is JSON_ARRAYAGG.
 	expressions.KindJSONArrayAgg: "JSON_ARRAYAGG",
+	// JSON function classes whose camelToSnake split would emit J_S_O_N_*.
+	expressions.KindJSONType:        "JSON_TYPE",
+	expressions.KindJSONSet:         "JSON_SET",
+	expressions.KindJSONRemove:      "JSON_REMOVE",
+	expressions.KindJSONArrayAppend: "JSON_ARRAY_APPEND",
+	expressions.KindJSONArrayInsert: "JSON_ARRAY_INSERT",
 	// Spark cluster: _sql_names[0] for TimestampDiff is TIMESTAMPDIFF, while the
 	// camelToSnake split would emit TIMESTAMP_DIFF (temporal.py:136-138).
 	expressions.KindTimestampDiff: "TIMESTAMPDIFF",

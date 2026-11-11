@@ -139,6 +139,8 @@ func DuckDB() *Dialect {
 	d.RenameTableWithDB = false
 	d.LambdaKeyword = true
 	d.NormalizeExtractDateParts = true
+	d.IgnoreNullsInFunc = true
+	d.IgnoreNullsBeforeOrder = false
 	d.ExponentOperators = true
 	d.RegexpRangeOperators = true
 	d.CaretAtStartsWith = true

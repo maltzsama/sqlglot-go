@@ -1,12 +1,7 @@
 # simplify.sql cases that don't pass yet: index|sql. See optimizer/simplify_test.go.
 221|TS_OR_DS_TO_DATE('1998-12-01 00:00:01') - interval '90' day
 223|DATE_SUB(CAST('2023-01-02' AS DATE), 1 + 1, 'DAY')
-225|DATETIME_ADD(CAST('2023-01-02' AS DATETIME), -2, 'HOUR')
-226|DATETIME_SUB(CAST('2023-01-02' AS DATETIME), 1 + 1, 'HOUR')
 305|RAND() > 0 OR RAND() > 1
-352|CONCAT_WS('-', 'a', 'b', 'c')
-354|CONCAT_WS('-', 'a', x, y, 'b', 'c')
-356|CONCAT_WS('-', 'a')
 363|DATE_TRUNC('week', CAST('2023-12-15' AS DATE))
 364|DATE_TRUNC('week', CAST('2023-12-16' AS DATE))
 365|DATE_TRUNC('week', CAST('2023-12-11' AS DATE))
@@ -53,7 +48,6 @@
 454|DATE_ADD(x, 1, DAY) <= CAST('2021-01-01' AS DATE)
 455|DATE_SUB(x, 1, DAY) <> CAST('2021-01-01' AS DATE)
 456|DATE_ADD(DATE_ADD(DATE_TRUNC('week', DATE_SUB(x, 1, DAY)), 1, DAY), 1, YEAR) < CAST('2021-01-08' AS DATE)
-463|t.x = 'a' AND y = CONCAT_WS('-', t.x, 'b')
 496|STARTS_WITH('foo', 'f')
 497|STARTS_WITH('foo', 'g')
 498|STARTS_WITH('', 'f')
