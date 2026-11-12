@@ -191,6 +191,98 @@ const (
 	KindToDouble
 	KindToFile
 	KindTimeSlice
+	KindBitmapConstructAgg
+	KindBitmapCount
+	KindCollation
+	KindCompress
+	KindCorr
+	KindCurrentTimezone
+	KindElt
+	KindFactorial
+	KindGrouping
+	KindJSONArrayAppend
+	KindJSONArrayInsert
+	KindJSONRemove
+	KindJSONSet
+	KindJSONType
+	KindMinute
+	KindMonthsBetween
+	KindNanvl
+	KindNegative
+	KindNextDay
+	KindPad
+	KindRandn
+	KindRandstr
+	KindRegexpCount
+	KindRegexpInstr
+	KindRegexpSubstr
+	KindRegrIntercept
+	KindRegrR2
+	KindRegrSlope
+	KindReverse
+	KindRint
+	KindSearch
+	KindSec
+	KindSecond
+	KindSecret
+	KindShuffle
+	KindUtcDate
+	KindUtcTime
+	KindWidthBucket
+	KindAcos
+	KindAcosh
+	KindArrayConcatAgg
+	KindArrayLast
+	KindAscii
+	KindAsin
+	KindAsinh
+	KindAtan
+	KindAtanh
+	KindBitLength
+	KindCos
+	KindCosh
+	KindCot
+	KindCovarPop
+	KindCovarSamp
+	KindCumeDist
+	KindDateToDateStr
+	KindDateToDi
+	KindDayname
+	KindDegrees
+	KindDenseRank
+	KindDiToDate
+	KindFromBase32
+	KindGenerateTimestampArray
+	KindHour
+	KindIsInf
+	KindJustifyDays
+	KindJustifyHours
+	KindJustifyInterval
+	KindKurtosis
+	KindMonthname
+	KindNthValue
+	KindNtile
+	KindPercentRank
+	KindPi
+	KindRadians
+	KindRank
+	KindSign
+	KindSin
+	KindSinh
+	KindSpace
+	KindTan
+	KindTanh
+	KindTimeToTimeStr
+	KindTimestampLtzFromParts
+	KindTimestampTzFromParts
+	KindToBase32
+	KindTsOrDiToDi
+	KindTsOrDsToDateStr
+	KindUnixMicros
+	KindUnixMillis
+	KindUnixToTimeStr
+	KindWeek
+	KindYearOfWeekIso
 	KindBracket
 	KindLock
 	KindPreWhere
@@ -692,6 +784,7 @@ const (
 	// its upstream class in the parallel tables below and in expressions/presto_nodes.go.
 	KindAnyValue         // aggregate.py:17
 	KindApproxQuantile   // aggregate.py:234
+	KindApproxQuantiles  // aggregate.py: ApproxQuantiles
 	KindArrayUniqueAgg   // aggregate.py:83
 	KindDayOfWeekIso     // temporal.py:217
 	KindDecode           // string.py:285
@@ -1267,7 +1360,7 @@ var argTypes = map[Kind][]argSpec{
 	KindSummarize:             {{"this", true}, {"table", false}},
 	KindUnpivotColumns:        {{"this", false}, {"expressions", false}},
 	KindToVariant:             defaultArgTypes,
-	KindLogicalAnd:            {{"this", true}, {"expression", true}},
+	KindLogicalAnd:            {{"this", true}},
 	KindDatetimeAdd:           {{"this", true}, {"expression", true}, {"unit", false}},
 	KindDatetimeSub:           {{"this", true}, {"expression", true}, {"unit", false}},
 	KindTimeAdd:               {{"this", true}, {"expression", true}, {"unit", false}},
@@ -1628,8 +1721,9 @@ var argTypes = map[Kind][]argSpec{
 	KindInOutColumnConstraint:        {{"input_", false}, {"output", false}, {"variadic", false}},
 	// presto cluster: arg_types mirrored 1:1 from the upstream classes (dict order drives
 	// FromArgList positional mapping). See expressions/presto_nodes.go for per-Kind citations.
-	KindAnyValue:              defaultArgTypes,                                                                                                             // aggregate.py:17 (pass -> {"this": True})
-	KindApproxQuantile:        {{"this", true}, {"quantile", true}, {"accuracy", false}, {"weight", false}, {"error_tolerance", false}},                    // aggregate.py:234
+	KindAnyValue:              defaultArgTypes,                                                                                          // aggregate.py:17 (pass -> {"this": True})
+	KindApproxQuantile:        {{"this", true}, {"quantile", true}, {"accuracy", false}, {"weight", false}, {"error_tolerance", false}}, // aggregate.py:234
+	KindApproxQuantiles:       {{"this", true}, {"expression", false}},
 	KindArrayUniqueAgg:        defaultArgTypes,                                                                                                             // aggregate.py:83 (pass)
 	KindDayOfWeekIso:          defaultArgTypes,                                                                                                             // temporal.py:217 (pass)
 	KindDecode:                {{"this", true}, {"charset", true}, {"replace", false}},                                                                     // string.py:285
@@ -1882,31 +1976,123 @@ var argTypes = map[Kind][]argSpec{
 	// Spark/Databricks cluster (arg_types verbatim from the upstream classes: array.py:66,
 	// 215; math.py:208-286; aggregate.py:250-283; json.py:151; temporal.py:136,298;
 	// functions.py:431,530; string.py:52; constraints.py:224; core.py:2286).
-	KindReduce:           {{"this", true}, {"initial", true}, {"merge", true}, {"finish", false}},
-	KindFromTimeZone:     {{"this", true}, {"zone", true}},
-	KindArrayInsert:      {{"this", true}, {"position", true}, {"expression", true}, {"offset", false}},
-	KindBitwiseAndAgg:    defaultArgTypes,
-	KindBitwiseOrAgg:     defaultArgTypes,
-	KindBitwiseXorAgg:    defaultArgTypes,
-	KindBitwiseCount:     defaultArgTypes,
-	KindTimestampDiff:    {{"this", true}, {"expression", true}, {"unit", false}},
-	KindSafeAdd:          {{"this", true}, {"expression", true}},
-	KindSafeDivide:       {{"this", true}, {"expression", true}},
-	KindSafeMultiply:     {{"this", true}, {"expression", true}},
-	KindSafeSubtract:     {{"this", true}, {"expression", true}},
-	KindJSONKeys:         {{"this", true}, {"expression", false}, {"expressions", false}},
-	KindUniform:          {{"this", true}, {"expression", true}, {"gen", false}, {"seed", false}},
-	KindTimeseriesKey:    defaultArgTypes,
-	KindRegrAvgx:         {{"this", true}, {"expression", true}},
-	KindRegrAvgy:         {{"this", true}, {"expression", true}},
-	KindRegrSxx:          {{"this", true}, {"expression", true}},
-	KindRegrSxy:          {{"this", true}, {"expression", true}},
-	KindRegrSyy:          {{"this", true}, {"expression", true}},
-	KindRegrCount:        {{"this", true}, {"expression", false}},
-	KindGetbit:           {{"this", true}, {"expression", true}, {"zero_is_msb", false}},
-	KindDateFromUnixDate: defaultArgTypes,
-	KindReadParquet:      {{"expressions", true}},
-	KindFormat:           {{"this", true}, {"expressions", false}},
+	KindReduce:                 {{"this", true}, {"initial", true}, {"merge", true}, {"finish", false}},
+	KindFromTimeZone:           {{"this", true}, {"zone", true}},
+	KindArrayInsert:            {{"this", true}, {"position", true}, {"expression", true}, {"offset", false}},
+	KindBitwiseAndAgg:          defaultArgTypes,
+	KindBitwiseOrAgg:           defaultArgTypes,
+	KindBitwiseXorAgg:          defaultArgTypes,
+	KindBitwiseCount:           defaultArgTypes,
+	KindTimestampDiff:          {{"this", true}, {"expression", true}, {"unit", false}},
+	KindSafeAdd:                {{"this", true}, {"expression", true}},
+	KindSafeDivide:             {{"this", true}, {"expression", true}},
+	KindSafeMultiply:           {{"this", true}, {"expression", true}},
+	KindSafeSubtract:           {{"this", true}, {"expression", true}},
+	KindJSONKeys:               {{"this", true}, {"expression", false}, {"expressions", false}},
+	KindUniform:                {{"this", true}, {"expression", true}, {"gen", false}, {"seed", false}},
+	KindTimeseriesKey:          defaultArgTypes,
+	KindRegrAvgx:               {{"this", true}, {"expression", true}},
+	KindRegrAvgy:               {{"this", true}, {"expression", true}},
+	KindRegrSxx:                {{"this", true}, {"expression", true}},
+	KindRegrSxy:                {{"this", true}, {"expression", true}},
+	KindRegrSyy:                {{"this", true}, {"expression", true}},
+	KindRegrCount:              {{"this", true}, {"expression", false}},
+	KindGetbit:                 {{"this", true}, {"expression", true}, {"zero_is_msb", false}},
+	KindDateFromUnixDate:       defaultArgTypes,
+	KindReadParquet:            {{"expressions", true}},
+	KindFormat:                 {{"this", true}, {"expressions", false}},
+	KindAcos:                   {{"this", true}},
+	KindAcosh:                  {{"this", true}},
+	KindArrayConcatAgg:         {{"this", true}},
+	KindArrayLast:              {{"this", true}},
+	KindAscii:                  {{"this", true}},
+	KindAsin:                   {{"this", true}},
+	KindAsinh:                  {{"this", true}},
+	KindAtan:                   {{"this", true}, {"expression", false}},
+	KindAtanh:                  {{"this", true}},
+	KindBitLength:              {{"this", true}},
+	KindCos:                    {{"this", true}},
+	KindCosh:                   {{"this", true}},
+	KindCot:                    {{"this", true}},
+	KindCovarPop:               {{"this", true}, {"expression", true}},
+	KindCovarSamp:              {{"this", true}, {"expression", true}},
+	KindCumeDist:               {{"expressions", false}},
+	KindDateToDateStr:          {{"this", true}},
+	KindDateToDi:               {{"this", true}},
+	KindDayname:                {{"this", true}, {"abbreviated", false}},
+	KindDegrees:                {{"this", true}},
+	KindDenseRank:              {{"expressions", false}},
+	KindDiToDate:               {{"this", true}},
+	KindFromBase32:             {{"this", true}},
+	KindGenerateTimestampArray: {{"start", true}, {"end", true}, {"step", true}},
+	KindHour:                   {{"this", true}},
+	KindIsInf:                  {{"this", true}},
+	KindJustifyDays:            {{"this", true}},
+	KindJustifyHours:           {{"this", true}},
+	KindJustifyInterval:        {{"this", true}},
+	KindKurtosis:               {{"this", true}},
+	KindMonthname:              {{"this", true}, {"abbreviated", false}},
+	KindNthValue:               {{"this", true}, {"offset", true}, {"from_first", false}},
+	KindNtile:                  {{"this", false}},
+	KindPercentRank:            {{"expressions", false}},
+	KindPi:                     {},
+	KindRadians:                {{"this", true}},
+	KindRank:                   {{"expressions", false}},
+	KindSign:                   {{"this", true}},
+	KindSin:                    {{"this", true}},
+	KindSinh:                   {{"this", true}},
+	KindSpace:                  {{"this", true}},
+	KindTan:                    {{"this", true}},
+	KindTanh:                   {{"this", true}},
+	KindTimeToTimeStr:          {{"this", true}},
+	KindTimestampLtzFromParts:  {{"year", false}, {"month", false}, {"day", false}, {"hour", false}, {"min", false}, {"sec", false}, {"nano", false}},
+	KindTimestampTzFromParts:   {{"year", false}, {"month", false}, {"day", false}, {"hour", false}, {"min", false}, {"sec", false}, {"nano", false}, {"zone", false}},
+	KindToBase32:               {{"this", true}},
+	KindTsOrDiToDi:             {{"this", true}},
+	KindTsOrDsToDateStr:        {{"this", true}},
+	KindUnixMicros:             {{"this", true}},
+	KindUnixMillis:             {{"this", true}},
+	KindUnixToTimeStr:          {{"this", true}},
+	KindWeek:                   {{"this", true}, {"mode", false}},
+	KindYearOfWeekIso:          {{"this", true}},
+	KindBitmapConstructAgg:     {{"this", true}},
+	KindBitmapCount:            {{"this", true}},
+	KindCollation:              {{"this", true}},
+	KindCompress:               {{"this", true}, {"method", false}},
+	KindCorr:                   {{"this", true}, {"expression", true}, {"null_on_zero_variance", false}},
+	KindCurrentTimezone:        {},
+	KindElt:                    {{"this", true}, {"expressions", true}},
+	KindFactorial:              {{"this", true}},
+	KindGrouping:               {{"expressions", true}},
+	KindJSONArrayAppend:        {{"this", true}, {"expressions", true}},
+	KindJSONArrayInsert:        {{"this", true}, {"expressions", true}},
+	KindJSONRemove:             {{"this", true}, {"expressions", true}},
+	KindJSONSet:                {{"this", true}, {"expressions", true}},
+	KindJSONType:               {{"this", true}, {"expression", false}},
+	KindMinute:                 {{"this", true}},
+	KindMonthsBetween:          {{"this", true}, {"expression", true}, {"roundoff", false}},
+	KindNanvl:                  {{"this", true}, {"expression", true}},
+	KindNegative:               {{"this", true}},
+	KindNextDay:                {{"this", true}, {"expression", true}},
+	KindPad:                    {{"this", true}, {"expression", true}, {"fill_pattern", false}, {"is_left", true}},
+	KindRandn:                  {{"this", false}},
+	KindRandstr:                {{"this", true}, {"generator", false}},
+	KindRegexpCount:            {{"this", true}, {"expression", true}, {"position", false}, {"parameters", false}},
+	KindRegexpInstr:            {{"this", true}, {"expression", true}, {"position", false}, {"occurrence", false}, {"option", false}, {"parameters", false}, {"group", false}},
+	KindRegexpSubstr:           {{"this", true}, {"expression", true}, {"position", false}, {"occurrence", false}, {"parameters", false}, {"group", false}},
+	KindRegrIntercept:          {{"this", true}, {"expression", false}},
+	KindRegrR2:                 {{"this", true}, {"expression", false}},
+	KindRegrSlope:              {{"this", true}, {"expression", false}},
+	KindReverse:                {{"this", true}},
+	KindRint:                   {{"this", true}},
+	KindSearch:                 {{"this", true}, {"expression", true}, {"json_scope", false}, {"analyzer", false}, {"analyzer_options", false}, {"search_mode", false}},
+	KindSec:                    {{"this", true}},
+	KindSecond:                 {{"this", true}},
+	KindSecret:                 {{"this", true}, {"expression", true}},
+	KindShuffle:                {{"this", true}},
+	KindUtcDate:                {},
+	KindUtcTime:                {{"this", false}},
+	KindWidthBucket:            {{"this", true}, {"min_value", false}, {"max_value", false}, {"num_buckets", false}, {"threshold", false}},
 }
 
 var traitsOf = map[Kind]Trait{
@@ -2009,6 +2195,7 @@ var traitsOf = map[Kind]Trait{
 	KindMakeInterval:          TraitCondition | TraitFunc,
 	KindUnixSeconds:           TraitCondition | TraitFunc,
 	KindPercentileCont:        TraitCondition | TraitFunc | TraitAggFunc,
+	KindApproxQuantiles:       TraitCondition | TraitFunc | TraitAggFunc,
 	KindSortArray:             TraitCondition | TraitFunc,
 	KindRegexpFullMatch:       TraitCondition | TraitBinary | TraitFunc | TraitPredicate,
 	KindUnnest:                TraitCondition | TraitFunc | TraitUDTF | TraitDerivedTable,
@@ -2037,7 +2224,7 @@ var traitsOf = map[Kind]Trait{
 	KindToDouble:              TraitCondition | TraitFunc,
 	KindToFile:                TraitCondition | TraitFunc,
 	KindTimeSlice:             TraitCondition | TraitFunc,
-	KindLogicalAnd:            TraitCondition | TraitBinary | TraitFunc,
+	KindLogicalAnd:            TraitCondition | TraitFunc | TraitAggFunc,
 	KindBoolnot:               TraitCondition | TraitFunc,
 	// JSONTable(Expression, Func) (expressions/json.py:206); JSONColumnDef/JSONSchema/
 	// FormatJson are plain Expression subclasses with no Func/Condition mixin, so they
@@ -2370,30 +2557,122 @@ var traitsOf = map[Kind]Trait{
 	// Spark/Databricks cluster: Funcs carry TraitCondition|TraitFunc; the AggFunc
 	// subclasses add TraitAggFunc (aggregate.py AggFunc). TimeseriesKey is a plain
 	// Expression (constraints.py:224) with no traits row.
-	KindReduce:           TraitCondition | TraitFunc,
-	KindFromTimeZone:     TraitCondition | TraitFunc,
-	KindArrayInsert:      TraitCondition | TraitFunc,
-	KindBitwiseAndAgg:    TraitCondition | TraitFunc | TraitAggFunc,
-	KindBitwiseOrAgg:     TraitCondition | TraitFunc | TraitAggFunc,
-	KindBitwiseXorAgg:    TraitCondition | TraitFunc | TraitAggFunc,
-	KindBitwiseCount:     TraitCondition | TraitFunc,
-	KindTimestampDiff:    TraitCondition | TraitFunc,
-	KindSafeAdd:          TraitCondition | TraitFunc,
-	KindSafeDivide:       TraitCondition | TraitFunc,
-	KindSafeMultiply:     TraitCondition | TraitFunc,
-	KindSafeSubtract:     TraitCondition | TraitFunc,
-	KindJSONKeys:         TraitCondition | TraitFunc,
-	KindUniform:          TraitCondition | TraitFunc,
-	KindRegrAvgx:         TraitCondition | TraitFunc | TraitAggFunc,
-	KindRegrAvgy:         TraitCondition | TraitFunc | TraitAggFunc,
-	KindRegrSxx:          TraitCondition | TraitFunc | TraitAggFunc,
-	KindRegrSxy:          TraitCondition | TraitFunc | TraitAggFunc,
-	KindRegrSyy:          TraitCondition | TraitFunc | TraitAggFunc,
-	KindRegrCount:        TraitCondition | TraitFunc | TraitAggFunc,
-	KindGetbit:           TraitCondition | TraitFunc,
-	KindDateFromUnixDate: TraitCondition | TraitFunc,
-	KindReadParquet:      TraitCondition | TraitFunc,
-	KindFormat:           TraitCondition | TraitFunc,
+	KindReduce:                 TraitCondition | TraitFunc,
+	KindFromTimeZone:           TraitCondition | TraitFunc,
+	KindArrayInsert:            TraitCondition | TraitFunc,
+	KindBitwiseAndAgg:          TraitCondition | TraitFunc | TraitAggFunc,
+	KindBitwiseOrAgg:           TraitCondition | TraitFunc | TraitAggFunc,
+	KindBitwiseXorAgg:          TraitCondition | TraitFunc | TraitAggFunc,
+	KindBitwiseCount:           TraitCondition | TraitFunc,
+	KindTimestampDiff:          TraitCondition | TraitFunc,
+	KindSafeAdd:                TraitCondition | TraitFunc,
+	KindSafeDivide:             TraitCondition | TraitFunc,
+	KindSafeMultiply:           TraitCondition | TraitFunc,
+	KindSafeSubtract:           TraitCondition | TraitFunc,
+	KindJSONKeys:               TraitCondition | TraitFunc,
+	KindUniform:                TraitCondition | TraitFunc,
+	KindRegrAvgx:               TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrAvgy:               TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrSxx:                TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrSxy:                TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrSyy:                TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrCount:              TraitCondition | TraitFunc | TraitAggFunc,
+	KindGetbit:                 TraitCondition | TraitFunc,
+	KindDateFromUnixDate:       TraitCondition | TraitFunc,
+	KindReadParquet:            TraitCondition | TraitFunc,
+	KindFormat:                 TraitCondition | TraitFunc,
+	KindAcos:                   TraitCondition | TraitFunc,
+	KindAcosh:                  TraitCondition | TraitFunc,
+	KindArrayConcatAgg:         TraitCondition | TraitFunc | TraitAggFunc,
+	KindArrayLast:              TraitCondition | TraitFunc,
+	KindAscii:                  TraitCondition | TraitFunc,
+	KindAsin:                   TraitCondition | TraitFunc,
+	KindAsinh:                  TraitCondition | TraitFunc,
+	KindAtan:                   TraitCondition | TraitFunc,
+	KindAtanh:                  TraitCondition | TraitFunc,
+	KindBitLength:              TraitCondition | TraitFunc,
+	KindCos:                    TraitCondition | TraitFunc,
+	KindCosh:                   TraitCondition | TraitFunc,
+	KindCot:                    TraitCondition | TraitFunc,
+	KindCovarPop:               TraitCondition | TraitFunc | TraitAggFunc,
+	KindCovarSamp:              TraitCondition | TraitFunc | TraitAggFunc,
+	KindCumeDist:               TraitCondition | TraitFunc | TraitAggFunc,
+	KindDateToDateStr:          TraitCondition | TraitFunc,
+	KindDateToDi:               TraitCondition | TraitFunc,
+	KindDayname:                TraitCondition | TraitFunc,
+	KindDegrees:                TraitCondition | TraitFunc,
+	KindDenseRank:              TraitCondition | TraitFunc | TraitAggFunc,
+	KindDiToDate:               TraitCondition | TraitFunc,
+	KindFromBase32:             TraitCondition | TraitFunc,
+	KindGenerateTimestampArray: TraitCondition | TraitFunc,
+	KindHour:                   TraitCondition | TraitFunc,
+	KindIsInf:                  TraitCondition | TraitFunc,
+	KindJustifyDays:            TraitCondition | TraitFunc,
+	KindJustifyHours:           TraitCondition | TraitFunc,
+	KindJustifyInterval:        TraitCondition | TraitFunc,
+	KindKurtosis:               TraitCondition | TraitFunc | TraitAggFunc,
+	KindMonthname:              TraitCondition | TraitFunc,
+	KindNthValue:               TraitCondition | TraitFunc | TraitAggFunc,
+	KindNtile:                  TraitCondition | TraitFunc | TraitAggFunc,
+	KindPercentRank:            TraitCondition | TraitFunc | TraitAggFunc,
+	KindPi:                     TraitCondition | TraitFunc,
+	KindRadians:                TraitCondition | TraitFunc,
+	KindRank:                   TraitCondition | TraitFunc | TraitAggFunc,
+	KindSign:                   TraitCondition | TraitFunc,
+	KindSin:                    TraitCondition | TraitFunc,
+	KindSinh:                   TraitCondition | TraitFunc,
+	KindSpace:                  TraitCondition | TraitFunc,
+	KindTan:                    TraitCondition | TraitFunc,
+	KindTanh:                   TraitCondition | TraitFunc,
+	KindTimeToTimeStr:          TraitCondition | TraitFunc,
+	KindTimestampLtzFromParts:  TraitCondition | TraitFunc,
+	KindTimestampTzFromParts:   TraitCondition | TraitFunc,
+	KindToBase32:               TraitCondition | TraitFunc,
+	KindTsOrDiToDi:             TraitCondition | TraitFunc,
+	KindTsOrDsToDateStr:        TraitCondition | TraitFunc,
+	KindUnixMicros:             TraitCondition | TraitFunc,
+	KindUnixMillis:             TraitCondition | TraitFunc,
+	KindUnixToTimeStr:          TraitCondition | TraitFunc,
+	KindWeek:                   TraitCondition | TraitFunc,
+	KindYearOfWeekIso:          TraitCondition | TraitFunc,
+	KindBitmapConstructAgg:     TraitCondition | TraitFunc | TraitAggFunc,
+	KindBitmapCount:            TraitCondition | TraitFunc,
+	KindCollation:              TraitCondition | TraitFunc,
+	KindCompress:               TraitCondition | TraitFunc,
+	KindCorr:                   TraitCondition | TraitFunc | TraitAggFunc,
+	KindCurrentTimezone:        TraitCondition | TraitFunc,
+	KindElt:                    TraitCondition | TraitFunc,
+	KindFactorial:              TraitCondition | TraitFunc,
+	KindGrouping:               TraitCondition | TraitFunc | TraitAggFunc,
+	KindJSONArrayAppend:        TraitCondition | TraitFunc,
+	KindJSONArrayInsert:        TraitCondition | TraitFunc,
+	KindJSONRemove:             TraitCondition | TraitFunc,
+	KindJSONSet:                TraitCondition | TraitFunc,
+	KindJSONType:               TraitCondition | TraitFunc,
+	KindMinute:                 TraitCondition | TraitFunc,
+	KindMonthsBetween:          TraitCondition | TraitFunc,
+	KindNanvl:                  TraitCondition | TraitFunc,
+	KindNegative:               TraitCondition | TraitFunc,
+	KindNextDay:                TraitCondition | TraitFunc,
+	KindPad:                    TraitCondition | TraitFunc,
+	KindRandn:                  TraitCondition | TraitFunc,
+	KindRandstr:                TraitCondition | TraitFunc,
+	KindRegexpCount:            TraitCondition | TraitFunc,
+	KindRegexpInstr:            TraitCondition | TraitFunc,
+	KindRegexpSubstr:           TraitCondition | TraitFunc,
+	KindRegrIntercept:          TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrR2:                 TraitCondition | TraitFunc | TraitAggFunc,
+	KindRegrSlope:              TraitCondition | TraitFunc | TraitAggFunc,
+	KindReverse:                TraitCondition | TraitFunc,
+	KindRint:                   TraitCondition | TraitFunc,
+	KindSearch:                 TraitCondition | TraitFunc,
+	KindSec:                    TraitCondition | TraitFunc,
+	KindSecond:                 TraitCondition | TraitFunc,
+	KindSecret:                 TraitCondition | TraitFunc,
+	KindShuffle:                TraitCondition | TraitFunc,
+	KindUtcDate:                TraitCondition | TraitFunc,
+	KindUtcTime:                TraitCondition | TraitFunc,
+	KindWidthBucket:            TraitCondition | TraitFunc,
 }
 
 var primitive = map[Kind]bool{
@@ -2919,6 +3198,7 @@ var className = map[Kind]string{
 	KindUnpivotColumns:        "UnpivotColumns",
 	KindToVariant:             "ToVariant",
 	KindApproxQuantile:        "ApproxQuantile",
+	KindApproxQuantiles:       "ApproxQuantiles",
 	KindArrayUniqueAgg:        "ArrayUniqueAgg",
 	KindDayOfWeekIso:          "DayOfWeekIso",
 	KindDecode:                "Decode",
@@ -3125,31 +3405,123 @@ var className = map[Kind]string{
 	KindAlterDistStyle:                  "AlterDistStyle",
 	KindAlterSortKey:                    "AlterSortKey",
 	// Spark/Databricks cluster.
-	KindReduce:           "Reduce",
-	KindFromTimeZone:     "FromTimeZone",
-	KindArrayInsert:      "ArrayInsert",
-	KindBitwiseAndAgg:    "BitwiseAndAgg",
-	KindBitwiseOrAgg:     "BitwiseOrAgg",
-	KindBitwiseXorAgg:    "BitwiseXorAgg",
-	KindBitwiseCount:     "BitwiseCount",
-	KindTimestampDiff:    "TimestampDiff",
-	KindSafeAdd:          "SafeAdd",
-	KindSafeDivide:       "SafeDivide",
-	KindSafeMultiply:     "SafeMultiply",
-	KindSafeSubtract:     "SafeSubtract",
-	KindJSONKeys:         "JSONKeys",
-	KindUniform:          "Uniform",
-	KindTimeseriesKey:    "TimeseriesKey",
-	KindRegrAvgx:         "RegrAvgx",
-	KindRegrAvgy:         "RegrAvgy",
-	KindRegrSxx:          "RegrSxx",
-	KindRegrSxy:          "RegrSxy",
-	KindRegrSyy:          "RegrSyy",
-	KindRegrCount:        "RegrCount",
-	KindGetbit:           "Getbit",
-	KindDateFromUnixDate: "DateFromUnixDate",
-	KindReadParquet:      "ReadParquet",
-	KindFormat:           "Format",
+	KindReduce:                 "Reduce",
+	KindFromTimeZone:           "FromTimeZone",
+	KindArrayInsert:            "ArrayInsert",
+	KindBitwiseAndAgg:          "BitwiseAndAgg",
+	KindBitwiseOrAgg:           "BitwiseOrAgg",
+	KindBitwiseXorAgg:          "BitwiseXorAgg",
+	KindBitwiseCount:           "BitwiseCount",
+	KindTimestampDiff:          "TimestampDiff",
+	KindSafeAdd:                "SafeAdd",
+	KindSafeDivide:             "SafeDivide",
+	KindSafeMultiply:           "SafeMultiply",
+	KindSafeSubtract:           "SafeSubtract",
+	KindJSONKeys:               "JSONKeys",
+	KindUniform:                "Uniform",
+	KindTimeseriesKey:          "TimeseriesKey",
+	KindRegrAvgx:               "RegrAvgx",
+	KindRegrAvgy:               "RegrAvgy",
+	KindRegrSxx:                "RegrSxx",
+	KindRegrSxy:                "RegrSxy",
+	KindRegrSyy:                "RegrSyy",
+	KindRegrCount:              "RegrCount",
+	KindGetbit:                 "Getbit",
+	KindDateFromUnixDate:       "DateFromUnixDate",
+	KindReadParquet:            "ReadParquet",
+	KindFormat:                 "Format",
+	KindAcos:                   "Acos",
+	KindAcosh:                  "Acosh",
+	KindArrayConcatAgg:         "ArrayConcatAgg",
+	KindArrayLast:              "ArrayLast",
+	KindAscii:                  "Ascii",
+	KindAsin:                   "Asin",
+	KindAsinh:                  "Asinh",
+	KindAtan:                   "Atan",
+	KindAtanh:                  "Atanh",
+	KindBitLength:              "BitLength",
+	KindCos:                    "Cos",
+	KindCosh:                   "Cosh",
+	KindCot:                    "Cot",
+	KindCovarPop:               "CovarPop",
+	KindCovarSamp:              "CovarSamp",
+	KindCumeDist:               "CumeDist",
+	KindDateToDateStr:          "DateToDateStr",
+	KindDateToDi:               "DateToDi",
+	KindDayname:                "Dayname",
+	KindDegrees:                "Degrees",
+	KindDenseRank:              "DenseRank",
+	KindDiToDate:               "DiToDate",
+	KindFromBase32:             "FromBase32",
+	KindGenerateTimestampArray: "GenerateTimestampArray",
+	KindHour:                   "Hour",
+	KindIsInf:                  "IsInf",
+	KindJustifyDays:            "JustifyDays",
+	KindJustifyHours:           "JustifyHours",
+	KindJustifyInterval:        "JustifyInterval",
+	KindKurtosis:               "Kurtosis",
+	KindMonthname:              "Monthname",
+	KindNthValue:               "NthValue",
+	KindNtile:                  "Ntile",
+	KindPercentRank:            "PercentRank",
+	KindPi:                     "Pi",
+	KindRadians:                "Radians",
+	KindRank:                   "Rank",
+	KindSign:                   "Sign",
+	KindSin:                    "Sin",
+	KindSinh:                   "Sinh",
+	KindSpace:                  "Space",
+	KindTan:                    "Tan",
+	KindTanh:                   "Tanh",
+	KindTimeToTimeStr:          "TimeToTimeStr",
+	KindTimestampLtzFromParts:  "TimestampLtzFromParts",
+	KindTimestampTzFromParts:   "TimestampTzFromParts",
+	KindToBase32:               "ToBase32",
+	KindTsOrDiToDi:             "TsOrDiToDi",
+	KindTsOrDsToDateStr:        "TsOrDsToDateStr",
+	KindUnixMicros:             "UnixMicros",
+	KindUnixMillis:             "UnixMillis",
+	KindUnixToTimeStr:          "UnixToTimeStr",
+	KindWeek:                   "Week",
+	KindYearOfWeekIso:          "YearOfWeekIso",
+	KindBitmapConstructAgg:     "BitmapConstructAgg",
+	KindBitmapCount:            "BitmapCount",
+	KindCollation:              "Collation",
+	KindCompress:               "Compress",
+	KindCorr:                   "Corr",
+	KindCurrentTimezone:        "CurrentTimezone",
+	KindElt:                    "Elt",
+	KindFactorial:              "Factorial",
+	KindGrouping:               "Grouping",
+	KindJSONArrayAppend:        "JSONArrayAppend",
+	KindJSONArrayInsert:        "JSONArrayInsert",
+	KindJSONRemove:             "JSONRemove",
+	KindJSONSet:                "JSONSet",
+	KindJSONType:               "JSONType",
+	KindMinute:                 "Minute",
+	KindMonthsBetween:          "MonthsBetween",
+	KindNanvl:                  "Nanvl",
+	KindNegative:               "Negative",
+	KindNextDay:                "NextDay",
+	KindPad:                    "Pad",
+	KindRandn:                  "Randn",
+	KindRandstr:                "Randstr",
+	KindRegexpCount:            "RegexpCount",
+	KindRegexpInstr:            "RegexpInstr",
+	KindRegexpSubstr:           "RegexpSubstr",
+	KindRegrIntercept:          "RegrIntercept",
+	KindRegrR2:                 "RegrR2",
+	KindRegrSlope:              "RegrSlope",
+	KindReverse:                "Reverse",
+	KindRint:                   "Rint",
+	KindSearch:                 "Search",
+	KindSec:                    "Sec",
+	KindSecond:                 "Second",
+	KindSecret:                 "Secret",
+	KindShuffle:                "Shuffle",
+	KindUtcDate:                "UtcDate",
+	KindUtcTime:                "UtcTime",
+	KindWidthBucket:            "WidthBucket",
 }
 
 // varLenArgs is the authoritative is_var_len_args=True set (mirroring the upstream Func
@@ -3158,6 +3530,10 @@ var className = map[Kind]string{
 // Coalesce/Greatest/Least set it upstream too; they build via custom builders (never
 // FromArgList) but must still be recognized here so the over-arity check skips them.
 var varLenArgs = map[Kind]bool{
+	KindRank:                  true,
+	KindDenseRank:             true,
+	KindCumeDist:              true,
+	KindPercentRank:           true,
 	KindMax:                   true,
 	KindMin:                   true,
 	KindHll:                   true,
@@ -3193,9 +3569,15 @@ var varLenArgs = map[Kind]bool{
 
 	// Spark/Databricks cluster: is_var_len_args = True (json.py:153 JSONKeys,
 	// string.py:54 Format, functions.py:432 ReadParquet).
-	KindJSONKeys:    true,
-	KindFormat:      true,
-	KindReadParquet: true,
+	KindJSONKeys:        true,
+	KindFormat:          true,
+	KindReadParquet:     true,
+	KindElt:             true,
+	KindGrouping:        true,
+	KindJSONArrayAppend: true,
+	KindJSONArrayInsert: true,
+	KindJSONRemove:      true,
+	KindJSONSet:         true,
 }
 
 // ArgKeys returns the arg keys of a Kind in class-declaration order (mirrors

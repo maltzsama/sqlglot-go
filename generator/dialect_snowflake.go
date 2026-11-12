@@ -47,6 +47,7 @@ func init() {
 		expressions.KindDayOfYear:          clickhouseRename("DAYOFYEAR"),
 		expressions.KindWeekOfYear:         clickhouseRename("WEEKISO"),
 		expressions.KindYearOfWeek:         clickhouseRename("YEAROFWEEK"),
+		expressions.KindYearOfWeekIso:      clickhouseRename("YEAROFWEEKISO"),
 		expressions.KindExplode:            clickhouseRename("FLATTEN"),
 		expressions.KindCosineDistance:     clickhouseRename("VECTOR_COSINE_SIMILARITY"),
 		expressions.KindEuclideanDistance:  clickhouseRename("VECTOR_L2_DISTANCE"),

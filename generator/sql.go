@@ -2602,7 +2602,67 @@ func (g *Generator) lowerHexSQL(e expressions.Expression) string {
 	return text
 }
 
-func (g *Generator) arrayAggSQL(e expressions.Expression) string { return g.functionFallbackSQL(e) }
+// arrayAggSQL ports arrayagg_sql (generator.py:5747-5753): when the source dialect excludes
+// NULLs from ARRAY_AGG, the target re-adds them with a FILTER over the non-NULL input.
+func (g *Generator) arrayAggSQL(e expressions.Expression) string {
+	sql := g.functionFallbackSQL(e)
+	includesNulls := true
+	if g.dialect.ArrayAggIncludesNulls != nil {
+		includesNulls = *g.dialect.ArrayAggIncludesNulls
+	}
+	if !includesNulls || !truthy(e.Arg("nulls_excluded")) {
+		return sql
+	}
+	column := asExpression(e.This())
+	if column != nil && column.Kind() == expressions.KindOrder {
+		column = column.This()
+	}
+	// A DISTINCT input checks its underlying expression, never the Distinct node itself.
+	nullCheck := column
+	if nullCheck != nil && nullCheck.Kind() == expressions.KindDistinct {
+		if distinctArgs := nullCheck.Expressions(); len(distinctArgs) == 1 {
+			nullCheck = distinctArgs[0]
+		}
+	}
+	if parent := e.Parent(); parent != nil && parent.Kind() == expressions.KindFilter && nullCheck != nil {
+		if where := asExpression(parent.Arg("expression")); where != nil {
+			inner := where
+			if where.Kind() == expressions.KindWhere {
+				inner = where.This()
+			}
+			if inner != nil {
+				// Keep the original predicate grouped so a disjunction still evaluates as a
+				// whole before the null check is AND-ed in.
+				original := inner.Copy()
+				if original.Is(expressions.TraitConnector) || original.Is(expressions.TraitBinary) {
+					original = expressions.Paren(expressions.Args{"this": original})
+				}
+				nullExpr := nullCheck.Copy()
+				if nullExpr.Is(expressions.TraitConnector) || nullExpr.Is(expressions.TraitBinary) {
+					nullExpr = expressions.Paren(expressions.Args{"this": nullExpr})
+				}
+				notNull := expressions.Not(expressions.Args{
+					"this": expressions.Is(expressions.Args{"this": nullExpr, "expression": expressions.Null()}),
+				})
+				inner.Replace(expressions.And(expressions.Args{"this": original, "expression": notNull}))
+			}
+		}
+		return sql
+	}
+	// generator.py:5741-5745: only a column input gets the filter, and DISTINCT is rendered
+	// without propagating the keyword into FILTER.
+	if column != nil && column.Find(expressions.KindColumn) != nil {
+		columnSQL := g.gen(column)
+		if column.Kind() == expressions.KindDistinct {
+			columnSQL = g.expressions(exprsOptions{expression: column, flat: true})
+		} else if column.Is(expressions.TraitBinary) || column.Is(expressions.TraitConnector) {
+			// The null check must apply to the whole aggregate input, not its last operand.
+			columnSQL = "(" + columnSQL + ")"
+		}
+		sql += " FILTER(WHERE " + columnSQL + " IS NOT NULL)"
+	}
+	return sql
+}
 
 // arraySizeSQL ports arraysize_sql (generator.py:5798-5811). ARRAY_SIZE_DIM_REQUIRED
 // (generator.py:588, generators/postgres.py:254) is nil/false for base (drop a `1`

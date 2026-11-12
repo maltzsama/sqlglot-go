@@ -265,3 +265,23 @@ func TestPivotAnnotation(t *testing.T) {
 		}
 	}
 }
+
+// TestPortedFunctionNodeAnnotation guards the function nodes ported for #44: they now parse
+// to their structured Kind, so EXPRESSION_METADATA types them instead of UNKNOWN.
+func TestPortedFunctionNodeAnnotation(t *testing.T) {
+	cases := []struct {
+		sql  string
+		want exp.DType
+	}{
+		{"ACOS(x)", exp.DTypeDouble},
+		{"PI()", exp.DTypeDouble},
+		{"RANK()", exp.DTypeBigInt},
+		{"COVAR_POP(x, y)", exp.DTypeDouble},
+		{"WEEK(x)", exp.DTypeTinyInt},
+		{"MONTHNAME(x)", exp.DTypeVarchar},
+	}
+	for _, tc := range cases {
+		e := annotate(t, tc.sql, nil, "")
+		wantDType(t, tc.sql, e, tc.want)
+	}
+}

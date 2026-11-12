@@ -86,6 +86,20 @@ func (g *Generator) groupConcatSQL(e expressions.Expression) string {
 // aggregate.py:172) via functionFallbackSQL. The renamed branches gather their args via the
 // shared fallbackArgs helper (the same path varianceSQL/variancePopSQL use), so all three
 // dialect renames collect arguments identically.
+// logicalAndSQL mirrors logicalOrSQL for exp.LogicalAnd: postgres -> BOOL_AND
+// (generators/postgres.py:359), mysql -> MIN (generators/mysql.py:171); base keeps the class's
+// default name via functionFallbackSQL.
+func (g *Generator) logicalAndSQL(e expressions.Expression) string {
+	switch g.switchDialect() {
+	case "postgres":
+		return g.funcCall("BOOL_AND", g.fallbackArgs(e), "(", ")", true)
+	case "mysql":
+		return g.funcCall("MIN", g.fallbackArgs(e), "(", ")", true)
+	default:
+		return g.functionFallbackSQL(e)
+	}
+}
+
 func (g *Generator) logicalOrSQL(e expressions.Expression) string {
 	switch g.switchDialect() {
 	case "postgres":
@@ -100,4 +114,5 @@ func (g *Generator) logicalOrSQL(e expressions.Expression) string {
 func init() {
 	dispatch[expressions.KindGroupConcat] = (*Generator).groupConcatSQL
 	dispatch[expressions.KindLogicalOr] = (*Generator).logicalOrSQL
+	dispatch[expressions.KindLogicalAnd] = (*Generator).logicalAndSQL
 }

@@ -116,6 +116,7 @@ func init() {
 		expressions.KindLambda:                duckDBLambdaSQL,
 		expressions.KindGetbit:                clickhouseRename("GET_BIT"),
 		expressions.KindToVariant:             duckDBToVariantSQL,
+		expressions.KindIsInf:                 clickhouseRename("ISINF"),
 		expressions.KindLogicalOr:             duckDBLogicalSQL("BOOL_OR"),
 		expressions.KindLogicalAnd:            duckDBLogicalSQL("BOOL_AND"),
 		expressions.KindDateAdd:               duckDBDateDeltaSQL("+"),
@@ -756,21 +757,28 @@ func duckDBParseJSONSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("JSON", []any{e.This()}, "(", ")", true)
 }
 
-// duckDBIgnoreNullsSQL ports ignorenulls_sql (generators/duckdb.py:3987-4010): IGNORE NULLS
-// on a generic aggregate is dropped, and on ARRAY_AGG becomes a filter over the non-NULLs.
+// duckDBIgnoreNullsSQL ports ignorenulls_sql (generators/duckdb.py:3987-4010): window
+// functions keep the modifier (inline, since IGNORE_NULLS_IN_FUNC is set), ARRAY_AGG turns it
+// into a non-NULL filter, and any other aggregate drops it.
 func duckDBIgnoreNullsSQL(g *Generator, e expressions.Expression) string {
 	this := asExpression(e.This())
 	if this == nil {
 		return ""
 	}
 	switch this.Kind() {
+	case expressions.KindFirstValue, expressions.KindLag, expressions.KindLastValue,
+		expressions.KindLead, expressions.KindNthValue:
+		return g.ignoreNullsSQL(e)
 	case expressions.KindArrayAgg:
-		arg := this.This()
-		return g.funcCall("LIST", []any{arg}, "(", ")", true) + " FILTER(WHERE " + g.gen(arg) + " IS NOT NULL)"
-	case expressions.KindFirst, expressions.KindAnyValue:
+		this.Set("nulls_excluded", true)
 		return g.gen(this)
+	case expressions.KindFirst:
+		this = expressions.AnyValue(expressions.Args{"this": this.This()})
 	}
-	return g.gen(this) + " IGNORE NULLS"
+	if this.Kind() != expressions.KindAnyValue && this.Kind() != expressions.KindApproxQuantiles {
+		g.unsupported("IGNORE NULLS is not supported for non-window functions.")
+	}
+	return g.gen(this)
 }
 
 // duckDBTableSampleSQL ports tablesample_sql (generators/duckdb.py:3118-3133).

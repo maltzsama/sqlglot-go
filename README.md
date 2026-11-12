@@ -35,9 +35,10 @@ targeted slice of the optimizer:
   `optimize_joins`, `unnest_subqueries` and `merge_subqueries`, each checked against its upstream
   fixture file, on top of a port of upstream's query builder API.
 - **`annotate_types`** — type inference with the per-dialect expression metadata generated from
-  upstream. Functions the port still parses as `Anonymous` annotate as `UNKNOWN` (tracked in #44).
+  upstream. The function nodes upstream parses structurally are ported (#44); the remaining
+  fixture gaps are recorded in `optimizer/testdata/annotate_gaps.txt`.
 - **`simplify`** — boolean, arithmetic, string and date simplification, folding constants with
-  upstream's value semantics; the same `Anonymous` gap leaves some function folds undone (#44).
+  upstream's value semantics; remaining fixture gaps are in `optimizer/testdata/simplify_gaps.txt`.
 - **`normalize`** and **`eliminate_joins`** — CNF/DNF conversion and unused-join removal.
 - **`pushdown_predicates`** and **`pushdown_projections`** — predicate pushdown and unused
   projection pruning.

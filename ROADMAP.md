@@ -114,8 +114,9 @@ differential-check against the pinned Python):
   `pushdown_predicates`, `pushdown_projections` and `canonicalize`, plus the query builder API
   they share. `optimizer.sql` passes except the PIVOT star-expansion cases of #46, and the TPC-H
   and TPC-DS fixture sets pass in full.
-- annotate_types is ported (#27). What remains is the function nodes it can't type yet because the
-  port parses them as `Anonymous` (#44; `optimizer/testdata/annotate_gaps.txt`).
+- annotate_types is ported (#27), and the function nodes it previously parsed as `Anonymous` are
+  now structured (#44). The fixture cases that still do not pass are recorded in
+  `optimizer/testdata/annotate_gaps.txt`.
 - CROSS-DIALECT transpilation: same-dialect round-trip is verified; reading one dialect and writing
   another is not. The per-dialect override tables that make it correct are partial — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
