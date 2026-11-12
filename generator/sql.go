@@ -2637,8 +2637,12 @@ func (g *Generator) arrayAggSQL(e expressions.Expression) string {
 				if original.Is(expressions.TraitConnector) || original.Is(expressions.TraitBinary) {
 					original = expressions.Paren(expressions.Args{"this": original})
 				}
+				nullExpr := nullCheck.Copy()
+				if nullExpr.Is(expressions.TraitConnector) || nullExpr.Is(expressions.TraitBinary) {
+					nullExpr = expressions.Paren(expressions.Args{"this": nullExpr})
+				}
 				notNull := expressions.Not(expressions.Args{
-					"this": expressions.Is(expressions.Args{"this": nullCheck.Copy(), "expression": expressions.Null()}),
+					"this": expressions.Is(expressions.Args{"this": nullExpr, "expression": expressions.Null()}),
 				})
 				inner.Replace(expressions.And(expressions.Args{"this": original, "expression": notNull}))
 			}

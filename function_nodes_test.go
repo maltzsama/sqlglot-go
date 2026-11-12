@@ -49,6 +49,22 @@ func TestArrayAggNullFilterGrouping(t *testing.T) {
 		t.Fatalf("existing filter = %q, want %q", got, want)
 	}
 
+	compoundWithFilter := exp.Filter(exp.Args{
+		"this": exp.ArrayAgg(exp.Args{
+			"this":           exp.Add(exp.Args{"this": col("a"), "expression": col("b")}),
+			"nulls_excluded": true,
+		}),
+		"expression": exp.Where(exp.Args{"this": cond}),
+	})
+	sel = exp.Select(exp.Args{"expressions": []exp.Expression{compoundWithFilter}})
+	got, err = sqlglot.Generate(sel, "duckdb", generator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "SELECT ARRAY_AGG(a + b) FILTER(WHERE (a OR b) AND NOT (a + b) IS NULL)"; got != want {
+		t.Fatalf("compound null check = %q, want %q", got, want)
+	}
+
 	compound := exp.ArrayAgg(exp.Args{
 		"this":           exp.Add(exp.Args{"this": col("a"), "expression": col("b")}),
 		"nulls_excluded": true,
