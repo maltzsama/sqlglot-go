@@ -393,6 +393,11 @@ type Dialect struct {
 	// so the generator can rename the columns when a statement is written under a dialect that
 	// names them differently (generator.py:2534-2546).
 	PivotColumnNaming string
+	// PrefixedPivotColumns ports PREFIXED_PIVOT_COLUMNS (base False; parsers/bigquery.py:190
+	// True): the aggregation alias moves to the front of each inferred PIVOT output column
+	// name, so `SUM(f) AS sum ... IN ('x')` yields sum_x instead of x_sum. Recorded on the
+	// Pivot node alongside PivotColumnNaming (parser.py:5504).
+	PrefixedPivotColumns bool
 	// ConcatWsCoalesce ports CONCAT_WS_COALESCE (base False; duckdb True): CONCAT_WS ignores
 	// NULL arguments.
 	ConcatWsCoalesce bool

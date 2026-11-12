@@ -113,6 +113,7 @@ func init() {
 		expressions.KindArrayDistinct:         clickhouseRename("LIST_DISTINCT"),
 		expressions.KindIgnoreNulls:           duckDBIgnoreNullsSQL,
 		expressions.KindTableSample:           duckDBTableSampleSQL,
+		expressions.KindPivot:                 duckDBPivot,
 		expressions.KindLambda:                duckDBLambdaSQL,
 		expressions.KindGetbit:                clickhouseRename("GET_BIT"),
 		expressions.KindToVariant:             duckDBToVariantSQL,
@@ -779,6 +780,13 @@ func duckDBIgnoreNullsSQL(g *Generator, e expressions.Expression) string {
 		g.unsupported("IGNORE NULLS is not supported for non-window functions.")
 	}
 	return g.gen(this)
+}
+
+// duckDBPivot applies transforms.unqualify_columns to the whole operator
+// (generators/duckdb.py:1739) before the base PIVOT rendering: DuckDB only accepts simple
+// column names inside a (UN)PIVOT.
+func duckDBPivot(g *Generator, e expressions.Expression) string {
+	return g.pivotSQL(unqualifyColumnsDeep(e))
 }
 
 // duckDBTableSampleSQL ports tablesample_sql (generators/duckdb.py:3118-3133).

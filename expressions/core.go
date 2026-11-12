@@ -1091,13 +1091,27 @@ func (n *Node) NamedSelects() []string {
 		}
 		return out
 	case KindUnion, KindExcept, KindIntersect:
-		// Mirror SetOperation.named_selects (query.py:1050): unnest down to the
-		// leftmost query, then return _named_selects (query.py:90) — the unfiltered
+		// Mirror SetOperation.named_selects (query.py:1050): at each level, a BY NAME
+		// set-op unions its operands' named selects; otherwise unnest down to the
+		// leftmost query and return _named_selects (query.py:90) — the unfiltered
 		// output_name of every projection, with no Aliases expansion. This differs
 		// from Select.named_selects, which filters unnamed projections and expands
 		// Aliases.
 		var expr Expression = n
 		for expr != nil && expr.Is(TraitSetOperation) {
+			if truthy(expr.Arg("by_name")) {
+				left := expr.This().Unnest().NamedSelects()
+				right := expr.Expr().Unnest().NamedSelects()
+				seen := map[string]bool{}
+				out := make([]string, 0, len(left)+len(right))
+				for _, name := range append(append([]string(nil), left...), right...) {
+					if !seen[name] {
+						seen[name] = true
+						out = append(out, name)
+					}
+				}
+				return out
+			}
 			expr = expr.This()
 			if expr != nil {
 				expr = expr.Unnest()

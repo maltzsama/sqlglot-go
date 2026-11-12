@@ -118,12 +118,34 @@ func init() {
 		},
 		expressions.KindJSONObject:  snowflakeJSONObjectSQL,
 		expressions.KindTableSample: snowflakeTableSampleSQL,
+		expressions.KindPivot:       snowflakePivot,
 		expressions.KindExtract:     snowflakeExtractSQL,
 		expressions.KindDate:        snowflakeDateSQL,
 		expressions.KindUndrop:      snowflakeUndropSQL,
 		expressions.KindDescribe:    snowflakeDescribeSQL,
 	}
 	registerDialectDispatch("snowflake", handlers)
+}
+
+// snowflakePivot applies _unqualify_pivot_columns (generators/snowflake.py:74-96) before the
+// base PIVOT rendering: Snowflake doesn't allow columns referenced in UNPIVOT to be qualified,
+// so the whole operator is unqualified; for PIVOT only the `ANY ORDER BY <column>` inside a
+// PivotAny is unqualified, leaving the aggregate and FOR field qualified.
+func snowflakePivot(g *Generator, e expressions.Expression) string {
+	if boolValue(e.Arg("unpivot")) {
+		e = unqualifyColumnsDeep(e)
+	} else if fields, ok := e.Arg("fields").([]expressions.Expression); ok {
+		for _, field := range fields {
+			if field == nil {
+				continue
+			}
+			fieldExprs := field.Expressions()
+			if len(fieldExprs) > 0 && fieldExprs[0].Kind() == expressions.KindPivotAny {
+				field.SetAt("expressions", unqualifyColumnsDeep(fieldExprs[0]), 0, true)
+			}
+		}
+	}
+	return g.pivotSQL(e)
 }
 
 // snowflakeArrayConcatSQL ports array_concat_sql("ARRAY_CAT").
