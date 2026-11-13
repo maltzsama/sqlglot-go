@@ -3,7 +3,8 @@
 Goal: a faithful Go port of sqlglot v30.17.0's **parse → AST → generate** core (tokenizer, AST,
 parser, generator, schema) plus the `qualify` + `scope` optimizer passes that column qualification and
 **lineage** build on, for **base + MySQL + Postgres**. This is deliberately **not** a full port of
-sqlglot: cross-dialect transpilation and the other 30+ dialects are out of scope for now. Port 1:1 from
+sqlglot: the other 30+ dialects are out of scope for now, while cross-dialect transpilation between
+the registered dialects is verified against upstream's `validate_all` corpus (#33). Port 1:1 from
 .reference/sqlglot-v30.17.0/ file-by-file; port the matching upstream tests as the oracle.
 
 Status: the parse → generate round-trip is at **100% parity on the ported upstream identity corpus** —
@@ -118,8 +119,10 @@ differential-check against the pinned Python):
 - annotate_types is ported (#27), and the function nodes it previously parsed as `Anonymous` are
   now structured (#44). The fixture cases that still do not pass are recorded in
   `optimizer/testdata/annotate_gaps.txt`.
-- CROSS-DIALECT transpilation: same-dialect round-trip is verified; reading one dialect and writing
-  another is not. The per-dialect override tables that make it correct are partial — per-dialect
+- CROSS-DIALECT transpilation: verified against upstream's `validate_all` read/write pairs —
+  `TestTranspileCorpus` runs every pair whose dialects are all registered (`testdata/transpile_corpus.jsonl`,
+  8368 pairs, 5766 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
+  What remains are the per-dialect override tables that make cross-dialect output correct — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
 - DIALECTS: base, MySQL, Postgres, TSQL, ClickHouse, StarRocks, Doris, Presto, Trino, Hive, Athena,
@@ -962,3 +965,42 @@ runs duckdb and snowflake (`dialectInScope`), deferring only the unrelated snowf
 LEVEL` and `sqlglot.meta case_sensitive` cases. Not ported (cross-dialect only): the generator's
 `_pivot_in_value_aliases` rewrite (generator.py:2524), which renames stored pivot columns when the
 write dialect names them differently — same-dialect output is unaffected.
+
+## Cross-dialect transpile corpus — DONE (issue #33)
+
+Reading one dialect and writing another is now verified against the oracle upstream already keeps
+for it: `validate_all(sql, read={...}, write={...})` (tests/dialects/test_dialect.py:74-113), where
+each read pair asserts `parse_one(read_sql, read_dialect).sql(self.dialect) == sql` and each write
+pair asserts `expression.sql(write_dialect) == write_sql`.
+
+- **Extraction** — `scripts/extract_dialect_corpus.py --transpile-only` records every pair whose
+  dialects are all registered into `testdata/transpile_corpus.jsonl`: **8368 records across 264
+  dialect pairs** (6298 cross-dialect, 2070 same-dialect), deduped and sorted for a byte-stable
+  rerun (verified: two consecutive runs are identical). Unregistered-dialect pairs and
+  `UnsupportedError` wants are skipped. The issue's ~1.1k figure counted `validate_all` call sites
+  in 12 test files; the extractor runs every registered dialect's test class plus `TestDialect`
+  (base, `dialect = None` → `""`) and records each read/write *entry*, which reconciles to the
+  larger pair count. The new `--transpile-only` flag leaves `testdata/dialect_identity.jsonl`
+  byte-identical: a plain full run rewrites every identity section and would drop the hand-added
+  MySQL/Postgres/base records that per-dialect `--dialects` runs preserve verbatim. Three
+  log-asserting methods joined `KNOWN_FAILURES` after verifying each fails at/after its last
+  capture call, so no record is silently lost: `TestPostgres.test_array_offset`,
+  `TestClickhouse.test_array_offset`, `TestDuckDB.test_array_index`, `TestBigQuery.test_warnings`.
+- **Harness** — `transpile_corpus_test.go` (`TestTranspileCorpus`) mirrors `corpus_test.go`: parse
+  under `read`, generate under `write`, and require (a) every failure be listed in
+  `testdata/transpile_gaps.txt`, (b) per-write-dialect pass floors (bucketed by the generation
+  target, where the TRANSFORMS/TYPE_MAPPING gaps live; read-side parse gaps show up with a
+  `parse:` category), (c) per-write-dialect total floors against dropped records. Regenerate the
+  gaps file and print observed counts with
+  `SQLGLOT_TRANSPILE_UPDATE=1 go test . -run TestTranspileCorpus -v`.
+- **Initial state** — **5766/8368 pass (69%)**, 2602 tracked gaps: 1717 `gen: transpile mismatch`,
+  777 `gen: cast/type`, 65 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
+  slice is the per-dialect generator work listed under Remaining work.
+- **Bug found by the first run** — `SELECT e'Hello\nworld'` (duckdb → bigquery) crashed the test
+  binary with a stack overflow: `bytestringSQL`'s cast-wrap branch rebuilt its child ByteString
+  without the `is_bytes` flag upstream's `maybe_parse` carries (parser.py:1223,
+  `is_bytes = BYTE_STRING_IS_BYTES_TYPE or None`), so BigQuery's `CAST(b'...' AS STRING)` re-entered
+  the branch forever. Fixed in `generator/residual_tail.go` by mirroring the parser's flag
+  (parser.go:2847) on the fresh node — no output change on any previously passing case.
+- **Docs** — README moves cross-dialect transpilation out of "Not ported (yet)" into the ported
+  list, with the verified pair counts and the gaps file as the burndown record.

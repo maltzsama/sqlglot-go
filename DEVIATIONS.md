@@ -346,7 +346,9 @@ The rows are tracked in `testdata/parity_gaps.txt` (one Databricks, six BigQuery
 
 ## 2. Cross-dialect-only deviations (never affect same-dialect round-trip)
 
-Cross-dialect transpilation is out of scope. The Presto/Trino/Hive/Athena generators port the
+Cross-dialect transpilation between the registered dialects is exercised and gap-tracked by
+`TestTranspileCorpus` (issue #33); the deviations below only manifest there and never in a
+same-dialect round trip. The Presto/Trino/Hive/Athena generators port the
 same-dialect surface of upstream's `TRANSFORMS`/`TYPE_MAPPING`/`PROPERTIES_LOCATION`
 (`generator/dialect_{presto,trino,hive,athena}.go`); the transpile-only `Select` preprocess chain
 (eliminate_qualify/distinct_on, explode_projection_to_unnest, semi/anti joins) and transforms whose

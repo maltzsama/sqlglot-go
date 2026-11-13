@@ -28,6 +28,11 @@ targeted slice of the optimizer:
   **100% round-trip parity — 1876/1876 corpus cases** (base 980/980, MySQL 428/428, Postgres 468/468),
   checked against the ported upstream test suite. No statement fakes a round-trip via a raw-text
   fallback where upstream builds a structured node (guarded by a committed fidelity test).
+- **Cross-dialect transpilation** — reading one registered dialect and writing another, verified
+  against upstream's `validate_all` read/write pairs: `TestTranspileCorpus` runs every pair whose
+  dialects are all registered (**8368 pairs, 5766 passing today**) with monotonic per-target-dialect
+  floors, and the open pairs are the burndown list in `testdata/transpile_gaps.txt` (mostly the
+  per-dialect generator `TRANSFORMS`/`TYPE_MAPPING` remaps).
 - **Schema** — `MappingSchema`, `DataType.build`, type-category sets.
 - **`qualify` optimizer pass** — qualify_tables → normalize_identifiers → qualify_columns →
   quote_identifiers → validate.
@@ -48,8 +53,6 @@ targeted slice of the optimizer:
 
 **Not ported (yet):**
 - `canonicalize_internal_names`, which is not one of `optimize()`'s default rules.
-- **Cross-dialect transpilation** — the generator can target a dialect, but only **same-dialect**
-  round-trip is a goal and is tested; reading one dialect and writing another is not verified.
 - **Dialects beyond the ones listed under [Dialects](#dialects)** (upstream ships 30+).
 
 **Beyond upstream — opt-in, additive (default output unchanged):**
@@ -74,6 +77,7 @@ case-folding, to match real engines).
 | Tokenize | `tokens` | base tokenizer plus per-dialect overrides for every registered dialect |
 | Parse → AST | `parser`, `expressions` | full: SELECT/set-ops/CTE/subqueries, all query clauses, predicates, functions, DML + DDL (INSERT/UPDATE/DELETE/MERGE/CREATE + properties), CAST/DataType, PIVOT/LATERAL/VALUES/TABLESAMPLE, INTERVAL, JSON/JSONB ops, window functions |
 | Generate (AST → SQL) | `generator` | **100% round-trip** on the upstream identity corpus for base (980/980) and every registered dialect (see [Dialects](#dialects)) |
+| Transpile (read one dialect, write another) | `parser`, `generator` | every registered-dialect pair from upstream's `validate_all` corpus runs green or is tracked: 5766/8368 pass, open pairs in `testdata/transpile_gaps.txt` |
 | Schema | `schema` | `MappingSchema`, `DataType.build`, type-category sets |
 | Qualify | `optimizer` | `qualify` (qualify_tables, normalize_identifiers, qualify_columns, quote_identifiers, validate) |
 | Rewrite passes | `optimizer` | `EliminateCTEs`, `EliminateSubqueries`, `OptimizeJoins`, `UnnestSubqueries`, `MergeSubqueries`, `Normalize`, `EliminateJoins`, `PushdownPredicates`, `PushdownProjections`, `Canonicalize`, `Simplify`, `AnnotateTypes` |
@@ -158,9 +162,14 @@ gofmt -l . && go vet ./...
 ```
 
 The upstream test suite is ported alongside the code (`*_test.go` + `testdata/*.sql` fixtures reused
-verbatim) and is the correctness oracle. A round-trip parity corpus and an AST-fidelity gate keep the
-port honest — both are monotonic (they can only tighten). For a live differential check against the
-pinned Python source, `scripts/fetch-reference.sh` fetches sqlglot 30.17.0 into `.reference/`, then e.g.
+verbatim) and is the correctness oracle. A round-trip parity corpus, a cross-dialect transpile corpus
+and an AST-fidelity gate keep the port honest — all are monotonic (they can only tighten). The
+cross-dialect corpus is re-extracted with
+`PYTHONPATH=.reference/sqlglot-v30.17.0 python3 scripts/extract_dialect_corpus.py --transpile-only`,
+and its gaps file regenerates with
+`SQLGLOT_TRANSPILE_UPDATE=1 go test . -run TestTranspileCorpus -v`. For a live differential check
+against the pinned Python source, `scripts/fetch-reference.sh` fetches sqlglot 30.17.0 into
+`.reference/`, then e.g.
 `PYTHONPATH=.reference/sqlglot-v30.17.0 python3 -c "import sqlglot; print(sqlglot.parse_one('…','postgres').sql())"`.
 
 ## Continuing the port

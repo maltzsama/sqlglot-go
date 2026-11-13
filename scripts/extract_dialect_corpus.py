@@ -1,25 +1,37 @@
 #!/usr/bin/env python3
-"""Extract the dialect validate_identity() round-trip corpus (Scope B) from upstream
-tobymao/sqlglot's dialect test suite into testdata/dialect_identity.jsonl.
+"""Extract the dialect round-trip and transpile corpora from upstream tobymao/sqlglot's
+dialect test suite into testdata/dialect_identity.jsonl and testdata/transpile_corpus.jsonl.
 
 Why this exists: tests/dialects/test_mysql.py and tests/dialects/test_postgres.py call
 Validator.validate_identity(sql, write_sql=None, pretty=False, ...) hundreds of times, including
 inside loops and f-strings that expand into many distinct cases at runtime (e.g. the
 BIGINT/INT/... UNSIGNED loop in test_mysql.py, the pretty ARRAY[...] case and GRANT/REVOKE lists
 in test_postgres.py). A static regex over the test source cannot recover those expanded cases. So
-this script monkeypatches Validator.validate_identity to record every (dialect, sql, want, pretty)
-tuple it is called with, then runs the selected dialect test classes under unittest so every call
-site — including loop/template expansions — fires for real. The output feeds the Go parity harness
-(corpus_test.go); it is not run by `go test` itself.
+this script monkeypatches Validator.validate_identity and Validator.validate_all to record every
+call, then runs the selected dialect test classes under unittest so every call site — including
+loop/template expansions — fires for real. The outputs feed the Go parity harnesses
+(corpus_test.go and transpile_corpus_test.go); they are not run by `go test` itself.
 MySQL/Postgres records carry hand-added cases, so re-extract those dialects deliberately. For the
 Presto-family dialects the same-dialect write of validate_all is recorded too.
 
+validate_all(sql, read={...}, write={...}) also carries the cross-dialect oracle: every read pair
+asserts parse_one(read_sql, read_dialect).sql(self.dialect) == sql and every write pair asserts
+expression.sql(write_dialect) == write_sql (tests/dialects/test_dialect.py:74). Each pair whose
+dialects are all registered in the Go port becomes one transpile record
+{"read":..,"write":..,"sql":..,"want":..}: parse `sql` under `read`, generate under `write`,
+expect `want`. Pairs naming an unregistered dialect and UnsupportedError wants are skipped.
+
 Run manually (after `scripts/fetch-reference.sh`, since .reference/ is gitignored):
 
-    PYTHONPATH=.reference/sqlglot-v30.17.0 python3 scripts/extract_dialect_corpus.py
+    PYTHONPATH=.reference/sqlglot-v30.17.0 python3 scripts/extract_dialect_corpus.py --transpile-only
 
-Use --dialects athena,trino,presto,hive to replace only those dialects in the existing file.
-Without --dialects, all six dialects are extracted and the file is fully rewritten.
+Use --transpile-only to refresh testdata/transpile_corpus.jsonl while leaving
+testdata/dialect_identity.jsonl byte-identical (a plain full run rewrites every identity section
+and would drop the hand-added MySQL/Postgres/base records that per-dialect runs preserve).
+Use --dialects athena,trino,presto,hive to replace only those dialects in the existing
+dialect_identity.jsonl. Without either flag, all dialects (plus the base TestDialect class) are
+extracted and both files are fully rewritten. The transpile corpus mixes pairs from every test
+class, so a partial --dialects run leaves testdata/transpile_corpus.jsonl unchanged.
 
 Seongjin.
 """
@@ -51,7 +63,7 @@ except ImportError:
     print(REFERENCE_HINT, file=sys.stderr)
     raise
 
-from tests.dialects.test_dialect import Validator  # noqa: E402
+from tests.dialects.test_dialect import Validator, TestDialect  # noqa: E402
 from tests.dialects.test_athena import TestAthena  # noqa: E402
 from tests.dialects.test_trino import TestTrino  # noqa: E402
 from tests.dialects.test_presto import TestPresto  # noqa: E402
@@ -75,7 +87,25 @@ from tests.dialects.test_postgres import TestPostgres  # noqa: E402
 DIALECTS = ("bigquery", "duckdb", "snowflake", "mysql", "postgres", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks")
 SAME_DIALECT_WRITES = {"bigquery", "duckdb", "snowflake", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks"}
 
+# Every dialect the Go port registers (dialects.GetOrRaise): the 19 named ones plus base "".
+# A transpile pair is captured only when BOTH of its dialects are in this set, so the corpus
+# never names a dialect the Go harness cannot parse/generate.
+REGISTERED = set(DIALECTS) | {""}
+
+
+def _norm_dialect(dialect):
+    """Map a test-class/validate_all dialect key to the Go port's spelling.
+
+    TestDialect carries Validator.dialect = None (base); enum-valued keys (Dialects.X) reduce to
+    their value. Everything else is the plain string the test files use.
+    """
+    if dialect is None:
+        return ""
+    return str(getattr(dialect, "value", dialect))
+
+
 captured = []
+transpile_captured = []
 
 orig_validate_identity = Validator.validate_identity
 orig_validate_all = Validator.validate_all
@@ -107,9 +137,43 @@ def patched_validate_identity(
 
 
 def patched_validate_all(self, sql, read=None, write=None, pretty=False, identify=False):
-    # Cross-dialect writes are out of scope, but write[self.dialect] is a same-dialect
-    # expectation for sql. Recorded for the Presto-family dialects only; mysql/postgres keep
-    # their hand-curated records. Best effort only, so an unrelated validate_all failure never
+    # Cross-dialect oracle first: record every read/write pair whose dialects are all
+    # registered, without running upstream's assertions (the Go harness owns those).
+    # read pair: parse_one(read_sql, read_dialect).sql(self.dialect) == sql.
+    # write pair: parse_one(sql, self.dialect).sql(write_dialect) == write_sql.
+    test_dialect = _norm_dialect(self.dialect)
+    if test_dialect in REGISTERED:
+        for read_dialect, read_sql in (read or {}).items():
+            read_key = _norm_dialect(read_dialect)
+            if read_key in REGISTERED and isinstance(read_sql, str) and isinstance(sql, str):
+                transpile_captured.append(
+                    {
+                        "read": read_key,
+                        "write": test_dialect,
+                        "sql": read_sql,
+                        "want": sql,
+                        "pretty": bool(pretty),
+                        "identify": bool(identify),
+                    }
+                )
+        for write_dialect, write_sql in (write or {}).items():
+            write_key = _norm_dialect(write_dialect)
+            # UnsupportedError wants assert that generation raises; skip them (not a SQL pair).
+            if write_key in REGISTERED and isinstance(write_sql, str) and isinstance(sql, str):
+                transpile_captured.append(
+                    {
+                        "read": test_dialect,
+                        "write": write_key,
+                        "sql": sql,
+                        "want": write_sql,
+                        "pretty": bool(pretty),
+                        "identify": bool(identify),
+                    }
+                )
+
+    # The same-dialect write[self.dialect] also lands in the identity corpus for the
+    # dialects listed in SAME_DIALECT_WRITES; mysql/postgres keep their hand-curated records.
+    # Best effort only, so an unrelated validate_all failure never
     # aborts a test method before its later validate_identity calls fire.
     if self.dialect in SAME_DIALECT_WRITES and write and self.dialect in write:
         want = write[self.dialect]
@@ -138,14 +202,26 @@ Validator.validate_all = patched_validate_all
 
 
 # Test methods we expect to fail *because of* the monkeypatches above, keyed by
-# (class, method). test_array_offset asserts on the "Applying array index offset"
-# log lines emitted by the real cross-dialect validate_all transpile, which
-# patched_validate_all neutralizes; it makes zero validate_identity calls, so its
-# failure loses nothing. Any failure NOT listed here could have truncated a test
-# method before its later validate_identity calls fired (leaving the corpus
-# silently incomplete), so it aborts extraction before anything is written.
+# (class, method). Each entry was verified to make no validate_identity/validate_all
+# call AFTER the failing assertion, so the failure cannot truncate a test method
+# before its later capture calls fired (losing corpus records silently):
+#   - test_array_offset (postgres, clickhouse) asserts on the "Applying array index
+#     offset" log lines emitted by the real cross-dialect validate_all transpile,
+#     which patched_validate_all neutralizes; the failing assert is the method's last
+#     statement (the clickhouse variant holds a single validate_all, already captured).
+#   - TestDuckDB.test_array_index is the same log assert, but its validate_all and all
+#     five validate_identity calls precede the failing final assertEqual.
+#   - TestBigQuery.test_warnings fails at the __exit__ of the assertLogs block whose
+#     validate_all/validate_identity calls already ran; the remainder of the method
+#     only calls parse() directly (no validate_* capture sites).
+# Any failure NOT listed here could have truncated a test method before its later
+# validate_identity calls fired (leaving the corpus silently incomplete), so it aborts
+# extraction before anything is written.
 KNOWN_FAILURES = {
     ("TestPostgres", "test_array_offset"),
+    ("TestClickhouse", "test_array_offset"),
+    ("TestDuckDB", "test_array_index"),
+    ("TestBigQuery", "test_warnings"),
 }
 
 
@@ -164,21 +240,36 @@ def main():
         "--dialects", help="comma-separated dialects to replace; default: all six, full rewrite"
     )
     parser.add_argument(
+        "--transpile-only",
+        action="store_true",
+        help="extract only testdata/transpile_corpus.jsonl and leave testdata/dialect_identity.jsonl "
+        "byte-identical (a full run rewrites every section, dropping the hand-added MySQL/Postgres/"
+        "base records the per-dialect --dialects runs preserve verbatim)",
+    )
+    parser.add_argument(
         "--allow-failures",
         action="store_true",
         help="record what was captured instead of aborting on unittest failures (use while "
         "bringing a new dialect up; the corpus is a burndown list, not a release gate)",
     )
     args = parser.parse_args()
+    if args.transpile_only and args.dialects is not None:
+        parser.error("--transpile-only always extracts every dialect; drop --dialects")
     selected = set(DIALECTS if args.dialects is None else args.dialects.split(","))
     unknown = selected.difference(DIALECTS)
     if unknown:
         parser.error("unknown dialect(s): " + ", ".join(sorted(unknown)))
+    if args.dialects is None:
+        # Full runs also extract the base dialect (TestDialect, dialect = None -> "").
+        selected.add("")
 
     runner = unittest.TextTestRunner(verbosity=0)
     unexpected = []
-    for cls in (TestBigQuery, TestDuckDB, TestSnowflake, TestMySQL, TestPostgres, TestAthena, TestTrino, TestPresto, TestHive, TestTSQL, TestClickhouse, TestStarrocks, TestDoris, TestOracle, TestRedshift, TestMaterialize, TestRisingWave, TestSpark, TestDatabricks):
-        if cls.dialect not in selected:
+    for cls in (TestBigQuery, TestDuckDB, TestSnowflake, TestMySQL, TestPostgres, TestAthena, TestTrino, TestPresto, TestHive, TestTSQL, TestClickhouse, TestStarrocks, TestDoris, TestOracle, TestRedshift, TestMaterialize, TestRisingWave, TestSpark, TestDatabricks, TestDialect):
+        # TestDialect carries dialect = None (base); _norm_dialect maps it to "", which only a
+        # full run adds to `selected` above — a partial --dialects run skips it (and skips
+        # writing the transpile corpus anyway).
+        if _norm_dialect(cls.dialect) not in selected:
             continue
         result = runner.run(unittest.defaultTestLoader.loadTestsFromTestCase(cls))
         for test, _ in list(result.failures) + list(result.errors):
@@ -202,41 +293,83 @@ def main():
         )
         sys.exit(1)
 
-    records = {}
-    for rec in captured:
-        if rec["dialect"] not in selected:
-            continue
-        key = (rec["dialect"], rec["sql"], rec["want"], rec["pretty"], rec.get("identify", False))
-        records[key] = rec
+    if args.transpile_only:
+        # Do not touch the identity corpus: a full rewrite drops the hand-added MySQL/Postgres/
+        # base records that partial --dialects runs preserve verbatim (see --transpile-only help).
+        print(
+            "transpile-only run: testdata/dialect_identity.jsonl left unchanged",
+            file=sys.stderr,
+        )
+    else:
+        records = {}
+        for rec in captured:
+            if rec["dialect"] not in selected:
+                continue
+            key = (rec["dialect"], rec["sql"], rec["want"], rec["pretty"], rec.get("identify", False))
+            records[key] = rec
 
-    deduped = sorted(
-        records.values(), key=lambda r: (r["dialect"], r["sql"], r["want"])
-    )
+        deduped = sorted(
+            records.values(), key=lambda r: (r["dialect"], r["sql"], r["want"])
+        )
 
-    out_path = "testdata/dialect_identity.jsonl"
-    preserved = {}
-    if args.dialects is not None and Path(out_path).exists():
-        for line in Path(out_path).read_text().splitlines():
-            if line.strip():
-                dialect = json.loads(line)["dialect"]
-                if dialect not in selected:
-                    preserved.setdefault(dialect, []).append(line)
-    output = {}
-    for rec in deduped:
-        output.setdefault(rec["dialect"], []).append(json.dumps(rec))
-    output.update(preserved)
-    with open(out_path, "w") as f:
-        for dialect in sorted(d for d in output if d):
-            for line in output[dialect]:
+        out_path = "testdata/dialect_identity.jsonl"
+        preserved = {}
+        if args.dialects is not None and Path(out_path).exists():
+            for line in Path(out_path).read_text().splitlines():
+                if line.strip():
+                    dialect = json.loads(line)["dialect"]
+                    if dialect not in selected:
+                        preserved.setdefault(dialect, []).append(line)
+        output = {}
+        for rec in deduped:
+            output.setdefault(rec["dialect"], []).append(json.dumps(rec))
+        output.update(preserved)
+        with open(out_path, "w") as f:
+            for dialect in sorted(d for d in output if d):
+                for line in output[dialect]:
+                    f.write(line + "\n")
+            for line in output.get("", []):
                 f.write(line + "\n")
-        for line in output.get("", []):
-            f.write(line + "\n")
 
-    print(f"captured {len(captured)} validate_identity call(s)", file=sys.stderr)
-    for dialect in sorted(output):
-        print(f"  {dialect or 'base'}: {len(output[dialect])}", file=sys.stderr)
-    count = sum(len(lines) for lines in output.values())
-    print(f"wrote {count} deduped record(s) to {out_path}", file=sys.stderr)
+        print(f"captured {len(captured)} validate_identity call(s)", file=sys.stderr)
+        for dialect in sorted(output):
+            print(f"  {dialect or 'base'}: {len(output[dialect])}", file=sys.stderr)
+        count = sum(len(lines) for lines in output.values())
+        print(f"wrote {count} deduped record(s) to {out_path}", file=sys.stderr)
+
+    if args.dialects is not None:
+        # A partial run only fires validate_all for the selected classes, so rewriting here
+        # would drop every pair owned by the other classes. Transpile extraction is full-run-only.
+        print(
+            "partial run: testdata/transpile_corpus.jsonl left unchanged",
+            file=sys.stderr,
+        )
+        return
+
+    tp_records = {}
+    for rec in transpile_captured:
+        key = (rec["read"], rec["write"], rec["sql"], rec["want"], rec["pretty"], rec["identify"])
+        tp_records[key] = rec
+    tp_deduped = sorted(
+        tp_records.values(),
+        key=lambda r: (r["read"], r["write"], r["sql"], r["want"], r["pretty"], r["identify"]),
+    )
+    tp_path = "testdata/transpile_corpus.jsonl"
+    with open(tp_path, "w") as f:
+        for rec in tp_deduped:
+            f.write(json.dumps(rec) + "\n")
+
+    pair_counts = {}
+    for rec in tp_deduped:
+        pair = (rec["read"], rec["write"])
+        pair_counts[pair] = pair_counts.get(pair, 0) + 1
+    print(
+        f"wrote {len(tp_deduped)} deduped transpile record(s) "
+        f"across {len(pair_counts)} dialect pair(s) to {tp_path}",
+        file=sys.stderr,
+    )
+    for (read_dialect, write_dialect), n in sorted(pair_counts.items()):
+        print(f"  {read_dialect or 'base'} -> {write_dialect or 'base'}: {n}", file=sys.stderr)
 
 
 if __name__ == "__main__":
