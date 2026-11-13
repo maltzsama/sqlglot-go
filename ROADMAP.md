@@ -121,7 +121,7 @@ differential-check against the pinned Python):
   `optimizer/testdata/annotate_gaps.txt`.
 - CROSS-DIALECT transpilation: verified against upstream's `validate_all` read/write pairs —
   `TestTranspileCorpus` runs every pair whose dialects are all registered (`testdata/transpile_corpus.jsonl`,
-  8368 pairs, 5766 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
+  8497 pairs, 5854 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
   What remains are the per-dialect override tables that make cross-dialect output correct — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
@@ -974,17 +974,20 @@ each read pair asserts `parse_one(read_sql, read_dialect).sql(self.dialect) == s
 pair asserts `expression.sql(write_dialect) == write_sql`.
 
 - **Extraction** — `scripts/extract_dialect_corpus.py --transpile-only` records every pair whose
-  dialects are all registered into `testdata/transpile_corpus.jsonl`: **8368 records across 264
-  dialect pairs** (6298 cross-dialect, 2070 same-dialect), deduped and sorted for a byte-stable
-  rerun (verified: two consecutive runs are identical). Unregistered-dialect pairs and
+  dialects are all registered into `testdata/transpile_corpus.jsonl`: **8497 records across 284
+  dialect pairs** (6427 cross-dialect, 2070 same-dialect), deduped and sorted for a byte-stable
+  rerun (verified: two consecutive runs are identical). `REGISTERED` mirrors `dialects.GetOrRaise`,
+  so it also holds `spark2` — which upstream's test classes only ever name as a read/write key,
+  111 of them, with no `TestSpark2` class of its own to run — and the `mariadb` alias, though
+  upstream ships no MariaDB dialect and yields zero keys. Unregistered-dialect pairs and
   `UnsupportedError` wants are skipped. The issue's ~1.1k figure counted `validate_all` call sites
   in 12 test files; the extractor runs every registered dialect's test class plus `TestDialect`
   (base, `dialect = None` → `""`) and records each read/write *entry*, which reconciles to the
   larger pair count. The new `--transpile-only` flag leaves `testdata/dialect_identity.jsonl`
   byte-identical: a plain full run rewrites every identity section and would drop the hand-added
-  MySQL/Postgres/base records that per-dialect `--dialects` runs preserve verbatim. Three
-  log-asserting methods joined `KNOWN_FAILURES` after verifying each fails at/after its last
-  capture call, so no record is silently lost: `TestPostgres.test_array_offset`,
+  MySQL/Postgres/base records that per-dialect `--dialects` runs preserve verbatim. Four
+  log-asserting methods are allowlisted in `KNOWN_FAILURES`, each verified to fail at/after its
+  last capture call, so no record is silently lost: `TestPostgres.test_array_offset`,
   `TestClickhouse.test_array_offset`, `TestDuckDB.test_array_index`, `TestBigQuery.test_warnings`.
 - **Harness** — `transpile_corpus_test.go` (`TestTranspileCorpus`) mirrors `corpus_test.go`: parse
   under `read`, generate under `write`, and require (a) every failure be listed in
@@ -993,8 +996,8 @@ pair asserts `expression.sql(write_dialect) == write_sql`.
   `parse:` category), (c) per-write-dialect total floors against dropped records. Regenerate the
   gaps file and print observed counts with
   `SQLGLOT_TRANSPILE_UPDATE=1 go test . -run TestTranspileCorpus -v`.
-- **Initial state** — **5766/8368 pass (69%)**, 2602 tracked gaps: 1717 `gen: transpile mismatch`,
-  777 `gen: cast/type`, 65 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
+- **Initial state** — **5854/8497 pass (69%)**, 2643 tracked gaps: 1743 `gen: transpile mismatch`,
+  790 `gen: cast/type`, 67 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
   slice is the per-dialect generator work listed under Remaining work.
 - **Bug found by the first run** — `SELECT e'Hello\nworld'` (duckdb → bigquery) crashed the test
   binary with a stack overflow: `bytestringSQL`'s cast-wrap branch rebuilt its child ByteString

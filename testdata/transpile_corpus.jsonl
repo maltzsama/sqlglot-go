@@ -1462,6 +1462,33 @@
 {"read": "", "write": "spark", "sql": "true or null as \"foo\"", "want": "TRUE OR NULL AS `foo`", "pretty": false, "identify": false}
 {"read": "", "write": "spark", "sql": "x ILIKE '%y'", "want": "x ILIKE '%y'", "pretty": false, "identify": false}
 {"read": "", "write": "spark", "sql": "x[y]", "want": "x[y]", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "ARRAY_ANY(arr, x -> pred)", "want": "(SIZE(arr) = 0 OR SIZE(FILTER(arr, x -> pred)) <> 0)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "ARRAY_SLICE(x, 1, 3)", "want": "SLICE(x, 1, 3)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "FORMAT('str fmt1 fmt2', 1, 'a')", "want": "FORMAT_STRING('str fmt1 fmt2', 1, 'a')", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "GROUPING(x)", "want": "GROUPING(x)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "LOG(10, a)", "want": "LOG(10, a)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "LOG(2, a)", "want": "LOG(2, a)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "LTRIM('Hello World')", "want": "LTRIM('Hello World')", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "LTRIM('Hello World', 'H')", "want": "TRIM(LEADING 'H' FROM 'Hello World')", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "REVERSE(x)", "want": "REVERSE(x)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "RTRIM('Hello World')", "want": "RTRIM('Hello World')", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "RTRIM('Hello World', 'd')", "want": "TRIM(TRAILING 'd' FROM 'Hello World')", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "SELECT * FROM (WITH t AS (SELECT 1 AS c) SELECT c FROM t) AS subq", "want": "WITH t AS (SELECT 1 AS c) SELECT * FROM (SELECT c FROM t) AS subq", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "SELECT 1 AS \"x`\"", "want": "SELECT 1 AS `x```", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "SELECT LPAD('bar', 5)", "want": "SELECT LPAD('bar', 5, ' ')", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "SELECT LPAD('bar', 5, ' ')", "want": "SELECT LPAD('bar', 5, ' ')", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "SELECT NVL2(a, b)", "want": "SELECT NVL2(a, b)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "SELECT NVL2(a, b, c)", "want": "SELECT NVL2(a, b, c)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "SELECT RPAD('bar', 5)", "want": "SELECT RPAD('bar', 5, ' ')", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "SELECT RPAD('bar', 5, ' ')", "want": "SELECT RPAD('bar', 5, ' ')", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "SELECT a FROM x CROSS JOIN UNNEST(y) WITH ORDINALITY AS t (a)", "want": "SELECT a FROM x LATERAL VIEW POSEXPLODE(y) t AS pos, a", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "SOUNDEX(x)", "want": "SOUNDEX(x)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "STR_POSITION(haystack, needle)", "want": "LOCATE(needle, haystack)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "STR_POSITION(haystack, needle, position)", "want": "LOCATE(needle, haystack, position)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "TRANSLATE(x, y, z)", "want": "TRANSLATE(x, y, z)", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "TRIM('abc', 'a')", "want": "TRIM('a' FROM 'abc')", "pretty": false, "identify": false}
+{"read": "", "write": "spark2", "sql": "UUID()", "want": "UUID()", "pretty": false, "identify": false}
 {"read": "", "write": "starrocks", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
 {"read": "", "write": "starrocks", "sql": "ARRAY_REMOVE(the_array, target)", "want": "ARRAY_REMOVE(the_array, target)", "pretty": false, "identify": false}
 {"read": "", "write": "starrocks", "sql": "CAST(a AS BINARY(4))", "want": "CAST(a AS BINARY(4))", "pretty": false, "identify": false}
@@ -2605,6 +2632,17 @@
 {"read": "bigquery", "write": "spark", "sql": "current_datetime", "want": "CURRENT_DATETIME()", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "current_time", "want": "CURRENT_TIME()", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "r\"\"\"/\\*.*\\*/\"\"\"", "want": "'/\\\\*.*\\\\*/'", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "ARRAY_CONCAT([1, 2], [3, 4], [5, 6])", "want": "CONCAT(ARRAY(1, 2), ARRAY(3, 4), ARRAY(5, 6))", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SAFE_DIVIDE(x + 1, 2 * y)", "want": "IF((2 * y) <> 0, (x + 1) / (2 * y), NULL)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SAFE_DIVIDE(x, y)", "want": "IF(y <> 0, x / y, NULL)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SELECT * FROM UNNEST([STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob', 92), STRUCT('Diana', 95)])", "want": "SELECT * FROM EXPLODE(ARRAY(STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob' AS name, 92 AS score), STRUCT('Diana' AS name, 95 AS score)))", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SELECT * FROM UNNEST([STRUCT('Alice' AS name, STRUCT(85 AS math, 90 AS english) AS scores), STRUCT('Bob' AS name, STRUCT(92 AS math, 88 AS english) AS scores)])", "want": "SELECT * FROM EXPLODE(ARRAY(STRUCT('Alice' AS name, STRUCT(85 AS math, 90 AS english) AS scores), STRUCT('Bob' AS name, STRUCT(92 AS math, 88 AS english) AS scores)))", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET ", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS offset, ref", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS pos", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS pos, ref", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SELECT GENERATE_UUID()", "want": "SELECT CAST(UUID() AS STRING)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 as a, 'abc' AS b), STRUCT(str_col AS abc)", "want": "SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 AS a, 'abc' AS b), STRUCT(str_col AS abc)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SHA256(x)", "want": "SHA2(x, 256)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SHA512(x)", "want": "SHA2(x, 512)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "starrocks", "sql": "DATE_DIFF(DATE '2010-07-07', DATE '2008-12-25', DAY)", "want": "DATE_DIFF('DAY', CAST('2010-07-07' AS DATE), CAST('2008-12-25' AS DATE))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "starrocks", "sql": "DATE_DIFF(DATE '2010-07-07', DATE '2008-12-25', MINUTE)", "want": "DATE_DIFF('MINUTE', CAST('2010-07-07' AS DATE), CAST('2008-12-25' AS DATE))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "starrocks", "sql": "REGEXP_CONTAINS('foo', '.*')", "want": "REGEXP('foo', '.*')", "pretty": false, "identify": false}
@@ -3028,6 +3066,7 @@
 {"read": "databricks", "write": "spark", "sql": "SELECT X'1A2B'", "want": "SELECT X'1A2B'", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "SELECT c1:item[1].price", "want": "SELECT GET_JSON_OBJECT(c1, '$.item[1].price')", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "WITH RECURSIVE t(n) AS (SELECT * FROM VALUES (1) AS _values) SELECT n FROM t", "want": "WITH RECURSIVE t(n) AS (SELECT * FROM VALUES (1) AS _values) SELECT n FROM t", "pretty": false, "identify": false}
+{"read": "databricks", "write": "spark2", "sql": "SELECT X'1A2B'", "want": "SELECT X'1A2B'", "pretty": false, "identify": false}
 {"read": "databricks", "write": "tsql", "sql": "CREATE TABLE foo (x INT GENERATED ALWAYS AS (YEAR(y)))", "want": "CREATE TABLE foo (x AS YEAR(y))", "pretty": false, "identify": false}
 {"read": "databricks", "write": "tsql", "sql": "SELECT DATEADD(year, 1, '2020-01-01')", "want": "SELECT DATEADD(YEAR, 1, '2020-01-01')", "pretty": false, "identify": false}
 {"read": "databricks", "write": "tsql", "sql": "SELECT DATEDIFF(year, 'start', 'end')", "want": "SELECT DATEDIFF(YEAR, 'start', 'end')", "pretty": false, "identify": false}
@@ -3654,6 +3693,7 @@
 {"read": "duckdb", "write": "spark", "sql": "WITH t AS (SELECT 5 AS c) SELECT RANGE(1, c) FROM t", "want": "WITH t AS (SELECT 5 AS c) SELECT IF((c - 1) < 1, ARRAY(), SEQUENCE(1, (c - 1))) FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark", "sql": "[0, 1, 2]", "want": "ARRAY(0, 1, 2)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark", "sql": "cast([[1]] as int[][])", "want": "CAST(ARRAY(ARRAY(1)) AS ARRAY<ARRAY<INT>>)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "spark2", "sql": "SELECT TIMESTAMP 'foo'", "want": "SELECT CAST('foo' AS TIMESTAMP)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT MAP(['a', 'b'], [1, 2])", "want": "SELECT MAP('a', 1, 'b', 2)", "pretty": false, "identify": false}
@@ -4087,6 +4127,23 @@
 {"read": "hive", "write": "spark", "sql": "x DIV y", "want": "x DIV y", "pretty": false, "identify": false}
 {"read": "hive", "write": "spark", "sql": "x | 1", "want": "x | 1", "pretty": false, "identify": false}
 {"read": "hive", "write": "spark", "sql": "~x", "want": "~x", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "ALTER TABLE db.example_table ADD PARTITION(col_a = 'a') LOCATION 'b'", "want": "ALTER TABLE db.example_table ADD PARTITION(col_a = 'a') LOCATION 'b'", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "PERCENTILE(x, 0.5)", "want": "PERCENTILE(x, 0.5)", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "REGEXP_EXTRACT('abc', '(a)(b)(c)')", "want": "REGEXP_EXTRACT('abc', '(a)(b)(c)')", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT * FROM t1 FULL OUTER JOIN t2 ON TRUE", "want": "SELECT * FROM t1 FULL OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT * FROM t1 INNER JOIN t2 ON TRUE", "want": "SELECT * FROM t1 INNER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT * FROM t1 LEFT JOIN t2 ON TRUE", "want": "SELECT * FROM t1 LEFT JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT * FROM t1 LEFT OUTER JOIN t2 ON TRUE", "want": "SELECT * FROM t1 LEFT OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT * FROM t1 RIGHT JOIN t2 ON TRUE", "want": "SELECT * FROM t1 RIGHT JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT * FROM t1 RIGHT OUTER JOIN t2 ON TRUE", "want": "SELECT * FROM t1 RIGHT OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT EXISTS(ARRAY(2, 3), x -> x % 2 = 0)", "want": "SELECT EXISTS(ARRAY(2, 3), x -> x % 2 = 0)", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT FIRST(sample_col, TRUE)", "want": "SELECT FIRST(sample_col, TRUE)", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT FIRST_VALUE(sample_col, TRUE)", "want": "SELECT FIRST_VALUE(sample_col, TRUE)", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT LAST(sample_col, TRUE)", "want": "SELECT LAST(sample_col, TRUE)", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT LAST_VALUE(sample_col, TRUE)", "want": "SELECT LAST_VALUE(sample_col, TRUE)", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "SELECT MAP(*), STRUCT(*) FROM t", "want": "SELECT MAP(*), STRUCT(*) FROM t", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT GET_JSON_OBJECT(c, '$.x-y') FROM t", "want": "WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT GET_JSON_OBJECT(c, '$.x-y') FROM t", "pretty": false, "identify": false}
+{"read": "hive", "write": "spark2", "sql": "x DIV y", "want": "x DIV y", "pretty": false, "identify": false}
 {"read": "hive", "write": "starrocks", "sql": "SELECT MAP('a', 1, 'b', 2)", "want": "SELECT MAP('a', 1, 'b', 2)", "pretty": false, "identify": false}
 {"read": "hive", "write": "trino", "sql": "COLLECT_SET(x)", "want": "ARRAY_AGG(DISTINCT x)", "pretty": false, "identify": false}
 {"read": "hive", "write": "trino", "sql": "REGEXP_EXTRACT('abc', '(a)(b)(c)')", "want": "REGEXP_EXTRACT('abc', '(a)(b)(c)', 1)", "pretty": false, "identify": false}
@@ -4688,6 +4745,7 @@
 {"read": "oracle", "write": "spark", "sql": "TRUNC(CAST(x AS TIMESTAMP), 'MONTH')", "want": "TRUNC(CAST(x AS TIMESTAMP), 'MONTH')", "pretty": false, "identify": false}
 {"read": "oracle", "write": "spark", "sql": "TRUNC(CAST(x AS TIMESTAMP), 'SECOND')", "want": "TRUNC(CAST(x AS TIMESTAMP), 'SECOND')", "pretty": false, "identify": false}
 {"read": "oracle", "write": "spark", "sql": "TRUNC(CAST(x AS TIMESTAMP), 'YEAR')", "want": "TRUNC(CAST(x AS TIMESTAMP), 'YEAR')", "pretty": false, "identify": false}
+{"read": "oracle", "write": "spark2", "sql": "TO_NUMBER(x)", "want": "CAST(x AS DOUBLE)", "pretty": false, "identify": false}
 {"read": "oracle", "write": "starrocks", "sql": "TO_NUMBER(x)", "want": "CAST(x AS DOUBLE)", "pretty": false, "identify": false}
 {"read": "oracle", "write": "tsql", "sql": "SELECT * FROM t FETCH FIRST 10 ROWS ONLY", "want": "SELECT * FROM t ORDER BY (SELECT NULL) OFFSET 0 ROWS FETCH FIRST 10 ROWS ONLY", "pretty": false, "identify": false}
 {"read": "oracle", "write": "tsql", "sql": "SELECT NEXT VALUE FOR db.schema.sequence_name", "want": "SELECT NEXT VALUE FOR db.schema.sequence_name", "pretty": false, "identify": false}
@@ -5078,6 +5136,10 @@
 {"read": "postgres", "write": "spark", "sql": "TRIM(BOTH 'as' FROM 'as string as')", "want": "TRIM(BOTH 'as' FROM 'as string as')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "TRUNC(3.14159, 2)", "want": "CAST(3.14159 AS BIGINT)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "WITH t AS (SELECT ARRAY[1, 2, 3] AS col) SELECT * FROM t WHERE 1 <= ANY(col) AND 2 = ANY(col)", "want": "WITH t AS (SELECT ARRAY(1, 2, 3) AS col) SELECT * FROM t WHERE EXISTS(col, x -> 1 <= x) AND EXISTS(col, x -> 2 = x)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "spark2", "sql": "ARRAY_LENGTH(arr, 1)", "want": "SIZE(arr)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "spark2", "sql": "GENERATE_SERIES('2019-01-01'::TIMESTAMP, NOW(), '1day')", "want": "EXPLODE(SEQUENCE(CAST('2019-01-01' AS TIMESTAMP), CAST(CURRENT_TIMESTAMP() AS TIMESTAMP), INTERVAL '1' DAY))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "spark2", "sql": "SELECT * FROM GENERATE_SERIES(a, b)", "want": "SELECT * FROM EXPLODE(SEQUENCE(a, b))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "spark2", "sql": "WITH t AS (SELECT ARRAY[1, 2, 3] AS col) SELECT * FROM t WHERE 1 <= ANY(col) AND 2 = ANY(col)", "want": "WITH t AS (SELECT ARRAY(1, 2, 3) AS col) SELECT * FROM t WHERE EXISTS(col, x -> 1 <= x) AND EXISTS(col, x -> 2 = x)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "starrocks", "sql": "SELECT ARRAY[1, 2, 3] @> ARRAY[1, 2]", "want": "SELECT ARRAY_CONTAINS_ALL([1, 2, 3], [1, 2])", "pretty": false, "identify": false}
 {"read": "postgres", "write": "starrocks", "sql": "SELECT ARRAY[1, 2] <@ ARRAY[1, 2, 3]", "want": "SELECT ARRAY_CONTAINS_ALL([1, 2, 3], [1, 2])", "pretty": false, "identify": false}
 {"read": "postgres", "write": "starrocks", "sql": "UPDATE foo SET a = bar.a, b = bar.b FROM bar WHERE foo.id = bar.id", "want": "UPDATE foo SET a = bar.a, b = bar.b FROM bar WHERE foo.id = bar.id", "pretty": false, "identify": false}
@@ -5619,6 +5681,9 @@
 {"read": "presto", "write": "spark", "sql": "u&'Hello winter #2603 !' UESCAPE '#'", "want": "'Hello winter \\u2603 !'", "pretty": false, "identify": false}
 {"read": "presto", "write": "spark", "sql": "u&'Hello winter \\2603 !'", "want": "'Hello winter \\u2603 !'", "pretty": false, "identify": false}
 {"read": "presto", "write": "spark", "sql": "x IN ('a', 'a''b')", "want": "x IN ('a', 'a\\'b')", "pretty": false, "identify": false}
+{"read": "presto", "write": "spark2", "sql": "ARBITRARY(x)", "want": "FIRST(x)", "pretty": false, "identify": false}
+{"read": "presto", "write": "spark2", "sql": "IS_NAN(x)", "want": "ISNAN(x)", "pretty": false, "identify": false}
+{"read": "presto", "write": "spark2", "sql": "REGEXP_EXTRACT('abc', '(a)(b)(c)')", "want": "REGEXP_EXTRACT('abc', '(a)(b)(c)', 0)", "pretty": false, "identify": false}
 {"read": "presto", "write": "starrocks", "sql": "SELECT MAP(ARRAY['a', 'b'], ARRAY[1, 2])", "want": "SELECT MAP('a', 1, 'b', 2)", "pretty": false, "identify": false}
 {"read": "presto", "write": "starrocks", "sql": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "want": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "pretty": false, "identify": false}
 {"read": "presto", "write": "starrocks", "sql": "SIGN(x)", "want": "SIGN(x)", "pretty": false, "identify": false}
@@ -5812,6 +5877,7 @@
 {"read": "redshift", "write": "spark", "sql": "SELECT DATEADD(month, 18, '2008-02-28')", "want": "SELECT DATE_ADD(MONTH, 18, '2008-02-28')", "pretty": false, "identify": false}
 {"read": "redshift", "write": "spark", "sql": "SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC", "want": "SELECT a, b FROM (SELECT a AS a, b AS b, ROW_NUMBER() OVER (PARTITION BY a ORDER BY c DESC NULLS FIRST) AS _row_number FROM x) AS _t WHERE _row_number = 1", "pretty": false, "identify": false}
 {"read": "redshift", "write": "spark", "sql": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "want": "SELECT GET_JSON_OBJECT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', '$.farm.barn.color')", "pretty": false, "identify": false}
+{"read": "redshift", "write": "spark2", "sql": "SELECT DATEADD(month, 18, '2008-02-28')", "want": "SELECT ADD_MONTHS('2008-02-28', 18)", "pretty": false, "identify": false}
 {"read": "redshift", "write": "starrocks", "sql": "SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC", "want": "SELECT a, b FROM (SELECT a AS a, b AS b, ROW_NUMBER() OVER (PARTITION BY a ORDER BY CASE WHEN c IS NULL THEN 1 ELSE 0 END DESC, c DESC) AS _row_number FROM x) AS _t WHERE _row_number = 1", "pretty": false, "identify": false}
 {"read": "redshift", "write": "trino", "sql": "CREATE TABLE t1 (LIKE t2)", "want": "CREATE TABLE t1 (LIKE t2)", "pretty": false, "identify": false}
 {"read": "redshift", "write": "trino", "sql": "CREATE TABLE t1 (col VARCHAR, LIKE t2)", "want": "CREATE TABLE t1 (col VARCHAR, LIKE t2)", "pretty": false, "identify": false}
@@ -7203,6 +7269,8 @@
 {"read": "snowflake", "write": "spark", "sql": "TRUNC(3.14159, 2)", "want": "CAST(3.14159 AS BIGINT)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "spark", "sql": "UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')", "want": "CAST(UUID() AS STRING)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "spark", "sql": "ZEROIFNULL(foo)", "want": "IF(foo IS NULL, 0, foo)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "spark2", "sql": "REGEXP_SUBSTR(subject, pattern, 1, 1, 'c', 1)", "want": "REGEXP_EXTRACT(subject, pattern)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "spark2", "sql": "UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')", "want": "CAST(UUID() AS STRING)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "starrocks", "sql": "SELECT ARRAY_FLATTEN([['a', 'b'], ['c', 'd', 'e']])", "want": "SELECT ARRAY_FLATTEN([['a', 'b'], ['c', 'd', 'e']])", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "starrocks", "sql": "SELECT ARRAY_INTERSECTION([1, 2], [2, 3])", "want": "SELECT ARRAY_INTERSECT([1, 2], [2, 3])", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "starrocks", "sql": "SELECT CURRENT_VERSION()", "want": "SELECT CURRENT_VERSION()", "pretty": false, "identify": false}
@@ -7747,6 +7815,14 @@
 {"read": "spark", "write": "spark", "sql": "WITH RECURSIVE t(n) AS (SELECT * FROM VALUES (1) AS _values) SELECT n FROM t", "want": "WITH RECURSIVE t(n) AS (SELECT * FROM VALUES (1) AS _values) SELECT n FROM t", "pretty": false, "identify": false}
 {"read": "spark", "write": "spark", "sql": "WITH tbl AS (SELECT 1 AS id, 'eggy' AS name UNION ALL SELECT NULL AS id, 'jake' AS name) SELECT COUNT(DISTINCT id, name) AS cnt FROM tbl", "want": "WITH tbl AS (SELECT 1 AS id, 'eggy' AS name UNION ALL SELECT NULL AS id, 'jake' AS name) SELECT COUNT(DISTINCT id, name) AS cnt FROM tbl", "pretty": false, "identify": false}
 {"read": "spark", "write": "spark", "sql": "YEAR('2021-03-01')", "want": "YEAR('2021-03-01')", "pretty": false, "identify": false}
+{"read": "spark", "write": "spark2", "sql": "INSERT OVERWRITE TABLE table WITH cte AS (SELECT cola FROM other_table) SELECT cola FROM cte", "want": "WITH cte AS (SELECT cola FROM other_table) INSERT OVERWRITE TABLE table SELECT cola FROM cte", "pretty": false, "identify": false}
+{"read": "spark", "write": "spark2", "sql": "SELECT CAST(123456 AS VARCHAR(3))", "want": "SELECT CAST(123456 AS STRING)", "pretty": false, "identify": false}
+{"read": "spark", "write": "spark2", "sql": "SELECT CAST(col AS TIMESTAMP)", "want": "SELECT CAST(col AS TIMESTAMP)", "pretty": false, "identify": false}
+{"read": "spark", "write": "spark2", "sql": "SELECT DATEDIFF(MONTH, '2020-01-01', '2020-03-05')", "want": "SELECT CAST(MONTHS_BETWEEN('2020-03-05', '2020-01-01') AS INT)", "pretty": false, "identify": false}
+{"read": "spark", "write": "spark2", "sql": "SELECT DATEDIFF(MONTH, CAST('1996-10-30' AS TIMESTAMP), CAST('1997-02-28 10:30:00' AS TIMESTAMP))", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('1997-02-28 10:30:00' AS TIMESTAMP), CAST('1996-10-30' AS TIMESTAMP)) AS INT)", "pretty": false, "identify": false}
+{"read": "spark", "write": "spark2", "sql": "SELECT DATE_ADD(my_date_column, 1)", "want": "SELECT DATE_ADD(my_date_column, 1)", "pretty": false, "identify": false}
+{"read": "spark", "write": "spark2", "sql": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "want": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "pretty": false, "identify": false}
+{"read": "spark", "write": "spark2", "sql": "SELECT TRY_CAST('a' AS INT)", "want": "SELECT CAST('a' AS INT)", "pretty": false, "identify": false}
 {"read": "spark", "write": "starrocks", "sql": "SELECT MAP('a', 1, 'b', 2)", "want": "SELECT MAP('a', 1, 'b', 2)", "pretty": false, "identify": false}
 {"read": "spark", "write": "starrocks", "sql": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "want": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "pretty": false, "identify": false}
 {"read": "spark", "write": "trino", "sql": "AGGREGATE(my_arr, 0, (acc, x) -> acc + x, s -> s * 2)", "want": "REDUCE(my_arr, 0, (acc, x) -> acc + x, s -> s * 2)", "pretty": false, "identify": false}
@@ -7772,6 +7848,46 @@
 {"read": "spark", "write": "tsql", "sql": "SHA(x)", "want": "HASHBYTES('SHA1', x)", "pretty": false, "identify": false}
 {"read": "spark", "write": "tsql", "sql": "SHA2(x, 256)", "want": "HASHBYTES('SHA2_256', x)", "pretty": false, "identify": false}
 {"read": "spark", "write": "tsql", "sql": "SHA2(x, 512)", "want": "HASHBYTES('SHA2_512', x)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "GROUPING(x)", "want": "GROUPING(x)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "INSTR(haystack, needle)", "want": "STR_POSITION(haystack, needle)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "LOCATE(needle, haystack)", "want": "STR_POSITION(haystack, needle)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "LOCATE(needle, haystack, position)", "want": "STR_POSITION(haystack, needle, position)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "LTRIM('H', 'Hello World')", "want": "LTRIM('Hello World', 'H')", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "LTRIM('Hello World')", "want": "LTRIM('Hello World')", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "POSITION(needle in haystack)", "want": "STR_POSITION(haystack, needle)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "POSITION(needle, haystack)", "want": "STR_POSITION(haystack, needle)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "POSITION(needle, haystack, position)", "want": "STR_POSITION(haystack, needle, position)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "REVERSE(x)", "want": "REVERSE(x)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "RTRIM('Hello World')", "want": "RTRIM('Hello World')", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "RTRIM('d', 'Hello World')", "want": "RTRIM('Hello World', 'd')", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "SELECT * FROM (SELECT 1 AS col) apply", "want": "SELECT * FROM (SELECT 1 AS col) AS apply", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "SELECT 1 AS `x```", "want": "SELECT 1 AS \"x`\"", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "SLICE(x, 1, 3)", "want": "ARRAY_SLICE(x, 1, 3)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "SOUNDEX(x)", "want": "SOUNDEX(x)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "TRANSLATE(x, y, z)", "want": "TRANSLATE(x, y, z)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "TRIM('a', 'abc')", "want": "TRIM('abc', 'a')", "pretty": false, "identify": false}
+{"read": "spark2", "write": "", "sql": "UUID()", "want": "UUID()", "pretty": false, "identify": false}
+{"read": "spark2", "write": "databricks", "sql": "SELECT X'1A2B'", "want": "SELECT X'1A2B'", "pretty": false, "identify": false}
+{"read": "spark2", "write": "duckdb", "sql": "DATEDIFF(a, b)", "want": "DATE_DIFF('DAY', CAST(b AS DATE), CAST(a AS DATE))", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "ALTER TABLE db.example_table ADD PARTITION(col_a = 'a') LOCATION 'b'", "want": "ALTER TABLE db.example_table ADD PARTITION(col_a = 'a') LOCATION 'b'", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "PERCENTILE(ALL x, 0.5)", "want": "PERCENTILE(x, 0.5)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "PERCENTILE_APPROX(ALL x, 0.5)", "want": "PERCENTILE_APPROX(x, 0.5)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "PERCENTILE_APPROX(ALL x, 0.5, 200)", "want": "PERCENTILE_APPROX(x, 0.5, 200)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "REGEXP_EXTRACT('abc', '(a)(b)(c)')", "want": "REGEXP_EXTRACT('abc', '(a)(b)(c)')", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "SELECT * FROM t1 FULL OUTER JOIN t2", "want": "SELECT * FROM t1 FULL OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "SELECT * FROM t1 INNER JOIN t2", "want": "SELECT * FROM t1 INNER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "SELECT * FROM t1 LEFT JOIN t2", "want": "SELECT * FROM t1 LEFT JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "SELECT * FROM t1 LEFT OUTER JOIN t2", "want": "SELECT * FROM t1 LEFT OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "SELECT * FROM t1 RIGHT JOIN t2", "want": "SELECT * FROM t1 RIGHT JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "SELECT * FROM t1 RIGHT OUTER JOIN t2", "want": "SELECT * FROM t1 RIGHT OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "SELECT EXISTS(ARRAY(2, 3), x -> x % 2 = 0)", "want": "SELECT EXISTS(ARRAY(2, 3), x -> x % 2 = 0)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "SELECT MAP(*), STRUCT(*) FROM t", "want": "SELECT MAP(*), STRUCT(*) FROM t", "pretty": false, "identify": false}
+{"read": "spark2", "write": "hive", "sql": "x DIV y", "want": "x DIV y", "pretty": false, "identify": false}
+{"read": "spark2", "write": "postgres", "sql": "SIZE(arr)", "want": "ARRAY_LENGTH(arr, 1)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "presto", "sql": "FIRST(x)", "want": "ARBITRARY(x)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "snowflake", "sql": "REGEXP_EXTRACT(subject, pattern)", "want": "REGEXP_SUBSTR(subject, pattern, 1, 1, 'c', 1)", "pretty": false, "identify": false}
+{"read": "spark2", "write": "spark", "sql": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "want": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "", "sql": "DATE_TRUNC('day', x)", "want": "TIMESTAMP_TRUNC(x, DAY)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "", "sql": "DATE_TRUNC('day', x::DATE)", "want": "TIMESTAMP_TRUNC(CAST(x AS DATE), DAY)", "pretty": false, "identify": false}
@@ -8186,6 +8302,19 @@
 {"read": "tsql", "write": "spark", "sql": "TRY_CONVERT(INT, x)", "want": "TRY_CAST(x AS INT)", "pretty": false, "identify": false}
 {"read": "tsql", "write": "spark", "sql": "TRY_CONVERT(NVARCHAR, x, 121)", "want": "TRY_CAST(DATE_FORMAT(x, 'yyyy-MM-dd HH:mm:ss.SSSSSS') AS VARCHAR(30))", "pretty": false, "identify": false}
 {"read": "tsql", "write": "spark", "sql": "WITH t AS (SELECT 'a.b.c' AS value, 1 AS idx) SELECT SPLIT_PART(value, '.', idx) FROM t", "want": "WITH t AS (SELECT 'a.b.c' AS value, 1 AS idx) SELECT SPLIT_PART(value, '.', idx) FROM t", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "CAST(X AS BIGINT)", "want": "CAST(X AS BIGINT)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "CAST(X AS INT)", "want": "CAST(X AS INT)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "CAST(X AS SMALLINT)", "want": "CAST(X AS SMALLINT)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "CAST(X AS TINYINT)", "want": "CAST(X AS SMALLINT)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "CREATE TABLE #mytemptable (a INTEGER)", "want": "CREATE TEMPORARY TABLE mytemptable (a INT) USING PARQUET", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "CREATE TABLE [dbo].[mytable](\n                [email] [varchar](255) NOT NULL,\n                CONSTRAINT [UN_t_mytable] UNIQUE NONCLUSTERED\n                (\n                    [email] ASC\n                )\n                )", "want": "CREATE TABLE `dbo`.`mytable` (`email` VARCHAR(255) NOT NULL)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "CREATE TABLE x ([zip_cd] VARCHAR(5) NULL NOT FOR REPLICATION, [zip_cd_mkey] VARCHAR(5) NOT NULL, CONSTRAINT [pk_mytable] PRIMARY KEY CLUSTERED ([zip_cd_mkey] ASC) WITH (PAD_INDEX=ON, STATISTICS_NORECOMPUTE=OFF) ON [INDEX]) ON [SECONDARY]", "want": "CREATE TABLE x (`zip_cd` VARCHAR(5), `zip_cd_mkey` VARCHAR(5) NOT NULL, CONSTRAINT `pk_mytable` PRIMARY KEY (`zip_cd_mkey`))", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "SELECT DATEDIFF(mm, 'start', 'end')", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('end' AS TIMESTAMP), CAST('start' AS TIMESTAMP)) AS INT)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "SELECT DATEDIFF(quarter, 'start', 'end')", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('end' AS TIMESTAMP), CAST('start' AS TIMESTAMP)) / 3 AS INT)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "SELECT DATEDIFF(year, '2020-01-01', '2021-01-01')", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('2021-01-01' AS TIMESTAMP), CAST('2020-01-01' AS TIMESTAMP)) / 12 AS INT)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "SELECT DATEDIFF_BIG(mm, 'start', 'end')", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('end' AS TIMESTAMP), CAST('start' AS TIMESTAMP)) AS INT)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "SELECT DATEDIFF_BIG(quarter, 'start', 'end')", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('end' AS TIMESTAMP), CAST('start' AS TIMESTAMP)) / 3 AS INT)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "spark2", "sql": "SELECT DATEDIFF_BIG(year, '2020-01-01', '2021-01-01')", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('2021-01-01' AS TIMESTAMP), CAST('2020-01-01' AS TIMESTAMP)) / 12 AS INT)", "pretty": false, "identify": false}
 {"read": "tsql", "write": "starrocks", "sql": "ALTER TABLE a ALTER COLUMN b INTEGER NOT NULL", "want": "ALTER TABLE a MODIFY COLUMN b INT NOT NULL", "pretty": false, "identify": false}
 {"read": "tsql", "write": "tsql", "sql": "\n            CREATE FUNCTION udfProductInYear (\n                @model_year INT\n            )\n            RETURNS TABLE\n            AS\n            RETURN\n                SELECT\n                    product_name,\n                    model_year,\n                    list_price\n                FROM\n                    production.products\n                WHERE\n                    model_year = @model_year\n            ", "want": "CREATE FUNCTION udfProductInYear(\n    @model_year INTEGER\n)\nRETURNS TABLE AS\nRETURN SELECT\n  product_name,\n  model_year,\n  list_price\nFROM production.products\nWHERE\n  model_year = @model_year", "pretty": true, "identify": false}
 {"read": "tsql", "write": "tsql", "sql": "\n            SELECT *\n            FROM OPENJSON ( @json )\n            WITH (\n                          Number   VARCHAR(200)   '$.Order.Number',\n                          Date     DATETIME       '$.Order.Date',\n                          Customer VARCHAR(200)   '$.AccountNumber',\n                          Quantity INT            '$.Item.Quantity',\n                          [Order]  NVARCHAR(MAX)  AS JSON\n             )\n            ", "want": "SELECT\n  *\nFROM OPENJSON(@json) WITH (\n    Number VARCHAR(200) '$.Order.Number',\n    Date DATETIME '$.Order.Date',\n    Customer VARCHAR(200) '$.AccountNumber',\n    Quantity INTEGER '$.Item.Quantity',\n    [Order] NVARCHAR(MAX) AS JSON\n)", "pretty": true, "identify": false}

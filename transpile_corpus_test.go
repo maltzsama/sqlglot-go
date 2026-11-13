@@ -207,23 +207,24 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 // Read-side parse gaps surface under their target's bucket with a "parse:" category.
 // Pass and total floors are monotonic: raise them, never lower them.
 const (
-	minPassTranspileBase        = 722
+	minPassTranspileBase        = 739
 	minPassTranspileAthena      = 7
 	minPassTranspileBigQuery    = 584
 	minPassTranspileClickhouse  = 181
-	minPassTranspileDatabricks  = 206
+	minPassTranspileDatabricks  = 207
 	minPassTranspileDoris       = 65
 	minPassTranspileDuckDB      = 617
-	minPassTranspileHive        = 370
+	minPassTranspileHive        = 383
 	minPassTranspileMaterialize = 26
 	minPassTranspileMySQL       = 213
 	minPassTranspileOracle      = 157
-	minPassTranspilePostgres    = 299
-	minPassTranspilePresto      = 408
+	minPassTranspilePostgres    = 300
+	minPassTranspilePresto      = 409
 	minPassTranspileRedshift    = 150
 	minPassTranspileRisingWave  = 4
 	minPassTranspileSnowflake   = 663
-	minPassTranspileSpark       = 641
+	minPassTranspileSpark       = 642
+	minPassTranspileSpark2      = 54
 	minPassTranspileStarrocks   = 79
 	minPassTranspileTrino       = 84
 	minPassTranspileTSQL        = 290
@@ -231,23 +232,24 @@ const (
 
 // Total floors catch dropped failing records that pass floors cannot detect.
 const (
-	minTotalTranspileBase        = 881
+	minTotalTranspileBase        = 901
 	minTotalTranspileAthena      = 11
 	minTotalTranspileBigQuery    = 723
 	minTotalTranspileClickhouse  = 240
-	minTotalTranspileDatabricks  = 257
+	minTotalTranspileDatabricks  = 258
 	minTotalTranspileDoris       = 104
-	minTotalTranspileDuckDB      = 1419
-	minTotalTranspileHive        = 491
+	minTotalTranspileDuckDB      = 1420
+	minTotalTranspileHive        = 505
 	minTotalTranspileMaterialize = 32
 	minTotalTranspileMySQL       = 338
 	minTotalTranspileOracle      = 184
-	minTotalTranspilePostgres    = 434
-	minTotalTranspilePresto      = 611
+	minTotalTranspilePostgres    = 435
+	minTotalTranspilePresto      = 612
 	minTotalTranspileRedshift    = 187
 	minTotalTranspileRisingWave  = 6
-	minTotalTranspileSnowflake   = 985
-	minTotalTranspileSpark       = 831
+	minTotalTranspileSnowflake   = 986
+	minTotalTranspileSpark       = 832
+	minTotalTranspileSpark2      = 89
 	minTotalTranspileStarrocks   = 100
 	minTotalTranspileTrino       = 148
 	minTotalTranspileTSQL        = 386
@@ -308,6 +310,7 @@ func TestTranspileCorpus(t *testing.T) {
 		{"risingwave", minPassTranspileRisingWave, minTotalTranspileRisingWave},
 		{"snowflake", minPassTranspileSnowflake, minTotalTranspileSnowflake},
 		{"spark", minPassTranspileSpark, minTotalTranspileSpark},
+		{"spark2", minPassTranspileSpark2, minTotalTranspileSpark2},
 		{"starrocks", minPassTranspileStarrocks, minTotalTranspileStarrocks},
 		{"trino", minPassTranspileTrino, minTotalTranspileTrino},
 		{"tsql", minPassTranspileTSQL, minTotalTranspileTSQL},
@@ -322,7 +325,7 @@ func TestTranspileCorpus(t *testing.T) {
 			pass[floor.dialect], total[floor.dialect], total[floor.dialect]-pass[floor.dialect]))
 	}
 
-	if os.Getenv("SQLGLOT_TRANSPILE_UPDATE") != "" {
+	if os.Getenv("SQLGLOT_TRANSPILE_UPDATE") == "1" {
 		if err := writeTranspileGaps(fails); err != nil {
 			t.Fatalf("write %s: %v", transpileGapsPath, err)
 		}

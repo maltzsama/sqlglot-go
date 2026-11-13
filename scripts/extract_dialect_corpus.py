@@ -88,9 +88,12 @@ DIALECTS = ("bigquery", "duckdb", "snowflake", "mysql", "postgres", "athena", "t
 SAME_DIALECT_WRITES = {"bigquery", "duckdb", "snowflake", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks"}
 
 # Every dialect the Go port registers (dialects.GetOrRaise): the 19 named ones plus base "".
-# A transpile pair is captured only when BOTH of its dialects are in this set, so the corpus
-# never names a dialect the Go harness cannot parse/generate.
-REGISTERED = set(DIALECTS) | {""}
+# "spark2" and "mariadb" have no upstream test class of their own to run — spark2 appears only
+# as a validate_all read/write key inside the classes above (111 keys), and upstream has no
+# MariaDB dialect at all (zero keys) — but GetOrRaise accepts both, so spark2 pairs must be
+# captured. A transpile pair is captured only when BOTH of its dialects are in this set, so the
+# corpus never names a dialect the Go harness cannot parse/generate.
+REGISTERED = set(DIALECTS) | {"", "spark2", "mariadb"}
 
 
 def _norm_dialect(dialect):

@@ -5,7 +5,9 @@ parser, generator, and optimizer). It ports the **parse → AST → generate** c
 parser, generator, schema) plus the `qualify` and `scope` optimizer passes that column qualification
 and **lineage** build on, and the rest of the optimizer with its `optimize()` rule pipeline. It is
 **not** a full port of sqlglot: cross-dialect transpilation *between* the registered dialects is
-verified against upstream's `validate_all` pairs (#33), but dialects beyond the ones `dialects.GetOrRaise` registers (base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris, Oracle) are out of scope for now. This repo is
+verified against upstream's `validate_all` pairs (#33), but dialects beyond the ones `dialects.GetOrRaise` registers (base, MySQL, MariaDB as a MySQL alias, Postgres, Presto, Trino, Hive, Athena,
+TSQL, ClickHouse, StarRocks, Doris, Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark,
+Databricks, BigQuery, DuckDB, Snowflake) are out of scope for now. This repo is
 the SQL engine only; it has no application-specific code.
 
 ## Source of truth (READ THIS FIRST, always)
@@ -57,7 +59,7 @@ and every registered dialect meets its floor in the per-dialect corpus
 `GET_JSON_OBJECT` path rewrite, six BigQuery JSON-path rewrites, 37 DuckDB cases, and 334
 Snowflake cases (`testdata/parity_gaps.txt`). Cross-dialect transpilation is verified the same way
 against upstream's `validate_all` read/write pairs (`testdata/transpile_corpus.jsonl`,
-`TestTranspileCorpus`): 5766/8368 pairs pass, with the open pairs in `testdata/transpile_gaps.txt`.
+`TestTranspileCorpus`): 5854/8497 pairs pass, with the open pairs in `testdata/transpile_gaps.txt`.
 AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
 `exp.Command` where upstream builds a structured node (`fidelity_test.go` +
 `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
