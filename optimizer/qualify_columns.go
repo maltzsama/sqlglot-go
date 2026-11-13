@@ -735,9 +735,15 @@ func qualifyColumnsInScope(scope *Scope, resolver *Resolver, allowPartialQualifi
 		columnName := column.Name()
 
 		if columnTable != "" {
-			if _, ok := scope.Sources[columnTable]; ok {
+			if source, ok := scope.Sources[columnTable]; ok {
 				sourceColumns := resolver.GetSourceColumns(columnTable)
-				// TODO(slice 4c): pivot output column validation.
+				// For pivoted sources, source_columns are pre-pivot; validate against the
+				// post-pivot set (qualify_columns.py:655-663).
+				if tableNode, ok := source.(exp.Expression); ok && tableNode != nil && tableNode.Kind() == exp.KindTable {
+					for _, pivot := range expressionsFor(tableNode, "pivots") {
+						sourceColumns = pivotOutputColumns(pivot, sourceColumns).keys
+					}
+				}
 				if !allowPartialQualification && len(sourceColumns) > 0 && !containsString(sourceColumns, columnName) && !containsString(sourceColumns, "*") {
 					panic(&sqlerrors.OptimizeError{Msg: "Unknown column: " + columnName})
 				}
@@ -764,12 +770,41 @@ func qualifyColumnsInScope(scope *Scope, resolver *Resolver, allowPartialQualifi
 		}
 	}
 
-	for _, pivot := range scope.Pivots() {
+	// A chained operator's IN-list may name columns produced by earlier operators, which no
+	// source exposes; track the chain's accumulated output to resolve them. Attribution is
+	// only unambiguous when all pivots share one parent, i.e. there's a single pivoted
+	// source (qualify_columns.py:699-723).
+	pivots := scope.Pivots()
+	singleChain := len(pivots) > 0 && pivots[0].Parent() == pivots[len(pivots)-1].Parent()
+	produced := map[string]bool{}
+	pivotedSource := ""
+	if singleChain {
+		pivotedSource = pivots[len(pivots)-1].Alias()
+	}
+	var available []string
+	if _, ok := scope.Sources[pivotedSource]; ok {
+		available = resolver.GetSourceColumns(pivotedSource)
+	}
+
+	for _, pivot := range pivots {
 		for _, column := range pivot.FindAll(exp.KindColumn) {
-			if column.Text("table") == "" && resolver.AllColumns()[column.Name()] {
-				if table := resolver.GetTable(column.Name()); table != nil {
+			if column.Text("table") != "" {
+				continue
+			}
+			name := column.Name()
+			if resolver.AllColumns()[name] {
+				if table := resolver.GetTable(name); table != nil {
 					column.Set("table", table)
 				}
+			} else if singleChain && produced[name] {
+				column.Set("table", exp.ToIdentifier(pivotedSource))
+			}
+		}
+
+		if singleChain {
+			available = pivotOutputColumns(pivot, available).keys
+			for _, name := range available {
+				produced[name] = true
 			}
 		}
 	}
@@ -787,12 +822,35 @@ func hasDuplicateName(columns []string) bool {
 	return false
 }
 
+// outputIdentifierQuoted ports _output_identifier_quoted (qualify_columns.py:1038-1048):
+// whether a projection's output column name is a quoted (case-sensitive) identifier.
+func outputIdentifierQuoted(selection exp.Expression) bool {
+	if selection == nil {
+		return false
+	}
+	var identifier exp.Expression
+	switch selection.Kind() {
+	case exp.KindAlias:
+		identifier = asExpression(selection.Arg("alias"))
+	case exp.KindColumn:
+		identifier = selection.This()
+	default:
+		return false
+	}
+	return identifier != nil && identifier.Kind() == exp.KindIdentifier && truthyArg(identifier.Arg("quoted"))
+}
+
+// isTableSource reports whether a scope source is a table node, i.e. `isinstance(source,
+// exp.Table)` in upstream.
+func isTableSource(source any) bool {
+	table, ok := source.(exp.Expression)
+	return ok && table != nil && table.Kind() == exp.KindTable
+}
+
 func expandStarsInScope(scope *Scope, resolver *Resolver, usingColumnTables map[string][]string, pseudocolumns map[string]bool, annotator *TypeAnnotator) {
 	var newSelections []exp.Expression
 	coalescedColumns := map[string]bool{}
 	dialect := resolver.dialect
-
-	// TODO(slice 4c): PIVOT star expansion (scope.Pivots()) is not ported yet.
 
 	if dialect.SupportsStructStarExpansion {
 		for _, col := range scope.Stars() {
@@ -853,12 +911,32 @@ func expandStarsInScope(scope *Scope, resolver *Resolver, usingColumnTables map[
 		}
 
 		for i, table := range tables {
-			if _, ok := scope.Sources[table]; !ok {
-				panic(&sqlerrors.OptimizeError{Msg: "Unknown table: " + table})
+			source, ok := scope.Sources[table]
+			var pivots []exp.Expression
+			sourceTable := table
+
+			if !ok || source == nil {
+				// The chain's final alias names the resulting source, but only the underlying
+				// source is registered in `scope.sources`, so resolve through the chain's parent.
+				// Attribution is only unambiguous for a single chain (all pivots share a parent)
+				// — qualify_columns.py:922-936.
+				chain := scope.Pivots()
+				var parent exp.Expression
+				if len(chain) > 0 && chain[0].Parent() == chain[len(chain)-1].Parent() && chain[len(chain)-1].Alias() == table {
+					parent = chain[len(chain)-1].Parent()
+				}
+				if parent != nil {
+					pivots = chain
+					sourceTable = parent.AliasOrName()
+					source = scope.Sources[sourceTable]
+				}
+				if source == nil {
+					panic(&sqlerrors.OptimizeError{Msg: "Unknown table: " + table})
+				}
 			}
 			tableKey := tableKeys[i]
 
-			columns := resolver.GetSourceColumns(table, true)
+			columns := resolver.GetSourceColumns(sourceTable, true)
 			if len(columns) == 0 {
 				columns = scope.OuterColumns
 			}
@@ -884,7 +962,71 @@ func expandStarsInScope(scope *Scope, resolver *Resolver, usingColumnTables map[
 			renamed := renameColumns[tableKey]
 			replaced := replaceColumns[tableKey]
 
-			// TODO(slice 4c): pivot output column expansion.
+			// Preserve case-sensitivity of quoted source columns when expanding stars,
+			// so the generated alias isn't folded by dialect normalization
+			// (qualify_columns.py:955-965).
+			var sourceExpression exp.Expression
+			if sourceScope, ok := source.(*Scope); ok && sourceScope != nil {
+				sourceExpression = sourceScope.Expression
+			}
+			quotedColumns := map[string]bool{}
+			if sourceExpression != nil && sourceExpression.Is(exp.TraitQuery) {
+				for _, selection := range sourceExpression.Selects() {
+					if outputIdentifierQuoted(selection) {
+						quotedColumns[selection.OutputName()] = true
+					}
+				}
+			}
+
+			// The operators belong to a specific source, so a star over a source joined
+			// alongside it must expand from that source's own columns
+			// (qualify_columns.py:968-979).
+			if pivots == nil {
+				selectedNode := exp.Expression(nil)
+				if selected, ok := scope.SelectedSources()[table]; ok {
+					selectedNode = selected.Node
+				}
+				if selectedNode == nil {
+					if tableNode, ok := source.(exp.Expression); ok && tableNode != nil && tableNode.Kind() == exp.KindTable {
+						// A pivoted CTE reference is registered under the pivot's alias, a name
+						// `references` doesn't know, so it's absent from `selected_sources`
+						selectedNode = tableNode
+					}
+				}
+				if selectedNode != nil {
+					pivots = expressionsFor(selectedNode, "pivots")
+				}
+			}
+
+			if len(pivots) > 0 {
+				// Each operator consumes the previous one's output, so fold them in order
+				// (qualify_columns.py:982-996).
+				pivotColumns := columns
+				for _, pivot := range pivots {
+					folded := pivotOutputColumns(pivot, pivotColumns).keys
+					if len(folded) > 0 {
+						pivotColumns = folded
+					} else {
+						pivotColumns = pivot.AliasColumnNames()
+					}
+				}
+
+				if len(pivotColumns) > 0 {
+					var lastTable any
+					if alias := pivots[len(pivots)-1].Alias(); alias != "" {
+						lastTable = alias
+					}
+					for _, name := range pivotColumns {
+						if columnsToExclude[name] {
+							continue
+						}
+						column := exp.Column_(name, lastTable, nil, nil, nil)
+						newSelections = append(newSelections, exp.AliasExpr(column, name, false))
+					}
+					continue
+				}
+			}
+
 			for _, name := range columns {
 				if columnsToExclude[name] || coalescedColumns[name] {
 					continue
@@ -907,12 +1049,15 @@ func expandStarsInScope(scope *Scope, resolver *Resolver, usingColumnTables map[
 					if renamed != nil && renamed[name] != "" {
 						aliasName = renamed[name]
 					}
+					quoted := quotedColumns[name] ||
+						// if it has characters that the dialect would have changed, infer that it was quoted.
+						(isTableSource(source) && dialect.CaseSensitive(name))
 					selectionExpr := exp.Expression(nil)
 					if replaced != nil {
 						selectionExpr = replaced[name]
 					}
 					if selectionExpr == nil {
-						selectionExpr = exp.Column_(name, table, nil, nil, nil)
+						selectionExpr = exp.Column_(name, table, nil, nil, nil, quoted)
 					}
 					if aliasName != name {
 						newSelections = append(newSelections, exp.AliasExpr(selectionExpr, aliasName, false))

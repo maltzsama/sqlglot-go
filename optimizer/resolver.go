@@ -242,16 +242,26 @@ func (r *Resolver) GetSourceColumns(name string, onlyVisible ...bool) []string {
 					}
 				}
 			}
-			aliased := make([]string, len(columns))
-			copy(aliased, columns)
+			// zip_longest(columns, column_aliases) (resolver.py:217): when the alias list is
+			// longer than the source's columns — e.g. the table isn't in the schema, so its
+			// schema columns are empty while the alias declares them — the trailing aliases
+			// still name the outputs instead of being truncated away.
+			aliased := make([]string, 0, max(len(columns), len(columnAliases)))
 			aliasIndex := 0
-			for i := range aliased {
-				if implicit[aliased[i]] {
+			for _, col := range columns {
+				if implicit[col] {
+					aliased = append(aliased, col)
 					continue
 				}
+				name := col
 				if aliasIndex < len(columnAliases) && columnAliases[aliasIndex] != "" {
-					aliased[i] = columnAliases[aliasIndex]
+					name = columnAliases[aliasIndex]
 				}
+				aliasIndex++
+				aliased = append(aliased, name)
+			}
+			for aliasIndex < len(columnAliases) {
+				aliased = append(aliased, columnAliases[aliasIndex])
 				aliasIndex++
 			}
 			columns = aliased

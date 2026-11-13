@@ -73,7 +73,7 @@ table qualification (`QualifyOpts.SearchPath`), top-level `UPDATE`/`DELETE`/`MER
 structural PG `EXPLAIN`, MySQL `REPLACE`, and the `FoldIdentifierName`/`IsReservedKeyword`
 helpers. See **[CHANGELOG.md](./CHANGELOG.md)** for the per-version history.
 
-**Remaining work** (see `ROADMAP.md`): verified cross-dialect transpilation; the deferred JSONPath tokenizer (used by `to_json_path`); and dialects beyond base/MySQL/Postgres/Spark.
+**Remaining work** (see `ROADMAP.md`): verified cross-dialect transpilation; the deferred JSONPath tokenizer (used by `to_json_path`); and the dialects beyond the registered set (queued: SQLite #38, MariaDB #37).
 The parse/generate round-trip itself is done — a construct upstream parses that this port doesn't is a
 regression, not expected.
 

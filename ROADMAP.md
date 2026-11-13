@@ -112,8 +112,9 @@ differential-check against the pinned Python):
   `eliminate_ctes` + `journal`, `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries`,
   `merge_subqueries`, `annotate_types`, `simplify`, `normalize`, `eliminate_joins`,
   `pushdown_predicates`, `pushdown_projections` and `canonicalize`, plus the query builder API
-  they share. `optimizer.sql` passes except the PIVOT star-expansion cases of #46, and the TPC-H
-  and TPC-DS fixture sets pass in full.
+  they share. `optimizer.sql` passes with only the six tracked `optimizeGaps` rows skipped
+  (explode folding, the Spark decorrelation/TRANSFORM cases, and the two Snowflake #40 rows),
+  and the TPC-H and TPC-DS fixture sets pass in full.
 - annotate_types is ported (#27), and the function nodes it previously parsed as `Anonymous` are
   now structured (#44). The fixture cases that still do not pass are recorded in
   `optimizer/testdata/annotate_gaps.txt`.
@@ -122,8 +123,9 @@ differential-check against the pinned Python):
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
 - DIALECTS: base, MySQL, Postgres, TSQL, ClickHouse, StarRocks, Doris, Presto, Trino, Hive, Athena,
-  Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark and Databricks are ported; upstream ships
-  30+ and the rest are out of scope for now (queued: DuckDB #39, Snowflake #40, BigQuery #41).
+  Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery (#41), DuckDB (#39)
+  and Snowflake (#40) are ported; upstream ships 30+ and the rest are out of scope for now (queued:
+  SQLite #38, MariaDB #37).
 - TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): the v30.17.0 bump removed
   the FOR VERSION/TIMESTAMP and hive AS OF compound keywords but did not port `VERSION_PHRASES` +
   `_parse_version` (parser.py:1738-1745, 5120-5146); the constructs now fail closed (parse error)
@@ -856,7 +858,7 @@ Corpus: 227 `spark` and 176 `databricks` `validate_identity` cases from
 (`scripts/extract_dialect_corpus.py`), at **227/227** and **175/176**. The remaining Databricks
 row is the `GET_JSON_OBJECT` path rewrite, which needs the deferred JSONPath tokenizer
 (DEVIATIONS §1.27). Regression tests: `spark2_test.go`, `spark_test.go`, `databricks_test.go`.
-The two newly-running optimizer fixtures that do not pass yet are recorded in `optimizeGaps`.
+The optimizer fixtures that do not pass yet are recorded in `optimizeGaps`.
 
 ## BigQuery dialect — DONE (issue #41)
 
@@ -883,8 +885,7 @@ Corpus: 689 `validate_identity` cases from `tests/dialects/test_bigquery.py`
 (`scripts/extract_dialect_corpus.py --dialects bigquery`), at **683/689**. The six open rows are
 JSON-path rewrites (e.g. `JSON_EXTRACT(doc, '$. a b c .d')` → `$[' a b c '].d`), which need the
 deferred JSONPath tokenizer (DEVIATIONS §1.27). Regression tests: `bigquery_test.go`. The newly
-running optimizer fixtures that do not pass yet are recorded in `optimizeGaps` and
-`optimizer/testdata/annotate_gaps.txt`.
+running annotate fixtures that do not pass yet are recorded in `optimizer/testdata/annotate_gaps.txt`.
 
 ## DuckDB dialect — DONE (issue #39)
 
@@ -929,3 +930,35 @@ paths and `GET_PATH`/`FLATTEN` implicit columns, object/map literal keys, COPY p
 ALTER TABLE property statements, and the remaining DDL describe qualifiers. Newly active optimizer
 fixtures are recorded in `optimizeGaps`, `simplify_gaps.txt`, and `annotate_gaps.txt`. Regression
 tests: `snowflake_test.go`.
+
+## Star expansion through PIVOT / UNPIVOT — DONE (issue #46)
+
+`SELECT *` over a pivoted or unpivoted source now expands to the operator's output columns instead
+of the pre-pivot columns, matching upstream `qualify` (`_expand_stars` + `Scope.pivots`,
+qualify_columns.py:843-1035):
+
+- `expandStarsInScope` resolves the chain's final alias (the `(UN)PIVOT ... AS _0` name), which is
+  not registered in `scope.sources`, through the chain's parent, then folds each operator with
+  `Pivot.output_columns` (expressions/query.py:1780): the pre-pivot columns minus the consumed
+  ones, plus the operator's outputs — honoring `value_columns_first` (T-SQL), the dialect's
+  inferred `columns`, and the alias's positional renames. `qualifyColumnsInScope` validates the
+  projections against the post-pivot set (upstream's `single_chain`/`produced`/`available` block).
+- `Resolver.GetSourceColumns` zips a table alias's column list over the source columns
+  `zip_longest`-style (resolver.py:217), so `m_sales AS m_sales(empid, dept, jan, feb)` exposes its
+  alias columns even when the table is absent from the schema.
+- Parser: the inferred PIVOT output columns honor `IDENTIFY_PIVOT_STRINGS` (snowflake: the IN-list
+  literal `'x'` names the column `'x'`) and `PREFIXED_PIVOT_COLUMNS` (bigquery: the aggregation
+  alias leads, `sum_x` not `x_sum`), and all three naming flags are recorded on the Pivot node
+  (parser.py:5463-5506).
+- Generators: snowflake unqualifies a UNPIVOT's columns deeply and a PIVOT's `ANY ORDER BY` field
+  only (`_unqualify_pivot_columns`), while duckdb unqualifies the whole operator — DuckDB only
+  accepts simple column names inside a (UN)PIVOT; `SetOperation.named_selects` honors `BY NAME`
+  so DuckDB's `UNION BY NAME` fixtures expand. `TestPivotAnnotation` now runs raw `SELECT *`
+  through qualify + annotate_types under snowflake/duckdb exactly like upstream
+  (tests/test_optimizer.py:869-955).
+
+The `optimizeGaps` and `qualifyColumnsInvalidGaps` #46 rows are cleared; the fixture harness now
+runs duckdb and snowflake (`dialectInScope`), deferring only the unrelated snowflake `CONNECT BY
+LEVEL` and `sqlglot.meta case_sensitive` cases. Not ported (cross-dialect only): the generator's
+`_pivot_in_value_aliases` rewrite (generator.py:2524), which renames stored pivot columns when the
+write dialect names them differently — same-dialect output is unaffected.

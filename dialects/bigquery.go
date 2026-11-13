@@ -88,6 +88,9 @@ func BigQuery() *Dialect {
 	d.TablesReferenceableAsColumns = true
 	d.SupportsStructStarExpansion = true
 	d.ExcludesPseudocolumnsFromStar = true
+	// parsers/bigquery.py:190 PREFIXED_PIVOT_COLUMNS: the aggregation alias leads each
+	// inferred PIVOT output column name.
+	d.PrefixedPivotColumns = true
 	d.QueryResultsAreStructs = true
 	d.JSONExtractScalarScalarOnly = true
 	d.JSONPathSingleDotIsWildcard = true

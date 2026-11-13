@@ -222,36 +222,37 @@ func TestUnionAnnotation(t *testing.T) {
 }
 
 // TestPivotAnnotation ports test_multiple_pivots_annotate_types and test_unpivot_cte_annotate_types
-// (tests/test_optimizer.py:869-955). Upstream runs them under snowflake and duckdb, which this port
-// doesn't have yet, so they run here under oracle and tsql. The input is the pinned upstream's
-// qualify output for each case, so the test covers annotate_types alone; this port's qualify still
-// expands a star through a PIVOT to the pre-pivot columns (tracked separately). Types flow through
-// every chained operator, and an unaliased operator shadowing a CTE resolves its source types
-// through the CTE's scope.
+// (tests/test_optimizer.py:869-955): raw SELECT * over a chained (UN)PIVOT runs through qualify,
+// which expands the star to the operators' output columns, then annotate_types types each one.
+// Types flow through every chained operator — the name columns are text and each value column
+// takes the type of the columns it was folded from — and an unaliased operator shadowing a CTE
+// resolves its source types through the CTE's scope.
 func TestPivotAnnotation(t *testing.T) {
-	unpivotSchema := schema.M("t", schema.M("id", "int", "jan", "int", "feb", "int", "north", "double", "south", "double"))
-	pivotSchema := schema.M("t", schema.M("id", "int", "cat", "text", "val", "int", "kind", "text", "amt", "double"))
-	cteSchema := schema.M("t", schema.M("id", "int", "jan", "int", "feb", "int"))
-
 	for _, tc := range []struct {
 		dialect, sql string
 		schema       *schema.Mapping
 		want         []string
 	}{
-		{"oracle", `SELECT "T"."ID" AS "ID", "T"."MONTH" AS "MONTH", "T"."REVENUE" AS "REVENUE", "T"."REGION" AS "REGION", "T"."HEADCOUNT" AS "HEADCOUNT" FROM "T" "T" UNPIVOT("REVENUE" FOR "MONTH" IN ("JAN", "FEB")) UNPIVOT("HEADCOUNT" FOR "REGION" IN ("NORTH", "SOUTH")) "T"`,
-			unpivotSchema, []string{"ID INT", "MONTH VARCHAR", "REVENUE INT", "REGION VARCHAR", "HEADCOUNT DOUBLE"}},
-		{"oracle", `SELECT "_0"."ID" AS "ID", "_0"."A" AS "A", "_0"."B" AS "B", "_0"."X" AS "X", "_0"."Y" AS "Y" FROM "T" "T" PIVOT(SUM("T"."VAL") FOR "CAT" IN ('a' AS "A", 'b' AS "B")) PIVOT(SUM("T"."AMT") FOR "KIND" IN ('x' AS "X", 'y' AS "Y")) "_0"`,
-			pivotSchema, []string{"ID INT", "A BIGINT", "B BIGINT", "X DOUBLE", "Y DOUBLE"}},
-		{"oracle", `WITH "C" AS (SELECT "T"."ID" AS "ID", "T"."JAN" AS "JAN", "T"."FEB" AS "FEB" FROM "T" "T") SELECT "C"."ID" AS "ID", "C"."M" AS "M", "C"."V" AS "V" FROM "C" "C" UNPIVOT("V" FOR "M" IN ("JAN", "FEB")) "C"`,
-			cteSchema, []string{"ID INT", "M VARCHAR", "V INT"}},
-		{"tsql", "SELECT [t].[id] AS [id], [t].[revenue] AS [revenue], [t].[month] AS [month], [t].[headcount] AS [headcount], [t].[region] AS [region] FROM [t] AS [t] UNPIVOT([revenue] FOR [month] IN ([t].[jan], [t].[feb])) UNPIVOT([headcount] FOR [region] IN ([t].[north], [t].[south])) AS [t]",
-			unpivotSchema, []string{"id INT", "revenue INT", "month VARCHAR", "headcount DOUBLE", "region VARCHAR"}},
-		{"tsql", "SELECT [_0].[id] AS [id], [_0].[a] AS [a], [_0].[b] AS [b], [_0].[x] AS [x], [_0].[y] AS [y] FROM [t] AS [t] PIVOT(SUM([t].[val]) FOR [t].[cat] IN ('a' AS [a], 'b' AS [b])) PIVOT(SUM([t].[amt]) FOR [t].[kind] IN ('x' AS [x], 'y' AS [y])) AS [_0]",
-			pivotSchema, []string{"id INT", "a BIGINT", "b BIGINT", "x DOUBLE", "y DOUBLE"}},
-		{"tsql", "WITH [c] AS (SELECT [t].[id] AS [id], [t].[jan] AS [jan], [t].[feb] AS [feb] FROM [t] AS [t]) SELECT [c].[id] AS [id], [c].[v] AS [v], [c].[m] AS [m] FROM [c] AS [c] UNPIVOT([v] FOR [m] IN ([c].[jan], [c].[feb])) AS [c]",
-			cteSchema, []string{"id INT", "v INT", "m VARCHAR"}},
+		{"snowflake", `SELECT * FROM t UNPIVOT(revenue FOR month IN (jan, feb)) UNPIVOT(headcount FOR region IN (north, south))`,
+			schema.M("t", schema.M("id", "int", "jan", "int", "feb", "int", "north", "double", "south", "double")),
+			[]string{"ID INT", "MONTH VARCHAR", "REVENUE INT", "REGION VARCHAR", "HEADCOUNT DOUBLE"}},
+		{"snowflake", `SELECT * FROM t PIVOT(SUM(val) FOR cat IN ('a' AS a, 'b' AS b)) PIVOT(SUM(amt) FOR kind IN ('x' AS x, 'y' AS y))`,
+			schema.M("t", schema.M("id", "int", "cat", "text", "val", "int", "kind", "text", "amt", "double")),
+			[]string{"ID INT", "A BIGINT", "B BIGINT", "X DOUBLE", "Y DOUBLE"}},
+		{"duckdb", `WITH c AS (SELECT id, jan, feb FROM t) SELECT * FROM c UNPIVOT(v FOR m IN (jan, feb))`,
+			schema.M("t", schema.M("id", "int", "jan", "int", "feb", "int")),
+			[]string{"id INT", "m VARCHAR", "v INT"}},
 	} {
-		e := annotate(t, tc.sql, tc.schema, tc.dialect)
+		e, err := sqlglot.ParseOne(tc.sql, tc.dialect)
+		if err != nil {
+			t.Fatalf("ParseOne(%q): %v", tc.sql, err)
+		}
+		opts := optimizer.DefaultQualifyOpts()
+		opts.Schema = tc.schema
+		opts.Dialect = tc.dialect
+		e = optimizer.Qualify(e, opts)
+		e = optimizer.AnnotateTypes(e, tc.schema, tc.dialect)
+
 		var got []string
 		for _, s := range e.Selects() {
 			typ := "<nil>"

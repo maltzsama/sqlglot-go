@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"strings"
 	"testing"
 
 	sqlglot "github.com/maltzsama/sqlglot-go"
@@ -174,5 +175,68 @@ func TestPivotClauseRejectedOnRestrictedTargets(t *testing.T) {
 		if _, err := sqlglot.ParseOne(tc.sql, tc.dialect); err == nil {
 			t.Errorf("%s %q: want parse error", tc.dialect, tc.sql)
 		}
+	}
+}
+
+// TestPivotOutputColumnInference locks the dialect-flagged PIVOT output-column naming of
+// _parse_pivot (parser.py:5463-5506): IDENTIFY_PIVOT_STRINGS (snowflake) names a non-aliased
+// IN value by its rendered SQL, PREFIXED_PIVOT_COLUMNS (bigquery) moves the aggregation alias
+// to the front of each name, and both flags are recorded on the node. The expectations are the
+// pinned v30.17.0 parse output, differential-checked against .reference.
+func TestPivotOutputColumnInference(t *testing.T) {
+	for _, tc := range []struct {
+		dialect, sql string
+		want         []string
+		wantQuoted   []bool
+	}{
+		{"snowflake", "SELECT * FROM u PIVOT (SUM(f) FOR h IN ('x', 'y'))",
+			[]string{"'x'", "'y'"}, []bool{true, true}},
+		{"snowflake", "SELECT * FROM u PIVOT (SUM(f) AS total FOR h IN ('x' AS a, 'y'))",
+			[]string{"a_total", "'y'_total"}, []bool{false, true}},
+		{"snowflake", "SELECT * FROM u PIVOT (SUM(f) FOR h IN (g))",
+			[]string{"g"}, []bool{false}},
+		{"bigquery", "SELECT * FROM u PIVOT(SUM(f) AS sum FOR h IN ('x', 'y'))",
+			[]string{"sum_x", "sum_y"}, []bool{false, false}},
+		{"bigquery", "SELECT * FROM u PIVOT(SUM(f) AS s, COUNT(f) AS c FOR h IN ('x', 'y'))",
+			[]string{"s_x", "c_x", "s_y", "c_y"}, []bool{false, false, false, false}},
+	} {
+		pivot := parseOneDialect(t, tc.sql, tc.dialect).Find(exp.KindPivot)
+		if pivot == nil {
+			t.Fatalf("[%s] missing pivot for %q", tc.dialect, tc.sql)
+		}
+		columns := expressionsForArg(pivot, "columns")
+		var got []string
+		var quoted []bool
+		for _, ident := range columns {
+			got = append(got, ident.Name())
+			quoted = append(quoted, ident.Arg("quoted") == true)
+		}
+		if strings.Join(got, ",") != strings.Join(tc.want, ",") {
+			t.Errorf("[%s] %s\ncolumns: %v\nwant:    %v", tc.dialect, tc.sql, got, tc.want)
+		}
+		if len(quoted) == len(tc.wantQuoted) {
+			for i := range quoted {
+				if quoted[i] != tc.wantQuoted[i] {
+					t.Errorf("[%s] %s: columns[%d] quoted = %v, want %v", tc.dialect, tc.sql, i, quoted[i], tc.wantQuoted[i])
+				}
+			}
+		}
+	}
+
+	// All three naming flags ride on the node for the generator's cross-dialect rename
+	// (parser.py:5503-5505); UNPIVOT infers no columns at all (parser.py:5463).
+	sf := parseOneDialect(t, "SELECT * FROM u PIVOT (SUM(f) FOR h IN ('x'))", "snowflake").Find(exp.KindPivot)
+	if sf.Arg("identify_pivot_strings") != true || sf.Arg("prefixed_pivot_columns") != false {
+		t.Errorf("snowflake pivot flags = %v / %v, want true / false",
+			sf.Arg("identify_pivot_strings"), sf.Arg("prefixed_pivot_columns"))
+	}
+	bq := parseOneDialect(t, "SELECT * FROM u PIVOT(SUM(f) FOR h IN ('x'))", "bigquery").Find(exp.KindPivot)
+	if bq.Arg("identify_pivot_strings") != false || bq.Arg("prefixed_pivot_columns") != true {
+		t.Errorf("bigquery pivot flags = %v / %v, want false / true",
+			bq.Arg("identify_pivot_strings"), bq.Arg("prefixed_pivot_columns"))
+	}
+	up := parseOneDialect(t, "SELECT * FROM u UNPIVOT(v FOR n IN (a, b))", "snowflake").Find(exp.KindPivot)
+	if up.Arg("columns") != nil {
+		t.Errorf("unpivot columns = %v, want nil", up.Arg("columns"))
 	}
 }

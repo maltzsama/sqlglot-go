@@ -229,11 +229,10 @@ func (p *Parser) parsePivot() exp.Expression {
 	return pivot
 }
 
-// setPivotColumns ports the PIVOT output-column inference of _parse_pivot (parser.py:5463-5505):
-// the product of each field's IN values and the aggregation aliases, joined by "_". No registered
-// dialect sets IDENTIFY_PIVOT_STRINGS or PREFIXED_PIVOT_COLUMNS, so a value is named by its
-// alias_or_name and the aggregation alias goes last; the flags are recorded on the node as
-// upstream does.
+// setPivotColumns ports the PIVOT output-column inference of _parse_pivot (parser.py:5463-5506):
+// the product of each field's IN values and the aggregation aliases, joined by "_". The dialect's
+// IDENTIFY_PIVOT_STRINGS and PREFIXED_PIVOT_COLUMNS flags shape the names, and all three naming
+// flags are recorded on the node as upstream does.
 func (p *Parser) setPivotColumns(pivot exp.Expression, aggregations []exp.Expression) {
 	// _pivot_column_names (parser.py:5509-5510), overridden by Spark2Parser
 	// (parsers/spark2.py:106-109): PIVOT_COLUMN_NAMING "agg_name_if_multiple" gives a single
@@ -258,6 +257,18 @@ func (p *Parser) setPivotColumns(pivot exp.Expression, aggregations []exp.Expres
 		}
 		var parts []string
 		for _, fld := range fieldExpressions {
+			// An explicit `<field> AS <alias>` names the output column directly, so it wins
+			// over the dialect's string-identifying convention; otherwise IDENTIFY_PIVOT_STRINGS
+			// (snowflake) names the value by its rendered SQL, e.g. the literal 'x' becomes the
+			// column 'x' (parser.py:5475-5481).
+			if p.dialect.IdentifyPivotStrings && fld.Kind() != exp.KindPivotAlias {
+				if sql, err := fld.SQL(exp.GenerateOptions{}); err == nil {
+					parts = append(parts, sql)
+					continue
+				}
+				// GenerateFunc may be unconfigured (see parser.go:4354); fall back to the
+				// dialect-independent name rather than failing the parse.
+			}
 			parts = append(parts, fld.AliasOrName())
 		}
 		allFields = append(allFields, parts)
@@ -282,13 +293,19 @@ func (p *Parser) setPivotColumns(pivot exp.Expression, aggregations []exp.Expres
 			combos = next
 		}
 		for _, combo := range combos {
+			// PREFIXED_PIVOT_COLUMNS (bigquery): move the aggregation name to the front of
+			// the list, so `SUM(f) AS sum ... IN ('x')` is sum_x, not x_sum
+			// (parser.py:5494-5497).
+			if len(names) > 0 && p.dialect.PrefixedPivotColumns && len(combo) > 0 {
+				combo = append([]string{combo[len(combo)-1]}, combo[:len(combo)-1]...)
+			}
 			columns = append(columns, exp.ToIdentifier(strings.Join(combo, "_")))
 		}
 	}
 
 	pivot.Set("columns", columns)
-	pivot.Set("identify_pivot_strings", false)
-	pivot.Set("prefixed_pivot_columns", false)
+	pivot.Set("identify_pivot_strings", p.dialect.IdentifyPivotStrings)
+	pivot.Set("prefixed_pivot_columns", p.dialect.PrefixedPivotColumns)
 	pivot.Set("pivot_column_naming", pivotColumnNaming)
 }
 

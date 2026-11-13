@@ -102,32 +102,18 @@ func TestTPCDS(t *testing.T) {
 	checkOptimizeFile(t, "tpc-ds/tpc-ds.sql", true, nil, optimizer.OptimizeOpts{Schema: loadTSVSchema(t, "tpc-ds/schema.tsv")})
 }
 
-// optimizeGaps are optimizer.sql fixtures whose SELECT * over a PIVOT or UNPIVOT still expands
-// to the pre-pivot columns (#46).
+// optimizeGaps are optimizer.sql fixtures this port can't reproduce yet.
 var optimizeGaps = map[string]string{
-	"pivoted source with explicit selections":                                                           "star expansion through PIVOT (#46)",
-	"pivoted source with explicit selections where one of them is excluded & selected at the same time": "star expansion through PIVOT (#46)",
-	"pivoted source with implicit selections":                                                           "star expansion through PIVOT (#46)",
-	"unpivoted table source, unpivot has column aliases":                                                "star expansion through UNPIVOT (#46)",
 	// #35: merge_subqueries folds the EXPLODE_OUTER projection subquery into the outer SELECT;
 	// upstream's eliminate_subqueries keeps it as a top-level CTE.
 	"explode_outer": "merge_subqueries folds an explode projection instead of keeping a CTE (#35 follow-up)",
 	// #35: fixtures that only run now that spark is registered.
-	"selecting all columns from a pivoted source and generating spark":            "star expansion through PIVOT (#46)",
 	"decorrelate subquery and transpile ArrayAny correctly when generating spark": "subquery decorrelation for the ArrayAny rewrite is not ported",
 	"SELECT TRANSFORM ... Spark clause when schema is provided":                   "qualify aliases a TRANSFORM projection instead of exposing its schema columns",
 	"SELECT TRANSFORM ... Spark clause when schema is not provided":               "qualify aliases a TRANSFORM projection instead of exposing its key/value columns",
-	// #41: fixtures that only run now that bigquery is registered.
-	"selecting all columns from a pivoted CTE source, using alias for the aggregation and generating bigquery": "star expansion through PIVOT (#46)",
-	"unpivoted table source with a single value column, unpivot columns can be qualified":                      "star expansion through UNPIVOT (#46)",
-	"unpivoted table source with multiple value columns":                                                       "star expansion through UNPIVOT (#46)",
 	// #40: fixtures that only run now that snowflake is registered.
-	"selecting all columns from a pivoted source and generating snowflake":                  "star expansion through PIVOT (#46)",
-	"selecting all columns from a pivoted source, pivot has column aliases":                 "star expansion through PIVOT (#46)",
-	"unpivoted table source with a single value column, unpivot columns can't be qualified": "star expansion through UNPIVOT (#46)",
-	"unpivoted derived table source with a single value column":                             "star expansion through UNPIVOT (#46)",
-	"flatten over object_construct":                                                         "ObjectConstruct/flatten rewriting is not ported (#40)",
-	"array_agg within group over":                                                           "ArrayAgg WITHIN GROUP ordering is not ported (#40)",
+	"flatten over object_construct": "ObjectConstruct/flatten rewriting is not ported (#40)",
+	"array_agg within group over":   "ArrayAgg WITHIN GROUP ordering is not ported (#40)",
 }
 
 // TestOptimizeFileSchema ports test_file_schema (tests/test_optimizer.py:1828-1835).
