@@ -287,9 +287,16 @@ Additive analysis features; default behavior and fixture output unchanged.
   apply unchanged. MariaDB-only grammar is gated on the dialect:
   `NEXT VALUE FOR <seq>` / `PREVIOUS VALUE FOR <seq>` (the latter a new `PrevValueFor` node,
   since upstream has none) and the `/*M! ... */` / `/*M!100100 ... */` executable comment,
-  activated alongside `/*!` by the `mysql_version` setting with MariaDB's six-digit version
-  gate. Each is a grammar extension tracked in `testdata/upstream_extensions.jsonl`; tests
-  `mariadb_test.go`, dialect identity in `dialects/dialecttype_test.go`.
+  activated alongside `/*!` by the `mysql_version` setting. MariaDB's lexer semantics apply:
+  either marker reads five gate digits plus an optional sixth, and MySQL-style comments gated
+  to 50700-99999 are ignored (MariaDB's own numbering starts at 100000). The grammar
+  extensions are tracked in `testdata/upstream_extensions.jsonl`.
+  Engine differences beyond plain inheritance: `XOR` binds between `AND` and `OR` (MySQL keeps
+  upstream's grouping), `SHOW SLAVE HOSTS` keeps its MariaDB spelling instead of MySQL's
+  `SHOW REPLICAS`, and `MEMBER OF` renders as MariaDB's `JSON_CONTAINS(array, value)` since
+  MariaDB only gains `MEMBER OF` in 13.3. Engine identity resolution applies the MySQL rules.
+  Tests `mariadb_test.go`, dialect identity in `dialects/dialecttype_test.go`, engine catalog
+  in `optimizer/engine_catalog_test.go`.
 
 ---
 

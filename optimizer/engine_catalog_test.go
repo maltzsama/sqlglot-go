@@ -528,3 +528,59 @@ func TestEngineCatalogAthenaQuotedNamesWithLowercaseStrategy(t *testing.T) {
 		}
 	}
 }
+
+// TestEngineCatalogMariaDBUsesMySQLRules pins that the MariaDB identity keeps the MySQL
+// resolution rules (native priority, current-database scoping) instead of failing closed.
+func TestEngineCatalogMariaDBUsesMySQLRules(t *testing.T) {
+	dialect := "mariadb, opaque_functions=true"
+	catalog := &optimizer.EngineCatalog{
+		BuiltinFunctions: names("abs", "pi", "ifnull"),
+		UDFSchemas: map[string]map[string]bool{
+			"shop": names("pi", "myfn"),
+		},
+		CurrentDatabase: "shop",
+		UserRelations: map[string]map[string]bool{
+			"shop": names("orders"),
+		},
+	}
+	for _, tt := range []struct {
+		name, sql    string
+		wantKind     optimizer.CallKind
+		wantIdentity string
+	}{
+		{"native beats stored", "SELECT pi()", optimizer.CallBuiltin, "pi"},
+		{"stored in current db", "SELECT myfn()", optimizer.CallUDF, "shop.myfn"},
+		{"qualified reaches stored", "SELECT shop.pi()", optimizer.CallUDF, "shop.pi"},
+		{"absent everywhere", "SELECT mystery()", optimizer.CallUnknown, ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			calls, _, _ := resolveOne(t, dialect, tt.sql, catalog, nil)
+			got := onlyCall(t, calls)
+			if got.Kind != tt.wantKind || got.Identity != tt.wantIdentity {
+				t.Errorf("%q = {%v %q}, want {%v %q}", tt.sql, got.Kind, got.Identity, tt.wantKind, tt.wantIdentity)
+			}
+		})
+	}
+
+	// Relation resolution uses the MySQL current-database scoping too.
+	for _, tt := range []struct {
+		name, sql    string
+		wantKind     optimizer.RelationKind
+		wantIdentity string
+	}{
+		{"current db table", "SELECT * FROM orders", optimizer.UserRelation, "shop.orders"},
+		{"unknown table absent from catalog", "SELECT * FROM mystery", optimizer.RelationUnknown, ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, relations, _ := resolveOne(t, dialect, tt.sql, catalog, nil)
+			if len(relations) != 1 {
+				t.Fatalf("expected one relation, got %d", len(relations))
+			}
+			for _, got := range relations {
+				if got.Kind != tt.wantKind || got.Identity != tt.wantIdentity {
+					t.Errorf("%q = {%v %q}, want {%v %q}", tt.sql, got.Kind, got.Identity, tt.wantKind, tt.wantIdentity)
+				}
+			}
+		})
+	}
+}

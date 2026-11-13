@@ -2291,8 +2291,10 @@ func (g *Generator) castSQLWithPrefix(e expressions.Expression, safePrefix strin
 func (g *Generator) tryCastSQL(e expressions.Expression) string {
 	// MySQL and Postgres have no TRY_CAST; upstream routes exp.TryCast through no_trycast_sql
 	// (dialects/dialect.py:1261), which renders a plain CAST - so a MySQL cast-target rename
-	// (e.g. TEXT -> CHAR) applies without a stray TRY_ prefix. See generators/mysql.py:223 and
-	// generators/postgres.py:377. Every other dialect keeps TRY_CAST (generator.py:4523).
+	// (e.g. TEXT -> CHAR) applies without a stray TRY_ prefix. See generators/mysql.py:213 and
+	// generators/postgres.py:377. The MySQL-family dialects inherit that (StarRocks/Doris do
+	// not override it upstream), so their pin is CAST even though Doris 4.0 adds TRY_CAST
+	// natively; every other dialect keeps TRY_CAST (generator.py:4523).
 	if g.isDialect("mysql") || g.isDialect("postgres") {
 		return g.castSQLWithPrefix(e, "")
 	}

@@ -82,6 +82,11 @@ func (g *Generator) jsonbContainsSQL(e expressions.Expression) string {
 // upstream, so they fall back to the `_sql_names = ["JSON_ARRAY_CONTAINS"]` function call
 // (json.py:36-37), again hardcoded for the same camelToSnake reason as jsonbContainsSQL.
 func (g *Generator) jsonArrayContainsSQL(e expressions.Expression) string {
+	if g.isDialect("mariadb") {
+		// MariaDB only gains MEMBER OF in 13.3; JSON_CONTAINS(array, value) is its documented
+		// equivalent and also works on the released 10.x/11.x servers.
+		return g.funcCall("JSON_CONTAINS", []any{e.Arg("expression"), e.This()}, "(", ")", true)
+	}
 	if g.isDialect("mysql") {
 		return g.sqlKey(e, "this") + " MEMBER OF(" + g.sqlKey(e, "expression") + ")"
 	}

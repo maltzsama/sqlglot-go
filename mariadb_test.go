@@ -86,8 +86,12 @@ func TestMariaDBExecutableComments(t *testing.T) {
 	cases := map[string]string{
 		"SELECT /*M!100100 1 */":   "SELECT 1",
 		"SELECT /*M! 2 */":         "SELECT 2",
-		"SELECT 0 /*M!110000 3 */": "SELECT 0 /* M!110000 3 */",
-		"SELECT /*!80035 4 */":     "SELECT 4",
+		"SELECT /*M!50301 3 */":    "SELECT 3",
+		"SELECT 0 /*M!110000 4 */": "SELECT 0 /* M!110000 4 */",
+		// MariaDB ignores MySQL-style comments gated to MySQL 5.7 through 9.99 ...
+		"SELECT 0 /*!80035 5 */": "SELECT 0 /* !80035 5 */",
+		// ... while MariaDB-numbered gates and markers execute.
+		"SELECT /*!100100 6 */": "SELECT 6",
 	}
 	for sql, want := range cases {
 		got, err := sqlglot.Transpile(sql, dialect, "mariadb", generator.Options{})
@@ -108,4 +112,49 @@ func TestMariaDBExecutableComments(t *testing.T) {
 			t.Fatalf("expected the comment body to stay inert without mysql_version, got %q", got[0])
 		}
 	}
+}
+
+// TestMariaDBDialectDifferences pins the engine differences that are not plain MySQL
+// inheritance: XOR precedence (AND binds tighter than XOR, XOR tighter than OR), the preserved
+// SHOW SLAVE HOSTS spelling, and MEMBER OF rendering through MariaDB's JSON_CONTAINS.
+func TestMariaDBDialectDifferences(t *testing.T) {
+	expr, err := sqlglot.ParseOne("SELECT 1 XOR 1 AND 0", "mariadb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	xor := expr.Expressions()[0]
+	if xor.Kind() != expressions.KindXor {
+		t.Fatalf("mariadb XOR precedence: expected a top-level Xor, got %s", xor.ToS())
+	}
+	if rhs := asKind(xor.Arg("expression")); rhs != expressions.KindAnd {
+		t.Fatalf("mariadb XOR precedence: expected Xor(1, And(1, 0)), got %s", xor.ToS())
+	}
+	// MySQL keeps upstream's grouping, where XOR shares the AND level.
+	mysqlExpr, err := sqlglot.ParseOne("SELECT 1 XOR 1 AND 0", "mysql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := mysqlExpr.Expressions()[0].Kind(); got != expressions.KindAnd {
+		t.Fatalf("mysql XOR precedence: expected a top-level And, got %s", mysqlExpr.Expressions()[0].ToS())
+	}
+
+	assertRoundTrip(t, "mariadb", "SHOW SLAVE HOSTS", "SHOW SLAVE HOSTS")
+	// MySQL canonicalizes to SHOW REPLICAS; MariaDB has no such spelling.
+	if out, err := sqlglot.Transpile("SHOW SLAVE HOSTS", "mysql", "mysql", generator.Options{}); err != nil || out[0] != "SHOW REPLICAS" {
+		t.Fatalf("mysql SHOW SLAVE HOSTS = %q, err %v; want SHOW REPLICAS", out, err)
+	}
+
+	out, err := sqlglot.Transpile("SELECT x MEMBER OF(y)", "mysql", "mariadb", generator.Options{})
+	if err != nil || out[0] != "SELECT JSON_CONTAINS(y, x)" {
+		t.Fatalf("mariadb MEMBER OF = %q, err %v; want JSON_CONTAINS", out, err)
+	}
+}
+
+// asKind returns the Kind of an expression argument value, or 0 when absent.
+func asKind(v any) expressions.Kind {
+	expr, ok := v.(expressions.Expression)
+	if !ok || expr == nil {
+		return 0
+	}
+	return expr.Kind()
 }

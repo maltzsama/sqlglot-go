@@ -2076,10 +2076,22 @@ func (p *Parser) parseAssignment() exp.Expression {
 // mysql additionally maps DPIPE -> exp.Or (parsers/mysql.py:78-80), since mysql's
 // DPIPE_IS_STRING_CONCAT=False frees `||` up to mean logical OR instead of concatenation.
 func (p *Parser) parseDisjunction() exp.Expression {
-	this := p.parseConjunction()
+	this := p.parseXorLevel()
 	for p.match(tokens.OR) || (p.dialectIs("mysql") && p.match(tokens.DPIPE)) {
 		comments := p.prevComments
-		this = p.expression(exp.Or(exp.Args{"this": this, "expression": p.parseConjunction()}), nil, comments)
+		this = p.expression(exp.Or(exp.Args{"this": this, "expression": p.parseXorLevel()}), nil, comments)
+	}
+	return this
+}
+
+// parseXorLevel places MariaDB's XOR between OR and AND (MariaDB operator precedence: OR is
+// lower than XOR, which is lower than AND); MySQL keeps upstream's grouping where XOR shares
+// the AND level.
+func (p *Parser) parseXorLevel() exp.Expression {
+	this := p.parseConjunction()
+	for p.dialectIs("mariadb") && p.match(tokens.XOR) {
+		comments := p.prevComments
+		this = p.expression(exp.Xor(exp.Args{"this": this, "expression": p.parseConjunction()}), nil, comments)
 	}
 	return this
 }
@@ -2096,7 +2108,7 @@ func (p *Parser) parseConjunction() exp.Expression {
 			constructor = exp.And
 		case p.dialectIs("mysql") && p.match(tokens.DAMP):
 			constructor = exp.And
-		case p.dialectIs("mysql") && p.match(tokens.XOR):
+		case p.dialectIs("mysql") && !p.dialectIs("mariadb") && p.match(tokens.XOR):
 			constructor = exp.Xor
 		default:
 			return this
