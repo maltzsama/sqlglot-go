@@ -72,6 +72,7 @@ from tests.dialects.test_tsql import TestTSQL  # noqa: E402
 from tests.dialects.test_clickhouse import TestClickhouse  # noqa: E402
 from tests.dialects.test_starrocks import TestStarrocks  # noqa: E402
 from tests.dialects.test_doris import TestDoris  # noqa: E402
+from tests.dialects.test_sqlite import TestSQLite  # noqa: E402
 from tests.dialects.test_oracle import TestOracle  # noqa: E402
 from tests.dialects.test_redshift import TestRedshift  # noqa: E402
 from tests.dialects.test_materialize import TestMaterialize  # noqa: E402
@@ -84,8 +85,8 @@ from tests.dialects.test_snowflake import TestSnowflake  # noqa: E402
 from tests.dialects.test_mysql import TestMySQL  # noqa: E402
 from tests.dialects.test_postgres import TestPostgres  # noqa: E402
 
-DIALECTS = ("bigquery", "duckdb", "snowflake", "mysql", "postgres", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks")
-SAME_DIALECT_WRITES = {"bigquery", "duckdb", "snowflake", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks"}
+DIALECTS = ("bigquery", "duckdb", "snowflake", "mysql", "postgres", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks", "sqlite")
+SAME_DIALECT_WRITES = {"bigquery", "duckdb", "snowflake", "athena", "trino", "presto", "hive", "tsql", "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave", "spark", "databricks", "sqlite"}
 
 # Every dialect the Go port registers (dialects.GetOrRaise): the 19 named ones plus base "".
 # "spark2" and "mariadb" have no upstream test class of their own to run — spark2 appears only
@@ -268,7 +269,7 @@ def main():
 
     runner = unittest.TextTestRunner(verbosity=0)
     unexpected = []
-    for cls in (TestBigQuery, TestDuckDB, TestSnowflake, TestMySQL, TestPostgres, TestAthena, TestTrino, TestPresto, TestHive, TestTSQL, TestClickhouse, TestStarrocks, TestDoris, TestOracle, TestRedshift, TestMaterialize, TestRisingWave, TestSpark, TestDatabricks, TestDialect):
+    for cls in (TestBigQuery, TestDuckDB, TestSnowflake, TestMySQL, TestPostgres, TestAthena, TestTrino, TestPresto, TestHive, TestTSQL, TestClickhouse, TestStarrocks, TestDoris, TestOracle, TestRedshift, TestMaterialize, TestRisingWave, TestSpark, TestDatabricks, TestSQLite, TestDialect):
         # TestDialect carries dialect = None (base); _norm_dialect maps it to "", which only a
         # full run adds to `selected` above — a partial --dialects run skips it (and skips
         # writing the transpile corpus anyway).

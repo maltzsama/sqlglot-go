@@ -605,6 +605,10 @@ type Dialect struct {
 	// SupportsTableAliasColumns ports SUPPORTS_TABLE_ALIAS_COLUMNS (base True; bigquery False):
 	// a table alias column list is dropped when false.
 	SupportsTableAliasColumns bool
+	// SupportsNamedCTEColumns ports SUPPORTS_NAMED_CTE_COLUMNS (generator.py:459, base True;
+	// bigquery False): a CTE alias keeps its column list even when table-alias columns are not
+	// supported.
+	SupportsNamedCTEColumns bool
 	// QualifyBeforeWindow ports bigquery's AFTER_HAVING_MODIFIER_TRANSFORMS order: QUALIFY is
 	// rendered before the WINDOW clause (base renders WINDOW first).
 	QualifyBeforeWindow bool
@@ -669,6 +673,7 @@ func Base() *Dialect {
 		IgnoreNullsBeforeOrder:    true,
 		UnnestWithOrdinality:      true,
 		SupportsTableAliasColumns: true,
+		SupportsNamedCTEColumns:   true,
 		// dialects/dialect.py LEAST_GREATEST_IGNORES_NULLS = True (base).
 		LeastGreatestIgnoresNulls: true,
 		// parser.py:1880 COLON_CHAIN_IS_SINGLE_EXTRACT = True (base).
@@ -1053,6 +1058,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return RisingWave(), nil
 	case "spark2":
 		return Spark2(), nil
+	case "sqlite":
+		return SQLite(), nil
 	case "spark":
 		return Spark(), nil
 	case "databricks":

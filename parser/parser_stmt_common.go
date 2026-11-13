@@ -25,6 +25,10 @@ func (p *Parser) parseCommand() exp.Expression {
 // parsePragma ports the inline TokenType.PRAGMA STATEMENT_PARSERS entry (parser.py:1101):
 // `PRAGMA <expr>`, e.g. sqlite's `PRAGMA quick_check`.
 func (p *Parser) parsePragma() exp.Expression {
+	// parsers/sqlite.py:153-168 overrides the base form with the dotted-name / value grammar.
+	if p.dialect.Name == "sqlite" {
+		return p.parseSQLitePragma()
+	}
 	return p.expression(exp.Pragma(exp.Args{"this": p.parseExpression()}), nil, nil)
 }
 

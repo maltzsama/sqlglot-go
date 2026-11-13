@@ -15,7 +15,6 @@
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT ARRAY_LENGTH([0], 1) AS x"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT JSON('{\"fruit\": {\"foo\": \"banana\"}}') -> 'fruit' -> 'foo'"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT JSON('{\"fruit\":\"banana\"}') -> 'fruit'"}
-{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY y DESC) FROM t"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"WITH _data AS (SELECT [{'a': 1, 'b': 2}, {'a': 2, 'b': 3}] AS col) SELECT t.col['b'] FROM _data, UNNEST(_data.col) AS t(col) WHERE t.col['a'] = 1"}
 {"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a INT, b FLOAT) AS TABLE SELECT a"}
 {"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE IF NOT EXISTS t (cola INT COMMENT 'cola', colb STRING) USING ICEBERG PARTITIONED BY (colb)"}

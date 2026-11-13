@@ -5431,6 +5431,143 @@
 {"dialect": "spark", "sql": "first_value(col, true)", "want": "FIRST_VALUE(col) IGNORE NULLS", "pretty": false, "identify": false}
 {"dialect": "spark", "sql": "last(col, true)", "want": "LAST(col) IGNORE NULLS", "pretty": false, "identify": false}
 {"dialect": "spark", "sql": "last_value(col, true)", "want": "LAST_VALUE(col) IGNORE NULLS", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "\n            CREATE TABLE \"Track\"\n            (\n                CONSTRAINT \"PK_Track\" FOREIGN KEY (\"TrackId\"),\n                FOREIGN KEY (\"AlbumId\") REFERENCES \"Album\" (\n                    \"AlbumId\"\n                ) ON DELETE NO ACTION ON UPDATE NO ACTION,\n                FOREIGN KEY (\"AlbumId\") ON DELETE CASCADE ON UPDATE RESTRICT,\n                FOREIGN KEY (\"AlbumId\") ON DELETE SET NULL ON UPDATE SET DEFAULT\n            )\n            ", "want": "CREATE TABLE \"Track\" (\n  CONSTRAINT \"PK_Track\" FOREIGN KEY (\"TrackId\"),\n  FOREIGN KEY (\"AlbumId\") REFERENCES \"Album\" (\n    \"AlbumId\"\n  ) ON DELETE NO ACTION ON UPDATE NO ACTION,\n  FOREIGN KEY (\"AlbumId\") ON DELETE CASCADE ON UPDATE RESTRICT,\n  FOREIGN KEY (\"AlbumId\") ON DELETE SET NULL ON UPDATE SET DEFAULT\n)", "pretty": true, "identify": false}
+{"dialect": "sqlite", "sql": "ALTER TABLE t RENAME a TO b", "want": "ALTER TABLE t RENAME COLUMN a TO b", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "ALTER TABLE t1 RENAME TO t2", "want": "ALTER TABLE t1 RENAME TO t2", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "ANALYZE schma.tbl", "want": "ANALYZE schma.tbl", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "ANALYZE tbl", "want": "ANALYZE tbl", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "ATTACH DATABASE 'foo' AS schema_name", "want": "ATTACH 'foo' AS schema_name", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "ATTACH DATABASE 'foo' || '.foo2' AS schema_name", "want": "ATTACH 'foo' || '.foo2' AS schema_name", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "ATTACH DATABASE IIF(NOT EXISTS(SELECT 1), 'foo1', 'foo2') AS schema_name", "want": "ATTACH IIF(NOT EXISTS(SELECT 1), 'foo1', 'foo2') AS schema_name", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "ATTACH DATABASE NOT EXISTS(SELECT 1) AS schema_name", "want": "ATTACH NOT EXISTS(SELECT 1) AS schema_name", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE \"foo t\" (\"foo t id\" TEXT NOT NULL, PRIMARY KEY (\"foo t id\"))", "want": "CREATE TABLE \"foo t\" (\"foo t id\" TEXT NOT NULL PRIMARY KEY)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE \"x\" (\"Name\" NVARCHAR(200) NOT NULL)", "want": "CREATE TABLE \"x\" (\"Name\" TEXT(200) NOT NULL)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE a (b, c, UNIQUE (b, c) ON CONFLICT IGNORE)", "want": "CREATE TABLE a (b, c, UNIQUE (b, c) ON CONFLICT IGNORE)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE foo (bar LONGVARCHAR)", "want": "CREATE TABLE foo (bar TEXT)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE foo (id INTEGER PRIMARY KEY ASC)", "want": "CREATE TABLE foo (id INTEGER PRIMARY KEY ASC)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE over (x, y)", "want": "CREATE TABLE over (x, y)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE store (store_id INTEGER PRIMARY KEY AUTOINCREMENT, mgr_id INTEGER NOT NULL UNIQUE REFERENCES staff ON UPDATE CASCADE)", "want": "CREATE TABLE store (store_id INTEGER PRIMARY KEY AUTOINCREMENT, mgr_id INTEGER NOT NULL UNIQUE REFERENCES staff ON UPDATE CASCADE)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE t (a INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY)", "want": "CREATE TABLE t (a INTEGER PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE t (a INTEGER, b AS (a * 2) STORED)", "want": "CREATE TABLE t (a INTEGER, b AS (a * 2) STORED)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE t (a INTEGER, b AS (a * 2))", "want": "CREATE TABLE t (a INTEGER, b AS (a * 2))", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE t (a INTEGER, b INTEGER AS (a * 2) STORED)", "want": "CREATE TABLE t (a INTEGER, b INTEGER AS (a * 2) STORED)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE t (a INTEGER, b INTEGER AS (a * 2))", "want": "CREATE TABLE t (a INTEGER, b INTEGER AS (a * 2))", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE t (a INTEGER, b INTEGER GENERATED ALWAYS AS (a * 2) STORED)", "want": "CREATE TABLE t (a INTEGER, b INTEGER AS (a * 2) STORED)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE t (a INTEGER, b INTEGER GENERATED ALWAYS AS (a * 2) VIRTUAL)", "want": "CREATE TABLE t (a INTEGER, b INTEGER AS (a * 2))", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE t (a INTEGER, b INTEGER GENERATED ALWAYS AS (a * 2))", "want": "CREATE TABLE t (a INTEGER, b INTEGER AS (a * 2))", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE z (a INTEGER PRIMARY KEY AUTOINCREMENT)", "want": "CREATE TABLE z (a INTEGER PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TABLE z (a INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT)", "want": "CREATE TABLE z (a INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TEMPORARY TABLE foo (id INTEGER)", "want": "CREATE TEMPORARY TABLE foo (id INTEGER)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TRIGGER check_balance BEFORE UPDATE OF balance ON accounts WHEN NEW.balance < 0 BEGIN UPDATE accounts SET balance = 0 WHERE id = NEW.id END", "want": "CREATE TRIGGER check_balance BEFORE UPDATE OF balance ON accounts WHEN NEW.balance < 0 BEGIN UPDATE accounts SET balance = 0 WHERE id = NEW.id END", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TRIGGER log_insert AFTER INSERT ON users BEGIN INSERT INTO audit_log (user_id, action, created_at) VALUES (NEW.id, 'INSERT', datetime('now')) END", "want": "CREATE TRIGGER log_insert AFTER INSERT ON users BEGIN INSERT INTO audit_log (user_id, action, created_at) VALUES (NEW.id, 'INSERT', datetime('now')) END", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE TRIGGER view_insert INSTEAD OF INSERT ON employee_view BEGIN INSERT INTO employees (id, name, department) VALUES (NEW.id, NEW.name, NEW.department) END", "want": "CREATE TRIGGER view_insert INSTEAD OF INSERT ON employee_view BEGIN INSERT INTO employees (id, name, department) VALUES (NEW.id, NEW.name, NEW.department) END", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(title, content)", "want": "CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(title, content)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE VIRTUAL TABLE demo_index USING rtree(id, minX, maxX, minY, maxY)", "want": "CREATE VIRTUAL TABLE demo_index USING rtree(id, minX, maxX, minY, maxY)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE VIRTUAL TABLE docs USING fts5(title, content)", "want": "CREATE VIRTUAL TABLE docs USING fts5(title, content)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE VIRTUAL TABLE main.docs USING fts5(title, content)", "want": "CREATE VIRTUAL TABLE main.docs USING fts5(title, content)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "CREATE VIRTUAL TABLE t USING module_name", "want": "CREATE VIRTUAL TABLE t USING module_name", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "DATEDIFF(a, b, 'day')", "want": "CAST((JULIANDAY(a) - JULIANDAY(b)) AS INTEGER)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "DATEDIFF(a, b, 'hour')", "want": "CAST((JULIANDAY(a) - JULIANDAY(b)) * 24.0 AS INTEGER)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "DATEDIFF(a, b, 'year')", "want": "CAST((JULIANDAY(a) - JULIANDAY(b)) / 365.0 AS INTEGER)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "DETACH DATABASE schema_name", "want": "DETACH schema_name", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "EDITDIST3(col1, col2)", "want": "EDITDIST3(col1, col2)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "INSERT INTO tbl (x, y) SELECT 1, 'a' WHERE TRUE ON CONFLICT(x, LOWER(y)) DO UPDATE SET y = excluded.y", "want": "INSERT INTO tbl (x, y) SELECT 1, 'a' WHERE TRUE ON CONFLICT(x, LOWER(y)) DO UPDATE SET y = excluded.y", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "INSERT INTO tbl (x, y) VALUES (1, 'a') ON CONFLICT(CASE WHEN x > 0 THEN x ELSE -x END) DO NOTHING", "want": "INSERT INTO tbl (x, y) VALUES (1, 'a') ON CONFLICT(CASE WHEN x > 0 THEN x ELSE -x END) DO NOTHING", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "INSERT INTO tbl (x, y) VALUES (1, 'a') ON CONFLICT(x) WHERE x > 0 DO UPDATE SET y = excluded.y", "want": "INSERT INTO tbl (x, y) VALUES (1, 'a') ON CONFLICT(x) WHERE x > 0 DO UPDATE SET y = excluded.y", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "INSERT INTO tbl (x, y) VALUES (1, 'a') ON CONFLICT(x, LOWER(y) COLLATE NOCASE ASC, y DESC) DO NOTHING", "want": "INSERT INTO tbl (x, y) VALUES (1, 'a') ON CONFLICT(x, LOWER(y) COLLATE NOCASE ASC, y DESC) DO NOTHING", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "INSERT OR ABORT INTO foo (x, y) VALUES (1, 2)", "want": "INSERT OR ABORT INTO foo (x, y) VALUES (1, 2)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "INSERT OR FAIL INTO foo (x, y) VALUES (1, 2)", "want": "INSERT OR FAIL INTO foo (x, y) VALUES (1, 2)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "INSERT OR IGNORE INTO foo (x, y) VALUES (1, 2)", "want": "INSERT OR IGNORE INTO foo (x, y) VALUES (1, 2)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "INSERT OR REPLACE INTO foo (x, y) VALUES (1, 2)", "want": "INSERT OR REPLACE INTO foo (x, y) VALUES (1, 2)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "INSERT OR ROLLBACK INTO foo (x, y) VALUES (1, 2)", "want": "INSERT OR ROLLBACK INTO foo (x, y) VALUES (1, 2)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA cache_size = 2000", "want": "PRAGMA cache_size = 2000", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA cache_size(2000)", "want": "PRAGMA cache_size = 2000", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA encoding = 'UTF-16'", "want": "PRAGMA encoding = 'UTF-16'", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA foo = -2000", "want": "PRAGMA foo = -2000", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA foo(-2000)", "want": "PRAGMA foo = -2000", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA full_column_names = off", "want": "PRAGMA full_column_names = off", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA full_column_names = on", "want": "PRAGMA full_column_names = on", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA main.cache_size", "want": "PRAGMA main.cache_size", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA main.cache_size = 2000", "want": "PRAGMA main.cache_size = 2000", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA main.cache_size(2000)", "want": "PRAGMA main.cache_size = 2000", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA schema", "want": "PRAGMA schema", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "PRAGMA table_info", "want": "PRAGMA table_info", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "REPLACE INTO foo (x, y) VALUES (1, 2)", "want": "REPLACE INTO foo (x, y) VALUES (1, 2)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT (JULIANDAY('now') - 2440587.5) * 86400.0", "want": "SELECT (JULIANDAY('now') - 2440587.5) * 86400.0", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT * FROM GENERATE_SERIES(1, 5)", "want": "SELECT * FROM GENERATE_SERIES(1, 5)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT * FROM station WHERE city IS NOT ''", "want": "SELECT * FROM station WHERE NOT city IS ''", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT * FROM t AS t INDEXED BY s.i", "want": "SELECT * FROM t AS t INDEXED BY s.i", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT * FROM t AS t(c1, c2)", "want": "SELECT * FROM t AS t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT * FROM t INDEXED BY i", "want": "SELECT * FROM t INDEXED BY i", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT * FROM t INDEXED BY s.i", "want": "SELECT * FROM t INDEXED BY s.i", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT * FROM t NOT INDEXED", "want": "SELECT * FROM t NOT INDEXED", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT * FROM t WHERE NULL IS NOT y", "want": "SELECT * FROM t WHERE NOT NULL IS y", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT * FROM t WHERE NULL IS y", "want": "SELECT * FROM t WHERE NULL IS y", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT * FROM t1, t2", "want": "SELECT * FROM t1 CROSS JOIN t2", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT -a || b FROM t", "want": "SELECT -a || b FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT 0 NOT IN (1) NOT IN (2)", "want": "SELECT NOT (NOT 0 IN (1)) IN (2)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT 0XCC", "want": "SELECT x'CC'", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT 1 + 2 || 3", "want": "SELECT 1 + (2 || 3)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT 1 IN (0) IN (1)", "want": "SELECT 1 IN (0) IN (1)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT 1 LIKE 2 LIKE 3", "want": "SELECT 1 LIKE 2 LIKE 3", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT 1 NOT IN (0) IN (0, 1)", "want": "SELECT (NOT 1 IN (0)) IN (0, 1)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT 2 * 3 || 4", "want": "SELECT 2 * (3 || 4)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT CAST([a].[b] AS SMALLINT) FROM foo", "want": "SELECT CAST(\"a\".\"b\" AS INTEGER) FROM foo", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT DATE('now', 'start of month', '+1 month', '-1 day')", "want": "SELECT DATE('now', 'start of month', '+1 month', '-1 day')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT DATE('now', 'start of year', '+9 months', 'weekday 2')", "want": "SELECT DATE('now', 'start of year', '+9 months', 'weekday 2')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT DATE()", "want": "SELECT DATE()", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT DATETIME(1092941466, 'auto')", "want": "SELECT DATETIME(1092941466, 'auto')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT DATETIME(1092941466, 'unixepoch')", "want": "SELECT DATETIME(1092941466, 'unixepoch')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT DATETIME(1092941466, 'unixepoch', 'localtime')", "want": "SELECT DATETIME(1092941466, 'unixepoch', 'localtime')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT FIRST_VALUE(Name) OVER (PARTITION BY AlbumId ORDER BY Bytes DESC) AS LargestTrack FROM tracks", "want": "SELECT FIRST_VALUE(Name) OVER (PARTITION BY AlbumId ORDER BY Bytes DESC) AS LargestTrack FROM tracks", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT GLOB('*y*', 'xyz')", "want": "SELECT 'xyz' GLOB '*y*'", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT INSTR(haystack, needle)", "want": "SELECT INSTR(haystack, needle)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[2]', '$[0]', '$[1]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[2]', '$[0]', '$[1]')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT JSON_EXTRACT(a, '$') FROM t", "want": "SELECT JSON_EXTRACT(a, '$') FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT JSON_EXTRACT(a, '$.k') FROM t", "want": "SELECT JSON_EXTRACT(a, '$.k') FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT JSON_EXTRACT(a, b) FROM t", "want": "SELECT JSON_EXTRACT(a, b) FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT JSON_OBJECT('col1', 1, 'col2', '1')", "want": "SELECT JSON_OBJECT('col1', 1, 'col2', '1')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT JSON_SET('{}', '$.x', JSON_EXTRACT(a, '$.k'))", "want": "SELECT JSON_SET('{}', '$.x', JSON_EXTRACT(a, '$.k'))", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT JULIANDAY('now') - JULIANDAY('1776-07-04')", "want": "SELECT JULIANDAY('now') - JULIANDAY('1776-07-04')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT LIKE('%y%', 'xyz', '')", "want": "SELECT 'xyz' LIKE '%y%' ESCAPE ''", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT LIKE(y, x)", "want": "SELECT x LIKE y", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT RANK() OVER (RANGE CURRENT ROW) FROM tbl", "want": "SELECT RANK() OVER (RANGE CURRENT ROW) FROM tbl", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT SQLITE_VERSION()", "want": "SELECT SQLITE_VERSION()", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT STRFTIME('%Y-%m-%d', '2016-10-16', 'start of month')", "want": "SELECT STRFTIME('%Y-%m-%d', '2016-10-16', 'start of month')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT STRFTIME('%Y-%m-%d', '2020-01-01 12:05:03')", "want": "SELECT STRFTIME('%Y-%m-%d', '2020-01-01 12:05:03')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT STRFTIME('%Y-%m-%d', CURRENT_TIMESTAMP)", "want": "SELECT STRFTIME('%Y-%m-%d', CURRENT_TIMESTAMP)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT STRFTIME('%Y/%m/%d', 'now')", "want": "SELECT STRFTIME('%Y/%m/%d', 'now')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT STRFTIME('%s')", "want": "SELECT STRFTIME('%s', CURRENT_TIMESTAMP)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT TIMEDIFF('now', '1809-02-12')", "want": "SELECT TIMEDIFF('now', '1809-02-12')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT UNIXEPOCH('now', 'subsec')", "want": "SELECT UNIXEPOCH('now', 'subsec')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT UNIXEPOCH()", "want": "SELECT UNIXEPOCH()", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT UNIXEPOCH() - UNIXEPOCH('2004-01-01 02:34:56')", "want": "SELECT UNIXEPOCH() - UNIXEPOCH('2004-01-01 02:34:56')", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a - b ->> c FROM t", "want": "SELECT a - (b ->> c) FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a -> '$.k' FROM t", "want": "SELECT a -> '$.k' FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a -> b ->> c -> d FROM t", "want": "SELECT a -> b ->> c -> d FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a ->> '$.k' FROM t", "want": "SELECT a ->> '$.k' FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a ->> b + c FROM t", "want": "SELECT (a ->> b) + c FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a ->> b || c FROM t", "want": "SELECT a ->> b || c FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a COLLATE NOCASE -> b + c FROM t", "want": "SELECT (a COLLATE NOCASE -> b) + c FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a COLLATE NOCASE || b * c FROM t", "want": "SELECT (a COLLATE NOCASE || b) * c FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a COLLATE NOCASE || b -> c FROM t", "want": "SELECT (a COLLATE NOCASE || b) -> c FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a FROM t1 WHERE a NOT NULL AND a NOT NULL ORDER BY a", "want": "SELECT a FROM t1 WHERE NOT a IS NULL AND NOT a IS NULL ORDER BY a", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a || b * c FROM t", "want": "SELECT (a || b) * c FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a || b ->> c", "want": "SELECT (a || b) ->> c", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a || b COLLATE NOCASE FROM t ORDER BY 1", "want": "SELECT a || b COLLATE NOCASE FROM t ORDER BY 1", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a, SUM(b) OVER (ORDER BY a ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) FROM t1 ORDER BY 1", "want": "SELECT a, SUM(b) OVER (ORDER BY a ROWS BETWEEN -1 PRECEDING AND 1 FOLLOWING) FROM t1 ORDER BY 1", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a, b FROM t1 WHERE b + a NOT NULL ORDER BY 1", "want": "SELECT a, b FROM t1 WHERE NOT b + a IS NULL ORDER BY 1", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT a.data ->> b.key ->> a.final_key FROM t", "want": "SELECT a.data ->> b.key ->> a.final_key FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "want": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT item AS \"item\", some AS \"some\" FROM data WHERE (item = 'value_1' COLLATE NOCASE) AND (some = 't' COLLATE NOCASE) ORDER BY item ASC LIMIT 1 OFFSET 0", "want": "SELECT item AS \"item\", some AS \"some\" FROM data WHERE (item = 'value_1' COLLATE NOCASE) AND (some = 't' COLLATE NOCASE) ORDER BY item ASC LIMIT 1 OFFSET 0", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT match FROM t", "want": "SELECT match FROM t", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT rowid FROM t1 WHERE t1 MATCH 'lorem'", "want": "SELECT rowid FROM t1 WHERE t1 MATCH 'lorem'", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "SELECT x NOT IN (1) IS TRUE", "want": "SELECT (NOT x IN (1)) IS TRUE", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "TRUNC(3.14)", "want": "TRUNC(3.14)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "TRUNC(3.14, 2)", "want": "TRUNC(3.14)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "UNHEX(a, b)", "want": "UNHEX(a, b)", "pretty": false, "identify": false}
+{"dialect": "sqlite", "sql": "WITH xyz(x) AS (SELECT 1) SELECT x FROM xyz", "want": "WITH xyz(x) AS (SELECT 1) SELECT x FROM xyz", "pretty": false, "identify": false}
 {"dialect": "starrocks", "sql": "ALTER TABLE a SWAP WITH b", "want": "ALTER TABLE a SWAP WITH b", "pretty": false, "identify": false}
 {"dialect": "starrocks", "sql": "ALTER TABLE t1 RENAME t2", "want": "ALTER TABLE t1 RENAME t2", "pretty": false, "identify": false}
 {"dialect": "starrocks", "sql": "ANALYZE FULL TABLE TBL(c1, c2) PROPERTIES ('prop1'=val1)", "want": "ANALYZE FULL TABLE TBL(c1, c2) PROPERTIES ('prop1'=val1)", "pretty": false, "identify": false}

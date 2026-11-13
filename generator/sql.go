@@ -3208,7 +3208,8 @@ func (g *Generator) tableAliasSQL(e expressions.Expression) string {
 	alias := g.sqlKey(e, "this")
 	columns := g.expressions(exprsOptions{expression: e, key: "columns", flat: true})
 	if columns != "" {
-		if !g.dialect.SupportsTableAliasColumns {
+		keepNamedCTEColumns := g.dialect.SupportsNamedCTEColumns && e.Parent() != nil && e.Parent().Kind() == expressions.KindCTE
+		if !g.dialect.SupportsTableAliasColumns && !keepNamedCTEColumns {
 			g.unsupported("Named columns are not supported in table alias.")
 			columns = ""
 		} else {

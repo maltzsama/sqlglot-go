@@ -16,6 +16,12 @@ func init() {
 // JSON_OBJECTAGG (registered separately in dispatch above, matching upstream's TRANSFORMS
 // entries at generator.py:210-211 - both map to the same private method).
 func (g *Generator) jsonObjectSQL(e expressions.Expression) string {
+	return g.jsonObjectSQLNamed(e, "")
+}
+
+// jsonObjectSQLNamed ports the name parameter of _jsonobject_sql (generator.py:3834): a
+// dialect override can rename the call, e.g. sqlite's JSON_GROUP_OBJECT.
+func (g *Generator) jsonObjectSQLNamed(e expressions.Expression, name string) string {
 	nullHandling := g.sqlKey(e, "null_handling")
 	if nullHandling != "" {
 		nullHandling = " " + nullHandling
@@ -39,13 +45,15 @@ func (g *Generator) jsonObjectSQL(e expressions.Expression) string {
 		encoding = " ENCODING " + encoding
 	}
 
-	name := "JSON_OBJECT"
-	if e.Kind() == expressions.KindJSONObjectAgg {
-		name = "JSON_OBJECTAGG"
-		// Postgres renders JSONObjectAgg as JSON_OBJECT_AGG (generators/postgres.py:389,
-		// rename_func("JSON_OBJECT_AGG")); base/mysql keep the JSON_OBJECTAGG spelling.
-		if g.isDialect("postgres") {
-			name = "JSON_OBJECT_AGG"
+	if name == "" {
+		name = "JSON_OBJECT"
+		if e.Kind() == expressions.KindJSONObjectAgg {
+			name = "JSON_OBJECTAGG"
+			// Postgres renders JSONObjectAgg as JSON_OBJECT_AGG (generators/postgres.py:389,
+			// rename_func("JSON_OBJECT_AGG")); base/mysql keep the JSON_OBJECTAGG spelling.
+			if g.isDialect("postgres") {
+				name = "JSON_OBJECT_AGG"
+			}
 		}
 	}
 

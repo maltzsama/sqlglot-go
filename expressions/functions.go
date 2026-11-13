@@ -36,6 +36,19 @@ func FromArgList(kind Kind, args []Expression) Expression {
 }
 
 var FunctionByName = map[string]func([]Expression) Expression{
+	// parser.py:414 GLOB(args) -> Glob(this=args[1], expression=args[0]); parser.py:432
+	// LIKE(args) -> Like(this=args[1], expression=args[0]), wrapped in Escape when a third
+	// argument is present (build_like).
+	"GLOB": func(args []Expression) Expression {
+		return newNode(KindGlob, Args{"this": seqGetExpr(args, 1), "expression": seqGetExpr(args, 0)})
+	},
+	"LIKE": func(args []Expression) Expression {
+		like := newNode(KindLike, Args{"this": seqGetExpr(args, 1), "expression": seqGetExpr(args, 0)})
+		if len(args) > 2 {
+			return newNode(KindEscape, Args{"this": like, "expression": seqGetExpr(args, 2)})
+		}
+		return like
+	},
 	"ARRAY": func(args []Expression) Expression {
 		return newNode(KindArray, Args{"expressions": args})
 	},

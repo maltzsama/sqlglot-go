@@ -5,6 +5,7 @@ package expressions
 // core.go). See the KindGlob..KindSoundex const-block comment in kinds.go for the exact
 // upstream class each one ports.
 func Glob(args Args) Expression                    { return newNode(KindGlob, args) }
+func Match(args Args) Expression                   { return newNode(KindMatch, args) }
 func Overlaps(args Args) Expression                { return newNode(KindOverlaps, args) }
 func RegexpILike(args Args) Expression             { return newNode(KindRegexpILike, args) }
 func Adjacent(args Args) Expression                { return newNode(KindAdjacent, args) }

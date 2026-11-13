@@ -225,6 +225,7 @@ const (
 	minPassTranspileSnowflake   = 663
 	minPassTranspileSpark       = 642
 	minPassTranspileSpark2      = 54
+	minPassTranspileSQLite      = 110
 	minPassTranspileStarrocks   = 79
 	minPassTranspileTrino       = 84
 	minPassTranspileTSQL        = 290
@@ -250,6 +251,7 @@ const (
 	minTotalTranspileSnowflake   = 986
 	minTotalTranspileSpark       = 832
 	minTotalTranspileSpark2      = 89
+	minTotalTranspileSQLite      = 156
 	minTotalTranspileStarrocks   = 100
 	minTotalTranspileTrino       = 148
 	minTotalTranspileTSQL        = 386
@@ -311,6 +313,7 @@ func TestTranspileCorpus(t *testing.T) {
 		{"snowflake", minPassTranspileSnowflake, minTotalTranspileSnowflake},
 		{"spark", minPassTranspileSpark, minTotalTranspileSpark},
 		{"spark2", minPassTranspileSpark2, minTotalTranspileSpark2},
+		{"sqlite", minPassTranspileSQLite, minTotalTranspileSQLite},
 		{"starrocks", minPassTranspileStarrocks, minTotalTranspileStarrocks},
 		{"trino", minPassTranspileTrino, minTotalTranspileTrino},
 		{"tsql", minPassTranspileTSQL, minTotalTranspileTSQL},

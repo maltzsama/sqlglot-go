@@ -46,7 +46,7 @@ func (p *Parser) parseCreateAsCommand(start tokens.Token) exp.Expression {
 			(tok.TokenType == tokens.PROCEDURE || tok.TokenType == tokens.FUNCTION || tok.TokenType == tokens.TRIGGER) {
 			routineCreate = true
 		}
-		if tok.TokenType == tokens.BEGIN && stringsUpper(tok.Text) == "BEGIN" && p.dialect.Name != "tsql" && p.dialect.Name != "oracle" {
+		if tok.TokenType == tokens.BEGIN && stringsUpper(tok.Text) == "BEGIN" && p.dialect.Name != "tsql" && p.dialect.Name != "oracle" && p.dialect.Name != "sqlite" {
 			p.raiseError("Unsupported routine definition (body did not parse)", start)
 			p.checkErrors()
 			break

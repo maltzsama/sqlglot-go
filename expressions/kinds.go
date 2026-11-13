@@ -650,6 +650,9 @@ const (
 	//
 	// KindGlob (core.py:2166, `class Glob(Expression, Binary, Predicate)`).
 	KindGlob
+	// KindMatch (core.py:2170, `class Match(Expression, Binary, Predicate)`): sqlite's
+	// `x MATCH y` range operator (parsers/sqlite.py:94-98).
+	KindMatch
 	// KindOverlaps (core.py:2122, `class Overlaps(Expression, Binary)`).
 	KindOverlaps
 	// KindRegexpILike (string.py:448, `class RegexpILike(Expression, Binary, Func)`):
@@ -749,6 +752,12 @@ const (
 	KindEngineProperty
 	KindInheritsProperty
 	KindLikeProperty
+	// KindModuleProperty (properties.py:61, `class ModuleProperty(Property)`): sqlite
+	// `CREATE VIRTUAL TABLE ... USING <module>([cols])`.
+	KindModuleProperty
+	// KindVirtualProperty (properties.py:65, `class VirtualProperty(Property)`): sqlite
+	// `CREATE VIRTUAL TABLE`.
+	KindVirtualProperty
 	KindLockProperty
 	KindLockingProperty
 	KindMaterializedProperty
@@ -1379,7 +1388,7 @@ var argTypes = map[Kind][]argSpec{
 	KindInterval:              {{"this", false}, {"unit", false}},
 	KindIntervalSpan:          {{"this", true}, {"expression", true}},
 	KindJSONExtract:           {{"this", true}, {"expression", true}, {"only_json_types", false}, {"expressions", false}, {"variant_extract", false}, {"json_query", false}, {"option", false}, {"quote", false}, {"on_condition", false}, {"requires_json", false}, {"emits", false}},
-	KindJSONExtractScalar:     {{"this", true}, {"expression", true}, {"only_json_types", false}, {"expressions", false}, {"json_type", false}, {"scalar_only", false}},
+	KindJSONExtractScalar:     {{"this", true}, {"expression", true}, {"only_json_types", false}, {"expressions", false}, {"json_type", false}, {"scalar_only", false}, {"json_subtype", false}},
 	KindJSONBExtract:          {{"this", true}, {"expression", true}},
 	KindJSONBExtractScalar:    {{"this", true}, {"expression", true}, {"json_type", false}},
 	KindJSONCast:              {{"this", true}, {"to", true}, {"format", false}, {"safe", false}, {"action", false}, {"default", false}},
@@ -1644,6 +1653,7 @@ var argTypes = map[Kind][]argSpec{
 	// verbatim (core.py:1623/1624); only ArrayOverlaps/JSON/Operator/MatchAgainst/
 	// JSONArrayContains override with extra fields.
 	KindGlob:                    {{"this", true}, {"expression", true}},
+	KindMatch:                   {{"this", true}, {"expression", true}},
 	KindOverlaps:                {{"this", true}, {"expression", true}},
 	KindRegexpILike:             {{"this", true}, {"expression", true}, {"flag", false}},
 	KindAdjacent:                {{"this", true}, {"expression", true}},
@@ -1690,6 +1700,8 @@ var argTypes = map[Kind][]argSpec{
 	KindEngineProperty:               {{"this", true}},
 	KindInheritsProperty:             {{"expressions", true}},
 	KindLikeProperty:                 {{"this", true}, {"expressions", false}},
+	KindModuleProperty:               {{"this", true}, {"expressions", false}},
+	KindVirtualProperty:              {},
 	KindLockProperty:                 {{"this", true}},
 	KindLockingProperty:              {{"this", false}, {"kind", true}, {"for_or_in", false}, {"lock_type", true}, {"override", false}},
 	KindMaterializedProperty:         {{"this", false}},
@@ -2377,6 +2389,7 @@ var traitsOf = map[Kind]Trait{
 	// the exact upstream class each mirrors. KindJSON (query.py:1965, plain
 	// Expression) gets no row, matching e.g. KindTableAlias.
 	KindGlob:                    TraitCondition | TraitBinary | TraitPredicate,
+	KindMatch:                   TraitCondition | TraitBinary | TraitPredicate,
 	KindOverlaps:                TraitCondition | TraitBinary | TraitPredicate,
 	KindRegexpILike:             TraitCondition | TraitBinary | TraitFunc | TraitPredicate,
 	KindAdjacent:                TraitCondition | TraitBinary | TraitPredicate,
@@ -3117,6 +3130,7 @@ var className = map[Kind]string{
 	KindSlice:                               "Slice",
 	KindNational:                            "National",
 	KindGlob:                                "Glob",
+	KindMatch:                               "Match",
 	KindOverlaps:                            "Overlaps",
 	KindRegexpILike:                         "RegexpILike",
 	KindAdjacent:                            "Adjacent",
@@ -3154,6 +3168,8 @@ var className = map[Kind]string{
 	KindEngineProperty:                      "EngineProperty",
 	KindInheritsProperty:                    "InheritsProperty",
 	KindLikeProperty:                        "LikeProperty",
+	KindModuleProperty:                      "ModuleProperty",
+	KindVirtualProperty:                     "VirtualProperty",
 	KindLockProperty:                        "LockProperty",
 	KindLockingProperty:                     "LockingProperty",
 	KindMaterializedProperty:                "MaterializedProperty",

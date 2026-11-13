@@ -5,6 +5,7 @@ import (
 
 	"github.com/maltzsama/sqlglot-go/dialects"
 	"github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 // Per-dialect generator overrides — the port of upstream's per-class TRANSFORMS, TYPE_MAPPING
@@ -52,6 +53,31 @@ func registerDialectDispatch(name string, table map[expressions.Kind]func(*Gener
 		}
 		dialectDispatch[name][kind] = handler
 	}
+}
+
+// dialectTokenMappings holds per-dialect overrides of Generator.TOKEN_MAPPING
+// (generator.py:522-531): token -> emitted text. The base map is empty.
+var dialectTokenMappings = map[string]map[tokens.TokenType]string{}
+
+func registerDialectTokenMapping(name string, mapping map[tokens.TokenType]string) {
+	name = strings.ToLower(name)
+	if dialectTokenMappings[name] == nil {
+		dialectTokenMappings[name] = map[tokens.TokenType]string{}
+	}
+	for tt, text := range mapping {
+		dialectTokenMappings[name][tt] = text
+	}
+}
+
+// tokenSQL ports token_sql (generator.py:4712-4713): the dialect's TOKEN_MAPPING entry, else
+// the token's own name.
+func (g *Generator) tokenSQL(tt tokens.TokenType) string {
+	for key := g.overrideKey(); key != ""; key = dialectParents[key] {
+		if text, ok := dialectTokenMappings[key][tt]; ok {
+			return text
+		}
+	}
+	return tokens.TypeName(tt)
 }
 
 func registerDialectTypeMapping(name string, delta map[expressions.DType]string) {

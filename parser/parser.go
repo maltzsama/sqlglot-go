@@ -1543,6 +1543,12 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 			this.Set("alias", alias)
 		}
 	}
+	// parser.py:5089-5092: sqlite `INDEXED BY <table-parts>` / `NOT INDEXED` after the alias.
+	if p.match(tokens.INDEXED_BY) {
+		this.Set("indexed", p.parseTableParts(false, false, false, false))
+	} else if p.matchTextSeq("NOT", "INDEXED") {
+		this.Set("indexed", false)
+	}
 	// parser.py:5094-5097: `FROM t.arr AS a AT i` indexes the navigated array (Redshift SUPER).
 	if this.Kind() == exp.KindTable && p.matchTextSeq("AT") {
 		return p.expression(exp.AtIndex(exp.Args{"this": tableToColumn(this), "expression": p.parseIdVar(true, nil)}), nil, nil)
@@ -2197,6 +2203,14 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 			// binary_range_parser(exp.Glob) (parser.py:1188).
 			p.advance()
 			this = p.parseEscape(p.expression(exp.Glob(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
+		case tokens.MATCH:
+			// parsers/sqlite.py:94-98 RANGE_PARSERS[MATCH] = binary_range_parser(exp.Match).
+			if p.dialect.Name == "sqlite" {
+				p.advance()
+				this = p.expression(exp.Match(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil)
+			} else {
+				matched = false
+			}
 		case tokens.TILDE:
 			// parsers/duckdb.py:222: RANGE_PARSERS[TILDE] = binary_range_parser(RegexpFullMatch).
 			if p.dialect.RegexpRangeOperators {
@@ -2405,6 +2419,8 @@ func (p *Parser) isRangeChainToken(tt tokens.TokenType) bool {
 		return p.dialectFamily("postgres")
 	case tokens.MEMBER_OF:
 		return p.dialect.Name == "mysql"
+	case tokens.MATCH:
+		return p.dialect.Name == "sqlite"
 	}
 	return false
 }
@@ -2588,18 +2604,34 @@ func (p *Parser) parseTerm() exp.Expression {
 		this = p.expression(constructor(exp.Args{"this": this, "expression": p.parseFactor()}), nil, comments)
 
 		if this != nil && this.Kind() == exp.KindCollate {
-			if expr := this.Expr(); expr != nil && expr.Kind() == exp.KindColumn && len(expr.Parts()) == 1 {
-				if ident := expr.This(); ident != nil && ident.Kind() == exp.KindIdentifier {
-					if quoted, _ := ident.Arg("quoted").(bool); quoted {
-						this.Set("expression", ident)
-					} else {
-						this.Set("expression", exp.Var(exp.Args{"this": ident.Name()}))
-					}
-				}
-			}
+			normalizeCollate(this)
 		}
 	}
 	return this
+}
+
+// normalizeCollate ports the COLLATE post-build step in _parse_term (parser.py:6107-6115):
+// a single-part column collation operand (e.g. `x COLLATE utf8_bin`) becomes a bare Var (or
+// the Identifier itself, if quoted) instead of staying a Column, while a qualified one
+// (e.g. `x COLLATE pg_catalog."default"`) is left as-is so it still round-trips. SQLite's
+// concat tier applies the same normalization (parsers/sqlite.py:125-134).
+func normalizeCollate(collate exp.Expression) {
+	if collate == nil || collate.Kind() != exp.KindCollate {
+		return
+	}
+	expr := collate.Expr()
+	if expr == nil || expr.Kind() != exp.KindColumn || len(expr.Parts()) != 1 {
+		return
+	}
+	ident := expr.This()
+	if ident == nil || ident.Kind() != exp.KindIdentifier {
+		return
+	}
+	if quoted, _ := ident.Arg("quoted").(bool); quoted {
+		collate.Set("expression", ident)
+	} else {
+		collate.Set("expression", exp.Var(exp.Args{"this": ident.Name()}))
+	}
 }
 
 var factorTokens = map[tokens.TokenType]func(exp.Args) exp.Expression{
@@ -2634,6 +2666,10 @@ func (p *Parser) parseFactor() exp.Expression {
 func (p *Parser) parseFactorOperand() exp.Expression {
 	if p.dialect.ExponentOperators {
 		return p.parseExponent()
+	}
+	// parsers/sqlite.py:100-123: sqlite's ||/->/->> tier binds tighter than multiplication.
+	if p.dialect.Name == "sqlite" {
+		return p.parseSQLiteFactorOperand()
 	}
 	return p.parseUnary()
 }
@@ -3117,6 +3153,7 @@ func (p *Parser) parseColumnOpsBase(this exp.Expression) exp.Expression {
 		// never binds as the postgres jsonb-contains operator there.
 		if !ok || (p.dialect.JSONOperatorsAreBinary && jsonOperatorTokens[opToken]) ||
 			(p.dialect.Name == "clickhouse" && opToken == tokens.PLACEHOLDER) ||
+			(p.dialect.Name == "sqlite" && (opToken == tokens.ARROW || opToken == tokens.DARROW)) ||
 			(opToken == tokens.QDCOLON && !p.dialectIs("databricks")) {
 			break
 		}

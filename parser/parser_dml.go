@@ -246,7 +246,7 @@ func (p *Parser) parseOnConflict() exp.Expression {
 		if p.matchTextSeq("ON", "CONSTRAINT") {
 			constraint = p.parseIdVar(false, nil)
 		} else if p.match(tokens.L_PAREN) {
-			conflictKeys = p.parseCsv(func() exp.Expression { return p.parseOrdered(p.parseColumn) })
+			conflictKeys = p.parseCsv(func() exp.Expression { return p.parseIndexedColumn() })
 			p.matchRParen(nil)
 		}
 	}
