@@ -38,14 +38,21 @@ func FromArgList(kind Kind, args []Expression) Expression {
 var FunctionByName = map[string]func([]Expression) Expression{
 	// parser.py:414 GLOB(args) -> Glob(this=args[1], expression=args[0]); parser.py:432
 	// LIKE(args) -> Like(this=args[1], expression=args[0]), wrapped in Escape when a third
-	// argument is present (build_like).
+	// argument is present (build_like). DIVERGENCE (DEVIATIONS §1.29): a binary operand is
+	// parenthesized, since the infix rewrite otherwise re-associates (LIKE(a OR b, 'x')).
 	"GLOB": func(args []Expression) Expression {
-		return newNode(KindGlob, Args{"this": seqGetExpr(args, 1), "expression": seqGetExpr(args, 0)})
+		return newNode(KindGlob, Args{
+			"this":       parenWrapBinary(seqGetExpr(args, 1)),
+			"expression": parenWrapBinary(seqGetExpr(args, 0)),
+		})
 	},
 	"LIKE": func(args []Expression) Expression {
-		like := newNode(KindLike, Args{"this": seqGetExpr(args, 1), "expression": seqGetExpr(args, 0)})
+		like := newNode(KindLike, Args{
+			"this":       parenWrapBinary(seqGetExpr(args, 1)),
+			"expression": parenWrapBinary(seqGetExpr(args, 0)),
+		})
 		if len(args) > 2 {
-			return newNode(KindEscape, Args{"this": like, "expression": seqGetExpr(args, 2)})
+			return newNode(KindEscape, Args{"this": like, "expression": parenWrapBinary(seqGetExpr(args, 2))})
 		}
 		return like
 	},

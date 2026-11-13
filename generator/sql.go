@@ -1442,10 +1442,9 @@ func (g *Generator) windowSpecSQL(e expressions.Expression) string {
 	windowSpec := kind + " BETWEEN " + start + " AND " + end
 	exclude := g.sqlKey(e, "exclude")
 	if exclude != "" {
-		// SUPPORTS_WINDOW_EXCLUDE (generator.py:512, generators/postgres.py:250): base
-		// defaults to unsupported (dropping EXCLUDE with a warning); postgres (like
-		// sqlite/oracle/duckdb upstream, out of scope here) renders it.
-		if g.isDialect("postgres") {
+		// SUPPORTS_WINDOW_EXCLUDE (generator.py:512): base defaults to unsupported (dropping
+		// EXCLUDE with a warning); dialects that support it render it.
+		if g.dialect.SupportsWindowExclude {
 			windowSpec += " EXCLUDE " + exclude
 		} else {
 			g.unsupported("EXCLUDE clause is not supported in the WINDOW clause")

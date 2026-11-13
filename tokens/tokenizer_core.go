@@ -51,6 +51,7 @@ type TokenizerCore struct {
 	tokensPrecedingHint              map[TokenType]bool
 	hasBitStrings                    bool
 	hasHexStrings                    bool
+	hexIntegerLiterals               bool
 	numericLiterals                  map[string]string
 	varSingleTokens                  map[rune]bool
 	stringEscapesAllowedInRawStrings bool
@@ -87,6 +88,7 @@ func NewTokenizerCore(cfg TokenizerConfig) *TokenizerCore {
 		tokensPrecedingHint:              cfg.TokensPrecedingHint,
 		hasBitStrings:                    cfg.HasBitStrings,
 		hasHexStrings:                    cfg.HasHexStrings,
+		hexIntegerLiterals:               cfg.HexIntegerLiterals,
 		numericLiterals:                  cfg.NumericLiterals,
 		varSingleTokens:                  cfg.VarSingleTokens,
 		stringEscapesAllowedInRawStrings: cfg.StringEscapesAllowedInRawStrings,
@@ -747,11 +749,18 @@ func (c *TokenizerCore) scanHex() {
 	}
 	// See scanBits: validate the full int("0x...", 16), so a bare "0x" (empty payload) falls
 	// back to an identifier while "0x_FF" tokenizes (payload "_FF" -> x'_FF').
-	if _, ok := ParseIntPython(value, 16); ok {
-		c.add(HEX_STRING, payload)
-	} else {
+	parsed, ok := ParseIntPython(value, 16)
+	if !ok {
 		c.add(IDENTIFIER)
+		return
 	}
+	// DIVERGENCE (DEVIATIONS §1.28): real SQLite reads 0x.. as an integer literal, not a hex
+	// BLOB. Emit the decimal NUMBER so the value survives parsing instead of becoming x'..'.
+	if c.hexIntegerLiterals {
+		c.add(NUMBER, parsed.String())
+		return
+	}
+	c.add(HEX_STRING, payload)
 }
 
 func (c *TokenizerCore) extractValue() string {

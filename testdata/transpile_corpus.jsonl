@@ -4607,9 +4607,6 @@
 {"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(x ORDER BY y SEPARATOR z)", "want": "GROUP_CONCAT(x, z)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "INSERT IGNORE INTO foo (x, y) VALUES (1, 2)", "want": "INSERT OR IGNORE INTO foo (x, y) VALUES (1, 2)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT 0b1011", "want": "SELECT 11", "pretty": false, "identify": false}
-{"read": "mysql", "write": "sqlite", "sql": "SELECT 0x0000CC", "want": "SELECT x'0000CC'", "pretty": false, "identify": false}
-{"read": "mysql", "write": "sqlite", "sql": "SELECT 0xCC", "want": "SELECT x'CC'", "pretty": false, "identify": false}
-{"read": "mysql", "write": "sqlite", "sql": "SELECT 0xCC ", "want": "SELECT x'CC'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "want": "SELECT '[10, 20, [30, 40]]' -> '$[1]'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT b'1011'", "want": "SELECT 11", "pretty": false, "identify": false}
@@ -8048,7 +8045,6 @@
 {"read": "sqlite", "write": "mysql", "sql": "CREATE TABLE \"x\" (\"Name\" NVARCHAR(200) NOT NULL)", "want": "CREATE TABLE `x` (`Name` VARCHAR(200) NOT NULL)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "mysql", "sql": "CREATE TABLE z (a INTEGER PRIMARY KEY AUTOINCREMENT)", "want": "CREATE TABLE z (a INT PRIMARY KEY AUTO_INCREMENT)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "mysql", "sql": "CREATE TABLE z (a INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT)", "want": "CREATE TABLE z (a INT UNIQUE PRIMARY KEY AUTO_INCREMENT)", "pretty": false, "identify": false}
-{"read": "sqlite", "write": "mysql", "sql": "SELECT 0XCC", "want": "SELECT x'CC'", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "mysql", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "want": "SELECT CAST('[10, 20, [30, 40]]' AS JSON) ->> '$[1]'", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "mysql", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "mysql", "sql": "SELECT JSON_EXTRACT(a, '$.k') FROM t", "want": "SELECT a ->> '$.k' FROM t", "pretty": false, "identify": false}
@@ -8077,7 +8073,6 @@
 {"read": "sqlite", "write": "sqlite", "sql": "DATEDIFF(a, b, 'year')", "want": "CAST((JULIANDAY(a) - JULIANDAY(b)) / 365.0 AS INTEGER)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "EDITDIST3(col1, col2)", "want": "EDITDIST3(col1, col2)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "INSERT OR IGNORE INTO foo (x, y) VALUES (1, 2)", "want": "INSERT OR IGNORE INTO foo (x, y) VALUES (1, 2)", "pretty": false, "identify": false}
-{"read": "sqlite", "write": "sqlite", "sql": "SELECT 0XCC", "want": "SELECT x'CC'", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT CAST([a].[b] AS SMALLINT) FROM foo", "want": "SELECT CAST(\"a\".\"b\" AS INTEGER) FROM foo", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT FIRST_VALUE(Name) OVER (PARTITION BY AlbumId ORDER BY Bytes DESC) AS LargestTrack FROM tracks", "want": "SELECT FIRST_VALUE(Name) OVER (PARTITION BY AlbumId ORDER BY Bytes DESC) AS LargestTrack FROM tracks", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT GLOB('*y*', 'xyz')", "want": "SELECT 'xyz' GLOB '*y*'", "pretty": false, "identify": false}

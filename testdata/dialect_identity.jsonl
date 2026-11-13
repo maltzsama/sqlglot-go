@@ -5506,7 +5506,6 @@
 {"dialect": "sqlite", "sql": "SELECT * FROM t1, t2", "want": "SELECT * FROM t1 CROSS JOIN t2", "pretty": false, "identify": false}
 {"dialect": "sqlite", "sql": "SELECT -a || b FROM t", "want": "SELECT -a || b FROM t", "pretty": false, "identify": false}
 {"dialect": "sqlite", "sql": "SELECT 0 NOT IN (1) NOT IN (2)", "want": "SELECT NOT (NOT 0 IN (1)) IN (2)", "pretty": false, "identify": false}
-{"dialect": "sqlite", "sql": "SELECT 0XCC", "want": "SELECT x'CC'", "pretty": false, "identify": false}
 {"dialect": "sqlite", "sql": "SELECT 1 + 2 || 3", "want": "SELECT 1 + (2 || 3)", "pretty": false, "identify": false}
 {"dialect": "sqlite", "sql": "SELECT 1 IN (0) IN (1)", "want": "SELECT 1 IN (0) IN (1)", "pretty": false, "identify": false}
 {"dialect": "sqlite", "sql": "SELECT 1 LIKE 2 LIKE 3", "want": "SELECT 1 LIKE 2 LIKE 3", "pretty": false, "identify": false}

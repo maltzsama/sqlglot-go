@@ -344,11 +344,38 @@ The rows are tracked in `testdata/parity_gaps.txt` (one Databricks, six BigQuery
 
 ---
 
+### 1.28 SQLite `0x..` literals are integers, not BLOBs
+
+Real SQLite parses a `0x`-prefixed token as a hexadecimal **integer**: `SELECT 0xCC` returns
+204. Upstream sqlglot's tokenizer treats `0x..` as a hex string for every dialect and generates
+`x'CC'` for SQLite — a BLOB, a different value (`0xCC = 204` is true; `x'CC' = 204` is false).
+The port emits the decimal integer for SQLite (`HexIntegerLiterals` tokenizer flag), matching
+the engine. `x'CC'`/`X'CC'` remain the BLOB literals. Guarding test:
+`TestSQLiteHexIntegerLiteral`. Upstream's 0x expectations are excluded from the extracted
+identity and transpile corpora by the extractor, since they encode the wrong value.
+
+### 1.29 SQLite `LIKE`/`GLOB` function forms parenthesize binary operands
+
+SQLite provides `like(pattern, string)`/`glob(pattern, string)` as functions. The infix rewrite
+runs as `string LIKE pattern`, so a binary operand (`LIKE(a OR b, 'x')`) must be parenthesized
+or SQL re-associates it (`a OR b LIKE 'x'` parses as `a OR (b LIKE 'x')`). Upstream emits the
+unparenthesized form; the port wraps binary operands, matching the engine's evaluation.
+Guarding test: `TestSQLiteLikeGlobParentheses`.
+
+### 1.30 SQLite `RANGE CURRENT ROW` abbreviates only the bare frame form
+
+Upstream's `windowspec_sql` returns `RANGE CURRENT ROW` for any `RANGE` frame whose start is
+`CURRENT ROW`, dropping an explicit end (`RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING`)
+and any `EXCLUDE` clause — which changes the window aggregate. The port abbreviates only when
+no end and no EXCLUDE are present. Guarding test: `TestSQLiteWindowFrames`.
+
 ## 2. Cross-dialect-only deviations (never affect same-dialect round-trip)
 
 Cross-dialect transpilation between the registered dialects is exercised and gap-tracked by
 `TestTranspileCorpus` (issue #33); the deviations below only manifest there and never in a
-same-dialect round trip. The Presto/Trino/Hive/Athena generators port the
+same-dialect round trip. SQLite's `DATEDIFF(..., 'nanosecond')` multiplier uses the real
+86,400,000,000,000 ns/day instead of upstream's ten-times-too-small value, so the transpiled
+result matches the engine. The Presto/Trino/Hive/Athena generators port the
 same-dialect surface of upstream's `TRANSFORMS`/`TYPE_MAPPING`/`PROPERTIES_LOCATION`
 (`generator/dialect_{presto,trino,hive,athena}.go`); the transpile-only `Select` preprocess chain
 (eliminate_qualify/distinct_on, explode_projection_to_unnest, semi/anti joins) and transforms whose

@@ -605,6 +605,10 @@ type Dialect struct {
 	// SupportsTableAliasColumns ports SUPPORTS_TABLE_ALIAS_COLUMNS (base True; bigquery False):
 	// a table alias column list is dropped when false.
 	SupportsTableAliasColumns bool
+	// SupportsWindowExclude ports SUPPORTS_WINDOW_EXCLUDE (generator.py:512, base False;
+	// postgres/sqlite/oracle/duckdb set it True): a window frame EXCLUDE clause is rendered
+	// instead of dropped with a warning.
+	SupportsWindowExclude bool
 	// SupportsNamedCTEColumns ports SUPPORTS_NAMED_CTE_COLUMNS (generator.py:459, base True;
 	// bigquery False): a CTE alias keeps its column list even when table-alias columns are not
 	// supported.

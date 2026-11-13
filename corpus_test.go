@@ -252,7 +252,7 @@ const (
 	minPassDatabricks  = 175
 	minPassDuckDB      = 529
 	minPassSnowflake   = 1209
-	minPassSQLite      = 137
+	minPassSQLite      = 136
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.

@@ -38,6 +38,7 @@ Seongjin.
 
 import argparse
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -140,6 +141,17 @@ def patched_validate_identity(
         return None
 
 
+# DEVIATIONS §1.28: real SQLite reads a 0x-prefixed token as a hexadecimal integer (0xCC ==
+# 204), while upstream tokenizes it as a hex string and expects x'CC' (a BLOB). The port
+# deliberately matches the engine, so upstream's expectation is not a valid oracle; the port's
+# own TestSQLiteHexIntegerLiteral asserts the engine behavior instead.
+_SQLITE_HEX_INTEGER = re.compile(r"(?<![0-9A-Za-z_])0[xX][0-9A-Fa-f]")
+
+
+def _sqlite_hex_divergence(*values):
+    return any(isinstance(v, str) and _SQLITE_HEX_INTEGER.search(v) for v in values)
+
+
 def patched_validate_all(self, sql, read=None, write=None, pretty=False, identify=False):
     # Cross-dialect oracle first: record every read/write pair whose dialects are all
     # registered, without running upstream's assertions (the Go harness owns those).
@@ -150,6 +162,8 @@ def patched_validate_all(self, sql, read=None, write=None, pretty=False, identif
         for read_dialect, read_sql in (read or {}).items():
             read_key = _norm_dialect(read_dialect)
             if read_key in REGISTERED and isinstance(read_sql, str) and isinstance(sql, str):
+                if "sqlite" in (read_key, test_dialect) and _sqlite_hex_divergence(read_sql):
+                    continue
                 transpile_captured.append(
                     {
                         "read": read_key,
@@ -164,6 +178,8 @@ def patched_validate_all(self, sql, read=None, write=None, pretty=False, identif
             write_key = _norm_dialect(write_dialect)
             # UnsupportedError wants assert that generation raises; skip them (not a SQL pair).
             if write_key in REGISTERED and isinstance(write_sql, str) and isinstance(sql, str):
+                if "sqlite" in (test_dialect, write_key) and _sqlite_hex_divergence(sql):
+                    continue
                 transpile_captured.append(
                     {
                         "read": test_dialect,
@@ -181,7 +197,9 @@ def patched_validate_all(self, sql, read=None, write=None, pretty=False, identif
     # aborts a test method before its later validate_identity calls fire.
     if self.dialect in SAME_DIALECT_WRITES and write and self.dialect in write:
         want = write[self.dialect]
-        if isinstance(want, str):
+        if isinstance(want, str) and not (
+            self.dialect == "sqlite" and _sqlite_hex_divergence(sql, want)
+        ):
             captured.append(
                 {
                     "dialect": self.dialect,

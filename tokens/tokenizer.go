@@ -39,21 +39,25 @@ type TokenizerConfig struct {
 	// begin a comment when immediately followed by whitespace/control or EOF. MySQL
 	// requires this for `--` — `1--2` is arithmetic `1 - -2`, not `1` + comment. See
 	// DEVIATIONS §1.4 (upstream mis-tokenizes this).
-	LineCommentRequiresSpace         map[string]bool
-	StringEscapes                    map[rune]bool
-	ByteStringEscapes                map[rune]bool
-	IdentifierEscapes                map[rune]bool
-	EscapeFollowChars                map[rune]bool
-	Commands                         map[TokenType]bool
-	CommandPrefixTokens              map[TokenType]bool
-	TokensPrecedingHint              map[TokenType]bool
-	NumericLiterals                  map[string]string
-	VarSingleTokens                  map[rune]bool
-	UnescapedSequences               map[string]string
-	NestedComments                   bool
-	HintStart                        string
-	HasBitStrings                    bool
-	HasHexStrings                    bool
+	LineCommentRequiresSpace map[string]bool
+	StringEscapes            map[rune]bool
+	ByteStringEscapes        map[rune]bool
+	IdentifierEscapes        map[rune]bool
+	EscapeFollowChars        map[rune]bool
+	Commands                 map[TokenType]bool
+	CommandPrefixTokens      map[TokenType]bool
+	TokensPrecedingHint      map[TokenType]bool
+	NumericLiterals          map[string]string
+	VarSingleTokens          map[rune]bool
+	UnescapedSequences       map[string]string
+	NestedComments           bool
+	HintStart                string
+	HasBitStrings            bool
+	HasHexStrings            bool
+	// HexIntegerLiterals makes 0x-prefixed tokens numeric integer literals instead of hex
+	// BLOB/binary literals. Upstream treats 0x as a hex string everywhere, but real SQLite
+	// parses it as an integer (see DEVIATIONS §1.28), so sqlite sets this.
+	HexIntegerLiterals               bool
 	StringEscapesAllowedInRawStrings bool
 	HeredocTagIsIdentifier           bool
 	HeredocStringAlternative         TokenType

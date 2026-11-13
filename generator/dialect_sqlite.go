@@ -180,8 +180,8 @@ func sqliteTransformCreate(e exp.Expression) exp.Expression {
 			}
 			if primaryKeyIndex != -1 {
 				insertAt := primaryKeyIndex
-				if autoIncrementIndex < primaryKeyIndex {
-					insertAt--
+				if insertAt > len(next) {
+					insertAt = len(next)
 				}
 				next = append(next[:insertAt], append([]exp.Expression{autoIncrement}, next[insertAt:]...)...)
 			}
@@ -369,9 +369,7 @@ func sqliteDateAddSQL(g *Generator, e exp.Expression) string {
 		modifierText = g.gen(modifier)
 	}
 	if unit != nil {
-		modifierText = "'" + modifierText + " " + unit.Name() + "'"
-	} else {
-		modifierText = "'" + modifierText + "'"
+		modifierText = modifierText + " " + unit.Name()
 	}
 	return g.funcCall("DATE", []any{e.This(), exp.LiteralString(modifierText)}, "(", ")", false)
 }
@@ -462,7 +460,9 @@ func sqliteDateDiffSQL(g *Generator, e exp.Expression) string {
 	case "MICROSECOND":
 		sql += " * 86400000000.0"
 	case "NANOSECOND":
-		sql += " * 8640000000000.0"
+		// DIVERGENCE (DEVIATIONS §2): one day is 86,400,000,000,000 ns; upstream uses a
+		// value ten times too small, so this matches the real engine instead.
+		sql += " * 86400000000000.0"
 	default:
 		g.unsupported("DATEDIFF unsupported for '" + unit + "'.")
 	}
@@ -541,7 +541,11 @@ func sqliteRespectNullsSQL(g *Generator, e exp.Expression) string {
 
 // sqliteWindowSpecSQL ports windowspec_sql (generators/sqlite.py:371-378).
 func sqliteWindowSpecSQL(g *Generator, e exp.Expression) string {
-	if strings.EqualFold(e.Text("kind"), "RANGE") && strings.EqualFold(e.Text("start"), "CURRENT ROW") {
+	// DIVERGENCE (DEVIATIONS §1.30): upstream abbreviates any RANGE frame whose start is
+	// CURRENT ROW, dropping an explicit end (and any EXCLUDE); only the bare shorthand form
+	// is equivalent to RANGE CURRENT ROW.
+	if strings.EqualFold(e.Text("kind"), "RANGE") && strings.EqualFold(e.Text("start"), "CURRENT ROW") &&
+		e.Arg("end") == nil && e.Arg("exclude") == nil {
 		return "RANGE CURRENT ROW"
 	}
 	return g.windowSpecSQL(e)

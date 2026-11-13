@@ -34,6 +34,8 @@ func SQLite() *Dialect {
 	d.SupportsTableAliasColumns = false
 	// generators/sqlite.py:119 JSON_KEY_VALUE_PAIR_SEP = ",".
 	d.JSONKeyValuePairSep = ","
+	// generators/sqlite.py:116 SUPPORTS_WINDOW_EXCLUDE = True.
+	d.SupportsWindowExclude = true
 
 	cfg := d.TokenizerConfig
 	// dialects/sqlite.py:21 IDENTIFIERS = ['"', ("[", "]"), "`"].
@@ -43,6 +45,8 @@ func SQLite() *Dialect {
 	cfg.FormatStrings["x'"] = tokens.FormatString{End: "'", TokenType: tokens.HEX_STRING}
 	cfg.FormatStrings["X'"] = tokens.FormatString{End: "'", TokenType: tokens.HEX_STRING}
 	cfg.HasHexStrings = true
+	// DIVERGENCE (DEVIATIONS §1.28): 0x-prefixed literals are integers in SQLite, not BLOBs.
+	cfg.HexIntegerLiterals = true
 	d.HexStart, d.HexEnd = "x'", "'"
 	// dialects/sqlite.py:24 NESTED_COMMENTS = False.
 	cfg.NestedComments = false
@@ -99,8 +103,8 @@ func sqliteFunctions() map[string]func([]exp.Expression) exp.Expression {
 					"json_subtype": true,
 				})
 			}
-			if len(args) == 0 {
-				return exp.Anonymous(exp.Args{"this": "JSON_EXTRACT"})
+			if len(args) < 2 {
+				return exp.Anonymous(exp.Args{"this": "JSON_EXTRACT", "expressions": args})
 			}
 			// The 2nd argument is the path (kept verbatim: the JSONPath tokenizer is not
 			// ported) and any further arguments are extra paths.

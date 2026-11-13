@@ -428,7 +428,6 @@
 {"read":"","write":"sqlite","category":"gen: cast/type","sql":"a / b"}
 {"read":"","write":"sqlite","category":"gen: ddl/properties","sql":"CREATE TABLE a LIKE b"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"CURRENT_SCHEMA()"}
-{"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"DATE_ADD(x, 1, 'DAY')"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"DATE_STR_TO_DATE(x)"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$.y[*]')"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$[\"a b\"]')"}
@@ -439,9 +438,6 @@
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
-{"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE CURRENT ROW)"}
-{"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE GROUP)"}
-{"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE TIES)"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT x FROM y OFFSET 10 FETCH FIRST 3 ROWS ONLY"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle)"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
@@ -1137,7 +1133,6 @@
 {"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"WITH t AS (SELECT 5 AS c) SELECT RANGE(1, c) FROM t"}
 {"read":"duckdb","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT DATE_ADD(d, INTERVAL 1 DAY) FROM t"}
 {"read":"duckdb","write":"starrocks","category":"gen: cast/type","sql":"SELECT TIMESTAMP 'foo'"}
 {"read":"duckdb","write":"trino","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"trino","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
@@ -1332,8 +1327,6 @@
 {"read":"mysql","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT x'CC'"}
 {"read":"mysql","write":"snowflake","category":"gen: transpile mismatch","sql":"a / b"}
 {"read":"mysql","write":"sqlite","category":"gen: cast/type","sql":"a / b"}
-{"read":"mysql","write":"sqlite","category":"gen: ddl/properties","sql":"CREATE TABLE x (id int not null auto_increment, primary key (id))"}
-{"read":"mysql","write":"sqlite","category":"gen: ddl/properties","sql":"CREATE TABLE z (a INT AUTO_INCREMENT PRIMARY KEY)"}
 {"read":"mysql","write":"trino","category":"gen: cast/type","sql":"a / b"}
 {"read":"mysql","write":"trino","category":"gen: transpile mismatch","sql":"SELECT * FROM test LIMIT 0 + 1, 0 + 1"}
 {"read":"mysql","write":"tsql","category":"gen: cast/type","sql":"a / b"}

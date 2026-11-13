@@ -22,7 +22,8 @@ func TestSQLiteCanonicalizations(t *testing.T) {
 	assertRoundTrip(t, "sqlite", "SELECT JSON_GROUP_OBJECT(name, value) FROM t", "SELECT JSON_GROUP_OBJECT(name, value) FROM t")
 	assertRoundTrip(t, "sqlite", "SELECT UNICODE(x)", "SELECT UNICODE(x)")
 	assertRoundTrip(t, "sqlite", "SELECT JULIANDAY('now') - JULIANDAY('1776-07-04')", "SELECT JULIANDAY('now') - JULIANDAY('1776-07-04')")
-	assertRoundTrip(t, "sqlite", "SELECT 0XCC", "SELECT x'CC'")
+	// DIVERGENCE (DEVIATIONS §1.28): SQLite reads 0x.. as an integer, not a BLOB.
+	assertRoundTrip(t, "sqlite", "SELECT 0XCC", "SELECT 204")
 	assertRoundTrip(t, "sqlite", "SELECT a FROM t1 WHERE a NOT NULL AND a NOT NULL ORDER BY a",
 		"SELECT a FROM t1 WHERE NOT a IS NULL AND NOT a IS NULL ORDER BY a")
 	assertRoundTrip(t, "sqlite", "SELECT * FROM t1, t2", "SELECT * FROM t1 CROSS JOIN t2")
@@ -173,6 +174,83 @@ func TestSQLiteDateDiff(t *testing.T) {
 		}
 		if got != want {
 			t.Fatalf("datediff mismatch\n  sql:  %s\n  got:  %s\n  want: %s", sql, got, want)
+		}
+	}
+}
+
+// TestSQLiteHexIntegerLiteral pins DEVIATIONS §1.28: `0x..` is a hexadecimal integer in
+// SQLite (0xCC == 204), while `x'CC'`/`X'CC'` are BLOB literals. Upstream tokenizes both as
+// hex strings and emits x'CC'; this port keeps the integer value.
+func TestSQLiteHexIntegerLiteral(t *testing.T) {
+	assertRoundTrip(t, "sqlite", "SELECT 0xCC", "SELECT 204")
+	assertRoundTrip(t, "sqlite", "SELECT 0XCC", "SELECT 204")
+	assertRoundTrip(t, "sqlite", "SELECT x'CC'", "SELECT x'CC'")
+	assertRoundTrip(t, "sqlite", "SELECT X'CC'", "SELECT x'CC'")
+
+	expr, err := sqlglot.ParseOne("SELECT 0xCC", "sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := sqlglot.Generate(expr, "mysql", generator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// MySQL's 0x form is a binary literal, so the integer value is preserved as a number.
+	if got != "SELECT 204" {
+		t.Fatalf("expected the integer value to survive to mysql, got %q", got)
+	}
+}
+
+// TestSQLiteLikeGlobParentheses pins DEVIATIONS §1.29: the LIKE/GLOB function forms apply to
+// the whole argument, so a binary operand keeps its grouping in the infix rewrite.
+func TestSQLiteLikeGlobParentheses(t *testing.T) {
+	assertRoundTrip(t, "sqlite", "SELECT LIKE(a OR b, 'x')", "SELECT 'x' LIKE (a OR b)")
+	assertRoundTrip(t, "sqlite", "SELECT GLOB(a OR b, 'x')", "SELECT 'x' GLOB (a OR b)")
+	assertRoundTrip(t, "sqlite", "SELECT LIKE(a, b LIKE c)", "SELECT (b LIKE c) LIKE a")
+}
+
+// TestSQLiteWindowFrames pins DEVIATIONS §1.30 and SUPPORTS_WINDOW_EXCLUDE
+// (generators/sqlite.py:116): an explicit frame end is never dropped, and EXCLUDE is rendered.
+func TestSQLiteWindowFrames(t *testing.T) {
+	assertRoundTrip(t, "sqlite", "SELECT RANK() OVER (RANGE CURRENT ROW) FROM tbl",
+		"SELECT RANK() OVER (RANGE CURRENT ROW) FROM tbl")
+	assertRoundTrip(t, "sqlite",
+		"SELECT SUM(x) OVER (ORDER BY a RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) FROM t",
+		"SELECT SUM(x) OVER (ORDER BY a RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) FROM t")
+	assertRoundTrip(t, "sqlite",
+		"SELECT SUM(x) OVER (ORDER BY a ROWS BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE CURRENT ROW) FROM t",
+		"SELECT SUM(x) OVER (ORDER BY a ROWS BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE CURRENT ROW) FROM t")
+}
+
+// TestSQLiteDateDiffNanosecond pins the §2 divergence: one day is 86,400,000,000,000 ns.
+func TestSQLiteDateDiffNanosecond(t *testing.T) {
+	expr, err := sqlglot.ParseOne("DATEDIFF(a, b, 'nanosecond')", "sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := sqlglot.Generate(expr, "sqlite", generator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "CAST((JULIANDAY(a) - JULIANDAY(b)) * 86400000000000.0 AS INTEGER)"
+	if got != want {
+		t.Fatalf("datediff nanosecond mismatch\n  got:  %s\n  want: %s", got, want)
+	}
+}
+
+// TestSQLiteAutoIncrementOrdering pins the table-level primary-key rewrite: a leading
+// AUTO_INCREMENT moves after the key, since SQLite only accepts `PRIMARY KEY AUTOINCREMENT`.
+func TestSQLiteAutoIncrementOrdering(t *testing.T) {
+	for _, sql := range []string{
+		"CREATE TABLE z (a INT PRIMARY KEY AUTO_INCREMENT)",
+		"CREATE TABLE z (a INT AUTO_INCREMENT PRIMARY KEY)",
+	} {
+		got, err := sqlglot.Transpile(sql, "mysql", "sqlite", generator.Options{})
+		if err != nil {
+			t.Fatalf("transpile %q: %v", sql, err)
+		}
+		if got[0] != "CREATE TABLE z (a INTEGER PRIMARY KEY AUTOINCREMENT)" {
+			t.Fatalf("transpile %q = %q, want PRIMARY KEY AUTOINCREMENT", sql, got[0])
 		}
 	}
 }
