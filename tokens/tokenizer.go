@@ -54,6 +54,9 @@ type TokenizerConfig struct {
 	HintStart                string
 	HasBitStrings            bool
 	HasHexStrings            bool
+	// MariaDBExecutableComments enables MariaDB's `/*M! ... */` and `/*M!100100 ... */`
+	// executable comments alongside MySQL's `/*!` form, gated by the same version setting.
+	MariaDBExecutableComments bool
 	// HexIntegerLiterals makes 0x-prefixed tokens numeric integer literals instead of hex
 	// BLOB/binary literals. Upstream treats 0x as a hex string everywhere, but real SQLite
 	// parses it as an integer (see DEVIATIONS §1.28), so sqlite sets this.

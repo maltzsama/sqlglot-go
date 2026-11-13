@@ -75,7 +75,7 @@ func (p *Parser) parseProperty() exp.Expression {
 	// extension, mysql_compound.go) — never a key=value property; without this stop the
 	// key parse would route `IF 1 THEN ...` into the IF() function parser and error.
 	// CASE has its own token type; a bare CASE statement body stops the same way.
-	if p.dialect.Name == "mysql" &&
+	if p.dialectIs("mysql") &&
 		((p.curr.TokenType == tokens.VAR && compoundWords[stringsUpper(p.curr.Text)]) ||
 			p.curr.TokenType == tokens.CASE) {
 		return nil

@@ -24,7 +24,7 @@ import (
 // upstream (it parse-errors at the dot), tracked in testdata/upstream_extensions.jsonl; the
 // unqualified `TABLE users` is the DEVIATIONS §1.15 correctness fix. See DEVIATIONS §1.15.
 func (p *Parser) parseMysqlTableStatement() exp.Expression {
-	if p.dialect.Name != "mysql" || p.curr.TokenType != tokens.TABLE {
+	if !p.dialectIs("mysql") || p.curr.TokenType != tokens.TABLE {
 		return nil
 	}
 	comments := p.curr.Comments

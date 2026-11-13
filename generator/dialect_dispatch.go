@@ -20,8 +20,16 @@ var (
 	// (generators/tsql.py:171-176 drops NCHAR/NVARCHAR), so the type renders with its own
 	// DType name instead of the base mapping.
 	dialectRemovedTypeMappings = map[string]map[expressions.DType]bool{}
-	dialectPropertyLocations   = map[string]map[expressions.Kind]propertyLocation{}
-	dialectParents             = map[string]string{
+	// dialectCastMappings holds per-dialect CAST_MAPPING replacements (generators/mysql.py:305;
+	// starrocks/doris.py both set it to {}): a registration replaces the inherited table,
+	// matching the class-attribute override.
+	dialectCastMappings = map[string]map[expressions.DType]string{}
+	// dialectTimestampFuncTypes holds per-dialect TIMESTAMP_FUNC_TYPES replacements
+	// (generators/mysql.py:323; doris sets it to {}): a registration replaces the inherited set.
+	dialectTimestampFuncTypes = map[string]map[expressions.DType]bool{}
+	dialectPropertyLocations  = map[string]map[expressions.Kind]propertyLocation{}
+	dialectParents            = map[string]string{
+		"mariadb":      "mysql",
 		"starrocks":    "mysql",
 		"doris":        "mysql",
 		"redshift":     "postgres",
@@ -102,6 +110,43 @@ func registerDialectRemoveTypeMappings(name string, dtypes ...expressions.DType)
 	}
 }
 
+func init() {
+	registerDialectCastMapping("mysql", mysqlCastMapping)
+	registerDialectTimestampFuncTypes("mysql", mysqlTimestampFuncTypes)
+}
+
+// registerDialectTimestampFuncTypes replaces a dialect's TIMESTAMP_FUNC_TYPES
+// (generators/mysql.py:323-326).
+func registerDialectTimestampFuncTypes(name string, types map[expressions.DType]bool) {
+	dialectTimestampFuncTypes[strings.ToLower(name)] = types
+}
+
+// timestampFuncTypes resolves the dialect's TIMESTAMP_FUNC_TYPES, first registration in the
+// parent chain.
+func (g *Generator) timestampFuncTypes() map[expressions.DType]bool {
+	for key := g.overrideKey(); key != ""; key = dialectParents[key] {
+		if types, ok := dialectTimestampFuncTypes[key]; ok {
+			return types
+		}
+	}
+	return nil
+}
+
+// registerDialectCastMapping replaces a dialect's CAST_MAPPING (generators/mysql.py:305-331).
+func registerDialectCastMapping(name string, mapping map[expressions.DType]string) {
+	dialectCastMappings[strings.ToLower(name)] = mapping
+}
+
+// castMapping resolves the dialect's CAST_MAPPING, first registration in the parent chain.
+func (g *Generator) castMapping() map[expressions.DType]string {
+	for key := g.overrideKey(); key != ""; key = dialectParents[key] {
+		if mapping, ok := dialectCastMappings[key]; ok {
+			return mapping
+		}
+	}
+	return nil
+}
+
 func registerDialectPropertyLocations(name string, table map[expressions.Kind]propertyLocation) {
 	name = strings.ToLower(name)
 	if dialectPropertyLocations[name] == nil {
@@ -177,6 +222,10 @@ func (g *Generator) child(d *dialects.Dialect, overrideName string) *Generator {
 func (g *Generator) switchDialect() string {
 	if g.isDialect("postgres") {
 		return "postgres"
+	}
+	// The mysql family shares one branch set; mariadb inherits it via dialectParents.
+	if g.isDialect("mysql") {
+		return "mysql"
 	}
 	return g.dialect.Name
 }

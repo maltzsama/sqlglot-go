@@ -500,6 +500,10 @@ type Dialect struct {
 	// LimitIsTop ports generator.py:382 LIMIT_IS_TOP: a Limit renders as SELECT TOP n
 	// instead of a trailing LIMIT clause (TSQL, Teradata).
 	LimitIsTop bool
+	// ParseJSONName ports PARSE_JSON_NAME (generator.py:590): the function spelling a
+	// ParseJSON node renders under, or "" for the bare-value fallback. nil keeps the base
+	// PARSE_JSON default.
+	ParseJSONName *string
 	// LimitFetch ports generator.py:343 LIMIT_FETCH: "LIMIT" or "FETCH". "FETCH" rewrites a
 	// Limit into a FETCH clause; "LIMIT" rewrites a Fetch into a LIMIT clause.
 	LimitFetch string
@@ -662,6 +666,9 @@ type Dialect struct {
 	// (true by default; Redshift renders a select-level EXCLUDE inline).
 	StarExcludeRequiresDerivedTable bool
 }
+
+// stringPtr returns a pointer to s, for optional string dialect flags (e.g. ParseJSONName).
+func stringPtr(s string) *string { return &s }
 
 func Base() *Dialect {
 	datePartMapping := baseDatePartMapping()
@@ -1030,10 +1037,7 @@ func buildDialectByName(name string) (*Dialect, error) {
 	case "mysql":
 		return MySQL(), nil
 	case "mariadb":
-		// Beyond upstream, which has no MariaDB dialect: an alias of MySQL, so the result is
-		// the MySQL dialect itself (Name "mysql") with all of its behavior. MariaDB-only grammar
-		// is not modeled yet. See DEVIATIONS "Opt-in behavioral extensions".
-		return MySQL(), nil
+		return MariaDB(), nil
 	case "postgres":
 		return Postgres(), nil
 	case "presto":

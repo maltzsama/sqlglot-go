@@ -212,7 +212,7 @@ const (
 	minPassTranspileBigQuery    = 586
 	minPassTranspileClickhouse  = 181
 	minPassTranspileDatabricks  = 207
-	minPassTranspileDoris       = 65
+	minPassTranspileDoris       = 70
 	minPassTranspileDuckDB      = 618
 	minPassTranspileHive        = 389
 	minPassTranspileMaterialize = 26
@@ -225,8 +225,8 @@ const (
 	minPassTranspileSnowflake   = 665
 	minPassTranspileSpark       = 645
 	minPassTranspileSpark2      = 54
-	minPassTranspileSQLite      = 113
-	minPassTranspileStarrocks   = 79
+	minPassTranspileSQLite      = 115
+	minPassTranspileStarrocks   = 81
 	minPassTranspileTrino       = 84
 	minPassTranspileTSQL        = 290
 )

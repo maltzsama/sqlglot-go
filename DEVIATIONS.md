@@ -279,13 +279,17 @@ Additive analysis features; default behavior and fixture output unchanged.
   catalog is a pure consumer input introspected from the live target — no name sets ship with
   sqlglot-go — and resolution is report-only: the AST is never rewritten. Tests
   `optimizer/engine_catalog_test.go`.
-- **`mariadb` dialect name**: `GetOrRaise("mariadb")` resolves to the MySQL dialect (an alias, so
-  `Name` is `mysql`). Upstream has no MariaDB dialect and raises `unknown dialect`. MariaDB forms
-  the MySQL grammar already accepts (`INSERT`/`DELETE ... RETURNING`, `NEXTVAL(s)`, `ROWNUM()`,
-  `CREATE SEQUENCE`) parse; MariaDB-only grammar (`NEXT VALUE FOR`, the `/*M! ... */` executable
-  comment) is not modeled yet. Test `TestMariaDBAlias` (`dialects/dialecttype_test.go`).
-
-Neither is a grammar construct — no ledger row.
+- **MariaDB dialect** (`mariadb`): upstream has no MariaDB dialect and raises `unknown dialect`.
+  The port gives it its own identity (`Name` is `mariadb`) that keeps every MySQL behavior —
+  the parser and generator override chains treat `mariadb` as a child of `mysql`, and the
+  ~60 former `dialect.Name == "mysql"` checks are family checks, so MySQL grammar, settings
+  (`mysql_version`, `mysql_ansi_quotes`), `REPLACE`, `SHOW CREATE`, `||`-as-OR and the rest
+  apply unchanged. MariaDB-only grammar is gated on the dialect:
+  `NEXT VALUE FOR <seq>` / `PREVIOUS VALUE FOR <seq>` (the latter a new `PrevValueFor` node,
+  since upstream has none) and the `/*M! ... */` / `/*M!100100 ... */` executable comment,
+  activated alongside `/*!` by the `mysql_version` setting with MariaDB's six-digit version
+  gate. Each is a grammar extension tracked in `testdata/upstream_extensions.jsonl`; tests
+  `mariadb_test.go`, dialect identity in `dialects/dialecttype_test.go`.
 
 ---
 

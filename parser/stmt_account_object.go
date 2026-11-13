@@ -27,7 +27,7 @@ import (
 // keyword — and a following token, since every valid form has a body (a user/role name) after the
 // object word; a bare `CREATE USER` fails closed to Command. It does not consume. MySQL-only.
 func (p *Parser) mysqlAccountObjectKind(allowUser, allowRole bool) string {
-	if p.dialect.Name != "mysql" || p.curr.TokenType != tokens.VAR || !p.next.IsValid() {
+	if !p.dialectIs("mysql") || p.curr.TokenType != tokens.VAR || !p.next.IsValid() {
 		return ""
 	}
 	switch stringsUpper(p.curr.Text) {

@@ -14,7 +14,7 @@ import (
 // MySQL's table and the MySQL gate below stands in for that class-level override: outside MySQL,
 // SHOW always falls straight through to the raw-text Command fallback, matching upstream exactly.
 func (p *Parser) parseShow() exp.Expression {
-	if p.dialect.Name == "mysql" {
+	if p.dialectIs("mysql") {
 		start := p.prev
 		if parse := p.findParser(showParsers, showTrie); parse != nil {
 			// A sub-parser returning nil means the form is malformed for that keyword (e.g.

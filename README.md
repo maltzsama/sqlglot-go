@@ -15,7 +15,7 @@ third-party dependencies** (Go stdlib only).
 This repository is a maintained, independent continuation of `ridi-oss/sqlglot-go` (forked at its
 v0.38.0 release). It tracks upstream sqlglot **v30.17.0** and extends the original base/MySQL/Postgres
 port with TSQL, ClickHouse, Oracle, StarRocks, Doris, Presto, Trino, Hive, Athena, Redshift,
-Materialize, RisingWave, Spark, Databricks, BigQuery, DuckDB, Snowflake, and SQLite.
+Materialize, RisingWave, Spark, Databricks, BigQuery, DuckDB, Snowflake, SQLite, and MariaDB.
 
 ## Scope — what this is (and isn't)
 
@@ -30,7 +30,7 @@ targeted slice of the optimizer:
   fallback where upstream builds a structured node (guarded by a committed fidelity test).
 - **Cross-dialect transpilation** — reading one registered dialect and writing another, verified
   against upstream's `validate_all` read/write pairs: `TestTranspileCorpus` runs every pair whose
-  dialects are all registered — **8703 pairs total, 6610 of them crossing dialects, 6006 passing
+  dialects are all registered — **8703 pairs total, 6610 of them crossing dialects, 6015 passing
   today** — with monotonic per-target-dialect
   floors, and the open pairs are the burndown list in `testdata/transpile_gaps.txt` (mostly the
   per-dialect generator `TRANSFORMS`/`TYPE_MAPPING` remaps).
@@ -78,7 +78,7 @@ case-folding, to match real engines).
 | Tokenize | `tokens` | base tokenizer plus per-dialect overrides for every registered dialect |
 | Parse → AST | `parser`, `expressions` | full: SELECT/set-ops/CTE/subqueries, all query clauses, predicates, functions, DML + DDL (INSERT/UPDATE/DELETE/MERGE/CREATE + properties), CAST/DataType, PIVOT/LATERAL/VALUES/TABLESAMPLE, INTERVAL, JSON/JSONB ops, window functions |
 | Generate (AST → SQL) | `generator` | **100% round-trip** on the upstream identity corpus for base (980/980) and every registered dialect (see [Dialects](#dialects)) |
-| Transpile (read one dialect, write another) | `parser`, `generator` | every registered-dialect pair from upstream's `validate_all` corpus runs green or is tracked — 6610 of the 8703 pairs cross dialects, 6006/8703 pass overall; open pairs in `testdata/transpile_gaps.txt` |
+| Transpile (read one dialect, write another) | `parser`, `generator` | every registered-dialect pair from upstream's `validate_all` corpus runs green or is tracked — 6610 of the 8703 pairs cross dialects, 6015/8703 pass overall; open pairs in `testdata/transpile_gaps.txt` |
 | Schema | `schema` | `MappingSchema`, `DataType.build`, type-category sets |
 | Qualify | `optimizer` | `qualify` (qualify_tables, normalize_identifiers, qualify_columns, quote_identifiers, validate) |
 | Rewrite passes | `optimizer` | `EliminateCTEs`, `EliminateSubqueries`, `OptimizeJoins`, `UnnestSubqueries`, `MergeSubqueries`, `Normalize`, `EliminateJoins`, `PushdownPredicates`, `PushdownProjections`, `Canonicalize`, `Simplify`, `AnnotateTypes` |
@@ -112,6 +112,7 @@ Same-dialect round-trip parity against the ported upstream identity corpus
 | DuckDB | `duckdb` | 529/565 |
 | Snowflake | `snowflake` | 1209/1543 |
 | SQLite | `sqlite` | 136/136 |
+| MariaDB | `mariadb` | n/a (no upstream fixture; beyond-upstream identity over MySQL) |
 | Spark 2 | `spark2` | n/a (no upstream fixture; exercised through Spark) |
 | RisingWave | `risingwave` | 7/7 |
 

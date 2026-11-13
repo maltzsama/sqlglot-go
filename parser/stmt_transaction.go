@@ -54,7 +54,7 @@ func (p *Parser) parseTransaction() exp.Expression {
 	// MySQL-only so Postgres (which also maps START->BEGIN) keeps upstream's behavior. parseStatement
 	// attaches this statement's leading comment (BEGIN is a statement-parser token), so we don't here.
 	// Top-level only (statementDepth == 1): a nested `SET x = START …` keeps upstream's behavior.
-	if p.statementDepth == 1 && p.dialect.Name == "mysql" && p.prev.TokenType == tokens.BEGIN &&
+	if p.statementDepth == 1 && p.dialectIs("mysql") && p.prev.TokenType == tokens.BEGIN &&
 		stringsUpper(p.prev.Text) == "START" && startReplicationVerbs[stringsUpper(p.curr.Text)] {
 		return p.parseAsCommand(p.prev)
 	}
@@ -72,7 +72,7 @@ func (p *Parser) parseTransaction() exp.Expression {
 		// so it isn't caught by the VAR run below. Gated to MySQL: real MySQL 8.0.33 accepts it,
 		// but real PostgreSQL 17.6 rejects it, and pinned upstream errors on it in both. Kept as a
 		// single mode string so it round-trips as one unit.
-		if p.dialect.Name == "mysql" && p.matchTextSeq("WITH", "CONSISTENT", "SNAPSHOT") {
+		if p.dialectIs("mysql") && p.matchTextSeq("WITH", "CONSISTENT", "SNAPSHOT") {
 			modes = append(modes, "WITH CONSISTENT SNAPSHOT")
 		} else {
 			var mode []string

@@ -10,6 +10,10 @@ import (
 // .reference/sqlglot-v30.17.0/sqlglot/generators/doris.py.
 func init() {
 	registerDialectDispatch("doris", dorisDispatch())
+	// generators/doris.py:47 CAST_MAPPING = {} (no MySQL cast renames) and :48
+	// TIMESTAMP_FUNC_TYPES = set() (TIMESTAMPTZ casts stay ordinary CASTs).
+	registerDialectCastMapping("doris", map[exp.DType]string{})
+	registerDialectTimestampFuncTypes("doris", map[exp.DType]bool{})
 	registerDialectTypeMapping("doris", map[exp.DType]string{
 		exp.DTypeText:        "STRING",
 		exp.DTypeTimestamp:   "DATETIME",

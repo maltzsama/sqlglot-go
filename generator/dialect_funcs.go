@@ -42,7 +42,7 @@ func (g *Generator) truncSQL(e expressions.Expression) string {
 // order, flattening/nil-skipping), so switching a Kind between the fallback and this path
 // never changes which arguments are emitted - only the function name and dialect gating do.
 func (g *Generator) mysqlRenameFunc(e expressions.Expression, name string) string {
-	if g.dialect.Name != "mysql" {
+	if !g.isDialect("mysql") {
 		return g.functionFallbackSQL(e)
 	}
 	return g.funcCall(name, g.fallbackArgs(e), "(", ")", true)
@@ -125,7 +125,7 @@ func (g *Generator) currentCatalogSQL(_ expressions.Expression) string {
 // SESSION_USER() (generators/mysql.py:204). In this port only postgres builds SessionUser from a
 // bare keyword (its NoParenFunctions override); the mysql arm covers the SESSION_USER() call form.
 func (g *Generator) sessionUserSQL(_ expressions.Expression) string {
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		return "SESSION_USER()"
 	}
 	return "SESSION_USER"
@@ -167,7 +167,7 @@ func (g *Generator) strPositionSQL(e expressions.Expression) string {
 	if g.dialect.OpaqueFunctions {
 		return "POSITION(" + g.sqlKey(e, "substr") + " IN " + g.sqlKey(e, "this") + ")"
 	}
-	if g.dialect.Name != "mysql" {
+	if !g.isDialect("mysql") {
 		return g.functionFallbackSQL(e)
 	}
 	return g.funcCall("LOCATE", []any{e.Arg("substr"), e.Arg("this"), e.Arg("position")}, "(", ")", true)
@@ -231,4 +231,20 @@ func init() {
 	dispatch[expressions.KindSessionUser] = (*Generator).sessionUserSQL
 	dispatch[expressions.KindLocaltime] = (*Generator).localtimeSQL
 	dispatch[expressions.KindLocaltimestamp] = (*Generator).localtimestampSQL
+}
+
+// nextValueForSQL ports nextvaluefor_sql (generator.py:3643-3646): T-SQL and MariaDB
+// `NEXT VALUE FOR <seq>` with an optional OVER (ORDER BY ...) clause.
+func (g *Generator) nextValueForSQL(e expressions.Expression) string {
+	sql := "NEXT VALUE FOR " + g.sqlKey(e, "this")
+	if order := g.sqlKey(e, "order"); order != "" {
+		sql += " OVER (" + order + ")"
+	}
+	return sql
+}
+
+// prevValueForSQL renders MariaDB's `PREVIOUS VALUE FOR <seq>` (beyond upstream; see
+// DEVIATIONS "Opt-in behavioral extensions").
+func (g *Generator) prevValueForSQL(e expressions.Expression) string {
+	return "PREVIOUS VALUE FOR " + g.sqlKey(e, "this")
 }

@@ -150,7 +150,7 @@ func (g *Generator) propertyLocation(property expressions.Expression) (propertyL
 
 	// generators/mysql.py:630-640 moves SQL SECURITY from POST_SCHEMA to POST_CREATE for
 	// views only; functions and procedures retain the base POST_SCHEMA placement.
-	if property.Kind() == expressions.KindSqlSecurityProperty && g.dialect.Name == "mysql" {
+	if property.Kind() == expressions.KindSqlSecurityProperty && g.isDialect("mysql") {
 		properties := property.Parent()
 		if properties != nil {
 			create := properties.Parent()

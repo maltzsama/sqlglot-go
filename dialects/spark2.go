@@ -14,6 +14,8 @@ import (
 func Spark2() *Dialect {
 	d := Hive()
 	d.Name = "spark2"
+	// generators/spark2.py:115 PARSE_JSON_NAME = None (bare value).
+	d.ParseJSONName = stringPtr("")
 
 	// dialects/spark2.py:14-15 ALTER_TABLE_SUPPORTS_CASCADE = False.
 	d.AlterTableSupportsCascade = false

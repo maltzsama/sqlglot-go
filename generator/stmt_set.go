@@ -15,7 +15,7 @@ func (g *Generator) setItemSQL(e expressions.Expression) string {
 	// MySQL `SET ROLE …` / `SET DEFAULT ROLE … TO …` (parser/dialect_mysql_set_role.go). Gated on the
 	// MySQL dialect so it doesn't collide with the Postgres `SET ROLE` form, which shares kind="ROLE"
 	// but renders through the generic path below.
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		if kind := e.Text("kind"); kind == "ROLE" || kind == "DEFAULT ROLE" {
 			return g.mysqlSetRoleSQL(e)
 		}

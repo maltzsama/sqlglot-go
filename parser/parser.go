@@ -494,7 +494,7 @@ func (p *Parser) parseBatchStatements(parseMethod func() exp.Expression, sepFirs
 		// statement parser (parseEndTransaction -> Commit) instead of this EndStatement fast
 		// path: real PG 16 executes `BEGIN; SELECT 1; END` with END as COMMIT; upstream
 		// returns [Transaction, Select, EndStatement]. See DEVIATIONS §1.18.
-		if !sepFirstStatement && p.dialect.Name == "mysql" && p.curr.TokenType == tokens.END {
+		if !sepFirstStatement && p.dialectIs("mysql") && p.curr.TokenType == tokens.END {
 			// Real MySQL rejects any statement leading with END (error 1064) — bare or
 			// suffixed (`END CASE`); a fragment here is truncation residue.
 			p.raiseError("Unexpected END")
@@ -502,7 +502,7 @@ func (p *Parser) parseBatchStatements(parseMethod func() exp.Expression, sepFirs
 		}
 		isBareEnd := !p.next.IsValid() && p.curr.TokenType == tokens.END &&
 			(sepFirstStatement || !p.dialectFamily("postgres"))
-		if isBareEnd && (len(expressions) > 0 || (!sepFirstStatement && p.dialect.Name == "mysql")) &&
+		if isBareEnd && (len(expressions) > 0 || (!sepFirstStatement && p.dialectIs("mysql"))) &&
 			p.match(tokens.END) {
 			// divergence: a bare top-level END chunk is a parse error under MySQL — real
 			// MySQL 8.0 rejects it (error 1064; a batch-LEADING `END` included), and a
@@ -510,7 +510,7 @@ func (p *Parser) parseBatchStatements(parseMethod func() exp.Expression, sepFirs
 			// per-statement consumer must not receive. base keeps upstream's EndStatement;
 			// Postgres never reaches here for a leading END (parseEndTransaction -> COMMIT).
 			// See DEVIATIONS §1.18.
-			if !sepFirstStatement && p.dialect.Name == "mysql" {
+			if !sepFirstStatement && p.dialectIs("mysql") {
 				p.raiseError("Unexpected END")
 				p.checkErrors()
 			}
@@ -563,7 +563,7 @@ func (p *Parser) parseBlock(beganAlready bool) exp.Expression {
 	// (parser/mysql_compound.go): DECLARE/IF/CASE/LOOP/REPEAT/WHILE and labels parse
 	// structurally, and the block's own END is matched exactly. Other dialects keep the
 	// plain per-chunk statement path (PG BEGIN ATOMIC bodies are ordinary SQL).
-	if p.dialect.Name == "mysql" {
+	if p.dialectIs("mysql") {
 		// A bare body (no BEGIN at the current position and none consumed by the caller)
 		// is exactly ONE compound statement (§13.1.17: routine_body is a single statement,
 		// possibly compound): parse it and stop — consuming further chunks would absorb
@@ -780,7 +780,7 @@ func (p *Parser) parseExpressionStatement() exp.Expression {
 // fails closed. Detection is never lost either way; this keeps the accepted grammar aligned with
 // MySQL. Called once per top-level statement (parseBatchStatements); MySQL-only.
 func (p *Parser) validateFileWriteIntoPlacement(stmt exp.Expression) {
-	if p.dialect.Name != "mysql" || stmt == nil {
+	if !p.dialectIs("mysql") || stmt == nil {
 		return
 	}
 	root := stmt
@@ -977,7 +977,7 @@ func (p *Parser) parseSelect(opts ...bool) exp.Expression {
 		// self._match_texts(self.OPERATION_MODIFIERS)` loop; see mysqlOperationModifiers
 		// (parser_hint.go) for why this is gated by dialect name rather than a shared set.
 		var operationModifiers []exp.Expression
-		if p.dialect.Name == "mysql" {
+		if p.dialectIs("mysql") {
 			for p.curr.IsValid() && p.matchTexts(mysqlOperationModifiers) {
 				operationModifiers = append(operationModifiers, exp.Var(exp.Args{"this": stringsUpper(p.prev.Text)}))
 			}
@@ -1143,7 +1143,7 @@ func (p *Parser) parseQueryModifiers(this exp.Expression) exp.Expression {
 		// parses INTO *before* FROM (parser.py:3967), so this grabs just the OUTFILE/
 		// DUMPFILE forms here (grammar extension); a plain trailing `INTO tbl/@var` is
 		// left alone, matching upstream. Guarded to Select nodes without an existing into.
-		if p.dialect.Name == "mysql" && this.Kind() == exp.KindSelect && this.Arg("into") == nil &&
+		if p.dialectIs("mysql") && this.Kind() == exp.KindSelect && this.Arg("into") == nil &&
 			p.curr.TokenType == tokens.INTO && isOutfileKeywordToken(p.next) {
 			if into := p.parseInto(); into != nil {
 				this.Set("into", into)
@@ -1192,7 +1192,7 @@ func (p *Parser) parseInto() exp.Expression {
 	// which leaves kind unset). Grammar extension beyond upstream, which parse-errors these.
 	// Only an *unquoted* OUTFILE/DUMPFILE is the keyword; a backtick-quoted `` `outfile` `` is an
 	// ordinary INTO target name that MySQL accepts, so it falls through to the plain-INTO path.
-	if p.dialect.Name == "mysql" && p.curr.TokenType != tokens.IDENTIFIER {
+	if p.dialectIs("mysql") && p.curr.TokenType != tokens.IDENTIFIER {
 		if p.matchTextSeq("OUTFILE") {
 			return p.parseIntoOutfile("OUTFILE")
 		}
@@ -1537,7 +1537,7 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 			this.Set("sample", s)
 		}
 	}
-	mysqlIndexHint := p.dialect.Name == "mysql" && tableIndexHintTokens[p.curr.TokenType]
+	mysqlIndexHint := p.dialectIs("mysql") && tableIndexHintTokens[p.curr.TokenType]
 	if p.curr.TokenType == tokens.ALIAS || (!mysqlIndexHint && !joinKinds[p.curr.TokenType] && !joinMethods[p.curr.TokenType] && !joinSides[p.curr.TokenType]) {
 		if alias := p.parseTableAlias(aliasTokens); alias != nil {
 			this.Set("alias", alias)
@@ -2077,7 +2077,7 @@ func (p *Parser) parseAssignment() exp.Expression {
 // DPIPE_IS_STRING_CONCAT=False frees `||` up to mean logical OR instead of concatenation.
 func (p *Parser) parseDisjunction() exp.Expression {
 	this := p.parseConjunction()
-	for p.match(tokens.OR) || (p.dialect.Name == "mysql" && p.match(tokens.DPIPE)) {
+	for p.match(tokens.OR) || (p.dialectIs("mysql") && p.match(tokens.DPIPE)) {
 		comments := p.prevComments
 		this = p.expression(exp.Or(exp.Args{"this": this, "expression": p.parseConjunction()}), nil, comments)
 	}
@@ -2094,9 +2094,9 @@ func (p *Parser) parseConjunction() exp.Expression {
 		switch {
 		case p.match(tokens.AND):
 			constructor = exp.And
-		case p.dialect.Name == "mysql" && p.match(tokens.DAMP):
+		case p.dialectIs("mysql") && p.match(tokens.DAMP):
 			constructor = exp.And
-		case p.dialect.Name == "mysql" && p.match(tokens.XOR):
+		case p.dialectIs("mysql") && p.match(tokens.XOR):
 			constructor = exp.Xor
 		default:
 			return this
@@ -2418,7 +2418,7 @@ func (p *Parser) isRangeChainToken(tt tokens.TokenType) bool {
 	case tokens.DAMP, tokens.DAT:
 		return p.dialectFamily("postgres")
 	case tokens.MEMBER_OF:
-		return p.dialect.Name == "mysql"
+		return p.dialectIs("mysql")
 	case tokens.MATCH:
 		return p.dialect.Name == "sqlite"
 	}
@@ -2728,7 +2728,7 @@ func (p *Parser) parseType(parseInterval, fallbackToIdentifier bool) exp.Express
 	// BINARY keyword prefix casts whatever follows, e.g. `ORDER BY BINARY a` ->
 	// `ORDER BY CAST(a AS BINARY)`. Checked before the base logic below, matching upstream's
 	// override calling super()._parse_type() only when this doesn't match.
-	if p.dialect.Name == "mysql" && p.curr.TokenType == tokens.BINARY {
+	if p.dialectIs("mysql") && p.curr.TokenType == tokens.BINARY {
 		index := p.index
 		dataType := p.parseTypes(true, false, false, false)
 		if dataType != nil && dataType.Kind() == exp.KindDataType {

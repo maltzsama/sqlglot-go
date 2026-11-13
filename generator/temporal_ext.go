@@ -286,7 +286,7 @@ func (g *Generator) timeStrToTimeDispatchSQL(e expressions.Expression) string {
 // mysql.py:212). Base (and every other dialect in this port's scope) has no override, so it
 // keeps the default name via functionFallbackSQL (TIME_STR_TO_UNIX(...)).
 func (g *Generator) timeStrToUnixSQL(e expressions.Expression) string {
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		return g.funcCall("UNIX_TIMESTAMP", g.fallbackArgs(e), "(", ")", true)
 	}
 	return g.functionFallbackSQL(e)

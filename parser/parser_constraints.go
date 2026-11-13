@@ -651,7 +651,7 @@ func (p *Parser) parsePrimaryKeyPart() exp.Expression {
 	if p.dialect.Name == "tsql" {
 		return p.parseOrdered(nil)
 	}
-	if p.dialect.Name != "mysql" {
+	if !p.dialectIs("mysql") {
 		this := p.parseField(false, nil, false)
 		// parsers/databricks.py:71-76: a PRIMARY KEY column marked TIMESERIES.
 		if p.dialectIs("databricks") && this != nil && p.matchTextSeq("TIMESERIES") {

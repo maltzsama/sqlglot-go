@@ -13,6 +13,8 @@ import (
 func Hive() *Dialect {
 	d := Base()
 	d.Name = "hive"
+	// generators/hive.py:240 PARSE_JSON_NAME = "PARSE_JSON".
+	d.ParseJSONName = stringPtr("PARSE_JSON")
 	d.QuoteStart = "'"
 	d.QuoteEnd = "'"
 	d.IdentifierStart = "`"

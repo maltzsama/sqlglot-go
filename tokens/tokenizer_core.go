@@ -38,6 +38,7 @@ type TokenizerCore struct {
 	identifiers                      map[rune]string
 	commentsConfig                   map[string]string
 	mysqlExecutableComments          bool
+	mariaDBExecutableComments        bool
 	mysqlVersion                     *int
 	lineCommentRequiresSpace         map[string]bool
 	stringEscapes                    map[rune]bool
@@ -75,6 +76,7 @@ func NewTokenizerCore(cfg TokenizerConfig) *TokenizerCore {
 		identifiers:                      cfg.Identifiers,
 		commentsConfig:                   cfg.Comments,
 		mysqlExecutableComments:          cfg.MySQLExecutableComments,
+		mariaDBExecutableComments:        cfg.MariaDBExecutableComments,
 		mysqlVersion:                     cfg.MySQLVersion,
 		lineCommentRequiresSpace:         cfg.LineCommentRequiresSpace,
 		stringEscapes:                    cfg.StringEscapes,
@@ -520,12 +522,28 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 		c.advance(commentStartSize, false)
 
 		activeMySQLComment := false
-		if commentStart == "/*" && c.mysqlExecutableComments && c.mysqlVersion != nil && c.char == '!' {
+		// Executable comments: MySQL's `/*!` and, for MariaDB, `/*M!` (both optionally
+		// followed by a five-digit version gate). A dialect must opt in and a version must be
+		// configured; otherwise the body stays an ordinary comment.
+		executable := false
+		// MySQL's version gate is five digits (e.g. 80035); MariaDB's is six (e.g. 100500).
+		gateDigits := 5
+		if commentStart == "/*" && c.mysqlVersion != nil {
+			if c.mysqlExecutableComments && c.char == '!' {
+				executable = true
+			} else if c.mariaDBExecutableComments && c.char == 'M' &&
+				c.current < c.size && c.input.at(c.current) == '!' {
+				c.advance(1, false) // consume the '!' of the M! marker
+				executable = true
+				gateDigits = 6
+			}
+		}
+		if executable {
 			activeMySQLComment = true
 			gate := -1
-			if c.current+5 <= c.size {
+			if c.current+gateDigits <= c.size {
 				gate = 0
-				for i := 0; i < 5; i++ {
+				for i := 0; i < gateDigits; i++ {
 					digit := c.input.at(c.current + i)
 					if digit < '0' || digit > '9' {
 						gate = -1
@@ -538,7 +556,7 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 			if gate >= 0 {
 				activeMySQLComment = gate <= *c.mysqlVersion
 				if activeMySQLComment {
-					c.advance(5, false)
+					c.advance(gateDigits, false)
 				}
 			}
 		}
