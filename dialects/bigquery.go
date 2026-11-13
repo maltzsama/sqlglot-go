@@ -105,6 +105,8 @@ func BigQuery() *Dialect {
 	// dialects/bigquery.py:52-55: case-insensitive identifiers, unnormalized function names.
 	d.NormalizationStrategy = CaseInsensitive
 	d.NormalizeFunctions = ""
+	// generators/bigquery.py:263 SUPPORTS_NAMED_CTE_COLUMNS = False.
+	d.SupportsNamedCTEColumns = false
 
 	// dialects/bigquery.py:58-98 time and datetime format tables.
 	d.TimeMapping = bigQueryTimeMapping

@@ -9,6 +9,8 @@ func DefinerProperty(args Args) Expression        { return newNode(KindDefinerPr
 func EngineProperty(args Args) Expression         { return newNode(KindEngineProperty, args) }
 func InheritsProperty(args Args) Expression       { return newNode(KindInheritsProperty, args) }
 func LikeProperty(args Args) Expression           { return newNode(KindLikeProperty, args) }
+func ModuleProperty(args Args) Expression         { return newNode(KindModuleProperty, args) }
+func VirtualProperty(args Args) Expression        { return newNode(KindVirtualProperty, args) }
 func LockProperty(args Args) Expression           { return newNode(KindLockProperty, args) }
 func LockingProperty(args Args) Expression        { return newNode(KindLockingProperty, args) }
 func MaterializedProperty(args Args) Expression   { return newNode(KindMaterializedProperty, args) }

@@ -250,8 +250,9 @@ const (
 	minPassRisingWave  = 7
 	minPassSpark       = 227
 	minPassDatabricks  = 175
-	minPassDuckDB      = 528
+	minPassDuckDB      = 529
 	minPassSnowflake   = 1209
+	minPassSQLite      = 136
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
@@ -276,6 +277,7 @@ const (
 	minTotalDatabricks  = 176
 	minTotalDuckDB      = 565
 	minTotalSnowflake   = 1543
+	minTotalSQLite      = 0
 )
 
 // TestCorpus is the single round-trip harness for both the base-dialect
@@ -342,6 +344,7 @@ func TestCorpus(t *testing.T) {
 		{"databricks", minPassDatabricks, minTotalDatabricks},
 		{"duckdb", minPassDuckDB, minTotalDuckDB},
 		{"snowflake", minPassSnowflake, minTotalSnowflake},
+		{"sqlite", minPassSQLite, minTotalSQLite},
 	}
 	var counts []string
 	for _, floor := range floors {

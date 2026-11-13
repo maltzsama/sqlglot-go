@@ -51,6 +51,8 @@ func Postgres() *Dialect {
 	d.NormalizeNotNull = false
 	// generators/postgres.py:245 JSON_TYPE_REQUIRED_FOR_EXTRACTION = True.
 	d.JSONTypeRequiredForExtraction = true
+	// generators/postgres.py:250 SUPPORTS_WINDOW_EXCLUDE = True.
+	d.SupportsWindowExclude = true
 
 	// dialects/postgres.py:30-70 TIME_MAPPING, with the metaclass-generated inverse
 	// (dialect.py:261-271). Consumed parse-side by the TO_CHAR builder below

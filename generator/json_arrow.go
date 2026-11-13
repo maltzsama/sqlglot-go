@@ -93,7 +93,9 @@ func (g *Generator) jsonExtractScalarSQL(e expressions.Expression) string {
 // arrowJSONExtractScalarSQL ports arrow_json_extract_sql (dialect.py:1210-1215): a string-
 // literal `this` is wrapped in CAST(... AS JSON) before rendering the `->>` operator form.
 func (g *Generator) arrowJSONExtractScalarSQL(e expressions.Expression) string {
-	if this := asExpression(e.Arg("this")); this != nil && this.Kind() == expressions.KindLiteral && this.IsString() {
+	// dialect.py:1250-1255: only dialects that require JSON-typed operands cast a string
+	// literal; sqlite (like the base default) must not, since CAST(x AS JSON) is numeric there.
+	if this := asExpression(e.Arg("this")); g.dialect.JSONTypeRequiredForExtraction && this != nil && this.Kind() == expressions.KindLiteral && this.IsString() {
 		cast := expressions.Cast(expressions.Args{
 			"this": this,
 			"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeJSON}),

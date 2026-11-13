@@ -1442,10 +1442,9 @@ func (g *Generator) windowSpecSQL(e expressions.Expression) string {
 	windowSpec := kind + " BETWEEN " + start + " AND " + end
 	exclude := g.sqlKey(e, "exclude")
 	if exclude != "" {
-		// SUPPORTS_WINDOW_EXCLUDE (generator.py:512, generators/postgres.py:250): base
-		// defaults to unsupported (dropping EXCLUDE with a warning); postgres (like
-		// sqlite/oracle/duckdb upstream, out of scope here) renders it.
-		if g.isDialect("postgres") {
+		// SUPPORTS_WINDOW_EXCLUDE (generator.py:512): base defaults to unsupported (dropping
+		// EXCLUDE with a warning); dialects that support it render it.
+		if g.dialect.SupportsWindowExclude {
 			windowSpec += " EXCLUDE " + exclude
 		} else {
 			g.unsupported("EXCLUDE clause is not supported in the WINDOW clause")
@@ -3208,7 +3207,8 @@ func (g *Generator) tableAliasSQL(e expressions.Expression) string {
 	alias := g.sqlKey(e, "this")
 	columns := g.expressions(exprsOptions{expression: e, key: "columns", flat: true})
 	if columns != "" {
-		if !g.dialect.SupportsTableAliasColumns {
+		keepNamedCTEColumns := g.dialect.SupportsNamedCTEColumns && e.Parent() != nil && e.Parent().Kind() == expressions.KindCTE
+		if !g.dialect.SupportsTableAliasColumns && !keepNamedCTEColumns {
 			g.unsupported("Named columns are not supported in table alias.")
 			columns = ""
 		} else {

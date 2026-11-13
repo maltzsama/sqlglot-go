@@ -47,6 +47,8 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindInheritsProperty:             propertyLocationPostSchema,
 	expressions.KindLanguageProperty:             propertyLocationPostSchema,
 	expressions.KindLikeProperty:                 propertyLocationPostSchema,
+	expressions.KindModuleProperty:               propertyLocationPostSchema,
+	expressions.KindVirtualProperty:              propertyLocationPostCreate,
 	expressions.KindLockProperty:                 propertyLocationPostSchema,
 	expressions.KindPartitionByListProperty:      propertyLocationPostSchema,
 	expressions.KindPartitionByRangeProperty:     propertyLocationPostSchema,
@@ -118,6 +120,8 @@ func init() {
 	dispatch[expressions.KindUnloggedProperty] = (*Generator).unloggedPropertySQL
 	dispatch[expressions.KindInheritsProperty] = (*Generator).inheritsPropertySQL
 	dispatch[expressions.KindLikeProperty] = (*Generator).likePropertySQL
+	dispatch[expressions.KindModuleProperty] = (*Generator).modulePropertySQL
+	dispatch[expressions.KindVirtualProperty] = (*Generator).virtualPropertySQL
 	dispatch[expressions.KindNoPrimaryIndexProperty] = (*Generator).noPrimaryIndexPropertySQL
 	dispatch[expressions.KindOnCommitProperty] = (*Generator).onCommitPropertySQL
 	dispatch[expressions.KindOnProperty] = (*Generator).onPropertySQL
@@ -268,7 +272,20 @@ func (g *Generator) propertySQL(e expressions.Expression) string {
 	return name + "=" + g.sqlKey(e, "this")
 }
 
-func (g *Generator) temporaryPropertySQL(expressions.Expression) string    { return "TEMPORARY" }
+func (g *Generator) temporaryPropertySQL(expressions.Expression) string { return "TEMPORARY" }
+
+// modulePropertySQL ports moduleproperty_sql (generator.py:2177-2180): sqlite
+// `USING <module>[(cols)]`.
+func (g *Generator) modulePropertySQL(e expressions.Expression) string {
+	exprs := g.expressions(exprsOptions{expression: e, flat: true})
+	if exprs != "" {
+		exprs = "(" + exprs + ")"
+	}
+	return "USING " + g.sqlKey(e, "this") + exprs
+}
+
+// virtualPropertySQL ports the base exp.VirtualProperty TRANSFORMS entry (generator.py:275).
+func (g *Generator) virtualPropertySQL(expressions.Expression) string      { return "VIRTUAL" }
 func (g *Generator) materializedPropertySQL(expressions.Expression) string { return "MATERIALIZED" }
 func (g *Generator) unloggedPropertySQL(expressions.Expression) string     { return "UNLOGGED" }
 

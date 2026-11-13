@@ -1489,6 +1489,63 @@
 {"read": "", "write": "spark2", "sql": "TRANSLATE(x, y, z)", "want": "TRANSLATE(x, y, z)", "pretty": false, "identify": false}
 {"read": "", "write": "spark2", "sql": "TRIM('abc', 'a')", "want": "TRIM('a' FROM 'abc')", "pretty": false, "identify": false}
 {"read": "", "write": "spark2", "sql": "UUID()", "want": "UUID()", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "BEGIN IMMEDIATE TRANSACTION", "want": "BEGIN IMMEDIATE TRANSACTION", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "BEGIN TRANSACTION", "want": "BEGIN TRANSACTION", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CAST(a AS BINARY(4))", "want": "CAST(a AS BLOB(4))", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CAST(a AS DATETIME)", "want": "CAST(a AS DATETIME)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CAST(a AS SMALLINT)", "want": "CAST(a AS INTEGER)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CAST(a AS VARBINARY(4))", "want": "CAST(a AS BLOB(4))", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CONCAT(a, b, c)", "want": "a || b || c", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CREATE INDEX my_idx ON tbl(a, b)", "want": "CREATE INDEX my_idx ON tbl(a, b)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CREATE TABLE a LIKE b", "want": "CREATE TABLE a AS SELECT * FROM b LIMIT 0", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CREATE TABLE t (b1 BINARY, b2 BINARY(1024), c1 TEXT, c2 TEXT(1024))", "want": "CREATE TABLE t (b1 BLOB, b2 BLOB(1024), c1 TEXT, c2 TEXT(1024))", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CREATE TABLE t (c CHAR, nc NCHAR, v1 VARCHAR, v2 VARCHAR2, nv NVARCHAR, nv2 NVARCHAR2)", "want": "CREATE TABLE t (c TEXT, nc TEXT, v1 TEXT, v2 TEXT, nv TEXT, nv2 TEXT)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CREATE UNIQUE INDEX my_idx ON tbl(a, b)", "want": "CREATE UNIQUE INDEX my_idx ON tbl(a, b)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CURRENT_DATE", "want": "CURRENT_DATE", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CURRENT_SCHEMA()", "want": "'main'", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CURRENT_TIME", "want": "CURRENT_TIME", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "CURRENT_TIMESTAMP", "want": "CURRENT_TIMESTAMP", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "DATE_ADD(x, 1, 'DAY')", "want": "DATE(x, '1 DAY')", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "DATE_STR_TO_DATE(x)", "want": "x", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "JSON_EXTRACT(x, '$.y')", "want": "x -> '$.y'", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "JSON_EXTRACT(x, '$.y[*]')", "want": "x -> '$.y'", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "JSON_EXTRACT(x, '$.y[0].z')", "want": "x -> '$.y[0].z'", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "JSON_EXTRACT(x, '$[\"a b\"]')", "want": "x -> '$.\"a b\"'", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "JSON_EXTRACT_SCALAR(x, '$.y')", "want": "x ->> '$.y'", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "JSON_EXTRACT_SCALAR(x, '$.y[0].z')", "want": "x ->> '$.y[0].z'", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "JSON_REMOVE(PARSE_JSON('[\"a\", [\"b\", \"c\"], \"d\"]'), '$[1]', '$[1]')", "want": "JSON_REMOVE('[\"a\", [\"b\", \"c\"], \"d\"]', '$[1]', '$[1]')", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "JSON_SET(PARSE_JSON('{\"a\": 1}'), '$', PARSE_JSON('{\"b\": 2, \"c\": 3}'))", "want": "JSON_SET('{\"a\": 1}', '$', '{\"b\": 2, \"c\": 3}')", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "LEVENSHTEIN(col1, col2)", "want": "EDITDIST3(col1, col2)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "LOG(10, a)", "want": "LOG(10, a)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "LOG(2, a)", "want": "LOG(2, a)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "RAND()", "want": "RANDOM()", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT * FROM (SELECT * FROM my_table AS t) AS tbl", "want": "SELECT * FROM (SELECT * FROM my_table AS t) AS tbl", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT * FROM (WITH t AS (SELECT 1 AS c) SELECT c FROM t) AS subq", "want": "SELECT * FROM (WITH t AS (SELECT 1 AS c) SELECT c FROM t) AS subq", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT * FROM data LIMIT 10, 20", "want": "SELECT * FROM data LIMIT 20 OFFSET 10", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT * FROM t FETCH FIRST ROWS ONLY", "want": "SELECT * FROM t LIMIT 1", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT 1 AS \"x\"\"\"", "want": "SELECT 1 AS \"x\"\"\"", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT 1 AS \"x`\"", "want": "SELECT 1 AS \"x`\"", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT COUNT_IF(col % 2 = 0) FILTER(WHERE col < 1000) FROM foo", "want": "SELECT SUM(IIF(col % 2 = 0, 1, 0)) FILTER(WHERE col < 1000) FROM foo", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT COUNT_IF(col % 2 = 0) FROM foo", "want": "SELECT SUM(IIF(col % 2 = 0, 1, 0)) FROM foo", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT IS_ASCII(x)", "want": "SELECT (NOT x GLOB CAST(x'2a5b5e012d7f5d2a' AS TEXT))", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT NVL2(a, b)", "want": "SELECT CASE WHEN NOT a IS NULL THEN b END", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT NVL2(a, b, c)", "want": "SELECT CASE WHEN NOT a IS NULL THEN b ELSE c END", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE CURRENT ROW)", "want": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE CURRENT ROW)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE GROUP)", "want": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE GROUP)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE TIES)", "want": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE TIES)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)", "want": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT x FROM y LIMIT 10", "want": "SELECT x FROM y LIMIT 10", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT x FROM y LIMIT 10 OFFSET 5", "want": "SELECT x FROM y LIMIT 10 OFFSET 5", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT x FROM y OFFSET 10 FETCH FIRST 3 ROWS ONLY", "want": "SELECT x FROM y LIMIT 3 OFFSET 10", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "SELECT y x FROM my_table t", "want": "SELECT y AS x FROM my_table AS t", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "STR_POSITION(haystack, needle)", "want": "INSTR(haystack, needle)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "STR_POSITION(haystack, needle, position)", "want": "IIF(INSTR(SUBSTRING(haystack, position), needle) = 0, 0, INSTR(SUBSTRING(haystack, position), needle) + position - 1)", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "TIME_STR_TO_TIME('2020-01-01 12:13:14-08:00', 'America/Los_Angeles')", "want": "'2020-01-01 12:13:14-08:00'", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "TIME_STR_TO_TIME('2020-01-01')", "want": "'2020-01-01'", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "TIME_STR_TO_TIME(col, 'America/Los_Angeles')", "want": "col", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "WITH cte1 AS (SELECT a, b FROM table1), cte2 AS (SELECT c, e AS d FROM table2) SELECT b, d AS dd FROM cte1 AS t CROSS JOIN cte2 WHERE cte1.a = cte2.c", "want": "WITH cte1 AS (SELECT a, b FROM table1), cte2 AS (SELECT c, e AS d FROM table2) SELECT b, d AS dd FROM cte1 AS t CROSS JOIN cte2 WHERE cte1.a = cte2.c", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "a / b", "want": "CAST(a AS REAL) / b", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "x ILIKE '%y'", "want": "LOWER(x) LIKE LOWER('%y')", "pretty": false, "identify": false}
 {"read": "", "write": "starrocks", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
 {"read": "", "write": "starrocks", "sql": "ARRAY_REMOVE(the_array, target)", "want": "ARRAY_REMOVE(the_array, target)", "pretty": false, "identify": false}
 {"read": "", "write": "starrocks", "sql": "CAST(a AS BINARY(4))", "want": "CAST(a AS BINARY(4))", "pretty": false, "identify": false}
@@ -2643,6 +2700,9 @@
 {"read": "bigquery", "write": "spark2", "sql": "SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 as a, 'abc' AS b), STRUCT(str_col AS abc)", "want": "SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 AS a, 'abc' AS b), STRUCT(str_col AS abc)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark2", "sql": "SHA256(x)", "want": "SHA2(x, 256)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark2", "sql": "SHA512(x)", "want": "SHA2(x, 512)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "sqlite", "sql": "LOWER(TO_HEX(x))", "want": "LOWER(HEX(x))", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "sqlite", "sql": "TO_HEX(x)", "want": "LOWER(HEX(x))", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "sqlite", "sql": "UPPER(TO_HEX(x))", "want": "HEX(x)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "starrocks", "sql": "DATE_DIFF(DATE '2010-07-07', DATE '2008-12-25', DAY)", "want": "DATE_DIFF('DAY', CAST('2010-07-07' AS DATE), CAST('2008-12-25' AS DATE))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "starrocks", "sql": "DATE_DIFF(DATE '2010-07-07', DATE '2008-12-25', MINUTE)", "want": "DATE_DIFF('MINUTE', CAST('2010-07-07' AS DATE), CAST('2008-12-25' AS DATE))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "starrocks", "sql": "REGEXP_CONTAINS('foo', '.*')", "want": "REGEXP('foo', '.*')", "pretty": false, "identify": false}
@@ -3694,6 +3754,11 @@
 {"read": "duckdb", "write": "spark", "sql": "[0, 1, 2]", "want": "ARRAY(0, 1, 2)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark", "sql": "cast([[1]] as int[][])", "want": "CAST(ARRAY(ARRAY(1)) AS ARRAY<ARRAY<INT>>)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark2", "sql": "SELECT TIMESTAMP 'foo'", "want": "SELECT CAST('foo' AS TIMESTAMP)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE NOT EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT DATE_ADD(d, INTERVAL 1 DAY) FROM t", "want": "SELECT DATE(d, '1 DAY') FROM t", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT FIRST_VALUE(c RESPECT NULLS) OVER (PARTITION BY gb ORDER BY ob) FROM t", "want": "SELECT FIRST_VALUE(c) OVER (PARTITION BY gb ORDER BY ob NULLS LAST) FROM t", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "WITH t AS (SELECT i, i * i * i * i * i AS i5 FROM RANGE(1, 5) t(i)) SELECT * FROM t", "want": "WITH t AS (SELECT i, i * i * i * i * i AS i5 FROM (SELECT value AS i FROM GENERATE_SERIES(1, 5)) AS t) SELECT * FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT MAP(['a', 'b'], [1, 2])", "want": "SELECT MAP('a', 1, 'b', 2)", "pretty": false, "identify": false}
@@ -4144,6 +4209,12 @@
 {"read": "hive", "write": "spark2", "sql": "SELECT MAP(*), STRUCT(*) FROM t", "want": "SELECT MAP(*), STRUCT(*) FROM t", "pretty": false, "identify": false}
 {"read": "hive", "write": "spark2", "sql": "WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT GET_JSON_OBJECT(c, '$.x-y') FROM t", "want": "WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT GET_JSON_OBJECT(c, '$.x-y') FROM t", "pretty": false, "identify": false}
 {"read": "hive", "write": "spark2", "sql": "x DIV y", "want": "x DIV y", "pretty": false, "identify": false}
+{"read": "hive", "write": "sqlite", "sql": "SELECT * FROM t1 FULL OUTER JOIN t2 ON TRUE", "want": "SELECT * FROM t1 FULL OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "sqlite", "sql": "SELECT * FROM t1 INNER JOIN t2 ON TRUE", "want": "SELECT * FROM t1 INNER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "sqlite", "sql": "SELECT * FROM t1 LEFT JOIN t2 ON TRUE", "want": "SELECT * FROM t1 LEFT JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "sqlite", "sql": "SELECT * FROM t1 LEFT OUTER JOIN t2 ON TRUE", "want": "SELECT * FROM t1 LEFT OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "sqlite", "sql": "SELECT * FROM t1 RIGHT JOIN t2 ON TRUE", "want": "SELECT * FROM t1 RIGHT JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "hive", "write": "sqlite", "sql": "SELECT * FROM t1 RIGHT OUTER JOIN t2 ON TRUE", "want": "SELECT * FROM t1 RIGHT OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
 {"read": "hive", "write": "starrocks", "sql": "SELECT MAP('a', 1, 'b', 2)", "want": "SELECT MAP('a', 1, 'b', 2)", "pretty": false, "identify": false}
 {"read": "hive", "write": "trino", "sql": "COLLECT_SET(x)", "want": "ARRAY_AGG(DISTINCT x)", "pretty": false, "identify": false}
 {"read": "hive", "write": "trino", "sql": "REGEXP_EXTRACT('abc', '(a)(b)(c)')", "want": "REGEXP_EXTRACT('abc', '(a)(b)(c)', 1)", "pretty": false, "identify": false}
@@ -4519,6 +4590,29 @@
 {"read": "mysql", "write": "spark", "sql": "SELECT x'0000CC'", "want": "SELECT X'0000CC'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "spark", "sql": "SELECT x'CC'", "want": "SELECT X'CC'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "spark", "sql": "a / b", "want": "a / b", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "CHAR(10)", "want": "CHAR(10)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "CREATE TABLE t (foo BLOB)", "want": "CREATE TABLE t (foo BLOB)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "CREATE TABLE x (id int not null auto_increment, primary key (id))", "want": "CREATE TABLE x (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "CREATE TABLE z (a INT AUTO_INCREMENT PRIMARY KEY)", "want": "CREATE TABLE z (a INTEGER PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "CREATE TABLE z (a INT PRIMARY KEY AUTO_INCREMENT)", "want": "CREATE TABLE z (a INTEGER PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "CREATE TABLE z (a INT UNIQUE PRIMARY KEY AUTO_INCREMENT)", "want": "CREATE TABLE z (a INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "CREATE TABLE z (a INT) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARACTER SET=utf8 COLLATE=utf8_bin COMMENT='x'", "want": "CREATE TABLE z (a INTEGER)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(DISTINCT a, b, c ORDER BY d SEPARATOR '')", "want": "GROUP_CONCAT(DISTINCT a || b || c, '')", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(DISTINCT a, b, c SEPARATOR '')", "want": "GROUP_CONCAT(DISTINCT a || b || c, '')", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(DISTINCT x ORDER BY y DESC SEPARATOR '')", "want": "GROUP_CONCAT(DISTINCT x, '')", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(DISTINCT x ORDER BY y DESC)", "want": "GROUP_CONCAT(DISTINCT x)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(a, b, c ORDER BY d SEPARATOR '')", "want": "GROUP_CONCAT(a || b || c, '')", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(a, b, c SEPARATOR '')", "want": "GROUP_CONCAT(a || b || c, '')", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(a, b, c SEPARATOR ',')", "want": "GROUP_CONCAT(a || b || c, ',')", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(x ORDER BY y SEPARATOR z)", "want": "GROUP_CONCAT(x, z)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "INSERT IGNORE INTO foo (x, y) VALUES (1, 2)", "want": "INSERT OR IGNORE INTO foo (x, y) VALUES (1, 2)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT 0b1011", "want": "SELECT 11", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "want": "SELECT '[10, 20, [30, 40]]' -> '$[1]'", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT b'1011'", "want": "SELECT 11", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT x'0000CC'", "want": "SELECT x'0000CC'", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT x'CC'", "want": "SELECT x'CC'", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "a / b", "want": "CAST(a AS REAL) / b", "pretty": false, "identify": false}
 {"read": "mysql", "write": "starrocks", "sql": "CAST(x AS TEXT)", "want": "CAST(x AS STRING)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "starrocks", "sql": "SELECT 0x0000CC", "want": "SELECT x'0000CC'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "starrocks", "sql": "SELECT 0xCC", "want": "SELECT x'CC'", "pretty": false, "identify": false}
@@ -5140,6 +5234,15 @@
 {"read": "postgres", "write": "spark2", "sql": "GENERATE_SERIES('2019-01-01'::TIMESTAMP, NOW(), '1day')", "want": "EXPLODE(SEQUENCE(CAST('2019-01-01' AS TIMESTAMP), CAST(CURRENT_TIMESTAMP() AS TIMESTAMP), INTERVAL '1' DAY))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark2", "sql": "SELECT * FROM GENERATE_SERIES(a, b)", "want": "SELECT * FROM EXPLODE(SEQUENCE(a, b))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark2", "sql": "WITH t AS (SELECT ARRAY[1, 2, 3] AS col) SELECT * FROM t WHERE 1 <= ANY(col) AND 2 = ANY(col)", "want": "WITH t AS (SELECT ARRAY(1, 2, 3) AS col) SELECT * FROM t WHERE EXISTS(col, x -> 1 <= x) AND EXISTS(col, x -> 2 = x)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "1 / DIV(4, 2)", "want": "1 / CAST(CAST(CAST(4 AS REAL) / 2 AS INTEGER) AS REAL)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "CREATE TABLE z (a INT GENERATED BY DEFAULT AS IDENTITY NOT NULL UNIQUE PRIMARY KEY)", "want": "CREATE TABLE z (a INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "GREATEST(x)", "want": "x", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "JSON_EXTRACT_PATH('{\"f2\":{\"f3\":1},\"f4\":{\"f5\":99,\"f6\":\"foo\"}}','f4')", "want": "'{\"f2\":{\"f3\":1},\"f4\":{\"f5\":99,\"f6\":\"foo\"}}' -> '$.f4'", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "SELECT * FROM x FETCH 1 ROW", "want": "SELECT * FROM x LIMIT 1", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "SELECT GREATEST(a, b) FROM t", "want": "SELECT MAX(a, b) FROM t", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "SELECT JSON_AGG(name) FROM t", "want": "SELECT JSON_GROUP_ARRAY(name) FROM t", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "SELECT JSON_OBJECT_AGG(name, value) FROM t", "want": "SELECT JSON_GROUP_OBJECT(name, value) FROM t", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "SELECT LEAST(a, b) FROM t", "want": "SELECT MIN(a, b) FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "starrocks", "sql": "SELECT ARRAY[1, 2, 3] @> ARRAY[1, 2]", "want": "SELECT ARRAY_CONTAINS_ALL([1, 2, 3], [1, 2])", "pretty": false, "identify": false}
 {"read": "postgres", "write": "starrocks", "sql": "SELECT ARRAY[1, 2] <@ ARRAY[1, 2, 3]", "want": "SELECT ARRAY_CONTAINS_ALL([1, 2, 3], [1, 2])", "pretty": false, "identify": false}
 {"read": "postgres", "write": "starrocks", "sql": "UPDATE foo SET a = bar.a, b = bar.b FROM bar WHERE foo.id = bar.id", "want": "UPDATE foo SET a = bar.a, b = bar.b FROM bar WHERE foo.id = bar.id", "pretty": false, "identify": false}
@@ -5684,6 +5787,7 @@
 {"read": "presto", "write": "spark2", "sql": "ARBITRARY(x)", "want": "FIRST(x)", "pretty": false, "identify": false}
 {"read": "presto", "write": "spark2", "sql": "IS_NAN(x)", "want": "ISNAN(x)", "pretty": false, "identify": false}
 {"read": "presto", "write": "spark2", "sql": "REGEXP_EXTRACT('abc', '(a)(b)(c)')", "want": "REGEXP_EXTRACT('abc', '(a)(b)(c)', 0)", "pretty": false, "identify": false}
+{"read": "presto", "write": "sqlite", "sql": "ARBITRARY(x)", "want": "MAX(x)", "pretty": false, "identify": false}
 {"read": "presto", "write": "starrocks", "sql": "SELECT MAP(ARRAY['a', 'b'], ARRAY[1, 2])", "want": "SELECT MAP('a', 1, 'b', 2)", "pretty": false, "identify": false}
 {"read": "presto", "write": "starrocks", "sql": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "want": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "pretty": false, "identify": false}
 {"read": "presto", "write": "starrocks", "sql": "SIGN(x)", "want": "SIGN(x)", "pretty": false, "identify": false}
@@ -5878,6 +5982,8 @@
 {"read": "redshift", "write": "spark", "sql": "SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC", "want": "SELECT a, b FROM (SELECT a AS a, b AS b, ROW_NUMBER() OVER (PARTITION BY a ORDER BY c DESC NULLS FIRST) AS _row_number FROM x) AS _t WHERE _row_number = 1", "pretty": false, "identify": false}
 {"read": "redshift", "write": "spark", "sql": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "want": "SELECT GET_JSON_OBJECT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', '$.farm.barn.color')", "pretty": false, "identify": false}
 {"read": "redshift", "write": "spark2", "sql": "SELECT DATEADD(month, 18, '2008-02-28')", "want": "SELECT ADD_MONTHS('2008-02-28', 18)", "pretty": false, "identify": false}
+{"read": "redshift", "write": "sqlite", "sql": "SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC", "want": "SELECT a, b FROM (SELECT a AS a, b AS b, ROW_NUMBER() OVER (PARTITION BY a ORDER BY c DESC NULLS FIRST) AS _row_number FROM x) AS _t WHERE _row_number = 1", "pretty": false, "identify": false}
+{"read": "redshift", "write": "sqlite", "sql": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "want": "SELECT '{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}' ->> '$.farm.barn.color'", "pretty": false, "identify": false}
 {"read": "redshift", "write": "starrocks", "sql": "SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC", "want": "SELECT a, b FROM (SELECT a AS a, b AS b, ROW_NUMBER() OVER (PARTITION BY a ORDER BY CASE WHEN c IS NULL THEN 1 ELSE 0 END DESC, c DESC) AS _row_number FROM x) AS _t WHERE _row_number = 1", "pretty": false, "identify": false}
 {"read": "redshift", "write": "trino", "sql": "CREATE TABLE t1 (LIKE t2)", "want": "CREATE TABLE t1 (LIKE t2)", "pretty": false, "identify": false}
 {"read": "redshift", "write": "trino", "sql": "CREATE TABLE t1 (col VARCHAR, LIKE t2)", "want": "CREATE TABLE t1 (col VARCHAR, LIKE t2)", "pretty": false, "identify": false}
@@ -7271,6 +7377,22 @@
 {"read": "snowflake", "write": "spark", "sql": "ZEROIFNULL(foo)", "want": "IF(foo IS NULL, 0, foo)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "spark2", "sql": "REGEXP_SUBSTR(subject, pattern, 1, 1, 'c', 1)", "want": "REGEXP_EXTRACT(subject, pattern)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "spark2", "sql": "UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')", "want": "CAST(UUID() AS STRING)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "CURRENT_DATE()", "want": "CURRENT_DATE", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "CURRENT_TIMESTAMP()", "want": "CURRENT_TIMESTAMP", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "DIV0(a - b, c - d)", "want": "IIF((c - d) = 0 AND NOT (a - b) IS NULL, 0, CAST((a - b) AS REAL) / (c - d))", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "DIV0(foo, bar)", "want": "IIF(bar = 0 AND NOT foo IS NULL, 0, CAST(foo AS REAL) / bar)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "DIV0NULL(a - b, c - d)", "want": "IIF((c - d) = 0 OR (c - d) IS NULL, 0, CAST((a - b) AS REAL) / (c - d))", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "DIV0NULL(foo, bar)", "want": "IIF(bar = 0 OR bar IS NULL, 0, CAST(foo AS REAL) / bar)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "LEAST(x)", "want": "x", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "LEAST(x, y, z)", "want": "MIN(x, y, z)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "MIN(x)", "want": "MIN(x)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "NULLIFZERO(foo)", "want": "IIF(foo = 0, NULL, foo)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "SELECT BOOLAND_AGG(c1), BOOLAND_AGG(c2) FROM test", "want": "SELECT MIN(c1), MIN(c2) FROM test", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "SELECT BOOLOR_AGG(c1), BOOLOR_AGG(c2) FROM test", "want": "SELECT MAX(c1), MAX(c2) FROM test", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "SELECT CAST('2020-01-01 16:03:05' AS DATE)", "want": "SELECT DATE('2020-01-01 16:03:05')", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "SELECT i, p, o FROM qt QUALIFY ROW_NUMBER() OVER (PARTITION BY p ORDER BY o) = 1", "want": "SELECT i, p, o FROM (SELECT i, p, o, ROW_NUMBER() OVER (PARTITION BY p ORDER BY o NULLS LAST) AS _w FROM qt) AS _t WHERE _w = 1", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "SQUARE(x)", "want": "POWER(x, 2)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "ZEROIFNULL(foo)", "want": "IIF(foo IS NULL, 0, foo)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "starrocks", "sql": "SELECT ARRAY_FLATTEN([['a', 'b'], ['c', 'd', 'e']])", "want": "SELECT ARRAY_FLATTEN([['a', 'b'], ['c', 'd', 'e']])", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "starrocks", "sql": "SELECT ARRAY_INTERSECTION([1, 2], [2, 3])", "want": "SELECT ARRAY_INTERSECT([1, 2], [2, 3])", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "starrocks", "sql": "SELECT CURRENT_VERSION()", "want": "SELECT CURRENT_VERSION()", "pretty": false, "identify": false}
@@ -7823,6 +7945,7 @@
 {"read": "spark", "write": "spark2", "sql": "SELECT DATE_ADD(my_date_column, 1)", "want": "SELECT DATE_ADD(my_date_column, 1)", "pretty": false, "identify": false}
 {"read": "spark", "write": "spark2", "sql": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "want": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "pretty": false, "identify": false}
 {"read": "spark", "write": "spark2", "sql": "SELECT TRY_CAST('a' AS INT)", "want": "SELECT CAST('a' AS INT)", "pretty": false, "identify": false}
+{"read": "spark", "write": "sqlite", "sql": "LEVENSHTEIN(col1, col2)", "want": "EDITDIST3(col1, col2)", "pretty": false, "identify": false}
 {"read": "spark", "write": "starrocks", "sql": "SELECT MAP('a', 1, 'b', 2)", "want": "SELECT MAP('a', 1, 'b', 2)", "pretty": false, "identify": false}
 {"read": "spark", "write": "starrocks", "sql": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "want": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "pretty": false, "identify": false}
 {"read": "spark", "write": "trino", "sql": "AGGREGATE(my_arr, 0, (acc, x) -> acc + x, s -> s * 2)", "want": "REDUCE(my_arr, 0, (acc, x) -> acc + x, s -> s * 2)", "pretty": false, "identify": false}
@@ -7888,6 +8011,83 @@
 {"read": "spark2", "write": "presto", "sql": "FIRST(x)", "want": "ARBITRARY(x)", "pretty": false, "identify": false}
 {"read": "spark2", "write": "snowflake", "sql": "REGEXP_EXTRACT(subject, pattern)", "want": "REGEXP_SUBSTR(subject, pattern, 1, 1, 'c', 1)", "pretty": false, "identify": false}
 {"read": "spark2", "write": "spark", "sql": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "want": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "CREATE INDEX my_idx ON tbl(a, b)", "want": "CREATE INDEX my_idx ON tbl(a, b)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "CREATE UNIQUE INDEX my_idx ON tbl(a, b)", "want": "CREATE UNIQUE INDEX my_idx ON tbl(a, b)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "EDITDIST3(col1, col2)", "want": "LEVENSHTEIN(col1, col2)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "INSTR(haystack, needle)", "want": "STR_POSITION(haystack, needle)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "LOG(b, n)", "want": "LOG(b, n)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "LOG(x)", "want": "LOG(x)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "LOG10(a)", "want": "LOG(10, a)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "LOG2(a)", "want": "LOG(2, a)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "RANDOM()", "want": "RAND()", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "SELECT 1 'foo'", "want": "SELECT 1 AS \"foo\"", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "SELECT 1 AS \"x\"\"\"", "want": "SELECT 1 AS \"x\"\"\"", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "SELECT 1 AS `x```", "want": "SELECT 1 AS \"x`\"", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE NO OTHERS)", "want": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "UNICODE(x)", "want": "UNICODE(x)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "`x` + \"y\"", "want": "\"x\" + \"y\"", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "x -> '$.y'", "want": "JSON_EXTRACT(x, '$.y')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "x -> '$.y[0].z'", "want": "JSON_EXTRACT(x, '$.y[0].z')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "x ->> '$.y'", "want": "JSON_EXTRACT_SCALAR(x, '$.y')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "x ->> '$.y[0].z'", "want": "JSON_EXTRACT_SCALAR(x, '$.y[0].z')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "bigquery", "sql": "HEX(x)", "want": "UPPER(TO_HEX(x))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "bigquery", "sql": "LOWER(HEX(x))", "want": "TO_HEX(x)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "bigquery", "sql": "MIN(x, y)", "want": "LEAST(x, y)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "want": "SELECT '[10, 20, [30, 40]]' ->> '$[1]'", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%Y-%m-%d', '2020-01-01 12:05:03')", "want": "SELECT STRFTIME(CAST('2020-01-01 12:05:03' AS TIMESTAMP), '%Y-%m-%d')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%Y-%m-%d', CURRENT_TIMESTAMP)", "want": "SELECT STRFTIME(CAST(CURRENT_TIMESTAMP AS TIMESTAMP), '%Y-%m-%d')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "hive", "sql": "SELECT * FROM t1 FULL OUTER JOIN t2", "want": "SELECT * FROM t1 FULL OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "hive", "sql": "SELECT * FROM t1 INNER JOIN t2", "want": "SELECT * FROM t1 INNER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "hive", "sql": "SELECT * FROM t1 LEFT JOIN t2", "want": "SELECT * FROM t1 LEFT JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "hive", "sql": "SELECT * FROM t1 LEFT OUTER JOIN t2", "want": "SELECT * FROM t1 LEFT OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "hive", "sql": "SELECT * FROM t1 RIGHT JOIN t2", "want": "SELECT * FROM t1 RIGHT JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "hive", "sql": "SELECT * FROM t1 RIGHT OUTER JOIN t2", "want": "SELECT * FROM t1 RIGHT OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "mysql", "sql": "CREATE TABLE \"x\" (\"Name\" NVARCHAR(200) NOT NULL)", "want": "CREATE TABLE `x` (`Name` VARCHAR(200) NOT NULL)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "mysql", "sql": "CREATE TABLE z (a INTEGER PRIMARY KEY AUTOINCREMENT)", "want": "CREATE TABLE z (a INT PRIMARY KEY AUTO_INCREMENT)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "mysql", "sql": "CREATE TABLE z (a INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT)", "want": "CREATE TABLE z (a INT UNIQUE PRIMARY KEY AUTO_INCREMENT)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "mysql", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "want": "SELECT CAST('[10, 20, [30, 40]]' AS JSON) ->> '$[1]'", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "mysql", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "mysql", "sql": "SELECT JSON_EXTRACT(a, '$.k') FROM t", "want": "SELECT a ->> '$.k' FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "mysql", "sql": "UNICODE(x)", "want": "ORD(CONVERT(x USING utf32))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "oracle", "sql": "UNICODE(x)", "want": "ASCII(UNISTR(x))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "postgres", "sql": "CREATE TABLE table1 (a INT, b INT, PRIMARY KEY (a))", "want": "CREATE TABLE table1 (a INT, b INT, PRIMARY KEY (a))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "postgres", "sql": "CREATE TABLE z (a INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT)", "want": "CREATE TABLE z (a INT GENERATED BY DEFAULT AS IDENTITY NOT NULL UNIQUE PRIMARY KEY)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "postgres", "sql": "SELECT JSON_EXTRACT(a, '$.k') FROM t", "want": "SELECT JSON_EXTRACT_PATH_TEXT(a, 'k') FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "postgres", "sql": "SELECT JSON_GROUP_ARRAY(name) FROM t", "want": "SELECT JSON_AGG(name) FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "postgres", "sql": "SELECT JSON_GROUP_OBJECT(name, value) FROM t", "want": "SELECT JSON_OBJECT_AGG(name, value) FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "postgres", "sql": "UNICODE(x)", "want": "ASCII(x)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "redshift", "sql": "UNICODE(x)", "want": "ASCII(x)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "snowflake", "sql": "MIN(x)", "want": "MIN(x)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "snowflake", "sql": "MIN(x, y, z)", "want": "LEAST(x, y, z)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "spark", "sql": "EDITDIST3(col1, col2)", "want": "LEVENSHTEIN(col1, col2)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "spark", "sql": "SELECT CAST([a].[b] AS SMALLINT) FROM foo", "want": "SELECT CAST(`a`.`b` AS SMALLINT) FROM foo", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "spark", "sql": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "want": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "spark", "sql": "UNICODE(x)", "want": "ASCII(x)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "\n            CREATE TABLE \"Track\"\n            (\n                CONSTRAINT \"PK_Track\" FOREIGN KEY (\"TrackId\"),\n                FOREIGN KEY (\"AlbumId\") REFERENCES \"Album\" (\n                    \"AlbumId\"\n                ) ON DELETE NO ACTION ON UPDATE NO ACTION,\n                FOREIGN KEY (\"AlbumId\") ON DELETE CASCADE ON UPDATE RESTRICT,\n                FOREIGN KEY (\"AlbumId\") ON DELETE SET NULL ON UPDATE SET DEFAULT\n            )\n            ", "want": "CREATE TABLE \"Track\" (\n  CONSTRAINT \"PK_Track\" FOREIGN KEY (\"TrackId\"),\n  FOREIGN KEY (\"AlbumId\") REFERENCES \"Album\" (\n    \"AlbumId\"\n  ) ON DELETE NO ACTION ON UPDATE NO ACTION,\n  FOREIGN KEY (\"AlbumId\") ON DELETE CASCADE ON UPDATE RESTRICT,\n  FOREIGN KEY (\"AlbumId\") ON DELETE SET NULL ON UPDATE SET DEFAULT\n)", "pretty": true, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "CREATE TABLE \"x\" (\"Name\" NVARCHAR(200) NOT NULL)", "want": "CREATE TABLE \"x\" (\"Name\" TEXT(200) NOT NULL)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "CREATE TABLE foo (bar LONGVARCHAR)", "want": "CREATE TABLE foo (bar TEXT)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "CREATE TABLE z (a INTEGER PRIMARY KEY AUTOINCREMENT)", "want": "CREATE TABLE z (a INTEGER PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "CREATE TABLE z (a INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT)", "want": "CREATE TABLE z (a INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "DATEDIFF(a, b, 'day')", "want": "CAST((JULIANDAY(a) - JULIANDAY(b)) AS INTEGER)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "DATEDIFF(a, b, 'hour')", "want": "CAST((JULIANDAY(a) - JULIANDAY(b)) * 24.0 AS INTEGER)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "DATEDIFF(a, b, 'year')", "want": "CAST((JULIANDAY(a) - JULIANDAY(b)) / 365.0 AS INTEGER)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "EDITDIST3(col1, col2)", "want": "EDITDIST3(col1, col2)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "INSERT OR IGNORE INTO foo (x, y) VALUES (1, 2)", "want": "INSERT OR IGNORE INTO foo (x, y) VALUES (1, 2)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT CAST([a].[b] AS SMALLINT) FROM foo", "want": "SELECT CAST(\"a\".\"b\" AS INTEGER) FROM foo", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT FIRST_VALUE(Name) OVER (PARTITION BY AlbumId ORDER BY Bytes DESC) AS LargestTrack FROM tracks", "want": "SELECT FIRST_VALUE(Name) OVER (PARTITION BY AlbumId ORDER BY Bytes DESC) AS LargestTrack FROM tracks", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT GLOB('*y*', 'xyz')", "want": "SELECT 'xyz' GLOB '*y*'", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT JSON_GROUP_ARRAY(name) FROM t", "want": "SELECT JSON_GROUP_ARRAY(name) FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT JSON_GROUP_OBJECT(name, value) FROM t", "want": "SELECT JSON_GROUP_OBJECT(name, value) FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LIKE('%y%', 'xyz', '')", "want": "SELECT 'xyz' LIKE '%y%' ESCAPE ''", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LIKE(y, x)", "want": "SELECT x LIKE y", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT MAX(a, b) FROM t", "want": "SELECT MAX(a, b) FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT MIN(a, b) FROM t", "want": "SELECT MIN(a, b) FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%Y-%m-%d', '2020-01-01 12:05:03')", "want": "SELECT STRFTIME('%Y-%m-%d', '2020-01-01 12:05:03')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%Y-%m-%d', CURRENT_TIMESTAMP)", "want": "SELECT STRFTIME('%Y-%m-%d', CURRENT_TIMESTAMP)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "want": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "tsql", "sql": "SELECT * FROM t LIMIT 5, 10", "want": "SELECT * FROM t ORDER BY (SELECT NULL) OFFSET 5 ROWS FETCH FIRST 10 ROWS ONLY", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "tsql", "sql": "SELECT IIF(cond, 'True', 'False')", "want": "SELECT IIF(cond <> 0, 'True', 'False')", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "", "sql": "DATE_TRUNC('day', x)", "want": "TIMESTAMP_TRUNC(x, DAY)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "", "sql": "DATE_TRUNC('day', x::DATE)", "want": "TIMESTAMP_TRUNC(CAST(x AS DATE), DAY)", "pretty": false, "identify": false}
@@ -8315,6 +8515,12 @@
 {"read": "tsql", "write": "spark2", "sql": "SELECT DATEDIFF_BIG(mm, 'start', 'end')", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('end' AS TIMESTAMP), CAST('start' AS TIMESTAMP)) AS INT)", "pretty": false, "identify": false}
 {"read": "tsql", "write": "spark2", "sql": "SELECT DATEDIFF_BIG(quarter, 'start', 'end')", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('end' AS TIMESTAMP), CAST('start' AS TIMESTAMP)) / 3 AS INT)", "pretty": false, "identify": false}
 {"read": "tsql", "write": "spark2", "sql": "SELECT DATEDIFF_BIG(year, '2020-01-01', '2021-01-01')", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('2021-01-01' AS TIMESTAMP), CAST('2020-01-01' AS TIMESTAMP)) / 12 AS INT)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "sqlite", "sql": "CREATE TABLE t (a INT, b AS (a * 2) PERSISTED NOT NULL)", "want": "CREATE TABLE t (a INTEGER, b AS (a * 2) STORED NOT NULL)", "pretty": false, "identify": false}
+{"read": "tsql", "write": "sqlite", "sql": "SCHEMA_NAME(id)", "want": "'main'", "pretty": false, "identify": false}
+{"read": "tsql", "write": "sqlite", "sql": "SELECT * FROM t ORDER BY (SELECT NULL) OFFSET 5 ROWS FETCH FIRST 10 ROWS ONLY", "want": "SELECT * FROM t ORDER BY (SELECT NULL) LIMIT 10 OFFSET 5", "pretty": false, "identify": false}
+{"read": "tsql", "write": "sqlite", "sql": "STRING_AGG(x, '|')", "want": "GROUP_CONCAT(x, '|')", "pretty": false, "identify": false}
+{"read": "tsql", "write": "sqlite", "sql": "STRING_AGG(x, '|') WITHIN GROUP (ORDER BY z ASC)", "want": "GROUP_CONCAT(x, '|')", "pretty": false, "identify": false}
+{"read": "tsql", "write": "sqlite", "sql": "STRING_AGG(x, y) WITHIN GROUP (ORDER BY z DESC)", "want": "GROUP_CONCAT(x, y)", "pretty": false, "identify": false}
 {"read": "tsql", "write": "starrocks", "sql": "ALTER TABLE a ALTER COLUMN b INTEGER NOT NULL", "want": "ALTER TABLE a MODIFY COLUMN b INT NOT NULL", "pretty": false, "identify": false}
 {"read": "tsql", "write": "tsql", "sql": "\n            CREATE FUNCTION udfProductInYear (\n                @model_year INT\n            )\n            RETURNS TABLE\n            AS\n            RETURN\n                SELECT\n                    product_name,\n                    model_year,\n                    list_price\n                FROM\n                    production.products\n                WHERE\n                    model_year = @model_year\n            ", "want": "CREATE FUNCTION udfProductInYear(\n    @model_year INTEGER\n)\nRETURNS TABLE AS\nRETURN SELECT\n  product_name,\n  model_year,\n  list_price\nFROM production.products\nWHERE\n  model_year = @model_year", "pretty": true, "identify": false}
 {"read": "tsql", "write": "tsql", "sql": "\n            SELECT *\n            FROM OPENJSON ( @json )\n            WITH (\n                          Number   VARCHAR(200)   '$.Order.Number',\n                          Date     DATETIME       '$.Order.Date',\n                          Customer VARCHAR(200)   '$.AccountNumber',\n                          Quantity INT            '$.Item.Quantity',\n                          [Order]  NVARCHAR(MAX)  AS JSON\n             )\n            ", "want": "SELECT\n  *\nFROM OPENJSON(@json) WITH (\n    Number VARCHAR(200) '$.Order.Number',\n    Date DATETIME '$.Order.Date',\n    Customer VARCHAR(200) '$.AccountNumber',\n    Quantity INTEGER '$.Item.Quantity',\n    [Order] NVARCHAR(MAX) AS JSON\n)", "pretty": true, "identify": false}

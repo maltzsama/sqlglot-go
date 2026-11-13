@@ -13,6 +13,8 @@ import (
 // generator/dispatch.go is never edited.
 func init() {
 	dispatch[expressions.KindProperties] = (*Generator).propertiesSQL
+	dispatch[expressions.KindAttach] = (*Generator).attachSQL
+	dispatch[expressions.KindDetach] = (*Generator).detachSQL
 	dispatch[expressions.KindUserDefinedFunction] = (*Generator).userDefinedFunctionSQL
 	dispatch[expressions.KindReturnsProperty] = (*Generator).returnsPropertySQL
 	dispatch[expressions.KindLanguageProperty] = (*Generator).languagePropertySQL
@@ -296,4 +298,34 @@ func (g *Generator) conditionalInsertSQL(e expressions.Expression) string {
 	insert := g.sqlKey(e, "this")
 	insert = strings.TrimSpace(strings.TrimPrefix(insert, "INSERT"))
 	return prefix + insert
+}
+
+// attachSQL ports attach_sql (generator.py:5901-5907): `ATTACH [IF NOT EXISTS] <this> [(exprs)]`.
+// SQLite/DuckDB parse ATTACH; DuckDB overrides the rendering with its own grammar.
+func (g *Generator) attachSQL(e expressions.Expression) string {
+	exists := ""
+	if boolValue(e.Arg("exists")) {
+		exists = " IF NOT EXISTS"
+	}
+	exprs := g.expressions(exprsOptions{expression: e, flat: true})
+	if exprs != "" {
+		exprs = " (" + exprs + ")"
+	}
+	return "ATTACH" + exists + " " + g.sqlKey(e, "this") + exprs
+}
+
+// detachSQL ports detach_sql (generator.py:5909-5919).
+func (g *Generator) detachSQL(e expressions.Expression) string {
+	kind := g.sqlKey(e, "kind")
+	if kind != "" {
+		kind = " " + kind
+	}
+	exists := ""
+	if boolValue(e.Arg("exists")) {
+		exists = " IF EXISTS"
+		if kind == "" {
+			kind = " DATABASE"
+		}
+	}
+	return "DETACH" + exists + kind + " " + g.sqlKey(e, "this")
 }

@@ -121,14 +121,14 @@ differential-check against the pinned Python):
   `optimizer/testdata/annotate_gaps.txt`.
 - CROSS-DIALECT transpilation: verified against upstream's `validate_all` read/write pairs —
   `TestTranspileCorpus` runs every pair whose dialects are all registered (`testdata/transpile_corpus.jsonl`,
-  8497 pairs, 5854 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
+  8703 pairs, 6006 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
   What remains are the per-dialect override tables that make cross-dialect output correct — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
 - DIALECTS: base, MySQL, Postgres, TSQL, ClickHouse, StarRocks, Doris, Presto, Trino, Hive, Athena,
-  Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery (#41), DuckDB (#39)
-  and Snowflake (#40) are ported; upstream ships 30+ and the rest are out of scope for now (queued:
-  SQLite #38, MariaDB #37).
+  Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery (#41), DuckDB (#39),
+  Snowflake (#40) and SQLite (#38) are ported; upstream ships 30+ and the rest are out of scope for
+  now (queued: MariaDB #37).
 - TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): the v30.17.0 bump removed
   the FOR VERSION/TIMESTAMP and hive AS OF compound keywords but did not port `VERSION_PHRASES` +
   `_parse_version` (parser.py:1738-1745, 5120-5146); the constructs now fail closed (parse error)
@@ -974,8 +974,8 @@ each read pair asserts `parse_one(read_sql, read_dialect).sql(self.dialect) == s
 pair asserts `expression.sql(write_dialect) == write_sql`.
 
 - **Extraction** — `scripts/extract_dialect_corpus.py --transpile-only` records every pair whose
-  dialects are all registered into `testdata/transpile_corpus.jsonl`: **8497 records across 284
-  dialect pairs** (6427 cross-dialect, 2070 same-dialect), deduped and sorted for a byte-stable
+  dialects are all registered into `testdata/transpile_corpus.jsonl`: **8703 records across 307
+  dialect pairs** (6610 cross-dialect, 2093 same-dialect), deduped and sorted for a byte-stable
   rerun (verified: two consecutive runs are identical). `REGISTERED` mirrors `dialects.GetOrRaise`,
   so it also holds `spark2` — which upstream's test classes only ever name as a read/write key,
   111 of them, with no `TestSpark2` class of its own to run — and the `mariadb` alias, though
@@ -996,8 +996,8 @@ pair asserts `expression.sql(write_dialect) == write_sql`.
   `parse:` category), (c) per-write-dialect total floors against dropped records. Regenerate the
   gaps file and print observed counts with
   `SQLGLOT_TRANSPILE_UPDATE=1 go test . -run TestTranspileCorpus -v`.
-- **Initial state** — **5854/8497 pass (69%)**, 2643 tracked gaps: 1743 `gen: transpile mismatch`,
-  790 `gen: cast/type`, 67 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
+- **Initial state** — **6006/8703 pass (69%)**, 2697 tracked gaps: 1785 `gen: transpile mismatch`,
+  800 `gen: cast/type`, 69 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
   slice is the per-dialect generator work listed under Remaining work.
 - **Bug found by the first run** — `SELECT e'Hello\nworld'` (duckdb → bigquery) crashed the test
   binary with a stack overflow: `bytestringSQL`'s cast-wrap branch rebuilt its child ByteString
@@ -1007,3 +1007,27 @@ pair asserts `expression.sql(write_dialect) == write_sql`.
   (parser.go:2847) on the fresh node — no output change on any previously passing case.
 - **Docs** — README moves cross-dialect transpilation out of "Not ported (yet)" into the ported
   list, with the verified pair counts and the gaps file as the burndown record.
+
+## SQLite dialect — DONE (issue #38)
+
+Ported `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/sqlite.py` as
+`dialects/sqlite.go`, `parser/dialect_sqlite.go` and `generator/dialect_sqlite.go`: the
+CASE_INSENSITIVE identifier normalization, `"`/`[]`/backtick identifiers, `x'..'`/`0x` hex
+strings, non-nested comments, the ATTACH/DETACH/INDEXED BY/MATCH keywords and REPLACE command,
+`STRING_ALIASES` and the standalone-UNIQUE rule, the `||`/`->`/`->>` concat tier (left-associative,
+tighter than multiplication, looser than COLLATE), `PRAGMA` name/value forms, `MATCH`, computed
+columns (`STORED`/`VIRTUAL`) and identity-to-AUTOINCREMENT, `CREATE VIRTUAL TABLE ... USING`,
+`JSON_EXTRACT`/`JSON_GROUP_ARRAY`/`JSON_GROUP_OBJECT`/`STRFTIME`/`EDITDIST3`/`SQLITE_VERSION`, the
+`JSON_GROUP_*` and `INSTR`/`IIF`/`CHAR`/`RANDOM`/`MAX`/`MIN` renames, `DATE()`/`JULIANDAY` date
+math, `GROUP_CONCAT`, the SQLite type map (INTEGER/REAL/TEXT/BLOB), and the UNSUPPORTED property
+policy.
+
+Corpus: 136 `validate_identity` cases from `tests/dialects/test_sqlite.py`, at **136/136**, with no
+SQLite rows in `testdata/parity_gaps.txt`; the same-dialect write pairs and cross-dialect read/write
+pairs are exercised by `TestTranspileCorpus` (152 SQLite write-bucket pairs, 113 passing, the rest
+tracked in `testdata/transpile_gaps.txt`). `sqlite_test.go` ports the upstream methods.
+
+The slice also closed four base-parser/base-generator gaps the upstream corpus exposed: the
+`LIKE(...)`/`GLOB(...)` function builders (base `FUNCTIONS`), the `ON CONFLICT` conflict-key grammar
+(ordered indexed columns, so `COLLATE`/`ASC`/`DESC` parse), `SUPPORTS_NAMED_CTE_COLUMNS` (CTE alias
+columns survive when table-alias columns are dropped), and the base `ATTACH`/`DETACH` generators.

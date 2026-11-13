@@ -5,6 +5,7 @@ import (
 	"unicode"
 
 	"github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 // init registers the CREATE-table constraint node family (see expressions/kinds.go's block
@@ -192,7 +193,7 @@ func (g *Generator) baseComputedColumnConstraintSQL(e expressions.Expression) st
 // TOKEN_MAPPING is empty and neither MySQL nor Postgres override it, so token_sql just
 // falls back to the token's name, "AUTO_INCREMENT" (generator.py:4712-4713).
 func (g *Generator) autoIncrementColumnConstraintSQL(e expressions.Expression) string {
-	return "AUTO_INCREMENT"
+	return g.tokenSQL(tokens.AUTO_INCREMENT)
 }
 
 // generatedAsIdentityColumnConstraintSQL ports generatedasidentitycolumnconstraint_sql

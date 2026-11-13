@@ -14,6 +14,7 @@ import (
 // 343-344 - and fall back to a plain function call elsewhere, matching upstream's lack of a
 // base TRANSFORMS entry for them) get their own dialect-gated method.
 func (g *Generator) globSQL(e expressions.Expression) string     { return g.binary(e, "GLOB") }
+func (g *Generator) matchSQL(e expressions.Expression) string    { return g.binary(e, "MATCH") }
 func (g *Generator) overlapsSQL(e expressions.Expression) string { return g.binary(e, "OVERLAPS") }
 func (g *Generator) adjacentSQL(e expressions.Expression) string { return g.binary(e, "-|-") }
 func (g *Generator) extendsLeftSQL(e expressions.Expression) string {
@@ -141,6 +142,7 @@ func (g *Generator) matchAgainstSQL(e expressions.Expression) string {
 
 func init() {
 	dispatch[expressions.KindGlob] = (*Generator).globSQL
+	dispatch[expressions.KindMatch] = (*Generator).matchSQL
 	dispatch[expressions.KindOverlaps] = (*Generator).overlapsSQL
 	dispatch[expressions.KindRegexpLike] = (*Generator).regexpLikeSQL
 	dispatch[expressions.KindRegexpILike] = (*Generator).regexpILikeSQL

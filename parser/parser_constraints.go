@@ -459,6 +459,16 @@ func (p *Parser) parseGeneratedAsIdentity() exp.Expression {
 				this = p.expression(exp.ComputedColumnConstraint(exp.Args{"this": this.Expr(), "persisted": persisted}), nil, nil)
 			}
 		}
+	case "sqlite":
+		// parsers/sqlite.py:181-204: only expression-bearing GENERATED ALWAYS AS (expr) forms
+		// are computed columns; STORED/VIRTUAL is matched inside this branch so true identity
+		// (AS IDENTITY) does not silently consume a trailing storage keyword.
+		if this.Kind() == exp.KindGeneratedAsIdentityColumnConstraint {
+			if expr := this.Expr(); expr != nil {
+				persisted := p.matchTexts(map[string]bool{"STORED": true, "VIRTUAL": true}) && stringsUpper(p.prev.Text) == "STORED"
+				this = p.expression(exp.ComputedColumnConstraint(exp.Args{"this": expr, "persisted": persisted}), nil, nil)
+			}
+		}
 	case "postgres":
 		if p.matchTextSeq("STORED") {
 			this = p.expression(exp.ComputedColumnConstraint(exp.Args{"this": this.Expr()}), nil, nil)
@@ -496,6 +506,11 @@ func (p *Parser) parseUniqueKey() exp.Expression {
 
 // parseUnique ports _parse_unique (parser.py:7509-7519).
 func (p *Parser) parseUnique() exp.Expression {
+	// parsers/sqlite.py:136-142: do not consume more tokens if UNIQUE is used as a standalone
+	// constraint, e.g. `CREATE TABLE foo (bar TEXT UNIQUE REFERENCES baz ...)`.
+	if p.dialect.Name == "sqlite" && p.curr.IsValid() && p.constraintParserKeys()[stringsUpper(p.curr.Text)] {
+		return p.expression(exp.UniqueColumnConstraint(nil), nil, nil)
+	}
 	// parsers/tsql.py:772-778: UNIQUE [NON]CLUSTERED (cols).
 	if p.dialect.Name == "tsql" && p.matchTexts(map[string]bool{"CLUSTERED": true, "NONCLUSTERED": true}) {
 		clustered := stringsUpper(p.prev.Text) == "CLUSTERED"
