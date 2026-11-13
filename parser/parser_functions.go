@@ -93,7 +93,7 @@ func (p *Parser) parseChar() exp.Expression {
 // round-trips unquoted; other dialects just parse a VAR/BINARY/IDENTIFIER token as a bare
 // Var (quoting dropped, matching the base upstream behavior).
 func (p *Parser) parseCharsetName() exp.Expression {
-	if p.dialect.Name == "mysql" {
+	if p.dialectIs("mysql") {
 		if identifier := p.parseIdentifier(); identifier != nil {
 			name := identifier.Name()
 			if exp.IsSafeIdentifier(name) {

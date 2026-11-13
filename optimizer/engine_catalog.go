@@ -123,7 +123,7 @@ func ResolveEngineIdentities(expression exp.Expression, catalog *EngineCatalog, 
 		panic(err)
 	}
 	name := strings.ToLower(d.Name)
-	supported := name == "mysql" || name == "postgres" || name == "athena"
+	supported := name == "mysql" || name == "mariadb" || name == "postgres" || name == "athena"
 	r := &engineResolver{catalog: catalog, dialect: d, searchPath: searchPath, ctes: cteNames(expression)}
 	if name == "athena" {
 		folded := make(map[string]bool, len(r.ctes))
@@ -170,7 +170,10 @@ type engineResolver struct {
 	ctes       map[string]bool
 }
 
-func (r *engineResolver) isMySQL() bool { return strings.ToLower(r.dialect.Name) == "mysql" }
+func (r *engineResolver) isMySQL() bool {
+	name := strings.ToLower(r.dialect.Name)
+	return name == "mysql" || name == "mariadb"
+}
 
 func quotedFlag(value any) bool {
 	b, _ := value.(bool)

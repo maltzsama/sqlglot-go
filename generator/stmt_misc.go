@@ -90,7 +90,7 @@ func (g *Generator) describeSQL(e expressions.Expression) string {
 		column = " " + column
 	}
 	target := g.sqlKey(e, "this")
-	if e.Text("kind") == "TABLE" && g.dialect.Name == "mysql" {
+	if e.Text("kind") == "TABLE" && g.isDialect("mysql") {
 		// Unlike upstream (which drops the keyword, generating `DESCRIBE t` — a METADATA read),
 		// `TABLE t` stays under MySQL: EXPLAIN TABLE t is a query plan of the table-scan
 		// statement, a different command from DESCRIBE t (engine-verified; see DEVIATIONS).

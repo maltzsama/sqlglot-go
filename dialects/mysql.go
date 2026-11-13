@@ -17,7 +17,7 @@ import (
 // re-generated statement is correct in that mode with no generator change. No-op for a non-MySQL base
 // (base/postgres already treat `"` as a quoted identifier). See DEVIATIONS.
 func applyMySQLAnsiQuotes(d *Dialect) {
-	if d.Name != "mysql" {
+	if d.Name != "mysql" && d.Name != "mariadb" {
 		return
 	}
 	cfg := d.TokenizerConfig
@@ -99,6 +99,8 @@ func MySQL() *Dialect {
 	d.CharsetIsFunction = true
 	// generators/mysql.py:137 DUPLICATE_KEY_UPDATE_WITH_SET = False.
 	d.DuplicateKeyUpdateWithSet = false
+	// generators/mysql.py:136 PARSE_JSON_NAME = None (bare value).
+	d.ParseJSONName = stringPtr("")
 	// generators/mysql.py:148 WRAP_DERIVED_VALUES = False: aliased VALUES is emitted bare.
 	d.WrapDerivedValues = false
 	// generators/mysql.py:134 JSON_KEY_VALUE_PAIR_SEP = "," (JSON_OBJECT pairs join with a comma).

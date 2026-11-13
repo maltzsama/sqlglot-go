@@ -145,7 +145,7 @@ func (p *Parser) parseHiveAlterTableChange() exp.Expression {
 }
 
 func (p *Parser) alterAlterParsers() (map[string]func(*Parser) exp.Expression, map[string]bool) {
-	if p.dialect.Name == "mysql" {
+	if p.dialectIs("mysql") {
 		return mysqlAlterAlterParsers, mysqlAlterAlterParserKeys
 	}
 	return alterAlterParsers, alterAlterParserKeys
@@ -485,7 +485,7 @@ func (p *Parser) parseDropColumn() exp.Expression {
 // parseAlterDropAction ports _parse_alter_drop_action (parser.py:8743-8744), overridden by
 // mysql (parsers/mysql.py:314-317) to recognize the bare `DROP PRIMARY KEY` action.
 func (p *Parser) parseAlterDropAction() exp.Expression {
-	if p.dialect.Name == "mysql" && p.matchPair(tokens.DROP, tokens.PRIMARY_KEY, true) {
+	if p.dialectIs("mysql") && p.matchPair(tokens.DROP, tokens.PRIMARY_KEY, true) {
 		return p.expression(exp.DropPrimaryKey(nil), nil, nil)
 	}
 	return p.parseDropColumn()
@@ -531,7 +531,7 @@ func (p *Parser) parseAlterTableRenameBase() exp.Expression {
 // MySQLParser._parse_alter_table_rename (RENAME INDEX/KEY -> exp.RenameIndex), falling back
 // to the base implementation.
 func (p *Parser) parseAlterTableRename() exp.Expression {
-	if p.dialect.Name == "mysql" && p.matchTexts(map[string]bool{"INDEX": true, "KEY": true}) {
+	if p.dialectIs("mysql") && p.matchTexts(map[string]bool{"INDEX": true, "KEY": true}) {
 		old := p.parseField(true, nil, false)
 		p.matchTextSeq("TO")
 		newField := p.parseField(true, nil, false)

@@ -93,6 +93,7 @@ func IsAscii(args Args) Expression { return newNode(KindIsAscii, args) }
 
 // NextValueFor ports exp.NextValueFor (expressions/ddl.py:432).
 func NextValueFor(args Args) Expression { return newNode(KindNextValueFor, args) }
+func PrevValueFor(args Args) Expression { return newNode(KindPrevValueFor, args) }
 
 // ClusteredColumnConstraint ports exp.ClusteredColumnConstraint
 // (expressions/constraints.py:64).

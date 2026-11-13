@@ -133,6 +133,7 @@ func (p *Parser) parserOverrideKey() string {
 // parserOverrideParents models parser-class inheritance: StarRocksParser extends
 // MySQLParser (parsers/starrocks.py:11), so a StarRocks lookup falls back to the mysql overlay.
 var parserOverrideParents = map[string]string{
+	"mariadb":     "mysql",
 	"starrocks":   "mysql",
 	"doris":       "mysql",
 	"redshift":    "postgres",
@@ -430,6 +431,10 @@ func mergeTokenSet(base, added, removed map[tokens.TokenType]bool) map[tokens.To
 func (p *Parser) switchDialect() string {
 	if p.dialectFamily("postgres") {
 		return "postgres"
+	}
+	// The mysql family shares one branch set; mariadb inherits it via parserOverrideParents.
+	if p.dialectFamily("mysql") {
+		return "mysql"
 	}
 	return p.dialect.Name
 }

@@ -52,6 +52,8 @@ func init() {
 	dispatch[expressions.KindIs] = (*Generator).isSQL
 	dispatch[expressions.KindLike] = (*Generator).likeSQL
 	dispatch[expressions.KindILike] = (*Generator).ilikeSQL
+	dispatch[expressions.KindNextValueFor] = (*Generator).nextValueForSQL
+	dispatch[expressions.KindPrevValueFor] = (*Generator).prevValueForSQL
 	dispatch[expressions.KindSimilarTo] = (*Generator).similarToSQL
 	dispatch[expressions.KindEscape] = (*Generator).escapeSQL
 	dispatch[expressions.KindIn] = (*Generator).inSQL

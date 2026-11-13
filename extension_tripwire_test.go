@@ -30,6 +30,9 @@ type extensionEntry struct {
 	Upstream  string `json:"upstream"` // "command" | "parse_error"
 	GoKind    string `json:"go_kind"`
 	Reconcile string `json:"reconcile"`
+	// Settings optionally extends Dialect with dialect settings for the Go-side parse, e.g.
+	// "mysql_version=100100" for the MariaDB executable-comment row.
+	Settings string `json:"settings,omitempty"`
 }
 
 const upstreamExtensionsPath = "testdata/upstream_extensions.jsonl"
@@ -60,7 +63,11 @@ func loadExtensionLedger(t *testing.T) []extensionEntry {
 func TestUpstreamExtensionsGoSide(t *testing.T) {
 	for _, e := range loadExtensionLedger(t) {
 		t.Run(e.ID, func(t *testing.T) {
-			parsed, err := sqlglot.ParseOne(e.SQL, e.Dialect)
+			dialect := e.Dialect
+			if e.Settings != "" {
+				dialect += ", " + e.Settings
+			}
+			parsed, err := sqlglot.ParseOne(e.SQL, dialect)
 			if err != nil {
 				t.Fatalf("sqlglot-go failed to parse %q (%s): %v", e.SQL, e.Dialect, err)
 			}

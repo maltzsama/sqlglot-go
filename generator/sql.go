@@ -1529,7 +1529,7 @@ func (g *Generator) embedIgnoreNulls(e expressions.Expression, text string) stri
 
 func (g *Generator) insertSQL(e expressions.Expression) string {
 	keyword := "INSERT"
-	if g.dialect.Name == "mysql" && boolValue(e.Arg("replace")) {
+	if g.isDialect("mysql") && boolValue(e.Arg("replace")) {
 		keyword = "REPLACE"
 	}
 	hint := g.sqlKey(e, "hint")
@@ -2034,7 +2034,7 @@ func (g *Generator) columnDefSQL(e expressions.Expression) string {
 	// (§15.1.17). Unlike upstream, which pop()s the constraint, we render around it so
 	// Generate() stays side-effect free.
 	modePrefix := ""
-	if g.isDialect("postgres") || g.dialect.Name == "mysql" {
+	if g.isDialect("postgres") || g.isDialect("mysql") {
 		for _, item := range listFromValue(e.Arg("constraints")) {
 			if c, ok := item.(expressions.Expression); ok && c != nil && c.Kind() == expressions.KindInOutColumnConstraint {
 				modePrefix = g.gen(c) + " "
@@ -2119,7 +2119,7 @@ func (g *Generator) typeMappingTable() map[expressions.DType]string {
 // above), Postgres's ARRAY/ENUM/FLOAT-with-precision rendering (generators/postgres.py:
 // 477-489), and the dialect-aware TYPE_MAPPING table lookup (typeMappingTable above).
 func (g *Generator) dataTypeSQL(e expressions.Expression) string {
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		if g.dialect.VarcharRequiresSize && expressions.IsType(e, expressions.DTypeVarchar) && len(listFromValue(e.Arg("expressions"))) == 0 {
 			// VARCHAR must always have a size - if it doesn't, we always generate TEXT.
 			return "TEXT"
@@ -2147,7 +2147,7 @@ func (g *Generator) dataTypeSQL(e expressions.Expression) string {
 	typeValue := e.Arg("this")
 	// MySQL renders unsigned numeric types as "<signed base> UNSIGNED" (see mysqlUnsignedTypeMapping).
 	mysqlUnsignedBase := ""
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		if dt, ok := typeValue.(expressions.DType); ok {
 			mysqlUnsignedBase = mysqlUnsignedTypeMapping[dt]
 		}
@@ -2234,7 +2234,7 @@ func (g *Generator) objectIdentifierSQL(e expressions.Expression) string { retur
 // (generators/mysql.py:796-798): MySQL has no AT TIME ZONE syntax, so it drops the zone
 // entirely and flags the query unsupported, keeping just the wrapped expression.
 func (g *Generator) atTimeZoneSQL(e expressions.Expression) string {
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		g.unsupported("AT TIME ZONE is not supported by MySQL")
 		return g.sqlKey(e, "this")
 	}
@@ -2260,12 +2260,12 @@ func (g *Generator) castSQLWithPrefix(e expressions.Expression, safePrefix strin
 	// CHAR/SIGNED/UNSIGNED (mysqlCastMapping) before the ordinary CAST(... AS ...) below. The
 	// rename is computed on a copy of the "to" DataType so the caller's expression tree (which
 	// Generate already Copy()'d once at the top) isn't mutated a second time here.
-	if g.dialect.Name == "mysql" && toExpr != nil {
+	if g.isDialect("mysql") && toExpr != nil {
 		if dt, ok := toExpr.Arg("this").(expressions.DType); ok {
-			if mysqlTimestampFuncTypes[dt] {
+			if g.timestampFuncTypes()[dt] {
 				return g.funcCall("TIMESTAMP", []any{e.Arg("this")}, "(", ")", true)
 			}
-			if renamed, ok := mysqlCastMapping[dt]; ok {
+			if renamed, ok := g.castMapping()[dt]; ok {
 				toCopy := toExpr.Copy()
 				toCopy.Set("this", renamed)
 				toExpr = toCopy
@@ -2291,9 +2291,11 @@ func (g *Generator) castSQLWithPrefix(e expressions.Expression, safePrefix strin
 func (g *Generator) tryCastSQL(e expressions.Expression) string {
 	// MySQL and Postgres have no TRY_CAST; upstream routes exp.TryCast through no_trycast_sql
 	// (dialects/dialect.py:1261), which renders a plain CAST - so a MySQL cast-target rename
-	// (e.g. TEXT -> CHAR) applies without a stray TRY_ prefix. See generators/mysql.py:223 and
-	// generators/postgres.py:377. Every other dialect keeps TRY_CAST (generator.py:4523).
-	if g.dialect.Name == "mysql" || g.isDialect("postgres") {
+	// (e.g. TEXT -> CHAR) applies without a stray TRY_ prefix. See generators/mysql.py:213 and
+	// generators/postgres.py:377. The MySQL-family dialects inherit that (StarRocks/Doris do
+	// not override it upstream), so their pin is CAST even though Doris 4.0 adds TRY_CAST
+	// natively; every other dialect keeps TRY_CAST (generator.py:4523).
+	if g.isDialect("mysql") || g.isDialect("postgres") {
 		return g.castSQLWithPrefix(e, "")
 	}
 	return g.castSQLWithPrefix(e, "TRY_")
@@ -2488,7 +2490,7 @@ func (g *Generator) trimSQL(e expressions.Expression) string {
 	if g.dialect.OpaqueFunctions {
 		return g.trimSQLStandard(e)
 	}
-	if g.dialect.Name == "mysql" || g.isDialect("postgres") {
+	if g.isDialect("mysql") || g.isDialect("postgres") {
 		return g.trimSQLStandard(e)
 	}
 	return g.trimSQLBase(e)
@@ -3254,7 +3256,7 @@ func (g *Generator) endStatementSQL(expressions.Expression) string {
 // whileblock_sql (generator.py:6208-6210): base has no WHILE rendering (T-SQL overrides
 // it). mysql renders the compound-grammar form `WHILE cond DO stmts; END WHILE [label]`.
 func (g *Generator) whileBlockSQL(e expressions.Expression) string {
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		return g.labelWrap(e, "WHILE "+g.sqlKey(e, "this")+" DO "+g.bodyKeySQL(e, "body")+" END WHILE")
 	}
 	g.unsupported("Unsupported While block syntax")
@@ -3265,7 +3267,7 @@ func (g *Generator) hintSQL(e expressions.Expression) string {
 	// QUERY_HINT_SEP: mysql joins hint items with a space (generators/mysql.py:138),
 	// base/postgres with ", " (generator.py:368).
 	sep := ", "
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		sep = " "
 	}
 	return " /*+ " + strings.TrimSpace(g.expressions(exprsOptions{expression: e, sep: sep})) + " */"

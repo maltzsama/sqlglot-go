@@ -45,7 +45,7 @@ func (p *Parser) parseInsert() exp.Expression {
 		// optional keyword. This becomes observable once dialects/mysql.py:154 no longer tokenizes
 		// REPLACE as Command. L_PAREN is listed explicitly even though selectStartTokens also
 		// contains it, because here it most commonly starts the target's explicit column list.
-		tableIsTarget := p.dialect.Name == "mysql" && p.curr.TokenType == tokens.TABLE &&
+		tableIsTarget := p.dialectIs("mysql") && p.curr.TokenType == tokens.TABLE &&
 			(p.next.TokenType == tokens.L_PAREN || p.next.TokenType == tokens.SET ||
 				p.next.TokenType == tokens.VALUES || selectStartTokens[p.next.TokenType])
 		if !tableIsTarget {

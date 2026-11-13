@@ -214,7 +214,7 @@ func (p *Parser) parseTypesBase(checkFunc, schema, allowIdentifiers, withCollati
 	// mysql adds TokenType.SET to TYPE_TOKENS/ENUM_TYPE_TOKENS (mysql.py:280-287); rather
 	// than mutating the global typeTokens (which would leak SET-as-type into base/postgres),
 	// match it inline for the mysql dialect only, then treat it as an enum below.
-	if p.matchSet(typeTokens) || (p.dialect.Name == "mysql" && p.match(tokens.SET)) {
+	if p.matchSet(typeTokens) || (p.dialectIs("mysql") && p.match(tokens.SET)) {
 		typeToken = p.prev.TokenType
 	} else {
 		var identifier exp.Expression
@@ -236,7 +236,7 @@ func (p *Parser) parseTypesBase(checkFunc, schema, allowIdentifiers, withCollati
 		// to re-parse as a type and falls through to the UDT/retreat path.
 		firstIsType := len(subTokens) > 0 &&
 			(typeTokens[subTokens[0].TokenType] ||
-				(p.dialect.Name == "mysql" && subTokens[0].TokenType == tokens.SET))
+				(p.dialectIs("mysql") && subTokens[0].TokenType == tokens.SET))
 		if firstIsType {
 			typeToken = subTokens[0].TokenType
 			if len(subTokens) > 1 {
@@ -307,7 +307,7 @@ func (p *Parser) parseTypesBase(checkFunc, schema, allowIdentifiers, withCollati
 				p.matchRParen(this)
 				return this
 			}
-		} else if enumTypeTokens[typeToken] || (p.dialect.Name == "mysql" && typeToken == tokens.SET) {
+		} else if enumTypeTokens[typeToken] || (p.dialectIs("mysql") && typeToken == tokens.SET) {
 			expressions = p.parseCsv(p.parseEquality)
 		} else if typeToken == tokens.JSON {
 			// parser.py:6552-6556: ClickHouse's JSON type takes a column/parameter list.

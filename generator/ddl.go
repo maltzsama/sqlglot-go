@@ -130,7 +130,7 @@ func (g *Generator) alterColumnSQL(e expressions.Expression) string {
 	}
 
 	if dtype != "" {
-		if g.dialect.Name == "mysql" {
+		if g.isDialect("mysql") {
 			return "MODIFY COLUMN " + this + " " + dtype + nullConstraint
 		}
 
@@ -271,7 +271,7 @@ func (g *Generator) alterSQL(e expressions.Expression) string {
 	// MySQL ALTER USER grammar extension: the body is not modeled; the sole `actions` element is a
 	// Command child with the verbatim statement text, keyed on that child. See
 	// parser/stmt_account_object.go.
-	if g.dialect.Name == "mysql" {
+	if g.isDialect("mysql") {
 		if a := listFromValue(e.Arg("actions")); len(a) == 1 {
 			if body := asExpression(a[0]); body != nil && body.Kind() == expressions.KindCommand {
 				return g.gen(body)

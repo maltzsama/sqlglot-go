@@ -5,9 +5,9 @@ parser, generator, and optimizer). It ports the **parse → AST → generate** c
 parser, generator, schema) plus the `qualify` and `scope` optimizer passes that column qualification
 and **lineage** build on, and the rest of the optimizer with its `optimize()` rule pipeline. It is
 **not** a full port of sqlglot: cross-dialect transpilation *between* the registered dialects is
-verified against upstream's `validate_all` pairs (#33), but dialects beyond the ones `dialects.GetOrRaise` registers (base, MySQL, MariaDB as a MySQL alias, Postgres, Presto, Trino, Hive, Athena,
+verified against upstream's `validate_all` pairs (#33), but dialects beyond the ones `dialects.GetOrRaise` registers (base, MySQL, MariaDB, Postgres, Presto, Trino, Hive, Athena,
 TSQL, ClickHouse, StarRocks, Doris, Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark,
-Databricks, BigQuery, DuckDB, Snowflake, SQLite) are out of scope for now. This repo is
+Databricks, BigQuery, DuckDB, Snowflake, SQLite, MariaDB) are out of scope for now. This repo is
 the SQL engine only; it has no application-specific code.
 
 ## Source of truth (READ THIS FIRST, always)
@@ -59,11 +59,11 @@ and every registered dialect meets its floor in the per-dialect corpus
 `GET_JSON_OBJECT` path rewrite, six BigQuery JSON-path rewrites, 37 DuckDB cases, and 334
 Snowflake cases (`testdata/parity_gaps.txt`). Cross-dialect transpilation is verified the same way
 against upstream's `validate_all` read/write pairs (`testdata/transpile_corpus.jsonl`,
-`TestTranspileCorpus`): 6006/8703 pairs pass, with the open pairs in `testdata/transpile_gaps.txt`.
+`TestTranspileCorpus`): 6015/8703 pairs pass, with the open pairs in `testdata/transpile_gaps.txt`.
 AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
 `exp.Command` where upstream builds a structured node (`fidelity_test.go` +
 `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
-Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery, DuckDB, Snowflake, and SQLite: the
+Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery, DuckDB, Snowflake, SQLite, and MariaDB: the
 tokenizer, the AST + node model, the parser, the generator (`Expression → SQL`),
 `schema.MappingSchema` + `DataType.build`, the `qualify` pass (qualify_tables → normalize_identifiers →
 qualify_columns → quote_identifiers → validate), `traverse_scope` + the full `Scope` API, and the
@@ -78,7 +78,7 @@ table qualification (`QualifyOpts.SearchPath`), top-level `UPDATE`/`DELETE`/`MER
 structural PG `EXPLAIN`, MySQL `REPLACE`, and the `FoldIdentifierName`/`IsReservedKeyword`
 helpers. See **[CHANGELOG.md](./CHANGELOG.md)** for the per-version history.
 
-**Remaining work** (see `ROADMAP.md`): closing the cross-dialect transpile gaps (`testdata/transpile_gaps.txt`, issue #33's burndown); the deferred JSONPath tokenizer (used by `to_json_path`); and the dialects beyond the registered set (queued: MariaDB #37).
+**Remaining work** (see `ROADMAP.md`): closing the cross-dialect transpile gaps (`testdata/transpile_gaps.txt`, issue #33's burndown); the deferred JSONPath tokenizer (used by `to_json_path`); and the dialects beyond the registered set.
 The parse/generate round-trip itself is done — a construct upstream parses that this port doesn't is a
 regression, not expected.
 

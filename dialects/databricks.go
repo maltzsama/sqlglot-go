@@ -13,6 +13,8 @@ import (
 func Databricks() *Dialect {
 	d := Spark()
 	d.Name = "databricks"
+	// generators/databricks.py:21 restores PARSE_JSON.
+	d.ParseJSONName = stringPtr("PARSE_JSON")
 
 	// dialects/databricks.py:19-21 and parsers/databricks.py:18-21.
 	d.SafeDivision = false

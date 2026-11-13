@@ -11,6 +11,8 @@ import (
 func TSQL() *Dialect {
 	d := Base()
 	d.Name = "tsql"
+	// generators/tsql.py:146 PARSE_JSON_NAME = None (bare value).
+	d.ParseJSONName = stringPtr("")
 	// parsers/tsql.py:326 UNPIVOT_VALUE_COLUMNS_FIRST.
 	d.UnpivotValueColumnsFirst = true
 	// dialects/tsql.py:16 WEEK_OFFSET = -1.

@@ -61,17 +61,18 @@ func TestCanonicalStringDialectType(t *testing.T) {
 	}
 }
 
-// TestMariaDBAlias pins the `mariadb` dialect name: an alias that resolves to the MySQL dialect
-// itself, settings form included, so MariaDB input parses with MySQL behavior.
-func TestMariaDBAlias(t *testing.T) {
+// TestMariaDBIdentity pins the `mariadb` dialect name: a beyond-upstream identity that keeps
+// every MySQL behavior (the override chains treat mariadb as a child of mysql), settings form
+// included, and gates MariaDB-only grammar.
+func TestMariaDBIdentity(t *testing.T) {
 	for _, name := range []string{"mariadb", "MariaDB", " mariadb "} {
 		d, err := dialects.GetOrRaise(name)
-		if err != nil || d == nil || d.Name != "mysql" {
-			t.Fatalf("GetOrRaise(%q) = %v, err %v; want the mysql dialect", name, d, err)
+		if err != nil || d == nil || d.Name != "mariadb" {
+			t.Fatalf("GetOrRaise(%q) = %v, err %v; want the mariadb dialect", name, d, err)
 		}
 	}
 	d, err := dialects.GetOrRaise("mariadb, mysql_version=100611")
-	if err != nil || d.Name != "mysql" || d.MySQLVersion == nil || *d.MySQLVersion != 100611 {
+	if err != nil || d.Name != "mariadb" || d.MySQLVersion == nil || *d.MySQLVersion != 100611 {
 		t.Fatalf("GetOrRaise(mariadb with settings) = %+v, err %v", d, err)
 	}
 }

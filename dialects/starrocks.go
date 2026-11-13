@@ -13,6 +13,8 @@ import (
 func StarRocks() *Dialect {
 	d := MySQL()
 	d.Name = "starrocks"
+	// generators/starrocks.py:60 restores PARSE_JSON.
+	d.ParseJSONName = stringPtr("PARSE_JSON")
 
 	// dialects/starrocks.py:10-11 STRICT_JSON_PATH_SYNTAX = False, INDEX_OFFSET = 1.
 	d.IndexOffset = 1

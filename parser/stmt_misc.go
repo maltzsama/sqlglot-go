@@ -124,7 +124,7 @@ func (p *Parser) parseDescribeStructured() exp.Expression {
 
 	var this exp.Expression
 	modifierTable := false
-	if kind == nil && p.dialect.Name == "mysql" && (style != nil || format != nil) && p.curr.TokenType == tokens.TABLE {
+	if kind == nil && p.dialectIs("mysql") && (style != nil || format != nil) && p.curr.TokenType == tokens.TABLE {
 		// MySQL explainable_stmt includes the TABLE statement, and modifiers precede it:
 		// {EXPLAIN|DESCRIBE|DESC} [ANALYZE [FORMAT=TREE] | FORMAT=x] TABLE tbl (manual §15.8.2,
 		// engine-verified on 8.0/8.4). The plain `DESCRIBE TABLE t` form is captured by the
@@ -158,7 +158,7 @@ func (p *Parser) parseDescribeStructured() exp.Expression {
 	// instead of misclassifying a query-explain as a table-describe. Also gated to a MySQL Table
 	// target (a statement target or other dialect never grabs a trailing token).
 	var column exp.Expression
-	if p.dialect.Name == "mysql" && style == nil && format == nil && kind == nil &&
+	if p.dialectIs("mysql") && style == nil && format == nil && kind == nil &&
 		this != nil && this.Kind() == exp.KindTable && p.curr.IsValid() {
 		if p.curr.TokenType == tokens.STRING {
 			column = p.parseString() // wild pattern, e.g. `DESCRIBE t 'i%'`

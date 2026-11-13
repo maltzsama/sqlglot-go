@@ -15,7 +15,7 @@ func (g *Generator) showSQL(e expressions.Expression) string {
 		// Postgres `SHOW <name>` (a grammar extension): the parameter name is in "this".
 		return "SHOW " + e.Text("this")
 	}
-	if g.dialect.Name != "mysql" {
+	if !g.isDialect("mysql") {
 		g.unsupported("Unsupported SHOW statement")
 		return ""
 	}

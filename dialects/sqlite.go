@@ -34,6 +34,8 @@ func SQLite() *Dialect {
 	d.SupportsTableAliasColumns = false
 	// generators/sqlite.py:119 JSON_KEY_VALUE_PAIR_SEP = ",".
 	d.JSONKeyValuePairSep = ","
+	// generators/sqlite.py:120 PARSE_JSON_NAME = None (bare value).
+	d.ParseJSONName = stringPtr("")
 	// generators/sqlite.py:116 SUPPORTS_WINDOW_EXCLUDE = True.
 	d.SupportsWindowExclude = true
 

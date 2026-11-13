@@ -36,7 +36,7 @@ var mysqlCommandLeaders = map[string]bool{
 // untouched. Returns nil (consuming nothing) when the leading token is not one of these bare-VAR
 // leaders, so parseStatement falls through to its normal expression path.
 func (p *Parser) parseMysqlCommandStatement() exp.Expression {
-	if p.dialect.Name != "mysql" || p.curr.TokenType != tokens.VAR {
+	if !p.dialectIs("mysql") || p.curr.TokenType != tokens.VAR {
 		return nil
 	}
 	if !mysqlCommandLeaders[stringsUpper(p.curr.Text)] {

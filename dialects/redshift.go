@@ -10,6 +10,8 @@ import (
 func Redshift() *Dialect {
 	d := Postgres()
 	d.Name = "redshift"
+	// generators/redshift.py:31 PARSE_JSON_NAME = "JSON_PARSE".
+	d.ParseJSONName = stringPtr("JSON_PARSE")
 
 	// https://docs.aws.amazon.com/redshift/latest/dg/r_names.html
 	d.NormalizationStrategy = CaseInsensitive

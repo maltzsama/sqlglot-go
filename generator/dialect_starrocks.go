@@ -16,7 +16,11 @@ func init() {
 		exp.DTypeTimestamp:   "DATETIME",
 		exp.DTypeTimestampTz: "DATETIME",
 	})
+	// generators/starrocks.py:70 CAST_MAPPING = {} (no MySQL cast renames) and :80
+	// SQL_SECURITY_VIEW_LOCATION = POST_SCHEMA.
+	registerDialectCastMapping("starrocks", map[exp.DType]string{})
 	registerDialectPropertyLocations("starrocks", map[exp.Kind]propertyLocation{
+		exp.KindSqlSecurityProperty:   propertyLocationPostSchema,
 		exp.KindPrimaryKey:            propertyLocationPostSchema,
 		exp.KindUniqueKeyProperty:     propertyLocationPostSchema,
 		exp.KindRollupProperty:        propertyLocationPostSchema,
@@ -57,6 +61,8 @@ func starRocksDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindSqlSecurityProperty: func(g *Generator, e exp.Expression) string {
 			return "SECURITY " + g.sqlKey(e, "this")
 		},
+		// generators/starrocks.py:94 drops MySQL's Trim transform, so the base TRIM renders.
+		exp.KindTrim:       (*Generator).trimSQLBase,
 		exp.KindStDistance: starRocksStDistance,
 		exp.KindStrToUnix: func(g *Generator, e exp.Expression) string {
 			return clickhouseCall(g, "UNIX_TIMESTAMP", e.This(), asExpression(e.Arg("format")))

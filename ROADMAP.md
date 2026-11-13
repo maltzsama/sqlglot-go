@@ -121,14 +121,14 @@ differential-check against the pinned Python):
   `optimizer/testdata/annotate_gaps.txt`.
 - CROSS-DIALECT transpilation: verified against upstream's `validate_all` read/write pairs —
   `TestTranspileCorpus` runs every pair whose dialects are all registered (`testdata/transpile_corpus.jsonl`,
-  8703 pairs, 6006 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
+  8703 pairs, 6015 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
   What remains are the per-dialect override tables that make cross-dialect output correct — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
 - DIALECTS: base, MySQL, Postgres, TSQL, ClickHouse, StarRocks, Doris, Presto, Trino, Hive, Athena,
   Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery (#41), DuckDB (#39),
-  Snowflake (#40) and SQLite (#38) are ported; upstream ships 30+ and the rest are out of scope for
-  now (queued: MariaDB #37).
+  Snowflake (#40), SQLite (#38) and MariaDB (#37, a beyond-upstream identity over MySQL) are
+  ported; upstream ships 30+ and the rest are out of scope for now.
 - TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): the v30.17.0 bump removed
   the FOR VERSION/TIMESTAMP and hive AS OF compound keywords but did not port `VERSION_PHRASES` +
   `_parse_version` (parser.py:1738-1745, 5120-5146); the constructs now fail closed (parse error)
@@ -978,8 +978,8 @@ pair asserts `expression.sql(write_dialect) == write_sql`.
   dialect pairs** (6610 cross-dialect, 2093 same-dialect), deduped and sorted for a byte-stable
   rerun (verified: two consecutive runs are identical). `REGISTERED` mirrors `dialects.GetOrRaise`,
   so it also holds `spark2` — which upstream's test classes only ever name as a read/write key,
-  111 of them, with no `TestSpark2` class of its own to run — and the `mariadb` alias, though
-  upstream ships no MariaDB dialect and yields zero keys. Unregistered-dialect pairs and
+  111 of them, with no `TestSpark2` class of its own to run — and `mariadb`, though upstream ships
+  no MariaDB dialect and yields zero keys. Unregistered-dialect pairs and
   `UnsupportedError` wants are skipped. The issue's ~1.1k figure counted `validate_all` call sites
   in 12 test files; the extractor runs every registered dialect's test class plus `TestDialect`
   (base, `dialect = None` → `""`) and records each read/write *entry*, which reconciles to the
@@ -996,8 +996,8 @@ pair asserts `expression.sql(write_dialect) == write_sql`.
   `parse:` category), (c) per-write-dialect total floors against dropped records. Regenerate the
   gaps file and print observed counts with
   `SQLGLOT_TRANSPILE_UPDATE=1 go test . -run TestTranspileCorpus -v`.
-- **Initial state** — **6006/8703 pass (69%)**, 2697 tracked gaps: 1785 `gen: transpile mismatch`,
-  800 `gen: cast/type`, 69 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
+- **Initial state** — **6015/8703 pass (69%)**, 2686 tracked gaps: 1778 `gen: transpile mismatch`,
+  796 `gen: cast/type`, 69 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
   slice is the per-dialect generator work listed under Remaining work.
 - **Bug found by the first run** — `SELECT e'Hello\nworld'` (duckdb → bigquery) crashed the test
   binary with a stack overflow: `bytestringSQL`'s cast-wrap branch rebuilt its child ByteString
@@ -1024,10 +1024,39 @@ policy.
 
 Corpus: 136 `validate_identity` cases from `tests/dialects/test_sqlite.py`, at **136/136**, with no
 SQLite rows in `testdata/parity_gaps.txt`; the same-dialect write pairs and cross-dialect read/write
-pairs are exercised by `TestTranspileCorpus` (152 SQLite write-bucket pairs, 113 passing, the rest
+pairs are exercised by `TestTranspileCorpus` (152 SQLite write-bucket pairs, 115 passing, the rest
 tracked in `testdata/transpile_gaps.txt`). `sqlite_test.go` ports the upstream methods.
 
 The slice also closed four base-parser/base-generator gaps the upstream corpus exposed: the
 `LIKE(...)`/`GLOB(...)` function builders (base `FUNCTIONS`), the `ON CONFLICT` conflict-key grammar
 (ordered indexed columns, so `COLLATE`/`ASC`/`DESC` parse), `SUPPORTS_NAMED_CTE_COLUMNS` (CTE alias
 columns survive when table-alias columns are dropped), and the base `ATTACH`/`DETACH` generators.
+
+## MariaDB dialect — DONE (issue #37)
+
+Upstream sqlglot has no MariaDB dialect (it raises `unknown dialect`), so this is a
+beyond-upstream identity rather than a port. `dialects/mariadb.go` builds on `MySQL()` and keeps
+every MySQL behavior: the parser and generator override chains treat `mariadb` as a child of
+`mysql` (`parserOverrideParents` / `dialectParents`), and the ~60 former
+`dialect.Name == "mysql"` checks are now family checks (`dialectIs`, `dialectFamily`,
+`isDialect`, and the shared `switchDialect`).
+
+The family conversion exposed per-dialect overrides the exact-name checks had been masking, now
+modeled from the upstream class attributes: StarRocks/Doris `CAST_MAPPING = {}` (new
+`registerDialectCastMapping`), Doris `TIMESTAMP_FUNC_TYPES = set()`, StarRocks's base `TRIM` and
+`SQL_SECURITY_VIEW_LOCATION = POST_SCHEMA`, and the per-dialect `PARSE_JSON_NAME`
+(`ParseJSONName`). Those fixes cleared the StarRocks/Doris corpus gaps (StarRocks identity
+145/145, Doris 56/56; transpile StarRocks 81/100, Doris 70/104) and corrected Redshift's
+`PARSE_JSON` rendering.
+
+MariaDB-only grammar, each tracked in `testdata/upstream_extensions.jsonl` with a DEVIATIONS
+entry:
+
+- `NEXT VALUE FOR <seq>` and `PREVIOUS VALUE FOR <seq>` (the latter a new `PrevValueFor` node,
+  since upstream has none), gated on the dialect so MySQL still rejects both.
+- `/*M! ... */` and `/*M!100100 ... */` executable comments, activated alongside `/*!` by the
+  `mysql_version` setting, with MariaDB's six-digit version gate on a new
+  `MariaDBExecutableComments` tokenizer capability.
+
+Tests: `mariadb_test.go` covers the inherited MySQL behavior, the sequence grammar and the
+executable comments; `dialects/dialecttype_test.go` pins the identity and settings.

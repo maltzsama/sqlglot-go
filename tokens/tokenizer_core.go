@@ -38,6 +38,7 @@ type TokenizerCore struct {
 	identifiers                      map[rune]string
 	commentsConfig                   map[string]string
 	mysqlExecutableComments          bool
+	mariaDBExecutableComments        bool
 	mysqlVersion                     *int
 	lineCommentRequiresSpace         map[string]bool
 	stringEscapes                    map[rune]bool
@@ -75,6 +76,7 @@ func NewTokenizerCore(cfg TokenizerConfig) *TokenizerCore {
 		identifiers:                      cfg.Identifiers,
 		commentsConfig:                   cfg.Comments,
 		mysqlExecutableComments:          cfg.MySQLExecutableComments,
+		mariaDBExecutableComments:        cfg.MariaDBExecutableComments,
 		mysqlVersion:                     cfg.MySQLVersion,
 		lineCommentRequiresSpace:         cfg.LineCommentRequiresSpace,
 		stringEscapes:                    cfg.StringEscapes,
@@ -520,9 +522,25 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 		c.advance(commentStartSize, false)
 
 		activeMySQLComment := false
-		if commentStart == "/*" && c.mysqlExecutableComments && c.mysqlVersion != nil && c.char == '!' {
+		// Executable comments: MySQL's `/*!` and, for MariaDB, `/*M!` (both optionally
+		// followed by a five-digit version gate). A dialect must opt in and a version must be
+		// configured; otherwise the body stays an ordinary comment.
+		executable := false
+		mariaMarker := false
+		if commentStart == "/*" && c.mysqlVersion != nil {
+			if c.mariaDBExecutableComments && c.char == 'M' &&
+				c.current < c.size && c.input.at(c.current) == '!' {
+				c.advance(1, false) // consume the '!' of the M! marker
+				executable = true
+				mariaMarker = true
+			} else if c.mysqlExecutableComments && c.char == '!' {
+				executable = true
+			}
+		}
+		if executable {
 			activeMySQLComment = true
 			gate := -1
+			gateDigits := 0
 			if c.current+5 <= c.size {
 				gate = 0
 				for i := 0; i < 5; i++ {
@@ -533,12 +551,32 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 					}
 					gate = gate*10 + int(digit-'0')
 				}
+				if gate >= 0 {
+					gateDigits = 5
+					// MariaDB reads an optional sixth gate digit (its versions are 10xxxx+)
+					// for either executable-comment marker.
+					if c.mariaDBExecutableComments && c.current+6 <= c.size {
+						if digit := c.input.at(c.current + 5); digit >= '0' && digit <= '9' {
+							gate = gate*10 + int(digit-'0')
+							gateDigits = 6
+						}
+					}
+				}
 			}
 
 			if gate >= 0 {
-				activeMySQLComment = gate <= *c.mysqlVersion
-				if activeMySQLComment {
-					c.advance(5, false)
+				switch {
+				case mariaMarker:
+					activeMySQLComment = gate <= *c.mysqlVersion
+				case c.mariaDBExecutableComments && gate >= 50700 && gate <= 99999:
+					// MariaDB ignores MySQL-style executable comments gated to MySQL
+					// 5.7 through 9.99; only its own numbering executes there.
+					activeMySQLComment = false
+				default:
+					activeMySQLComment = gate <= *c.mysqlVersion
+				}
+				if activeMySQLComment && gateDigits > 0 {
+					c.advance(gateDigits, false)
 				}
 			}
 		}

@@ -53,7 +53,7 @@ func (p *Parser) parseCreateAsCommand(start tokens.Token) exp.Expression {
 		}
 		// A truncated bare compound body (`CREATE PROCEDURE p() IF 1 THEN SELECT 1` with the
 		// END IF missing or in a later chunk) must not silently become a truncated Command.
-		if routineCreate && p.dialect.Name == "mysql" &&
+		if routineCreate && p.dialectIs("mysql") &&
 			(tok.TokenType == tokens.CASE || (tok.TokenType == tokens.VAR && compoundWords[stringsUpper(tok.Text)])) {
 			p.raiseError("Unsupported routine definition (body did not parse)", start)
 			p.checkErrors()
@@ -286,7 +286,7 @@ func (p *Parser) parsePostgresParameterMode() (tokens.TokenType, bool) {
 // (parsers/postgres.py:275-292). Mode constraints are raw InOutColumnConstraint children,
 // prepended directly to ColumnDef.constraints just as upstream does.
 func (p *Parser) parseFunctionParameter() exp.Expression {
-	if p.dialect.Name == "mysql" {
+	if p.dialectIs("mysql") {
 		// Grammar extension: MySQL routine parameter modes (`IN x INT`, `OUT y ...`,
 		// `INOUT z ...`, manual §15.1.17); upstream errors on them. Same speculative
 		// lookahead as PG so a parameter NAMED `out` still parses. INOUT is not a mysql
@@ -421,7 +421,7 @@ func (p *Parser) parseCreateFunction(ctt tokens.TokenType) (this, expression exp
 		// parsers/clickhouse.py:502-504: a ClickHouse CREATE FUNCTION body is a lambda.
 		expression = p.parseLambda(true)
 	} else if ctt == tokens.FUNCTION && begin != true && begin != "ATOMIC" &&
-		(p.dialect.Name != "mysql" || returnMatched) {
+		(!p.dialectIs("mysql") || returnMatched) {
 		// _parse_user_defined_function_expression (parser.py:7108-7109) is just
 		// self._parse_statement(). divergence: with a BEGIN body a FUNCTION takes the block
 		// path below like PROCEDURE — upstream's single-statement path leaves the body's END
@@ -518,7 +518,7 @@ func (p *Parser) parseCreateTrigger(isConstraint bool) (exp.Expression, exp.Expr
 		when = p.parseWrapped(p.parseDisjunction, true)
 	}
 	var execute exp.Expression
-	if p.dialect.Name == "mysql" {
+	if p.dialectIs("mysql") {
 		// MySQL trigger_body (§27.4.1): a single statement, possibly compound — parsed
 		// with the compound grammar (mysql_compound.go). Grammar extension: upstream and
 		// PG expect EXECUTE FUNCTION here; MySQL has an inline body instead.
