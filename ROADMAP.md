@@ -121,14 +121,15 @@ differential-check against the pinned Python):
   `optimizer/testdata/annotate_gaps.txt`.
 - CROSS-DIALECT transpilation: verified against upstream's `validate_all` read/write pairs —
   `TestTranspileCorpus` runs every pair whose dialects are all registered (`testdata/transpile_corpus.jsonl`,
-  8703 pairs, 6015 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
+  8758 pairs, 6074 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
   What remains are the per-dialect override tables that make cross-dialect output correct — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
 - DIALECTS: base, MySQL, Postgres, TSQL, ClickHouse, StarRocks, Doris, Presto, Trino, Hive, Athena,
   Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery (#41), DuckDB (#39),
-  Snowflake (#40), SQLite (#38) and MariaDB (#37, a beyond-upstream identity over MySQL) are
-  ported; upstream ships 30+ and the rest are out of scope for now.
+  Snowflake (#40), SQLite (#38), MariaDB (#37, a beyond-upstream identity over MySQL) and Dremio
+  are ported; upstream ships 30+ and the rest are out of scope for now (queued: Teradata, DAX,
+  Tableau).
 - TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): the v30.17.0 bump removed
   the FOR VERSION/TIMESTAMP and hive AS OF compound keywords but did not port `VERSION_PHRASES` +
   `_parse_version` (parser.py:1738-1745, 5120-5146); the constructs now fail closed (parse error)
@@ -974,8 +975,8 @@ each read pair asserts `parse_one(read_sql, read_dialect).sql(self.dialect) == s
 pair asserts `expression.sql(write_dialect) == write_sql`.
 
 - **Extraction** — `scripts/extract_dialect_corpus.py --transpile-only` records every pair whose
-  dialects are all registered into `testdata/transpile_corpus.jsonl`: **8703 records across 307
-  dialect pairs** (6610 cross-dialect, 2093 same-dialect), deduped and sorted for a byte-stable
+  dialects are all registered into `testdata/transpile_corpus.jsonl`: **8758 records across 325
+  dialect pairs** (6658 cross-dialect, 2100 same-dialect), deduped and sorted for a byte-stable
   rerun (verified: two consecutive runs are identical). `REGISTERED` mirrors `dialects.GetOrRaise`,
   so it also holds `spark2` — which upstream's test classes only ever name as a read/write key,
   111 of them, with no `TestSpark2` class of its own to run — and `mariadb`, though upstream ships
@@ -996,8 +997,8 @@ pair asserts `expression.sql(write_dialect) == write_sql`.
   `parse:` category), (c) per-write-dialect total floors against dropped records. Regenerate the
   gaps file and print observed counts with
   `SQLGLOT_TRANSPILE_UPDATE=1 go test . -run TestTranspileCorpus -v`.
-- **Initial state** — **6015/8703 pass (69%)**, 2686 tracked gaps: 1778 `gen: transpile mismatch`,
-  796 `gen: cast/type`, 69 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
+- **Initial state** — **6074/8758 pass (69%)**, 2684 tracked gaps: 1779 `gen: transpile mismatch`,
+  793 `gen: cast/type`, 69 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
   slice is the per-dialect generator work listed under Remaining work.
 - **Bug found by the first run** — `SELECT e'Hello\nworld'` (duckdb → bigquery) crashed the test
   binary with a stack overflow: `bytestringSQL`'s cast-wrap branch rebuilt its child ByteString
@@ -1060,3 +1061,20 @@ entry:
 
 Tests: `mariadb_test.go` covers the inherited MySQL behavior, the sequence grammar and the
 executable comments; `dialects/dialecttype_test.go` pins the identity and settings.
+
+## Dremio dialect — DONE (requested extension)
+
+Ported `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/dremio.py`:
+the `nulls_are_last` ordering, `CONCAT`/`CONCAT_WS` coalescing, typed division, the
+`//` comment, the `AT TIMESTAMP`/`AT SNAPSHOT` time travel, `CURRENT_DATE_UTC`, `DATETYPE`,
+`DATE_ADD`/`DATE_SUB` with `CAST(... AS INTERVAL <unit>)`, `DATE_FORMAT`/`TO_DATE`/`TO_CHAR`
+through the Dremio `TIME_MAPPING`, the numeric `TO_CHAR` form, `DATE_PART`, `REPEATSTR`,
+`REGEXP_MATCHES`, `ARRAY_GENERATE_RANGE`, `BIT_AND`/`BIT_OR`, the Dremio type map, `LIMIT`
+literal folding, and the multi-argument `DISTINCT` rewrite.
+
+Corpus: 46 `validate_identity` cases at **46/46**; the transpile corpus adds 31 Dremio
+write-bucket pairs at **31/31** (6074/8758 overall). The slice also ported the shared pieces
+those behaviours need: `TRY_SUPPORTED`, `NVL2_SUPPORTED`, `LIMIT_ONLY_LITERALS`,
+`MULTI_ARG_DISTINCT`, `SUPPORTS_CONVERT_TIMEZONE` and `SUPPORTS_BETWEEN_FLAGS` are now driven
+by dialect flags, with the `Nvl2` node and the base `CONVERT_TIMEZONE` builder added (which
+also corrected Redshift's `BETWEEN` flag behaviour).

@@ -93,6 +93,8 @@ func MySQL() *Dialect {
 	d.DPipeIsStringConcat = false
 	d.SupportsUserDefinedTypes = false
 	d.SafeDivision = true
+	// generators/mysql.py:216 TRY_SUPPORTED = False.
+	d.TrySupported = false
 	// parsers/mysql.py:68 FUNC_TOKENS adds TokenType.VALUES (see ValuesIsFunction doc).
 	d.ValuesIsFunction = true
 	// parsers/mysql.py:69 FUNC_TOKENS adds TokenType.CHARACTER_SET (see CharsetIsFunction doc).

@@ -933,6 +933,9 @@ const (
 	// TSQL cluster, cont.: NextValueFor (ddl.py:432) and the CLUSTERED/NONCLUSTERED
 	// column constraints (constraints.py:64,139) used by T-SQL's UNIQUE/PK index syntax.
 	KindNextValueFor
+	// KindNvl2 (functions.py:160, `class Nvl2(Expression, Func)`): NVL2(expr, true, false),
+	// which dialects without native NVL2 (dremio) rewrite as a CASE expression.
+	KindNvl2
 	// KindPrevValueFor mirrors NextValueFor for MariaDB's `PREVIOUS VALUE FOR <seq>` sequence
 	// access (beyond upstream, which has no MariaDB dialect). See DEVIATIONS
 	// "Opt-in behavioral extensions".
@@ -1831,6 +1834,7 @@ var argTypes = map[Kind][]argSpec{
 	KindVolatileProperty:              {{"this", false}},
 	KindNextValueFor:                  {{"this", true}, {"order", false}},
 	KindPrevValueFor:                  {{"this", true}},
+	KindNvl2:                          {{"this", true}, {"true", true}, {"false", false}},
 	KindClusteredColumnConstraint:     defaultArgTypes,
 	KindNonClusteredColumnConstraint:  defaultArgTypes,
 	KindOpenJSON:                      {{"this", true}, {"path", false}, {"expressions", false}},
@@ -2504,6 +2508,7 @@ var traitsOf = map[Kind]Trait{
 	KindIsAscii:             TraitCondition | TraitFunc,
 	KindNextValueFor:        TraitCondition | TraitFunc,
 	KindPrevValueFor:        TraitCondition | TraitFunc,
+	KindNvl2:                TraitCondition | TraitFunc,
 	KindOpenJSON:            TraitCondition | TraitFunc,
 
 	// ClickHouse cluster.
@@ -3310,6 +3315,7 @@ var className = map[Kind]string{
 	KindVolatileProperty:              "VolatileProperty",
 	KindNextValueFor:                  "NextValueFor",
 	KindPrevValueFor:                  "PrevValueFor",
+	KindNvl2:                          "Nvl2",
 	KindClusteredColumnConstraint:     "ClusteredColumnConstraint",
 	KindNonClusteredColumnConstraint:  "NonClusteredColumnConstraint",
 	KindOpenJSON:                      "OpenJSON",

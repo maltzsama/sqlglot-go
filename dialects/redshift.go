@@ -10,6 +10,10 @@ import (
 func Redshift() *Dialect {
 	d := Postgres()
 	d.Name = "redshift"
+	// generators/redshift.py: SUPPORTS_BETWEEN_FLAGS = False (postgres enables it).
+	d.SupportsBetweenFlags = false
+	// generators/redshift.py:33 / snowflake.py:394 / spark.py:70: native CONVERT_TIMEZONE.
+	d.SupportsConvertTimezone = true
 	// generators/redshift.py:31 PARSE_JSON_NAME = "JSON_PARSE".
 	d.ParseJSONName = stringPtr("JSON_PARSE")
 

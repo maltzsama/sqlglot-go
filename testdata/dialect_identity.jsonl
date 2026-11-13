@@ -1438,6 +1438,52 @@
 {"dialect": "doris", "sql": "UPDATE accounts a SET a.balance = a.balance + 100, a.status_code = 'active' WHERE a.account_type = 'savings'", "want": "UPDATE accounts a SET a.balance = a.balance + 100, a.status_code = 'active' WHERE a.account_type = 'savings'", "pretty": false, "identify": false}
 {"dialect": "doris", "sql": "UPDATE employees e SET e.salary = e.salary * 1.1 WHERE e.department = 'IT'", "want": "UPDATE employees e SET e.salary = e.salary * 1.1 WHERE e.department = 'IT'", "pretty": false, "identify": false}
 {"dialect": "doris", "sql": "UPDATE prices p SET p.amount = p.amount * 0.9 WHERE p.product_id IN (SELECT pr.id FROM products AS pr JOIN categories AS c ON pr.category_id = c.id WHERE c.foo = 'Electronics')", "want": "UPDATE prices p SET p.amount = p.amount * 0.9 WHERE p.product_id IN (SELECT pr.id FROM products AS pr JOIN categories AS c ON pr.category_id = c.id WHERE c.foo = 'Electronics')", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "CAST(x AS ARRAY)", "want": "CAST(x AS LIST)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "CAST(x AS BINARY)", "want": "CAST(x AS VARBINARY)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "CAST(x AS BIT)", "want": "CAST(x AS BOOLEAN)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "CAST(x AS CHAR)", "want": "CAST(x AS VARCHAR)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "CAST(x AS DATETIME)", "want": "CAST(x AS TIMESTAMP)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "CAST(x AS NCHAR)", "want": "CAST(x AS VARCHAR)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "CAST(x AS SMALLINT)", "want": "CAST(x AS INT)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "CAST(x AS TEXT)", "want": "CAST(x AS VARCHAR)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "CAST(x AS TIMESTAMPNTZ)", "want": "CAST(x AS TIMESTAMP)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "CAST(x AS TINYINT)", "want": "CAST(x AS INT)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "DATETYPE(2024,2,2)", "want": "DATE('2024-02-02')", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "DATETYPE(x,y,z)", "want": "CAST(CONCAT(x, '-', y, '-', z) AS DATE)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "INTERVAL '7' DAYS", "want": "INTERVAL '7' DAY", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "REGEXP_MATCHES(x, y)", "want": "REGEXP_LIKE(x, y)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT * FROM t AT SNAPSHOT '4132119532727284872'", "want": "SELECT * FROM t AT SNAPSHOT '4132119532727284872'", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT * FROM t AT SNAPSHOT '4132119532727284872' AS a", "want": "SELECT * FROM t AT SNAPSHOT '4132119532727284872' AS a", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT * FROM t AT TIMESTAMP '2024-01-01 12:00:00.000'", "want": "SELECT * FROM t AT TIMESTAMP '2024-01-01 12:00:00.000'", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT * FROM t LIMIT 1 + 1", "want": "SELECT * FROM t LIMIT 2", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT * FROM t ORDER BY a DESC NULLS FIRST", "want": "SELECT * FROM t ORDER BY a DESC NULLS FIRST", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT * FROM t ORDER BY a DESC NULLS LAST", "want": "SELECT * FROM t ORDER BY a DESC", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT * FROM t ORDER BY a NULLS FIRST", "want": "SELECT * FROM t ORDER BY a NULLS FIRST", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT * FROM t ORDER BY a NULLS LAST", "want": "SELECT * FROM t ORDER BY a", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT CONCAT('a', NULL)", "want": "SELECT CONCAT('a', NULL)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT CONVERT_TIMEZONE('America/Chicago', DateColumn)", "want": "SELECT CONVERT_TIMEZONE('America/Chicago', DateColumn)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT COUNT(DISTINCT a, b) FROM t", "want": "SELECT COUNT(DISTINCT CASE WHEN a IS NULL THEN NULL WHEN b IS NULL THEN NULL ELSE (a, b) END) FROM t", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT CURRENT_DATE_UTC", "want": "SELECT CURRENT_DATE_UTC", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT CURRENT_DATE_UTC()", "want": "SELECT CURRENT_DATE_UTC", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT DATE_ADD(TIMESTAMP '2022-01-01 12:00:00', CAST(-1 AS INTERVAL HOUR))", "want": "SELECT DATE_ADD(CAST('2022-01-01 12:00:00' AS TIMESTAMP), CAST(-1 AS INTERVAL HOUR))", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT DATE_ADD(col, 1)", "want": "SELECT DATE_ADD(col, 1)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT DATE_ADD(col, CAST(1 AS INTERVAL HOUR))", "want": "SELECT DATE_ADD(col, CAST(1 AS INTERVAL HOUR))", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT DATE_FORMAT(CAST('2025-08-18 15:30:00' AS TIMESTAMP), 'yyyy-mm-dd')", "want": "SELECT TO_CHAR(CAST('2025-08-18 15:30:00' AS TIMESTAMP), 'yyyy-mm-dd')", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT DATE_PART('YEAR', date '2021-04-01')", "want": "SELECT EXTRACT('YEAR' FROM CAST('2021-04-01' AS DATE))", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT DATE_SUB(TIMESTAMP '2022-01-01 12:00:00', CAST(-1 AS INTERVAL HOUR))", "want": "SELECT DATE_SUB(CAST('2022-01-01 12:00:00' AS TIMESTAMP), CAST(-1 AS INTERVAL HOUR))", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT DATE_SUB(col, 1)", "want": "SELECT DATE_SUB(col, 1)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT DATE_SUB(col, CAST(1 AS INTERVAL HOUR))", "want": "SELECT DATE_SUB(col, CAST(1 AS INTERVAL HOUR))", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT REPEAT(x, 5)", "want": "SELECT REPEAT(x, 5)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT REPEATSTR(x, 5)", "want": "SELECT REPEAT(x, 5)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yy-ddd hh24:mi:ss.fff tzd')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yy-ddd hh24:mi:ss.fff tzd')", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yyyy-mm-dd hh24:mi:ss')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yyyy-mm-dd hh24:mi:ss')", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "TO_CHAR(123, 'abcd')", "want": "TO_CHAR(123, 'abcd')", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "TO_CHAR(3.14, '#.#')", "want": "TO_CHAR(3.14, '#.#')", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "TO_CHAR(3.14, UPPER('abcd'))", "want": "TO_CHAR(3.14, UPPER('abcd'))", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "TO_CHAR(3.14, columnname)", "want": "TO_CHAR(3.14, columnname)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "TO_CHAR(5555)", "want": "TO_CHAR(5555)", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "TO_CHAR(5555, '#')", "want": "TO_CHAR(5555, '#')", "pretty": false, "identify": false}
+{"dialect": "dremio", "sql": "TO_CHAR(columnname, '#.##')", "want": "TO_CHAR(columnname, '#.##')", "pretty": false, "identify": false}
 {"dialect": "duckdb", "sql": "\n            SELECT\n                l_returnflag,\n                l_linestatus,\n                sum_qty:        sum(l_quantity),\n                sum_base_price: sum(l_extendedprice),\n                sum_disc_price: sum(l_extendedprice * (1-l_discount)),\n                sum_charge:     sum(l_extendedprice * (1-l_discount) * (1+l_tax)),\n                avg_qty:        avg(l_quantity),\n                avg_price:      avg(l_extendedprice),\n                avg_disc:       avg(l_discount),\n                count_order:    count(*)\n            ", "want": "SELECT l_returnflag, l_linestatus, SUM(l_quantity) AS sum_qty, SUM(l_extendedprice) AS sum_base_price, SUM(l_extendedprice * (1 - l_discount)) AS sum_disc_price, SUM(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge, AVG(l_quantity) AS avg_qty, AVG(l_extendedprice) AS avg_price, AVG(l_discount) AS avg_disc, COUNT(*) AS count_order", "pretty": false, "identify": false}
 {"dialect": "duckdb", "sql": "'red' IN flags", "want": "'red' IN flags", "pretty": false, "identify": false}
 {"dialect": "duckdb", "sql": "'red' IN tbl.flags", "want": "'red' IN tbl.flags", "pretty": false, "identify": false}

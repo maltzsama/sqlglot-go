@@ -390,6 +390,18 @@
 {"read": "", "write": "doris", "sql": "UNIX_TO_TIME(x)", "want": "FROM_UNIXTIME(x)", "pretty": false, "identify": false}
 {"read": "", "write": "doris", "sql": "YEAR(TS_OR_DS_TO_DATE(x))", "want": "YEAR(x)", "pretty": false, "identify": false}
 {"read": "", "write": "doris", "sql": "x ILIKE '%y'", "want": "LOWER(x) LIKE LOWER('%y')", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "DATE_ADD(CAST('2020-01-01' AS DATE), 1)", "want": "DATE_ADD(CAST('2020-01-01' AS DATE), 1)", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "DATE_ADD(x, 1)", "want": "DATE_ADD(x, 1)", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "DATE_ADD(x, 1, 'DAY')", "want": "DATE_ADD(x, 1)", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "LOG(10, a)", "want": "LOG(10, a)", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "LOG(2, a)", "want": "LOG(2, a)", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "SELECT NVL2(a, b)", "want": "SELECT CASE WHEN NOT a IS NULL THEN b END", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "SELECT NVL2(a, b, c)", "want": "SELECT CASE WHEN NOT a IS NULL THEN b ELSE c END", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "SELECT x BETWEEN 2 AND 10", "want": "SELECT x BETWEEN 2 AND 10", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "SELECT x BETWEEN ASYMMETRIC 10 AND 2", "want": "SELECT x BETWEEN ASYMMETRIC 10 AND 2", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "SELECT x BETWEEN SYMMETRIC 10 AND 2", "want": "SELECT x BETWEEN SYMMETRIC 10 AND 2", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "SOUNDEX(x)", "want": "SOUNDEX(x)", "pretty": false, "identify": false}
+{"read": "", "write": "dremio", "sql": "TRY_CAST(a AS FLOAT)", "want": "CAST(a AS FLOAT)", "pretty": false, "identify": false}
 {"read": "", "write": "duckdb", "sql": "\nWITH c AS (\n  WITH b AS (\n    WITH a1 AS (\n      SELECT 1\n    ), a2 AS (\n      SELECT 2\n    )\n    SELECT * FROM a1, a2\n  )\n  SELECT *\n  FROM b\n)\nSELECT *\nFROM c", "want": "WITH c AS (WITH b AS (WITH a1 AS (SELECT 1), a2 AS (SELECT 2) SELECT * FROM a1, a2) SELECT * FROM b) SELECT * FROM c", "pretty": false, "identify": false}
 {"read": "", "write": "duckdb", "sql": "'[\"x\"]'", "want": "'[\"x\"]'", "pretty": false, "identify": false}
 {"read": "", "write": "duckdb", "sql": "ARRAY(0, 1, 2)", "want": "[0, 1, 2]", "pretty": false, "identify": false}
@@ -2147,6 +2159,8 @@
 {"read": "bigquery", "write": "databricks", "sql": "SELECT UNIX_SECONDS('2008-12-25 15:30:00+00')", "want": "SELECT UNIX_SECONDS('2008-12-25 15:30:00+00')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT purchases, LAST_VALUE(item) OVER item_window AS most_popular FROM Produce WINDOW item_window AS (PARTITION BY purchases ORDER BY purchases ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING)", "want": "SELECT purchases, LAST_VALUE(item) OVER item_window AS most_popular FROM Produce WINDOW item_window AS (PARTITION BY purchases ORDER BY purchases ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "TIMESTAMP_DIFF(a, b, MONTH)", "want": "TIMESTAMPDIFF(MONTH, b, a)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "dremio", "sql": "BIT_AND(x)", "want": "BIT_AND(x)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "dremio", "sql": "BIT_OR(x)", "want": "BIT_OR(x)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "duckdb", "sql": "\"\"\"a\n\"\"\"", "want": "'a\n'", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "duckdb", "sql": "\"\"\"x\"\"\"", "want": "'x'", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "duckdb", "sql": "\"\"\"x'\"\"\"", "want": "'x'''", "pretty": false, "identify": false}
@@ -3182,6 +3196,37 @@
 {"read": "doris", "write": "postgres", "sql": "UPDATE prices p SET p.amount = p.amount * 0.9 WHERE p.product_id IN (SELECT pr.id FROM products AS pr JOIN categories AS c ON pr.category_id = c.id WHERE c.foo = 'Electronics')", "want": "UPDATE prices AS p SET p.amount = p.amount * 0.9 WHERE p.product_id IN (SELECT pr.id FROM products AS pr JOIN categories AS c ON pr.category_id = c.id WHERE c.foo = 'Electronics')", "pretty": false, "identify": false}
 {"read": "doris", "write": "presto", "sql": "ANY_VALUE(x)", "want": "ARBITRARY(x)", "pretty": false, "identify": false}
 {"read": "doris", "write": "snowflake", "sql": "ALTER TABLE db.t1 RENAME TO db.t2", "want": "ALTER TABLE db.t1 RENAME TO db.t2", "pretty": false, "identify": false}
+{"read": "dremio", "write": "", "sql": "DATE_ADD(x, 1)", "want": "DATE_ADD(x, 1, 'DAY')", "pretty": false, "identify": false}
+{"read": "dremio", "write": "", "sql": "LOG(x)", "want": "LN(x)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "", "sql": "LOG10(a)", "want": "LOG(10, a)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "", "sql": "LOG2(a)", "want": "LOG(2, a)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "", "sql": "SELECT CONCAT('a', NULL)", "want": "SELECT CONCAT('a', COALESCE(NULL, ''))", "pretty": false, "identify": false}
+{"read": "dremio", "write": "", "sql": "SELECT CONVERT_TIMEZONE('America/Chicago', DateColumn)", "want": "SELECT DateColumn AT TIME ZONE 'America/Chicago'", "pretty": false, "identify": false}
+{"read": "dremio", "write": "", "sql": "SELECT x BETWEEN 2 AND 10", "want": "SELECT x BETWEEN 2 AND 10", "pretty": false, "identify": false}
+{"read": "dremio", "write": "", "sql": "SOUNDEX(x)", "want": "SOUNDEX(x)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "bigquery", "sql": "BIT_AND(x)", "want": "BIT_AND(x)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "bigquery", "sql": "BIT_OR(x)", "want": "BIT_OR(x)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "dremio", "sql": "ARRAY_GENERATE_RANGE(1, 4)", "want": "ARRAY_GENERATE_RANGE(1, 4)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "dremio", "sql": "CAST(a AS FLOAT)", "want": "CAST(a AS FLOAT)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "dremio", "sql": "REGEXP_MATCHES(x, y)", "want": "REGEXP_LIKE(x, y)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "dremio", "sql": "SELECT CONCAT('a', NULL)", "want": "SELECT CONCAT('a', NULL)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "dremio", "sql": "SELECT CONVERT_TIMEZONE('America/Chicago', DateColumn)", "want": "SELECT CONVERT_TIMEZONE('America/Chicago', DateColumn)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "dremio", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yy-ddd hh24:mi:ss.fff tzd')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yy-ddd hh24:mi:ss.fff tzd')", "pretty": false, "identify": false}
+{"read": "dremio", "write": "dremio", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yyyy-mm-dd hh24:mi:ss')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yyyy-mm-dd hh24:mi:ss')", "pretty": false, "identify": false}
+{"read": "dremio", "write": "duckdb", "sql": "ARRAY_GENERATE_RANGE(1, 4)", "want": "GENERATE_SERIES(1, 4)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "duckdb", "sql": "REGEXP_MATCHES(x, y)", "want": "REGEXP_MATCHES(x, y)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "duckdb", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yy-ddd hh24:mi:ss.fff tzd')", "want": "SELECT STRFTIME(CAST('2025-06-24 12:34:56' AS TIMESTAMP), '%y-%j %H:%M:%S.%f %Z')", "pretty": false, "identify": false}
+{"read": "dremio", "write": "duckdb", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yyyy-mm-dd hh24:mi:ss')", "want": "SELECT STRFTIME(CAST('2025-06-24 12:34:56' AS TIMESTAMP), '%Y-%m-%d %H:%M:%S')", "pretty": false, "identify": false}
+{"read": "dremio", "write": "hive", "sql": "REGEXP_MATCHES(x, y)", "want": "x RLIKE y", "pretty": false, "identify": false}
+{"read": "dremio", "write": "oracle", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yy-ddd hh24:mi:ss.fff tzd')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'YY-DDD HH24:MI:SS.FF6 %Z')", "pretty": false, "identify": false}
+{"read": "dremio", "write": "oracle", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yyyy-mm-dd hh24:mi:ss')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'YYYY-MM-DD HH24:MI:SS')", "pretty": false, "identify": false}
+{"read": "dremio", "write": "postgres", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yy-ddd hh24:mi:ss.fff tzd')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'YY-DDD HH24:MI:SS.US TZ')", "pretty": false, "identify": false}
+{"read": "dremio", "write": "postgres", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yyyy-mm-dd hh24:mi:ss')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'YYYY-MM-DD HH24:MI:SS')", "pretty": false, "identify": false}
+{"read": "dremio", "write": "presto", "sql": "REGEXP_MATCHES(x, y)", "want": "REGEXP_LIKE(x, y)", "pretty": false, "identify": false}
+{"read": "dremio", "write": "spark", "sql": "REGEXP_MATCHES(x, y)", "want": "x RLIKE y", "pretty": false, "identify": false}
+{"read": "dremio", "write": "spark", "sql": "SELECT * FROM t AT SNAPSHOT '123'", "want": "SELECT * FROM t VERSION AS OF '123'", "pretty": false, "identify": false}
+{"read": "dremio", "write": "spark", "sql": "SELECT * FROM t AT TIMESTAMP '2024-01-01'", "want": "SELECT * FROM t TIMESTAMP AS OF '2024-01-01'", "pretty": false, "identify": false}
+{"read": "dremio", "write": "trino", "sql": "SELECT * FROM t AT SNAPSHOT '123'", "want": "SELECT * FROM t FOR VERSION AS OF '123'", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "", "sql": "0b1010", "want": "0 AS b1010", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "", "sql": "0x1010", "want": "0 AS x1010", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
@@ -3327,6 +3372,8 @@
 {"read": "duckdb", "write": "databricks", "sql": "SELECT TIMESTAMP 'foo'", "want": "SELECT CAST('foo' AS TIMESTAMP_NTZ)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "doris", "sql": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE NOT EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "doris", "sql": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "dremio", "sql": "SELECT STRFTIME(CAST('2025-06-24 12:34:56' AS TIMESTAMP), '%Y-%m-%d %H:%M:%S')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yyyy-mm-dd hh24:mi:ss')", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "dremio", "sql": "SELECT STRFTIME(CAST('2025-06-24 12:34:56' AS TIMESTAMP), '%y-%j %H:%M:%S.%f %Z')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yy-ddd hh24:mi:ss.fff tzd')", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "duckdb", "sql": "1d", "want": "1 AS d", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "duckdb", "sql": "ALTER TABLE \"db\".\"t1\" RENAME TO \"db\".\"t2\"", "want": "ALTER TABLE \"db\".\"t1\" RENAME TO \"t2\"", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "duckdb", "sql": "ALTER TABLE db.t1 RENAME TO db.t2", "want": "ALTER TABLE db.t1 RENAME TO t2", "pretty": false, "identify": false}
@@ -3861,6 +3908,7 @@
 {"read": "hive", "write": "databricks", "sql": "WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT GET_JSON_OBJECT(c, '$.x-y') FROM t", "want": "WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT GET_JSON_OBJECT(c, '$[\"x-y\"]') FROM t", "pretty": false, "identify": false}
 {"read": "hive", "write": "databricks", "sql": "x DIV y", "want": "x DIV y", "pretty": false, "identify": false}
 {"read": "hive", "write": "doris", "sql": "COLLECT_SET(x)", "want": "COLLECT_SET(x)", "pretty": false, "identify": false}
+{"read": "hive", "write": "dremio", "sql": "CAST(a AS FLOAT)", "want": "CAST(a AS FLOAT)", "pretty": false, "identify": false}
 {"read": "hive", "write": "duckdb", "sql": "\"'x'\"", "want": "'''x'''", "pretty": false, "identify": false}
 {"read": "hive", "write": "duckdb", "sql": "'\"x\"'", "want": "'\"x\"'", "pretty": false, "identify": false}
 {"read": "hive", "write": "duckdb", "sql": "'\\''", "want": "''''", "pretty": false, "identify": false}
@@ -4713,6 +4761,8 @@
 {"read": "oracle", "write": "doris", "sql": "ADD_MONTHS(d, n)", "want": "MONTHS_ADD(d, n)", "pretty": false, "identify": false}
 {"read": "oracle", "write": "doris", "sql": "TO_CHAR(x)", "want": "CAST(x AS STRING)", "pretty": false, "identify": false}
 {"read": "oracle", "write": "doris", "sql": "TO_NUMBER(x)", "want": "CAST(x AS DOUBLE)", "pretty": false, "identify": false}
+{"read": "oracle", "write": "dremio", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'YY-DDD HH24:MI:SS.FF6 %Z')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yy-ddd hh24:mi:ss.fff tzd')", "pretty": false, "identify": false}
+{"read": "oracle", "write": "dremio", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'YYYY-MM-DD HH24:MI:SS')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yyyy-mm-dd hh24:mi:ss')", "pretty": false, "identify": false}
 {"read": "oracle", "write": "duckdb", "sql": "SELECT * FROM test WHERE MOD(col1, 4) = 3", "want": "SELECT * FROM test WHERE col1 % 4 = 3", "pretty": false, "identify": false}
 {"read": "oracle", "write": "duckdb", "sql": "SELECT TO_DATE('2024-12-12', 'YYYY-MM-DD')", "want": "SELECT CAST(STRPTIME('2024-12-12', '%Y-%m-%d') AS DATE)", "pretty": false, "identify": false}
 {"read": "oracle", "write": "duckdb", "sql": "SELECT TO_TIMESTAMP('2024-12-12 12:12:12.000000', 'YYYY-MM-DD HH24:MI:SS.FF6')", "want": "SELECT STRPTIME('2024-12-12 12:12:12.000000', '%Y-%m-%d %H:%M:%S.%f')", "pretty": false, "identify": false}
@@ -4994,6 +5044,8 @@
 {"read": "postgres", "write": "doris", "sql": "UPDATE employees AS e SET e.salary = e.salary * 1.1 WHERE e.department = 'IT'", "want": "UPDATE employees e SET e.salary = e.salary * 1.1 WHERE e.department = 'IT'", "pretty": false, "identify": false}
 {"read": "postgres", "write": "doris", "sql": "UPDATE foo SET a = bar.a, b = bar.b FROM bar WHERE foo.id = bar.id", "want": "UPDATE foo SET a = bar.a, b = bar.b FROM bar WHERE foo.id = bar.id", "pretty": false, "identify": false}
 {"read": "postgres", "write": "doris", "sql": "UPDATE prices AS p SET p.amount = p.amount * 0.9 WHERE p.product_id IN (SELECT pr.id FROM products AS pr JOIN categories AS c ON pr.category_id = c.id WHERE c.foo = 'Electronics')", "want": "UPDATE prices p SET p.amount = p.amount * 0.9 WHERE p.product_id IN (SELECT pr.id FROM products AS pr JOIN categories AS c ON pr.category_id = c.id WHERE c.foo = 'Electronics')", "pretty": false, "identify": false}
+{"read": "postgres", "write": "dremio", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'YY-DDD HH24:MI:SS.US TZ')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yy-ddd hh24:mi:ss.fff tzd')", "pretty": false, "identify": false}
+{"read": "postgres", "write": "dremio", "sql": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'YYYY-MM-DD HH24:MI:SS')", "want": "SELECT TO_CHAR(CAST('2025-06-24 12:34:56' AS TIMESTAMP), 'yyyy-mm-dd hh24:mi:ss')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "1 / DIV(4, 2)", "want": "1 / CAST(4 // 2 AS DECIMAL)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "ARRAY_CAT(ARRAY[1, 2], ARRAY[3, 4])", "want": "LIST_CONCAT([1, 2], [3, 4])", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "ARRAY_LENGTH(arr, 1)", "want": "ARRAY_LENGTH(arr, 1)", "pretty": false, "identify": false}
@@ -7597,6 +7649,8 @@
 {"read": "spark", "write": "databricks", "sql": "WITH RECURSIVE t(n) AS (SELECT * FROM VALUES (1) AS _values) SELECT n FROM t", "want": "WITH RECURSIVE t(n) AS (SELECT * FROM VALUES (1) AS _values) SELECT n FROM t", "pretty": false, "identify": false}
 {"read": "spark", "write": "databricks", "sql": "WITH tbl AS (SELECT 1 AS id, 'eggy' AS name UNION ALL SELECT NULL AS id, 'jake' AS name) SELECT COUNT(DISTINCT id, name) AS cnt FROM tbl", "want": "WITH tbl AS (SELECT 1 AS id, 'eggy' AS name UNION ALL SELECT NULL AS id, 'jake' AS name) SELECT COUNT(DISTINCT id, name) AS cnt FROM tbl", "pretty": false, "identify": false}
 {"read": "spark", "write": "doris", "sql": "WITH tbl AS (SELECT 1 AS id, 'eggy' AS name UNION ALL SELECT NULL AS id, 'jake' AS name) SELECT COUNT(DISTINCT id, name) AS cnt FROM tbl", "want": "WITH tbl AS (SELECT 1 AS id, 'eggy' AS `name` UNION ALL SELECT NULL AS id, 'jake' AS `name`) SELECT COUNT(DISTINCT id, `name`) AS cnt FROM tbl", "pretty": false, "identify": false}
+{"read": "spark", "write": "dremio", "sql": "SELECT * FROM t TIMESTAMP AS OF '2024-01-01'", "want": "SELECT * FROM t AT TIMESTAMP '2024-01-01'", "pretty": false, "identify": false}
+{"read": "spark", "write": "dremio", "sql": "SELECT * FROM t VERSION AS OF '123'", "want": "SELECT * FROM t AT SNAPSHOT '123'", "pretty": false, "identify": false}
 {"read": "spark", "write": "duckdb", "sql": "\n            WITH hourlycostagg AS (\n                SELECT\n                    101 AS id,\n                    ARRAY(\n                        STRUCT(10.0 AS amount, 'USD' AS currency),\n                        STRUCT(20.0 AS amount, 'EUR' AS currency)\n                    ) AS costs,\n                    ARRAY(\n                        STRUCT('tax' AS type, 0.15 AS val, 'EUR' AS currency),\n                        STRUCT('fee' AS type, 5.00 AS val, 'EUR' AS currency)\n                    ) AS adjustments,\n                    ARRAY(\n                        STRUCT(\n                            12.0 AS length,\n                            STRUCT('A' AS tag, 98.5 AS score) AS details\n                        ),\n                        STRUCT(\n                            23.0 AS length,\n                            STRUCT('B' AS tag, 99.5 AS score) AS details\n                        )\n                    ) AS info\n            )\n            SELECT\n                h.id,\n                amount,\n                currency,\n                type,\n                val,\n                leng\n            FROM hourlycostagg h\n            LATERAL VIEW inline(h.costs) c\n            LATERAL VIEW inline(h.adjustments) as type, val, curr\n            LATERAL VIEW inline(h.info) exploded as leng, det\n            ", "want": "WITH hourlycostagg AS (SELECT 101 AS id, [{'amount': 10.0, 'currency': 'USD'}, {'amount': 20.0, 'currency': 'EUR'}] AS costs, [{'type': 'tax', 'val': 0.15, 'currency': 'EUR'}, {'type': 'fee', 'val': 5.00, 'currency': 'EUR'}] AS adjustments, [{'length': 12.0, 'details': {'tag': 'A', 'score': 98.5}}, {'length': 23.0, 'details': {'tag': 'B', 'score': 99.5}}] AS info) SELECT h.id, amount, currency, type, val, leng FROM hourlycostagg AS h CROSS JOIN LATERAL (SELECT UNNEST(h.costs, max_depth => 2)) AS c CROSS JOIN LATERAL (SELECT UNNEST(h.adjustments, max_depth => 2)) AS _u_1(type, val, curr) CROSS JOIN LATERAL (SELECT UNNEST(h.info, max_depth => 2)) AS exploded(leng, det)", "pretty": false, "identify": false}
 {"read": "spark", "write": "duckdb", "sql": "'\u6bdb'", "want": "'\u6bdb'", "pretty": false, "identify": false}
 {"read": "spark", "write": "duckdb", "sql": "1d", "want": "TRY_CAST(1 AS DOUBLE)", "pretty": false, "identify": false}
@@ -8178,6 +8232,7 @@
 {"read": "trino", "write": "bigquery", "sql": "SHA512(x)", "want": "SHA512(x)", "pretty": false, "identify": false}
 {"read": "trino", "write": "bigquery", "sql": "TO_HEX(x)", "want": "UPPER(TO_HEX(x))", "pretty": false, "identify": false}
 {"read": "trino", "write": "databricks", "sql": "SELECT FROM_ISO8601_TIMESTAMP_NANOS('2020-05-11T11:15:05.000000000')", "want": "SELECT CAST('2020-05-11T11:15:05.000000000' AS TIMESTAMP)", "pretty": false, "identify": false}
+{"read": "trino", "write": "dremio", "sql": "SELECT * FROM t FOR VERSION AS OF '123'", "want": "SELECT * FROM t AT SNAPSHOT '123'", "pretty": false, "identify": false}
 {"read": "trino", "write": "duckdb", "sql": "SELECT FORMAT('%s', 123)", "want": "SELECT FORMAT('{}', 123)", "pretty": false, "identify": false}
 {"read": "trino", "write": "duckdb", "sql": "SELECT FROM_ISO8601_TIMESTAMP_NANOS('2020-05-11T11:15:05.000000000')", "want": "SELECT CAST('2020-05-11T11:15:05.000000000' AS TIMESTAMPTZ)", "pretty": false, "identify": false}
 {"read": "trino", "write": "duckdb", "sql": "SELECT TIMESTAMP '2012-10-31 01:00:00 +02:00'", "want": "SELECT CAST('2012-10-31 01:00:00 +02:00' AS TIMESTAMPTZ)", "pretty": false, "identify": false}

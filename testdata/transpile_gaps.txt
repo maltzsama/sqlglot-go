@@ -289,8 +289,6 @@
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT IS_ASCII(x)"}
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
-{"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT x BETWEEN ASYMMETRIC 10 AND 2"}
-{"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT x BETWEEN SYMMETRIC 10 AND 2"}
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle)"}
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"TIMESTAMP_TRUNC(x, DAY, 'UTC')"}
@@ -615,7 +613,6 @@
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT id, mnth + 1 AS a_mnth FROM t CROSS JOIN UNNEST(GENERATE_DATE_ARRAY(start_month, DATE_TRUNC(CURRENT_DATE, MONTH), INTERVAL '1' MONTH)) AS mnth"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT id, mnth AS a_mnth FROM t CROSS JOIN UNNEST(GENERATE_DATE_ARRAY(start_month, DATE_TRUNC(CURRENT_DATE, MONTH), INTERVAL '1' MONTH)) AS mnth"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT id, mnth FROM t CROSS JOIN UNNEST(GENERATE_DATE_ARRAY(start_month, DATE_TRUNC(CURRENT_DATE, MONTH), INTERVAL '1' MONTH)) AS mnth"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"STRING('2008-12-25 15:30:00', 'America/New_York')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"TIMESTAMP(x)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"TIMESTAMP_TRUNC(TIMESTAMP '2024-03-15 14:35:47.123456', DAY, 'America/New_York')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"TO_JSON_STRING(x)"}
@@ -959,6 +956,9 @@
 {"read":"doris","write":"postgres","category":"gen: cast/type","sql":"SELECT JSON_EXTRACT(CAST('{\"key\": 1}' AS JSONB), '$.key')"}
 {"read":"doris","write":"postgres","category":"gen: transpile mismatch","sql":"SPLIT_BY_STRING('xx~^~yy~^~zz', '~^~', 'yy')"}
 {"read":"doris","write":"presto","category":"gen: transpile mismatch","sql":"ANY_VALUE(x)"}
+{"read":"dremio","write":"","category":"gen: transpile mismatch","sql":"LOG(x)"}
+{"read":"dremio","write":"","category":"gen: transpile mismatch","sql":"LOG10(a)"}
+{"read":"dremio","write":"","category":"gen: transpile mismatch","sql":"LOG2(a)"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"DATE_TRUNC('day', x)"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"INSTR(haystack, needle)"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
@@ -1731,7 +1731,6 @@
 {"read":"snowflake","write":"databricks","category":"gen: transpile mismatch","sql":"UNIFORM(1, 10, RANDOM(5))"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"APPROXIMATE_SIMILARITY(sig_col)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"CAST(x AS NUMBER)"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"CONVERT_TIMEZONE('America/New_York', CAST(start AS TIMESTAMPTZ))"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATE('01-01-2000', 'MM-DD-YYYY')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATE(x)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATEADD(NANOSECOND, -123456789, '2023-01-01 10:00:00.500000000')"}
@@ -1783,7 +1782,6 @@
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT BOOLXOR_AGG(c1) FROM test"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT CAST(1.5 AS DECFLOAT)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT CEIL(1.234, 1.5)"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT CONVERT_TIMEZONE('America/Los_Angeles', 'America/New_York', '2024-08-06 09:10:00.000')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF('day', '2020-01-01', '2025-10-12')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF('second', '2020-01-01', '2025-10-12 00:56:42.345')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF('second', '2020-01-01', '2025-10-12 00:56:42.345+07:00')"}

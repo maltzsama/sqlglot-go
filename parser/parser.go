@@ -1701,6 +1701,14 @@ func (p *Parser) parseVersion() exp.Expression {
 			break
 		}
 	}
+	// parsers/dremio.py:105-109 VERSION_PHRASES adds AT TIMESTAMP / AT SNAPSHOT.
+	if this == "" && p.dialect.Name == "dremio" {
+		if p.matchTextSeq("AT", "TIMESTAMP") {
+			this = "TIMESTAMP"
+		} else if p.matchTextSeq("AT", "SNAPSHOT") {
+			this = "VERSION"
+		}
+	}
 	if this == "" {
 		return nil
 	}
