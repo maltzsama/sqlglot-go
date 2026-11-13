@@ -60,18 +60,20 @@ func (g *Generator) bytestringSQL(e expressions.Expression) string {
 		isBytes := boolValue(e.Arg("is_bytes"))
 		delimited := g.dialect.ByteStart + escaped + g.dialect.ByteEnd
 
-		// Neither cast-wrap branch is reachable for base/mysql/postgres: no in-scope parser sets
-		// is_bytes, and BYTE_STRING_IS_BYTES_TYPE is false for all of them (see its doc). Kept for
-		// 1:1 shape with bytestring_sql. Upstream casts exp.cast(delimited_byte_string, ...), which
-		// maybe-parses the rendered literal back into a ByteString; a fresh ByteString{this} node is
-		// that same re-parse, so cast it directly (casting a LiteralString would re-quote it as a
-		// plain string, e.g. CAST('e''abc''' AS BYTEA) instead of CAST(e'abc' AS BYTEA)).
+		// Upstream casts exp.cast(delimited_byte_string, ...) (generator.py:1636-1643), which
+		// maybe-parses the rendered literal back under this dialect — parser.py:1223 rebuilds the
+		// ByteString with is_bytes = BYTE_STRING_IS_BYTES_TYPE or None (the Go parser does the
+		// same at parser.go:2847). A fresh ByteString must carry that same flag, or BigQuery's
+		// branch below re-enters itself forever: the child would again read as a non-bytes literal
+		// needing a CAST, cycling bytestringSQL -> castSQL -> bytestringSQL (stack overflow).
+		// Cast the re-parse directly rather than a LiteralString, which would re-quote it as a
+		// plain string, e.g. CAST('e''abc''' AS BYTEA) instead of CAST(e'abc' AS BYTEA).
 		if isBytes && !g.dialect.ByteStringIsBytesType {
-			reparsed := expressions.ByteString(expressions.Args{"this": this})
+			reparsed := expressions.ByteString(expressions.Args{"this": this, "is_bytes": g.dialect.ByteStringIsBytesType})
 			return g.gen(expressions.Cast(expressions.Args{"this": reparsed, "to": expressions.DTypeBinary.IntoExpr(nil)}))
 		}
 		if !isBytes && g.dialect.ByteStringIsBytesType {
-			reparsed := expressions.ByteString(expressions.Args{"this": this})
+			reparsed := expressions.ByteString(expressions.Args{"this": this, "is_bytes": g.dialect.ByteStringIsBytesType})
 			return g.gen(expressions.Cast(expressions.Args{"this": reparsed, "to": expressions.DTypeVarchar.IntoExpr(nil)}))
 		}
 		return delimited

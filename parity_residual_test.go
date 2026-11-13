@@ -233,3 +233,42 @@ func TestReviewFindingsFixes(t *testing.T) {
 		})
 	}
 }
+
+// TestByteStringCastWrapTranspile guards the bytestringSQL cast-wrap branches, which the
+// cross-dialect corpus (TestTranspileCorpus) exercised for the first time: generating a
+// byte-string literal to a dialect whose ByteStringIsBytesType differs from the node's is_bytes
+// flag must rebuild the child carrying the *target* dialect's flag, exactly as upstream's
+// maybe_parse does when exp.cast re-parses the rendered literal (parser.py:1223:
+// is_bytes = BYTE_STRING_IS_BYTES_TYPE or None; the Go parser mirrors it at parser.go:2847).
+// Without the flag the child reads as a literal still needing a CAST, and bytestringSQL
+// re-enters its own cast-wrap branch forever — the first case below crashed the test binary
+// with a stack overflow before the fix.
+// Oracle-verified against the pinned reference (tests/dialects/test_duckdb.py:1436 and
+// parse_one(...).sql(...) probes).
+func TestByteStringCastWrapTranspile(t *testing.T) {
+	cases := []struct {
+		name, read, write, sql, want string
+	}{
+		// duckdb parses e'...' to a ByteString without is_bytes; bigquery's is_bytes=true
+		// branch wraps it in CAST(... AS STRING). The embedded newline is escaped to \n on output.
+		{"duckdb_estring_to_bigquery", "duckdb", "bigquery", "SELECT e'Hello\nworld'", `SELECT CAST(b'Hello\nworld' AS STRING)`},
+		// The mirror branch: bigquery parses b'abc' with is_bytes=true; duckdb/postgres are not
+		// byte-string-as-bytes dialects, so the child is re-quoted with their BYTE_START and cast
+		// to BINARY (BLOB under duckdb, BYTEA under postgres).
+		{"bigquery_bytes_to_duckdb", "bigquery", "duckdb", "SELECT b'abc'", "SELECT CAST(e'abc' AS BLOB)"},
+		{"bigquery_bytes_to_postgres", "bigquery", "postgres", "SELECT b'abc'", "SELECT CAST(e'abc' AS BYTEA)"},
+		// Same-dialect BigQuery output stays a plain b'...' literal (both flags agree).
+		{"bigquery_bytes_identity", "bigquery", "bigquery", "SELECT b'abc'", "SELECT b'abc'"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := sqlglot.Transpile(tc.sql, tc.read, tc.write, generator.Options{})
+			if err != nil {
+				t.Fatalf("Transpile(%q, %q, %q) error: %v", tc.sql, tc.read, tc.write, err)
+			}
+			if got[0] != tc.want {
+				t.Fatalf("transpile mismatch\n  read:  %q\n  write: %q\n  sql:   %s\n  got:   %s\n  want: %s", tc.read, tc.write, tc.sql, got[0], tc.want)
+			}
+		})
+	}
+}
