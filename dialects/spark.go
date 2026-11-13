@@ -13,6 +13,8 @@ import (
 func Spark() *Dialect {
 	d := Spark2()
 	d.Name = "spark"
+	// generators/redshift.py:33 / snowflake.py:394 / spark.py:70: native CONVERT_TIMEZONE.
+	d.SupportsConvertTimezone = true
 
 	// dialects/spark.py:16-19 class attributes. ARRAY_FUNCS_PROPAGATES_NULLS and the
 	// ORDER BY / LIMIT ALL flags are the only ones this port models (the remaining

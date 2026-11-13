@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/maltzsama/sqlglot-go/expressions"
@@ -965,7 +966,7 @@ func (g *Generator) limitSQL(e expressions.Expression) string {
 	args := []string{}
 	for _, key := range []string{"offset", "expression"} {
 		if v := e.Arg(key); truthy(v) {
-			args = append(args, g.gen(v))
+			args = append(args, g.gen(g.limitArg(v)))
 		}
 	}
 	argsSQL := strings.Join(args, ", ")
@@ -975,6 +976,89 @@ func (g *Generator) limitSQL(e expressions.Expression) string {
 	}
 	limitOptions := g.sqlKey(e, "limit_options")
 	return this + g.seg("LIMIT") + " " + argsSQL + limitOptions + exprs
+}
+
+// limitArg ports _simplify_unless_literal (generator.py:5380-5386): under
+// LIMIT_ONLY_LITERALS a non-literal LIMIT/OFFSET argument is constant-folded.
+func (g *Generator) limitArg(v any) any {
+	if !g.dialect.LimitOnlyLiterals {
+		return v
+	}
+	expr := asExpression(v)
+	if expr == nil || expr.Kind() == expressions.KindLiteral {
+		return v
+	}
+	if folded := foldNumericLiteral(expr); folded != nil {
+		return folded
+	}
+	return v
+}
+
+// foldNumericLiteral folds a constant arithmetic expression over numeric literals (e.g.
+// `1 + 1` -> 2), the subset of the optimizer's simplify() pass LIMIT_ONLY_LITERALS needs for
+// LIMIT/OFFSET arguments. Returns nil when the expression is not fully constant.
+func foldNumericLiteral(e expressions.Expression) expressions.Expression {
+	if e == nil {
+		return nil
+	}
+	switch e.Kind() {
+	case expressions.KindLiteral:
+		if e.IsString() {
+			return nil
+		}
+		return e
+	case expressions.KindParen:
+		return foldNumericLiteral(e.This())
+	case expressions.KindNeg:
+		inner := foldNumericLiteral(e.This())
+		if inner == nil {
+			return nil
+		}
+		value, ok := numericLiteralValue(inner)
+		if !ok {
+			return nil
+		}
+		return expressions.LiteralNumber(-value)
+	case expressions.KindAdd, expressions.KindSub, expressions.KindMul, expressions.KindDiv, expressions.KindMod:
+		left := foldNumericLiteral(e.This())
+		right := foldNumericLiteral(asExpression(e.Arg("expression")))
+		if left == nil || right == nil {
+			return nil
+		}
+		a, okA := numericLiteralValue(left)
+		b, okB := numericLiteralValue(right)
+		if !okA || !okB {
+			return nil
+		}
+		switch e.Kind() {
+		case expressions.KindAdd:
+			return expressions.LiteralNumber(a + b)
+		case expressions.KindSub:
+			return expressions.LiteralNumber(a - b)
+		case expressions.KindMul:
+			return expressions.LiteralNumber(a * b)
+		case expressions.KindDiv:
+			if b == 0 || a%b != 0 {
+				return nil
+			}
+			return expressions.LiteralNumber(a / b)
+		case expressions.KindMod:
+			if b == 0 {
+				return nil
+			}
+			return expressions.LiteralNumber(a % b)
+		}
+	}
+	return nil
+}
+
+// numericLiteralValue returns the integer value of an integer Literal.
+func numericLiteralValue(e expressions.Expression) (int64, bool) {
+	if e == nil || e.Kind() != expressions.KindLiteral || e.IsString() {
+		return 0, false
+	}
+	value, err := strconv.ParseInt(e.Name(), 10, 64)
+	return value, err == nil
 }
 
 // limitTopSQL ports limit_sql(..., top=True) (generator.py:2932-2948): the SELECT TOP form
@@ -987,7 +1071,7 @@ func (g *Generator) limitTopSQL(e expressions.Expression) string {
 		if !truthy(v) {
 			continue
 		}
-		parts = append(parts, g.gen(v))
+		parts = append(parts, g.gen(g.limitArg(v)))
 		if ex, ok := v.(expressions.Expression); !ok || !ex.IsNumber() {
 			needsParens = true
 		}
@@ -1301,10 +1385,19 @@ func (g *Generator) betweenSQL(e expressions.Expression) string {
 	this := g.sqlKey(e, "this")
 	low := g.sqlKey(e, "low")
 	high := g.sqlKey(e, "high")
-	if boolValue(e.Arg("symmetric")) {
+	symmetric, hasSymmetric := e.Arg("symmetric").(bool)
+	if symmetric && !g.dialect.SupportsBetweenFlags {
 		return "(" + this + " BETWEEN " + low + " AND " + high + " OR " + this + " BETWEEN " + high + " AND " + low + ")"
 	}
-	return this + " BETWEEN " + low + " AND " + high
+	flag := ""
+	if symmetric {
+		flag = " SYMMETRIC"
+	} else if hasSymmetric && g.dialect.SupportsBetweenFlags {
+		// ASYMMETRIC is the default semantics but an explicit spelling is preserved where the
+		// dialect supports the flags; elsewhere it is silently dropped (identical semantics).
+		flag = " ASYMMETRIC"
+	}
+	return this + " BETWEEN" + flag + " " + low + " AND " + high
 }
 
 func (g *Generator) inSQL(e expressions.Expression) string {
@@ -1472,6 +1565,22 @@ func (g *Generator) withinGroupSQL(e expressions.Expression) string {
 
 func (g *Generator) distinctSQL(e expressions.Expression) string {
 	this := g.expressions(exprsOptions{expression: e, flat: true})
+	if !g.dialect.MultiArgDistinct && len(e.Expressions()) > 1 {
+		// generators/generator.py:4411-4424: COUNT(DISTINCT a, b) becomes
+		// COUNT(DISTINCT CASE WHEN a IS NULL THEN NULL WHEN b IS NULL THEN NULL ELSE (a, b) END).
+		whens := make([]expressions.Expression, 0, len(e.Expressions()))
+		for _, arg := range e.Expressions() {
+			isNull := expressions.Is(expressions.Args{"this": arg, "expression": expressions.Null()})
+			whens = append(whens, expressions.If(expressions.Args{
+				"this": isNull, "true": expressions.Null(),
+			}))
+		}
+		caseExpr := expressions.Case(expressions.Args{
+			"ifs":     whens,
+			"default": expressions.Tuple(expressions.Args{"expressions": e.Expressions()}),
+		})
+		this = g.gen(caseExpr)
+	}
 	if this != "" {
 		this = " " + this
 	}
@@ -2289,13 +2398,11 @@ func (g *Generator) castSQLWithPrefix(e expressions.Expression, safePrefix strin
 }
 
 func (g *Generator) tryCastSQL(e expressions.Expression) string {
-	// MySQL and Postgres have no TRY_CAST; upstream routes exp.TryCast through no_trycast_sql
-	// (dialects/dialect.py:1261), which renders a plain CAST - so a MySQL cast-target rename
-	// (e.g. TEXT -> CHAR) applies without a stray TRY_ prefix. See generators/mysql.py:213 and
-	// generators/postgres.py:377. The MySQL-family dialects inherit that (StarRocks/Doris do
-	// not override it upstream), so their pin is CAST even though Doris 4.0 adds TRY_CAST
-	// natively; every other dialect keeps TRY_CAST (generator.py:4523).
-	if g.isDialect("mysql") || g.isDialect("postgres") {
+	// TRY_SUPPORTED (generator.py:543, base True; mysql/postgres/dremio disable it): a dialect
+	// without TRY_CAST routes exp.TryCast through no_trycast_sql (dialects/dialect.py:1261),
+	// which renders a plain CAST - so a MySQL cast-target rename (e.g. TEXT -> CHAR) applies
+	// without a stray TRY_ prefix.
+	if !g.dialect.TrySupported {
 		return g.castSQLWithPrefix(e, "")
 	}
 	return g.castSQLWithPrefix(e, "TRY_")
@@ -3302,4 +3409,54 @@ func (g *Generator) queryTransformSQL(e expressions.Expression) string {
 		}
 	}
 	return b.String()
+}
+
+// convertTimezoneSQL ports converttimezone_sql (generator.py:5600-5617): dialects that
+// support CONVERT_TIMEZONE render the function, the rest rewrite it as AT TIME ZONE chains.
+func (g *Generator) convertTimezoneSQL(e expressions.Expression) string {
+	if g.dialect.SupportsConvertTimezone {
+		return g.functionFallbackSQL(e)
+	}
+	sourceTZ := asExpression(e.Arg("source_tz"))
+	targetTZ := asExpression(e.Arg("target_tz"))
+	timestamp := asExpression(e.Arg("timestamp"))
+	if sourceTZ != nil && timestamp != nil {
+		timestamp = expressions.AtTimeZone(expressions.Args{
+			"this": expressions.Cast(expressions.Args{
+				"this": timestamp,
+				"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeTimestampNtz}),
+			}),
+			"zone": sourceTZ,
+		})
+	}
+	return g.gen(expressions.AtTimeZone(expressions.Args{"this": timestamp, "zone": targetTZ}))
+}
+
+// toCharSQL ports the base tochar_sql (generator.py:4889-4890): CAST(this AS TEXT).
+// Dialects that keep a TO_CHAR call override this through their dispatch.
+func (g *Generator) toCharSQL(e expressions.Expression) string {
+	return g.gen(expressions.Cast(expressions.Args{
+		"this": e.This(),
+		"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeText}),
+	}))
+}
+
+// nvl2SQL ports nvl2_sql (generator.py:5023-5036).
+func (g *Generator) nvl2SQL(e expressions.Expression) string {
+	if g.dialect.Nvl2Supported {
+		return g.functionFallbackSQL(e)
+	}
+	condition := expressions.Not(expressions.Args{
+		"this": expressions.Is(expressions.Args{"this": e.This(), "expression": expressions.Null()}),
+	})
+	args := expressions.Args{
+		"ifs": []expressions.Expression{expressions.If(expressions.Args{
+			"this": condition,
+			"true": asExpression(e.Arg("true")),
+		})},
+	}
+	if falseArg := asExpression(e.Arg("false")); falseArg != nil {
+		args["default"] = falseArg
+	}
+	return g.gen(expressions.Case(args))
 }

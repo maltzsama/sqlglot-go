@@ -38,6 +38,8 @@ var snowflakeTimeMapping = map[string]string{
 func Snowflake() *Dialect {
 	d := Base()
 	d.Name = "snowflake"
+	// generators/redshift.py:33 / snowflake.py:394 / spark.py:70: native CONVERT_TIMEZONE.
+	d.SupportsConvertTimezone = true
 
 	// dialects/snowflake.py:20-40 class attributes.
 	d.NormalizationStrategy = Uppercase

@@ -51,6 +51,9 @@ func Postgres() *Dialect {
 	d.NormalizeNotNull = false
 	// generators/postgres.py:245 JSON_TYPE_REQUIRED_FOR_EXTRACTION = True.
 	d.JSONTypeRequiredForExtraction = true
+	// Postgres has no TRY_CAST: upstream routes exp.TryCast through no_trycast_sql
+	// (generators/postgres.py:377), modeled here by disabling the capability.
+	d.TrySupported = false
 	// generators/postgres.py:250 SUPPORTS_WINDOW_EXCLUDE = True.
 	d.SupportsWindowExclude = true
 

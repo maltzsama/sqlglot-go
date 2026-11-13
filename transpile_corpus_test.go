@@ -207,53 +207,55 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 // Read-side parse gaps surface under their target's bucket with a "parse:" category.
 // Pass and total floors are monotonic: raise them, never lower them.
 const (
-	minPassTranspileBase        = 755
+	minPassTranspileBase        = 760
 	minPassTranspileAthena      = 7
-	minPassTranspileBigQuery    = 586
+	minPassTranspileBigQuery    = 588
 	minPassTranspileClickhouse  = 181
 	minPassTranspileDatabricks  = 207
 	minPassTranspileDoris       = 70
-	minPassTranspileDuckDB      = 618
-	minPassTranspileHive        = 389
+	minPassTranspileDremio      = 31
+	minPassTranspileDuckDB      = 625
+	minPassTranspileHive        = 390
 	minPassTranspileMaterialize = 26
 	minPassTranspileMySQL       = 219
-	minPassTranspileOracle      = 157
-	minPassTranspilePostgres    = 303
-	minPassTranspilePresto      = 409
+	minPassTranspileOracle      = 160
+	minPassTranspilePostgres    = 307
+	minPassTranspilePresto      = 410
 	minPassTranspileRedshift    = 150
 	minPassTranspileRisingWave  = 4
 	minPassTranspileSnowflake   = 665
-	minPassTranspileSpark       = 645
+	minPassTranspileSpark       = 648
 	minPassTranspileSpark2      = 54
 	minPassTranspileSQLite      = 115
 	minPassTranspileStarrocks   = 81
-	minPassTranspileTrino       = 84
-	minPassTranspileTSQL        = 290
+	minPassTranspileTrino       = 85
+	minPassTranspileTSQL        = 291
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
 const (
-	minTotalTranspileBase        = 920
+	minTotalTranspileBase        = 928
 	minTotalTranspileAthena      = 11
-	minTotalTranspileBigQuery    = 726
+	minTotalTranspileBigQuery    = 728
 	minTotalTranspileClickhouse  = 240
 	minTotalTranspileDatabricks  = 258
 	minTotalTranspileDoris       = 104
-	minTotalTranspileDuckDB      = 1423
-	minTotalTranspileHive        = 511
+	minTotalTranspileDremio      = 31
+	minTotalTranspileDuckDB      = 1427
+	minTotalTranspileHive        = 512
 	minTotalTranspileMaterialize = 32
 	minTotalTranspileMySQL       = 345
-	minTotalTranspileOracle      = 185
-	minTotalTranspilePostgres    = 441
-	minTotalTranspilePresto      = 612
+	minTotalTranspileOracle      = 187
+	minTotalTranspilePostgres    = 443
+	minTotalTranspilePresto      = 613
 	minTotalTranspileRedshift    = 188
 	minTotalTranspileRisingWave  = 6
 	minTotalTranspileSnowflake   = 988
-	minTotalTranspileSpark       = 836
+	minTotalTranspileSpark       = 839
 	minTotalTranspileSpark2      = 89
 	minTotalTranspileSQLite      = 152
 	minTotalTranspileStarrocks   = 100
-	minTotalTranspileTrino       = 148
+	minTotalTranspileTrino       = 149
 	minTotalTranspileTSQL        = 388
 )
 
@@ -301,6 +303,7 @@ func TestTranspileCorpus(t *testing.T) {
 		{"clickhouse", minPassTranspileClickhouse, minTotalTranspileClickhouse},
 		{"databricks", minPassTranspileDatabricks, minTotalTranspileDatabricks},
 		{"doris", minPassTranspileDoris, minTotalTranspileDoris},
+		{"dremio", minPassTranspileDremio, minTotalTranspileDremio},
 		{"duckdb", minPassTranspileDuckDB, minTotalTranspileDuckDB},
 		{"hive", minPassTranspileHive, minTotalTranspileHive},
 		{"materialize", minPassTranspileMaterialize, minTotalTranspileMaterialize},

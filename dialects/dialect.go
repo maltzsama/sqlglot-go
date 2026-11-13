@@ -197,6 +197,21 @@ type Dialect struct {
 	// whether the CREATE TABLE LIKE statement is supported (base True; Materialize overrides
 	// False, generators/materialize.py:15). Consumed by likeproperty_sql.
 	SupportsCreateTableLike bool
+	// Nvl2Supported ports NVL2_SUPPORTED (generator.py:519, base True; dremio False): when
+	// false, NVL2 renders as a CASE expression instead of the function call.
+	Nvl2Supported bool
+	// TrySupported ports TRY_SUPPORTED (generator.py:543, base True; mysql/postgres/dremio
+	// False): a TryCast renders TRY_CAST when supported, else a plain CAST.
+	TrySupported bool
+	// LimitOnlyLiterals ports LIMIT_ONLY_LITERALS (generator.py:531, base False; dremio True):
+	// a non-literal LIMIT/OFFSET argument is simplified to a literal before rendering.
+	LimitOnlyLiterals bool
+	// MultiArgDistinct ports MULTI_ARG_DISTINCT (generator.py:536, base True; dremio False):
+	// a multi-argument DISTINCT is rewritten through a CASE WHEN ... IS NULL guard.
+	MultiArgDistinct bool
+	// SupportsConvertTimezone ports SUPPORTS_CONVERT_TIMEZONE (generator.py:530, base False;
+	// dremio True): when false, CONVERT_TIMEZONE renders as the AT TIME ZONE form.
+	SupportsConvertTimezone bool
 	// SupportsBetweenFlags ports the generator flag of the same name (generator.py:608):
 	// whether SYMMETRIC/ASYMMETRIC flags are supported with BETWEEN (base False; postgres
 	// True, generators/postgres.py:280; Materialize and RisingWave re-override False).
@@ -684,6 +699,9 @@ func Base() *Dialect {
 		IgnoreNullsBeforeOrder:    true,
 		UnnestWithOrdinality:      true,
 		SupportsTableAliasColumns: true,
+		TrySupported:              true,
+		Nvl2Supported:             true,
+		MultiArgDistinct:          true,
 		SupportsNamedCTEColumns:   true,
 		// dialects/dialect.py LEAST_GREATEST_IGNORES_NULLS = True (base).
 		LeastGreatestIgnoresNulls: true,
@@ -1056,6 +1074,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return StarRocks(), nil
 	case "doris":
 		return Doris(), nil
+	case "dremio":
+		return Dremio(), nil
 	case "oracle":
 		return Oracle(), nil
 	case "redshift":

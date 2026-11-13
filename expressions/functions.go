@@ -40,6 +40,29 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	// LIKE(args) -> Like(this=args[1], expression=args[0]), wrapped in Escape when a third
 	// argument is present (build_like). DIVERGENCE (DEVIATIONS §1.29): a binary operand is
 	// parenthesized, since the infix rewrite otherwise re-associates (LIKE(a OR b, 'x')).
+	// parser.py:157-167 build_convert_timezone: a 2-argument call has no source zone
+	// (target_tz=args[0], timestamp=args[1]); a 3-argument call adds source_tz first.
+	"CONVERT_TIMEZONE": func(args []Expression) Expression {
+		if len(args) == 2 {
+			return newNode(KindConvertTimezone, Args{
+				"target_tz": seqGetExpr(args, 0),
+				"timestamp": seqGetExpr(args, 1),
+			})
+		}
+		return newNode(KindConvertTimezone, Args{
+			"source_tz": seqGetExpr(args, 0),
+			"target_tz": seqGetExpr(args, 1),
+			"timestamp": seqGetExpr(args, 2),
+		})
+	},
+	// functions.py:160: NVL2(this, true, false).
+	"NVL2": func(args []Expression) Expression {
+		return newNode(KindNvl2, Args{
+			"this":  seqGetExpr(args, 0),
+			"true":  seqGetExpr(args, 1),
+			"false": seqGetExpr(args, 2),
+		})
+	},
 	"GLOB": func(args []Expression) Expression {
 		return newNode(KindGlob, Args{
 			"this":       parenWrapBinary(seqGetExpr(args, 1)),
