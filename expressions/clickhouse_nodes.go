@@ -109,4 +109,10 @@ func JSONExists(args Args) Expression       { return newNode(KindJSONExists, arg
 func MultitableInserts(args Args) Expression { return newNode(KindMultitableInserts, args) }
 func ConditionalInsert(args Args) Expression { return newNode(KindConditionalInsert, args) }
 
-func ConnectByRoot(args Args) Expression { return newNode(KindConnectByRoot, args) }
+func ConnectByRoot(args Args) Expression     { return newNode(KindConnectByRoot, args) }
+func JSONPathFilter(args Args) Expression    { return newNode(KindJSONPathFilter, args) }
+func JSONPathRecursive(args Args) Expression { return newNode(KindJSONPathRecursive, args) }
+func JSONPathScript(args Args) Expression    { return newNode(KindJSONPathScript, args) }
+func JSONPathSelector(args Args) Expression  { return newNode(KindJSONPathSelector, args) }
+func JSONPathSlice(args Args) Expression     { return newNode(KindJSONPathSlice, args) }
+func JSONPathUnion(args Args) Expression     { return newNode(KindJSONPathUnion, args) }

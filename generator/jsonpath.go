@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/maltzsama/sqlglot-go/dialects"
 	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
@@ -16,6 +17,63 @@ func init() {
 	dispatch[expressions.KindJSONPathRoot] = func(*Generator, expressions.Expression) string { return "$" }
 	dispatch[expressions.KindJSONPathSubscript] = (*Generator).jsonPathSubscriptSQL
 	dispatch[expressions.KindJSONPathWildcard] = func(*Generator, expressions.Expression) string { return "*" }
+	// JSON_PATH_PART_TRANSFORMS entries this port needs (jsonpath.py:203-238).
+	dispatch[expressions.KindJSONPathFilter] = func(_ *Generator, e expressions.Expression) string { return "?" + e.Text("this") }
+	dispatch[expressions.KindJSONPathRecursive] = (*Generator).jsonPathRecursiveSQL
+	dispatch[expressions.KindJSONPathScript] = func(_ *Generator, e expressions.Expression) string { return "(" + e.Text("this") }
+	dispatch[expressions.KindJSONPathSelector] = func(g *Generator, e expressions.Expression) string {
+		return "[" + g.jsonPathPartValue(e.Arg("this")) + "]"
+	}
+	dispatch[expressions.KindJSONPathSlice] = (*Generator).jsonPathSliceSQL
+	dispatch[expressions.KindJSONPathUnion] = (*Generator).jsonPathUnionSQL
+}
+
+// jsonPathRecursiveSQL ports the JSONPathRecursive transform (jsonpath.py:206):
+// `..{e.this or ”}`. `this` is a string name or a JSONPathWildcard node.
+func (g *Generator) jsonPathRecursiveSQL(e expressions.Expression) string {
+	value := e.Arg("this")
+	if value == nil {
+		return ".."
+	}
+	if part := g.jsonPathPartValue(value); part != "" {
+		return ".." + part
+	}
+	return ".."
+}
+
+// jsonPathSliceSQL ports the JSONPathSlice transform (jsonpath.py:214-219):
+// ":".join("" if p is False else json_path_part(p) for p in [start, end, step] if p is not None).
+func (g *Generator) jsonPathSliceSQL(e expressions.Expression) string {
+	parts := make([]string, 0, 3)
+	for _, key := range []string{"start", "end", "step"} {
+		value := e.Arg(key)
+		if value == nil {
+			continue
+		}
+		if isFalseValue(value) {
+			parts = append(parts, "")
+			continue
+		}
+		parts = append(parts, g.jsonPathPartValue(value))
+	}
+	return strings.Join(parts, ":")
+}
+
+// jsonPathUnionSQL ports the JSONPathUnion transform (jsonpath.py:220-222).
+func (g *Generator) jsonPathUnionSQL(e expressions.Expression) string {
+	values, _ := e.Arg("expressions").([]any)
+	parts := make([]string, 0, len(values))
+	for _, value := range values {
+		parts = append(parts, g.jsonPathPartValue(value))
+	}
+	return "[" + strings.Join(parts, ",") + "]"
+}
+
+// isFalseValue reports whether a JSONPath slice arg is upstream's Python `False` marker,
+// which renders as the empty string in a slice.
+func isFalseValue(value any) bool {
+	b, ok := value.(bool)
+	return ok && !b
 }
 
 // jsonPathSQL ports jsonpath_sql (generator.py:3795-3801).
@@ -43,7 +101,7 @@ func (g *Generator) jsonPathKeySQL(e expressions.Expression) string {
 
 	name := e.Name()
 	quoted := boolValue(e.Arg("quoted"))
-	if (!quoted || !g.dialect.JSONPathKeyQuotedForcesBrackets) && isSafeJSONPathKey(name) {
+	if (!quoted || !g.dialect.JSONPathKeyQuotedForcesBrackets) && isSafeJSONPathKey(name, g.dialect.JSONPathKeySafety) {
 		return "." + name
 	}
 
@@ -52,7 +110,7 @@ func (g *Generator) jsonPathKeySQL(e expressions.Expression) string {
 		// The whole path is a quoted string literal, so a bracketed key must be escaped again.
 		part = g.escapeStr(part)
 	}
-	if g.dialect.JSONPathBracketedKeySupported {
+	if g.quoteJSONPathKeyUsingBrackets && g.dialect.JSONPathBracketedKeySupported {
 		return "[" + part + "]"
 	}
 	return "." + part
@@ -83,7 +141,7 @@ func (g *Generator) jsonPathPartValue(value any) string {
 	case int64:
 		return strconv.FormatInt(v, 10)
 	case string:
-		if g.dialect.JSONPathSingleQuoteEscape {
+		if g.quoteJSONPathKeyUsingBrackets && g.dialect.JSONPathSingleQuoteEscape {
 			// Upstream formats the unescaped expression here (generator.py:3817), a quirk kept
 			// for parity.
 			return "\\'" + v + "\\'"
@@ -93,9 +151,37 @@ func (g *Generator) jsonPathPartValue(value any) string {
 	return ""
 }
 
-// isSafeJSONPathKey ports SAFE_IDENTIFIER_RE (expressions/core.py:2810): a word that may appear
-// after a dot without brackets.
-func isSafeJSONPathKey(name string) bool {
+// isSafeJSONPathKey ports SAFE_JSON_PATH_KEY_RE (generator.py:853, base SAFE_IDENTIFIER_RE;
+// generators/hive.py:237 and generators/bigquery.py override it): a key that may appear after
+// a dot without brackets.
+func isSafeJSONPathKey(name string, safety dialects.JSONPathKeySafety) bool {
+	switch safety {
+	case dialects.JSONPathKeySafetyBigQuery:
+		// ^[\-\w]*$ — a dash and word characters, including the empty key.
+		for _, r := range name {
+			if r != '-' && r != '_' && !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+				return false
+			}
+		}
+		return true
+	case dialects.JSONPathKeySafetyDash:
+		// ^[_\-a-zA-Z][\-\w]*$ — the first rune may also be a dash.
+		if name == "" {
+			return false
+		}
+		for i, r := range name {
+			if r == '-' || r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r) {
+				if i == 0 && unicode.IsDigit(r) {
+					return false
+				}
+				continue
+			}
+			return false
+		}
+		return true
+	}
+
+	// Base: ^[_a-zA-Z][\w]*$.
 	if name == "" {
 		return false
 	}

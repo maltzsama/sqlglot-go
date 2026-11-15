@@ -1058,6 +1058,12 @@ const (
 	KindJSONPathRoot
 	KindJSONPathSubscript
 	KindJSONPathWildcard
+	KindJSONPathFilter
+	KindJSONPathRecursive
+	KindJSONPathScript
+	KindJSONPathSelector
+	KindJSONPathSlice
+	KindJSONPathUnion
 	KindMap
 	KindMedian
 	KindNullif
@@ -1963,6 +1969,12 @@ var argTypes = map[Kind][]argSpec{
 	KindJSONPathRoot:             {},
 	KindJSONPathSubscript:        {{"this", true}},
 	KindJSONPathWildcard:         {},
+	KindJSONPathFilter:           {{"this", true}},
+	KindJSONPathRecursive:        {{"this", false}},
+	KindJSONPathScript:           {{"this", true}},
+	KindJSONPathSelector:         {{"this", true}},
+	KindJSONPathSlice:            {{"start", false}, {"end", false}, {"step", false}},
+	KindJSONPathUnion:            {{"expressions", true}},
 	KindMap:                      {{"keys", false}, {"values", false}},
 	KindMedian:                   {{"this", true}},
 	KindNullif:                   {{"this", true}, {"expression", true}},
@@ -3421,6 +3433,12 @@ var className = map[Kind]string{
 	KindJSONPathRoot:             "JSONPathRoot",
 	KindJSONPathSubscript:        "JSONPathSubscript",
 	KindJSONPathWildcard:         "JSONPathWildcard",
+	KindJSONPathFilter:           "JSONPathFilter",
+	KindJSONPathRecursive:        "JSONPathRecursive",
+	KindJSONPathScript:           "JSONPathScript",
+	KindJSONPathSelector:         "JSONPathSelector",
+	KindJSONPathSlice:            "JSONPathSlice",
+	KindJSONPathUnion:            "JSONPathUnion",
 	KindMap:                      "Map",
 	KindMedian:                   "Median",
 	KindNullif:                   "Nullif",

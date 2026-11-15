@@ -51,8 +51,12 @@ type Generator struct {
 	quoteStart      string
 	quoteEnd        string
 
-	escapedQuoteEnd                string
-	escapedIdentifierEnd           string
+	escapedQuoteEnd      string
+	escapedIdentifierEnd string
+	// quoteJSONPathKeyUsingBrackets ports generator._quote_json_path_key_using_brackets
+	// (generator.py:932, base True). BigQuery's JSON_QUERY/JSON_VALUE/JSON_QUERY_ARRAY
+	// handler flips it off while rendering so the path key uses `."key"` instead of `['key']`.
+	quoteJSONPathKeyUsingBrackets  bool
 	stringsSupportEscapedSequences bool
 	// escapedByteQuoteEnd ports _escaped_byte_quote_end (generator.py:906-910): like
 	// escapedQuoteEnd, but built from the dialect's BYTE_END (empty when the dialect has no
@@ -129,6 +133,7 @@ func New(d *dialects.Dialect, o Options) *Generator {
 	}
 
 	return &Generator{
+		quoteJSONPathKeyUsingBrackets:      true,
 		opts:                               o,
 		pretty:                             o.Pretty,
 		identify:                           o.Identify,

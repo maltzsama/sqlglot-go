@@ -94,6 +94,13 @@ func BigQuery() *Dialect {
 	d.QueryResultsAreStructs = true
 	d.JSONExtractScalarScalarOnly = true
 	d.JSONPathSingleDotIsWildcard = true
+	// generators/bigquery.py:268 JSON_PATH_SINGLE_QUOTE_ESCAPE = True.
+	d.JSONPathSingleQuoteEscape = true
+	// generators/bigquery.py:266 SAFE_JSON_PATH_KEY_RE = ^[\-\w]*$.
+	d.JSONPathKeySafety = JSONPathKeySafetyBigQuery
+	// dialects/bigquery.py:161-166 JSONPathTokenizer: VAR_TOKENS adds DASH and NUMBER.
+	d.JSONPathVarDash = true
+	d.JSONPathVarNumber = true
 	d.LeastGreatestIgnoresNulls = false
 	d.DefaultNullType = exp.DTypeBigInt
 	d.PrioritizeNonLiteralTypes = true

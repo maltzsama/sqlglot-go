@@ -108,9 +108,8 @@ mostly the **optimizer** (port 1:1 from `.reference/`, port the matching upstrea
 differential-check against the pinned Python):
 
 - THE OPTIMIZER is ported, with the top-level `optimize()` rule pipeline (`Optimize`, `Rules`)
-  and `canonicalize_internal_names` (not a default rule; its 65-fixture upstream suite runs with
-  six documented gaps that depend on the deferred JSONPath tokenizer and BigQuery UNNEST
-  qualification). Ported: `qualify` +
+  and `canonicalize_internal_names` (not a default rule; its 65-fixture upstream suite runs
+  clean). Ported: `qualify` +
   `scope`/`traverse_scope` (+ `isolate_table_selects`),
   `eliminate_ctes` + `journal`, `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries`,
   `merge_subqueries`, `annotate_types`, `simplify`, `normalize`, `eliminate_joins`,
@@ -123,7 +122,7 @@ differential-check against the pinned Python):
   `optimizer/testdata/annotate_gaps.txt`.
 - CROSS-DIALECT transpilation: verified against upstream's `validate_all` read/write pairs —
   `TestTranspileCorpus` runs every pair whose dialects are all registered (`testdata/transpile_corpus.jsonl`,
-  8881 pairs, 6308 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
+  8881 pairs, 6322 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
   What remains are the per-dialect override tables that make cross-dialect output correct — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
@@ -865,9 +864,8 @@ rendering; the INSERT TABLE source; LIKE/ILIKE ESCAPE; and the STRING/VOID type 
 
 Corpus: 227 `spark` and 176 `databricks` `validate_identity` cases from
 `tests/dialects/test_spark.py` and `tests/dialects/test_databricks.py`
-(`scripts/extract_dialect_corpus.py`), at **227/227** and **175/176**. The remaining Databricks
-row is the `GET_JSON_OBJECT` path rewrite, which needs the deferred JSONPath tokenizer
-(DEVIATIONS §1.27). Regression tests: `spark2_test.go`, `spark_test.go`, `databricks_test.go`.
+(`scripts/extract_dialect_corpus.py`), at **227/227** and **176/176**. Regression tests:
+`spark2_test.go`, `spark_test.go`, `databricks_test.go`.
 The optimizer fixtures that do not pass yet are recorded in `optimizeGaps`.
 
 ## BigQuery dialect — DONE (issue #41)
@@ -892,9 +890,9 @@ GROUP BY alias rewrite, `IGNORE NULLS` inside aggregates, UNPIVOT alias literals
 dataset, precision stripping on CAST, the reserved-keyword quoting set, and the BigQuery type map.
 
 Corpus: 689 `validate_identity` cases from `tests/dialects/test_bigquery.py`
-(`scripts/extract_dialect_corpus.py --dialects bigquery`), at **683/689**. The six open rows are
-JSON-path rewrites (e.g. `JSON_EXTRACT(doc, '$. a b c .d')` → `$[' a b c '].d`), which need the
-deferred JSONPath tokenizer (DEVIATIONS §1.27). Regression tests: `bigquery_test.go`. The newly
+(`scripts/extract_dialect_corpus.py --dialects bigquery`), at **689/689**. The JSON-path rows
+now rewrite through the ported JSONPath tokenizer (`Dialect.to_json_path`). Regression tests:
+`bigquery_test.go`. The newly
 running annotate fixtures that do not pass yet are recorded in `optimizer/testdata/annotate_gaps.txt`.
 
 ## DuckDB dialect — DONE (issue #39)

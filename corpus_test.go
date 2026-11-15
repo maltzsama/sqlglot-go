@@ -233,7 +233,7 @@ func writeGaps(fails map[gapKey]string) error {
 // burndown list. Pass and total floors are monotonic: raise them, never lower them.
 const (
 	minPassBase        = 980
-	minPassBigQuery    = 683
+	minPassBigQuery    = 689
 	minPassMySQL       = 428
 	minPassPostgres    = 468
 	minPassAthena      = 51
@@ -249,8 +249,8 @@ const (
 	minPassMaterialize = 24
 	minPassRisingWave  = 7
 	minPassSpark       = 227
-	minPassDatabricks  = 175
-	minPassDuckDB      = 529
+	minPassDatabricks  = 176
+	minPassDuckDB      = 530
 	minPassSnowflake   = 1210
 	minPassSQLite      = 136
 	minPassDremio      = 46

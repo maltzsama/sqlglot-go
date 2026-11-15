@@ -7,14 +7,12 @@
 {"read":"","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
 {"read":"","write":"athena","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
 {"read":"","write":"bigquery","category":"gen: cast/type","sql":"TS_OR_DS_TO_DATE(x)"}
-{"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"\n                SELECT\n                  \"u\".\"user_email\" AS \"user_email\",\n                  \"_q_0\".\"d\".\"user_id\" AS \"user_id\",\n                  \"_q_1\".\"account_id\" AS \"account_id\"\n                FROM\n                  \"analytics_staging\".\"stg_mongodb__users\" AS \"u\",\n                  UNNEST(\"u\".\"cluster_details\") AS \"_q_0\"(\"d\"),\n                  UNNEST(\"_q_0\".\"d\".\"account_ids\") AS \"_q_1\"(\"account_id\")\n                WHERE\n                  NOT \"_q_1\".\"account_id\" IS NULL\n                "}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE(the_array, target)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"DATE_TRUNC('DAY', x)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"DATE_TRUNC('YEAR', x)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$.y[*]')"}
-{"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$[\"a b\"]')"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"LEVENSHTEIN(coalesce(col1, col2), coalesce(col2, col1))"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"LEVENSHTEIN(col1, col2)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
@@ -369,7 +367,6 @@
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"CONCAT_WS('-', x)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"DATE_TRUNC('DAY', x)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"DATE_TRUNC('YEAR', x)"}
-{"read":"","write":"spark","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$[\"a b\"]')"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"LTRIM('Hello World', 'H')"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"RTRIM('Hello World', 'd')"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
@@ -602,9 +599,6 @@
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM a LEFT JOIN b ON a.key = b.key AND a.val IN UNNEST(b.arr)"}
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM a WHERE b IN UNNEST([1, 2, 3])"}
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM a WHERE b NOT IN UNNEST([1, 2, 3])"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM x INNER JOIN UNNEST(y)"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM x LEFT JOIN UNNEST(y)"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM x LEFT OUTER JOIN UNNEST(y)"}
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT ANY_VALUE(fruit HAVING MAX sold) FROM Store"}
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT ANY_VALUE(fruit HAVING MIN sold) FROM Store"}
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT ARRAY_CONCAT_AGG(arr ORDER BY y) FROM (SELECT [1, 2] AS arr, 1 AS y) AS t"}
@@ -919,7 +913,6 @@
 {"read":"duckdb","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"ISNAN(x)"}
-{"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t, UNNEST(\"t1\".\"t2\".\"t3\") \"t1\" (\"col\")"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)"}
@@ -1090,7 +1083,6 @@
 {"read":"hive","write":"bigquery","category":"gen: cast/type","sql":"DATE_FORMAT('2020-01-01', 'yyyy-MM-dd HH:mm:ss')"}
 {"read":"hive","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"hive","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SPACE(2)"}
-{"read":"hive","write":"databricks","category":"gen: transpile mismatch","sql":"WITH t AS (SELECT '{\"x-y\": \"z\"}' AS c) SELECT GET_JSON_OBJECT(c, '$.x-y') FROM t"}
 {"read":"hive","write":"databricks","category":"gen: transpile mismatch","sql":"x DIV y"}
 {"read":"hive","write":"duckdb","category":"gen: cast/type","sql":"1.0bd"}
 {"read":"hive","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF(TO_DATE(y), x)"}
@@ -1886,12 +1878,6 @@
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM (TABLE(GENERATOR(ROWCOUNT => 5)) JOIN other ON 1 = 1)"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM example SAMPLE (3 ROWS) SEED (82)"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM produce PIVOT(SUM(produce.sales) FOR produce.quarter IN ('Q1', 'Q2'))"}
-{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 FULL OUTER JOIN t2"}
-{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 INNER JOIN t2"}
-{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 LEFT JOIN t2"}
-{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 LEFT OUTER JOIN t2"}
-{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 RIGHT JOIN t2"}
-{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 RIGHT OUTER JOIN t2"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT 1 FROM TABLE(GENERATOR(ROWCOUNT => 5))"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT 1 WHERE 'abc' ILIKE ANY('%a%')"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT 1 WHERE 'abc' LIKE ALL ('%a%')"}

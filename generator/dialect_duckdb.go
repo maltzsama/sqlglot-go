@@ -79,6 +79,10 @@ func init() {
 		expressions.KindDateBin:           clickhouseRename("TIME_BUCKET"),
 		expressions.KindArray:             duckDBArraySQL,
 		expressions.KindStruct:            duckDBStructSQL,
+		// generators/duckdb.py:3145-3160: DuckDB rejects `JOIN UNNEST(...)` without an ON
+		// clause, so a synthetic UNNEST join gets a dummy ON TRUE and a plain comma join
+		// loses its synthetic side/kind.
+		expressions.KindJoin:              duckDBJoinSQL,
 		expressions.KindJSONExtract:       duckDBArrowJSONExtract,
 		expressions.KindJSONExtractScalar: duckDBArrowJSONExtract,
 		expressions.KindJSONExtractArray:  duckDBArrowJSONExtractArray,
@@ -965,4 +969,22 @@ func duckDBDiffUnit(unit expressions.Expression) any {
 		return expressions.LiteralString(strings.ToUpper(unit.Name()))
 	}
 	return unit
+}
+
+// duckDBJoinSQL ports the DuckDBGenerator.join_sql override (generators/duckdb.py:3145-3160):
+// DuckDB has no ON-less `LEFT/INNER JOIN UNNEST(...)`, so a synthetic UNNEST join gets a
+// dummy ON TRUE; a plain comma join has its synthetic side/kind cleared first.
+func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
+	if !truthy(e.Arg("using")) && !truthy(e.Arg("on")) && strings.ToUpper(e.Text("method")) == "" {
+		switch strings.ToUpper(e.Text("kind")) {
+		case "", "INNER", "OUTER":
+			if this := asExpression(e.Arg("this")); this != nil && this.Kind() == expressions.KindUnnest {
+				e.Set("on", expressions.True_())
+				return g.joinSQL(e)
+			}
+			e.Set("side", nil)
+			e.Set("kind", nil)
+		}
+	}
+	return g.joinSQL(e)
 }

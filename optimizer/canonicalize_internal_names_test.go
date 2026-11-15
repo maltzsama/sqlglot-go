@@ -44,26 +44,11 @@ func canonicalSQL(t *testing.T, e exp.Expression, dialect string) string {
 	return got
 }
 
-// canonicalizeInternalNamesGaps are fixtures this port can't reproduce yet because their
-// expected output depends on upstream behavior that is ported separately from
-// canonicalize_internal_names itself: the deferred JSONPath tokenizer, and two qualify-side
-// gaps in BigQuery UNNEST handling (the internal element alias qualifier and struct-field
-// resolution).
-var canonicalizeInternalNamesGaps = map[int]string{
-	33: "JSONPath tokenizer deferred (DEVIATIONS.md 1.27): the path stays a Literal, so JSONExtract.output_name cannot derive 'field'",
-	52: "qualify renders the internal UNNEST element alias `_0` as a column qualifier where upstream hides it",
-	53: "qualify qualifies the UNNEST pseudo-column with its element alias where upstream leaves it unqualified",
-	54: "qualify cannot resolve a BigQuery UNNEST struct field (panic: Column 'sid' could not be resolved)",
-	55: "qualify prefixes a UNNEST struct-field ref with the internal table alias where upstream leaves it unqualified",
-	56: "qualify qualifies UNNEST element-alias refs with the table alias where upstream leaves them unqualified",
-	57: "qualify qualifies a whole-row UNNEST element alias with its table alias where upstream leaves it unqualified",
-}
-
 // TestCanonicalizeInternalNamesFixtures ports the fixture half of
 // test_canonicalize_internal_names (tests/test_optimizer.py:1521-1534).
 func TestCanonicalizeInternalNamesFixtures(t *testing.T) {
 	sch := canonicalizeInternalNamesSchema()
-	checkPassFixturesWith(t, "canonicalize_internal_names.sql", false, canonicalizeInternalNamesGaps, func(e exp.Expression, dialect string) exp.Expression {
+	checkPassFixturesWith(t, "canonicalize_internal_names.sql", false, nil, func(e exp.Expression, dialect string) exp.Expression {
 		opts := optimizer.DefaultQualifyOpts()
 		opts.Schema = sch
 		opts.Dialect = dialect
@@ -206,13 +191,11 @@ func TestCanonicalizeInternalNamesContract(t *testing.T) {
 		t.Errorf("selected sources = %d, want 3", got)
 	}
 
-	// UNNEST whose element type is unresolved after qualify must not crash. The upstream
-	// parser turns the comma-separated UNNEST into `JOIN ... ON TRUE`; this port keeps the
-	// comma form, so the fixture-level canonicalization (which already handles the UNNEST
-	// pseudo-columns) is asserted instead of the join spelling.
+	// UNNEST whose element type is unresolved after qualify must not crash, and DuckDB
+	// renders the comma UNNEST as JOIN ... ON TRUE (generators/duckdb.py:3145-3160).
 	t.Run("duckdb unnest", func(t *testing.T) {
 		unnest := canon("SELECT v FROM t, UNNEST(t.arr) AS v(v)", "duckdb", schema.M("t", schema.M("arr", "ARRAY<INT>")), "", "")
-		if got, want := unnest, `SELECT "_t1"."_c0" AS "v" FROM "_t0" AS "_t0", UNNEST("_t0"."arr") AS "_t1"("_c0")`; got != want {
+		if got, want := unnest, `SELECT "_t1"."_c0" AS "v" FROM "_t0" AS "_t0" JOIN UNNEST("_t0"."arr") AS "_t1"("_c0") ON TRUE`; got != want {
 			t.Errorf("unnest: got %q, want %q", got, want)
 		}
 	})

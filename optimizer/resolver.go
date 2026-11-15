@@ -204,7 +204,46 @@ func (r *Resolver) GetSourceColumns(name string, onlyVisible ...bool) []string {
 		sourceExpr := source.Expression
 		if sourceExpr != nil && sourceExpr.Is(exp.TraitUDTF) {
 			columns = copyStringSlice(sourceExpr.NamedSelects())
-			// TODO(slice 4c): port UNNEST_COLUMN_ONLY / Explode / Lateral Query type-aware branches.
+			switch sourceExpr.Kind() {
+			case exp.KindUnnest:
+				// BigQuery scopes unnested structs as tables, so a struct field can be
+				// selected directly; handles the statically defined unnest too
+				// (resolver.py:161-176).
+				if r.dialect.UnnestColumnOnly {
+					if typ := sourceExpr.Type(); typ == nil || typ.IsType(exp.DTypeUnknown) {
+						if unnestExpr, ok := seqGet(expressionsFor(sourceExpr, "expressions"), 0); ok &&
+							unnestExpr != nil && unnestExpr.Kind() == exp.KindColumn && r.scope.Parent != nil {
+							if colType := r.getUnnestColumnType(unnestExpr, r.scope.Parent); colType != nil {
+								if colType.IsType(exp.DTypeArray) {
+									if elementType, ok := seqGet(colType.Expressions(), 0); ok {
+										sourceExpr.SetType(elementType.Copy())
+									}
+								} else {
+									sourceExpr.SetType(colType.Copy())
+								}
+							}
+						}
+					}
+					columns = append(columns, structFieldNames(sourceExpr.Type())...)
+				}
+			case exp.KindLateral:
+				lateralThis := asExpression(sourceExpr.Arg("this"))
+				if lateralThis == nil {
+					break
+				}
+				if lateralThis.Kind() == exp.KindExplode {
+					// resolver.py:177-188: resolve the exploded column's struct fields when the
+					// operand is qualified. An unqualified operand would recurse without bound
+					// on this very source's columns, so it is skipped.
+					if explodeCol := asExpression(lateralThis.Arg("this")); explodeCol != nil &&
+						explodeCol.Kind() == exp.KindColumn && explodeCol.Text("table") != "" && source.Parent != nil {
+						columns = append(columns, structFieldNames(r.getUnnestColumnType(explodeCol, source.Parent))...)
+					}
+				} else if lateralThis.Is(exp.TraitQuery) {
+					// resolver.py:189-191.
+					columns = copyStringSlice(lateralThis.NamedSelects())
+				}
+			}
 		} else if sourceExpr != nil && sourceExpr.Is(exp.TraitSetOperation) {
 			columns = r.GetSourceColumnsFromSetOp(sourceExpr)
 		} else if sourceExpr != nil {
@@ -413,4 +452,81 @@ func (r *Resolver) getUnambiguousColumns(sourceColumns map[string][]string, orde
 		}
 	}
 	return unambiguousColumns
+}
+
+// structFieldNames ports Resolver._struct_field_names (resolver.py:360-368): the field names
+// of a STRUCT type, looking through an ARRAY element type first.
+func structFieldNames(colType exp.Expression) []string {
+	if colType == nil {
+		return nil
+	}
+	if colType.IsType(exp.DTypeArray) {
+		elementType, _ := seqGet(colType.Expressions(), 0)
+		colType = elementType
+	}
+	if colType == nil || !colType.IsType(exp.DTypeStruct) {
+		return nil
+	}
+	names := make([]string, 0, len(colType.Expressions()))
+	for _, field := range colType.Expressions() {
+		names = append(names, field.Name())
+	}
+	return names
+}
+
+// getUnnestColumnType ports Resolver._get_unnest_column_type (resolver.py:370-395): the type
+// of a column being unnested/exploded, traced through CTEs/subqueries to the base table.
+func (r *Resolver) getUnnestColumnType(column exp.Expression, scope *Scope) exp.Expression {
+	if column == nil || scope == nil {
+		return nil
+	}
+	tableName := column.Text("table")
+	if tableName == "" {
+		parentResolver := NewResolver(scope, r.schema, r.inferSchema)
+		table := parentResolver.GetTable(column)
+		if table == nil {
+			return nil
+		}
+		tableName = table.Name()
+	}
+	source, ok := scope.Sources[tableName]
+	if !ok || source == nil {
+		return nil
+	}
+	return r.getColumnTypeFromScope(source, column, map[any]bool{})
+}
+
+// getColumnTypeFromScope ports Resolver._get_column_type_from_scope (resolver.py:397-430).
+// visited guards against cycles in the scope graph (a recursive CTE's self-reference), which
+// upstream avoids through its (source identity, column name) memo.
+func (r *Resolver) getColumnTypeFromScope(source any, column exp.Expression, visited map[any]bool) exp.Expression {
+	if source == nil || visited[source] {
+		return nil
+	}
+	visited[source] = true
+
+	if table, ok := source.(exp.Expression); ok && table != nil && table.Kind() == exp.KindTable {
+		if r.schema != nil {
+			colType, err := r.schema.GetColumnType(table, column, r.dialect, nil)
+			if err == nil && colType != nil && !colType.IsType(exp.DTypeUnknown) {
+				return colType
+			}
+		}
+		return nil
+	}
+
+	scope, ok := source.(*Scope)
+	if !ok || scope == nil {
+		return nil
+	}
+	for _, name := range scope.sourceOrder {
+		nested, ok := scope.Sources[name]
+		if !ok {
+			continue
+		}
+		if colType := r.getColumnTypeFromScope(nested, column, visited); colType != nil && !colType.IsType(exp.DTypeUnknown) {
+			return colType
+		}
+	}
+	return nil
 }

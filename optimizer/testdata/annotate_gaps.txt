@@ -60,8 +60,6 @@ annotate_functions.sql|bigquery|388
 annotate_functions.sql|bigquery|389
 annotate_functions.sql|bigquery|390
 annotate_functions.sql|bigquery|391
-annotate_functions.sql|bigquery|392
-annotate_functions.sql|bigquery|393
 annotate_functions.sql|bigquery|394
 annotate_functions.sql|bigquery|395
 annotate_functions.sql|bigquery|396
@@ -138,9 +136,7 @@ annotate_functions.sql|bigquery|491
 annotate_functions.sql|bigquery|501
 annotate_functions.sql|bigquery|503
 annotate_functions.sql|bigquery|505
-annotate_functions.sql|bigquery|506
 annotate_functions.sql|bigquery|507
-annotate_functions.sql|bigquery|508
 annotate_functions.sql|bigquery|509
 annotate_functions.sql|bigquery|510
 annotate_functions.sql|bigquery|511
