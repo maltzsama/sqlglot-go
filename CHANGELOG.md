@@ -18,6 +18,14 @@ merged, tags the version and publishes the GitHub release. See
 [AGENTS.md § Releasing](./AGENTS.md#releasing). Entries for **v0.5.0 and earlier** were written by hand
 before release-please was adopted.
 
+## [0.40.0](https://github.com/maltzsama/sqlglot-go/compare/v0.39.0...v0.40.0) (2026-11-15)
+
+
+### Features
+
+* **optimizer:** port canonicalize_internal_names ([020bdf6](https://github.com/maltzsama/sqlglot-go/commit/020bdf643ed731ed8f799e7d8ab954df7fab09c8))
+* **optimizer:** port canonicalize_internal_names ([#66](https://github.com/maltzsama/sqlglot-go/issues/66)) ([ece7be8](https://github.com/maltzsama/sqlglot-go/commit/ece7be87ae789402a23d89d722441890eb256206))
+
 ## [0.39.0](https://github.com/maltzsama/sqlglot-go/compare/v0.38.0...v0.39.0) (2026-11-15)
 
 
