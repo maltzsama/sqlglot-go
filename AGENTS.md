@@ -55,11 +55,10 @@ correctness rationale (matches the DB) or an explicit, tracked feature decision 
 `go test ./...` is green. The parse → generate pipeline is at **100% round-trip parity** for base +
 MySQL + Postgres — **1876/1876** base-corpus cases (base 980/980, MySQL 428/428, Postgres 468/468),
 and every registered dialect meets its floor in the per-dialect corpus
-(`testdata/dialect_identity.jsonl`, 6575 records); the open rows are the Databricks
-`GET_JSON_OBJECT` path rewrite, six BigQuery JSON-path rewrites, 36 DuckDB cases, and 333
+(`testdata/dialect_identity.jsonl`, 6575 records); the open rows are 35 DuckDB cases and 333
 Snowflake cases (`testdata/parity_gaps.txt`). Cross-dialect transpilation is verified the same way
 against upstream's `validate_all` read/write pairs (`testdata/transpile_corpus.jsonl`,
-`TestTranspileCorpus`): 6308/8881 pairs pass, with the open pairs in `testdata/transpile_gaps.txt`.
+`TestTranspileCorpus`): 6322/8881 pairs pass, with the open pairs in `testdata/transpile_gaps.txt`.
 AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
 `exp.Command` where upstream builds a structured node (`fidelity_test.go` +
 `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
@@ -78,7 +77,7 @@ table qualification (`QualifyOpts.SearchPath`), top-level `UPDATE`/`DELETE`/`MER
 structural PG `EXPLAIN`, MySQL `REPLACE`, and the `FoldIdentifierName`/`IsReservedKeyword`
 helpers. See **[CHANGELOG.md](./CHANGELOG.md)** for the per-version history.
 
-**Remaining work** (see `ROADMAP.md`): closing the cross-dialect transpile gaps (`testdata/transpile_gaps.txt`, issue #33's burndown); the deferred JSONPath tokenizer (used by `to_json_path`); and the dialects beyond the registered set.
+**Remaining work** (see `ROADMAP.md`): closing the cross-dialect transpile gaps (`testdata/transpile_gaps.txt`, issue #33's burndown); the `->`/`->>` arrow operators' JSONPath construction (`build_json_extract_path`); and the dialects beyond the registered set.
 The parse/generate round-trip itself is done — a construct upstream parses that this port doesn't is a
 regression, not expected.
 

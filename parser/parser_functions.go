@@ -524,3 +524,20 @@ func (p *Parser) parseGapFill() exp.Expression {
 	args = append(args, p.parseCsv(func() exp.Expression { return p.parseLambda(false) })...)
 	return p.validateExpression(exp.FromArgList(exp.KindGapFill, args), exprArgs(args))
 }
+
+// normalizeJSONPathArg ports the dialect.to_json_path call inside the JSON function builders
+// (parser.py:104-118, 425-431): the path argument of JSON_EXTRACT, JSON_EXTRACT_SCALAR,
+// JSON_EXTRACT_PATH_TEXT and JSON_KEYS becomes a JSONPath AST when the dialect's JSONPath
+// tokenizer accepts it. Other functions pass through untouched.
+func (p *Parser) normalizeJSONPathArg(e exp.Expression) exp.Expression {
+	if e == nil {
+		return e
+	}
+	switch e.Kind() {
+	case exp.KindJSONExtract, exp.KindJSONExtractScalar, exp.KindJSONExtractArray, exp.KindJSONKeys:
+		if path := asExpr(e.Arg("expression")); path != nil {
+			e.Set("expression", p.dialect.ToJSONPath(path))
+		}
+	}
+	return e
+}

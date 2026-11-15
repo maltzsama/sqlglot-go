@@ -451,7 +451,20 @@ func bigQueryJSONExtractSQL(g *Generator, e expressions.Expression) string {
 	if name == "" {
 		name = g.sqlName(e.Kind())
 	}
-	return g.funcCall(strings.ToUpper(name), g.fallbackArgs(e), "(", ")", true)
+	upper := strings.ToUpper(name)
+
+	// generators/bigquery.py:231-246: JSON_QUERY, JSON_VALUE and JSON_QUERY_ARRAY escape the
+	// path key with double quotes, so bracket-key quoting is disabled around the render.
+	dquoteEscaping := upper == "JSON_QUERY" || upper == "JSON_VALUE" || upper == "JSON_QUERY_ARRAY"
+	previous := g.quoteJSONPathKeyUsingBrackets
+	if dquoteEscaping {
+		g.quoteJSONPathKeyUsingBrackets = false
+	}
+	sql := g.funcCall(upper, g.fallbackArgs(e), "(", ")", true)
+	if dquoteEscaping {
+		g.quoteJSONPathKeyUsingBrackets = previous
+	}
+	return sql
 }
 
 // bigQueryJSONFormatSQL ports the JSONFormat transform (generators/bigquery.py:355-359).
@@ -861,9 +874,11 @@ func exprList(value any) []expressions.Expression {
 }
 
 // bigQuerySelectSQL ports the Select preprocess pipeline (generators/bigquery.py:387-396)
-// for the transforms this port has: _alias_ordered_group rewrites a GROUP BY expression that
-// exactly matches a projection alias into a reference to that alias.
+// for the transforms this port has: unqualify_unnest strips the synthetic UNNEST table
+// qualifier, and _alias_ordered_group rewrites a GROUP BY expression that exactly matches a
+// projection alias into a reference to that alias.
 func bigQuerySelectSQL(g *Generator, e expressions.Expression) string {
+	e = unqualifyUnnest(e)
 	group := asExpression(e.Arg("group"))
 	order := asExpression(e.Arg("order"))
 	if group != nil && order != nil {

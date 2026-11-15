@@ -40,6 +40,8 @@ func DuckDB() *Dialect {
 	d.SupportsLimitAll = true
 	d.SupportsFixedSizeArrays = true
 	d.StrictJSONPathSyntax = false
+	// dialects/duckdb.py:55-65 to_json_path keeps JSON-pointer paths ("/..." or "[#...") literal.
+	d.JSONPathPointerSyntax = true
 	d.NumbersCanBeUnderscoreSeparated = true
 	d.UUIDIsStringType = false
 	d.NormalizationStrategy = CaseInsensitive

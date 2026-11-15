@@ -2,11 +2,26 @@ package dialects
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
 	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/jsonpath"
 	"github.com/maltzsama/sqlglot-go/tokens"
+)
+
+// JSONPathKeySafety selects the dialect's SAFE_JSON_PATH_KEY_RE variant
+// (generator.py:853 base; generators/hive.py:237 and generators/bigquery.py).
+type JSONPathKeySafety int
+
+const (
+	// JSONPathKeySafetyBase is ^[_a-zA-Z][\w]*$ (SAFE_IDENTIFIER_RE).
+	JSONPathKeySafetyBase JSONPathKeySafety = iota
+	// JSONPathKeySafetyDash is hive's ^[_\-a-zA-Z][\-\w]*$.
+	JSONPathKeySafetyDash
+	// JSONPathKeySafetyBigQuery is bigquery's ^[\-\w]*$ (also matches the empty key).
+	JSONPathKeySafetyBigQuery
 )
 
 type NormalizationStrategy int
@@ -82,6 +97,22 @@ type Dialect struct {
 	// JSONPathKeyQuotedForcesBrackets renders a quoted key as ["key"] even when it would be a
 	// safe identifier (base False; databricks True).
 	JSONPathKeyQuotedForcesBrackets bool
+	// The JSONPath parser/tokenizer flags (jsonpath.py + per-dialect JSONPathTokenizer).
+	// JSONPathVarDash merges DASH into a var run (bigquery, hive and its children).
+	JSONPathVarDash bool
+	// JSONPathVarNumber merges NUMBER into a var run (bigquery).
+	JSONPathVarNumber bool
+	// JSONPathNoDollar removes '$' from the JSONPath single-token table (snowflake).
+	JSONPathNoDollar bool
+	// JSONPathBacktickIdentifier adds the backtick to the JSONPath identifier delimiters
+	// (databricks).
+	JSONPathBacktickIdentifier bool
+	// JSONPathKeySafety is the dialect's SAFE_JSON_PATH_KEY_RE variant, which decides whether a
+	// JSONPath key renders as a bare dotted key.
+	JSONPathKeySafety JSONPathKeySafety
+	// JSONPathPointerSyntax keeps a path literal that uses DuckDB's JSON pointer syntax
+	// (a leading "/" or a "[#" back-of-list index) instead of parsing it.
+	JSONPathPointerSyntax bool
 	// JSONPathSingleQuoteEscape uses backslash-escaped single quotes for a bracketed key
 	// (base False).
 	JSONPathSingleQuoteEscape bool
@@ -423,8 +454,8 @@ type Dialect struct {
 	// ConcatWsCoalesce ports CONCAT_WS_COALESCE (base False; duckdb True): CONCAT_WS ignores
 	// NULL arguments.
 	ConcatWsCoalesce bool
-	// StrictJSONPathSyntax ports STRICT_JSON_PATH_SYNTAX (base True; duckdb False): whether a
-	// bare `$` path may omit its brackets/quotes.
+	// StrictJSONPathSyntax ports STRICT_JSON_PATH_SYNTAX (base True; duckdb and starrocks
+	// False): an invalid JSON path logs a warning and the literal is kept.
 	StrictJSONPathSyntax bool
 	// NumbersCanBeUnderscoreSeparated ports NUMBERS_CAN_BE_UNDERSCORE_SEPARATED (duckdb True).
 	NumbersCanBeUnderscoreSeparated bool
@@ -607,8 +638,8 @@ type Dialect struct {
 	// JSONExtractScalarScalarOnly ports JSON_EXTRACT_SCALAR_SCALAR_ONLY (bigquery True): the
 	// parser records scalar_only on the JSONExtractScalar node.
 	JSONExtractScalarScalarOnly bool
-	// JSONPathSingleDotIsWildcard ports JSON_PATH_SINGLE_DOT_IS_WILDCARD (bigquery True); the
-	// JSONPath tokenizer is not ported yet, so the flag is recorded only.
+	// JSONPathSingleDotIsWildcard ports JSON_PATH_SINGLE_DOT_IS_WILDCARD (bigquery True): a
+	// bare `.` with no key is a wildcard rather than a parse error.
 	JSONPathSingleDotIsWildcard bool
 	// LeastGreatestIgnoresNulls ports LEAST_GREATEST_IGNORES_NULLS (base True; bigquery False):
 	// recorded on the parsed Least/Greatest nodes.
@@ -720,6 +751,8 @@ func Base() *Dialect {
 		LeastGreatestIgnoresNulls: true,
 		// parser.py:1880 COLON_CHAIN_IS_SINGLE_EXTRACT = True (base).
 		ColonChainIsSingleExtract: true,
+		// dialects/dialect.py:685 STRICT_JSON_PATH_SYNTAX = True.
+		StrictJSONPathSyntax: true,
 		// generator.py:505-561 JSON_PATH_* / QUOTE_JSON_PATH defaults.
 		QuoteJSONPath:                 true,
 		JSONPathBracketedKeySupported: true,
@@ -805,9 +838,8 @@ func Base() *Dialect {
 		ChangeColumnAlterSyntax: false,
 		// parser.py:1846 PIVOT_COLUMN_NAMING = "agg_name_if_aliased" (base); spark2 overrides
 		// to "agg_name_if_multiple" (parsers/spark2.py:24).
-		PivotColumnNaming:    "agg_name_if_aliased",
-		StrictJSONPathSyntax: true,
-		UUIDIsStringType:     true,
+		PivotColumnNaming: "agg_name_if_aliased",
+		UUIDIsStringType:  true,
 		// generator.py:400 ALTER_TABLE_INCLUDE_COLUMN_KEYWORD = True (base).
 		AlterTableIncludeColumnKeyword: true,
 		// generator.py:412 COMPUTED_COLUMN_WITH_TYPE = True (base).
@@ -1699,3 +1731,57 @@ func (d *Dialect) castTypeName(dt exp.DType) string {
 }
 
 // (helper kept in the dialects package for the Oracle builders)
+
+// ToJSONPath ports Dialect.to_json_path (dialects/dialect.py:1153-1166): a Literal path is
+// parsed into an exp.JSONPath when the dialect's JSONPath tokenizer accepts it; otherwise the
+// literal is kept and, under StrictJSONPathSyntax, a warning is logged.
+func (d *Dialect) ToJSONPath(path exp.Expression) exp.Expression {
+	if path == nil || path.Kind() != exp.KindLiteral {
+		return path
+	}
+
+	pathText := path.Name()
+	if d.JSONPathPointerSyntax && (strings.HasPrefix(pathText, "/") || strings.Contains(pathText, "[#")) {
+		return path
+	}
+	if path.IsInt() {
+		pathText = "[" + pathText + "]"
+	}
+
+	parsed, err := jsonpath.Parse(pathText, d.JSONPathConfig())
+	if err == nil {
+		return parsed
+	}
+
+	trimmed := strings.TrimLeftFunc(pathText, func(r rune) bool { return r == ' ' || r == '\t' || r == '\n' || r == '\r' })
+	if d.StrictJSONPathSyntax && !strings.HasPrefix(trimmed, "lax") && !strings.HasPrefix(trimmed, "strict") {
+		log.Printf("Invalid JSON path syntax. %s", err)
+	}
+	return path
+}
+
+// JSONPathConfig assembles the dialect's jsonpath.Config from the JSONPath flags
+// (jsonpath.py:15-45 and the per-dialect JSONPathTokenizer overrides).
+func (d *Dialect) JSONPathConfig() jsonpath.Config {
+	cfg := jsonpath.Config{SingleDotIsWildcard: d.JSONPathSingleDotIsWildcard}
+
+	if d.JSONPathVarDash || d.JSONPathVarNumber {
+		cfg.VarTokens = map[tokens.TokenType]bool{
+			tokens.VAR:    true,
+			tokens.DASH:   d.JSONPathVarDash,
+			tokens.NUMBER: d.JSONPathVarNumber,
+		}
+	}
+
+	if d.JSONPathNoDollar {
+		single := jsonpath.BaseSingleTokens()
+		delete(single, '$')
+		cfg.SingleTokens = single
+	}
+
+	if d.JSONPathBacktickIdentifier {
+		cfg.IdentifierDelims = map[rune]bool{'"': true, '`': true}
+	}
+
+	return cfg
+}

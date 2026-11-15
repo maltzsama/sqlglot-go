@@ -38,6 +38,8 @@ var snowflakeTimeMapping = map[string]string{
 func Snowflake() *Dialect {
 	d := Base()
 	d.Name = "snowflake"
+	// dialects/snowflake.py:130-132 JSONPathTokenizer: SINGLE_TOKENS drops '$'.
+	d.JSONPathNoDollar = true
 	// generators/redshift.py:33 / snowflake.py:394 / spark.py:70: native CONVERT_TIMEZONE.
 	d.SupportsConvertTimezone = true
 

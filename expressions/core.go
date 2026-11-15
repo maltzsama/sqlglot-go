@@ -1503,6 +1503,17 @@ func toSAny(node any, verbose bool, level int, reprStr bool) string {
 			return "[" + indent + strings.Join(items, delim) + "]"
 		}
 		return "[]"
+	case []any:
+		// Upstream stores some list args with mixed element types (a JSONPathUnion's
+		// expressions hold strings, ints or nodes); _to_s renders them like any list.
+		items := make([]string, 0, len(v))
+		for _, item := range v {
+			items = append(items, toSAny(item, verbose, level+1, false))
+		}
+		if len(items) > 0 {
+			return "[" + indent + strings.Join(items, delim) + "]"
+		}
+		return "[]"
 	case []string:
 		// Upstream _to_s (core.py) renders a list of strings (e.g. _comments) like
 		// any list node: multi-line with per-item indentation, dedented, and

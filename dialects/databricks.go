@@ -13,6 +13,8 @@ import (
 func Databricks() *Dialect {
 	d := Spark()
 	d.Name = "databricks"
+	// dialects/databricks.py:30-31 JSONPathTokenizer: IDENTIFIERS adds the backtick.
+	d.JSONPathBacktickIdentifier = true
 	// generators/databricks.py:21 restores PARSE_JSON.
 	d.ParseJSONName = stringPtr("PARSE_JSON")
 
@@ -30,6 +32,10 @@ func Databricks() *Dialect {
 	d.CopyParamsAreWrapped = false
 	d.CopyParamsEqRequired = true
 	d.QuoteJSONPath = false
+	// generators/databricks.py:17 JSON_PATH_SINGLE_QUOTE_ESCAPE = False (hive sets True), and
+	// the SAFE_JSON_PATH_KEY_RE is the base one, not hive's dash-tolerant variant.
+	d.JSONPathSingleQuoteEscape = false
+	d.JSONPathKeySafety = JSONPathKeySafetyBase
 	d.JSONPathKeyQuotedForcesBrackets = true
 
 	// dialects/databricks.py:35-41 Tokenizer: STREAM and VOID keywords.

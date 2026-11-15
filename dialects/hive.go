@@ -13,6 +13,12 @@ import (
 func Hive() *Dialect {
 	d := Base()
 	d.Name = "hive"
+	// dialects/hive.py:85-89 JSONPathTokenizer: VAR_TOKENS adds DASH.
+	d.JSONPathVarDash = true
+	// generators/hive.py:236 JSON_PATH_SINGLE_QUOTE_ESCAPE = True.
+	d.JSONPathSingleQuoteEscape = true
+	// generators/hive.py:237 SAFE_JSON_PATH_KEY_RE = ^[_\-a-zA-Z][\-\w]*$.
+	d.JSONPathKeySafety = JSONPathKeySafetyDash
 	// generators/hive.py:240 PARSE_JSON_NAME = "PARSE_JSON".
 	d.ParseJSONName = stringPtr("PARSE_JSON")
 	d.QuoteStart = "'"

@@ -205,3 +205,65 @@ func removeWithinGroupForPercentiles(e expressions.Expression) expressions.Expre
 		"quantile": asExpression(this.Arg("this")),
 	}))
 }
+
+// unqualifyUnnest ports transforms.unqualify_unnest (transforms.py:278-294): remove references
+// to UNNEST table aliases that qualify_columns added. BigQuery accepts a bare `n` for a value
+// produced by `UNNEST(...) AS n`, so the generator strips the synthetic `_0.`/`_t0.` qualifier
+// before rendering.
+func unqualifyUnnest(expression expressions.Expression) expressions.Expression {
+	if expression == nil || expression.Kind() != expressions.KindSelect {
+		return expression
+	}
+
+	unnestAliases := map[string]bool{}
+	for _, unnest := range findAllInScope(expression, expressions.KindUnnest) {
+		parent := unnest.Parent()
+		if parent != nil && (parent.Kind() == expressions.KindFrom || parent.Kind() == expressions.KindJoin) {
+			if alias := unnest.Alias(); alias != "" {
+				unnestAliases[alias] = true
+			}
+		}
+	}
+	if len(unnestAliases) == 0 {
+		return expression
+	}
+
+	// expression.find_all (NOT in-scope): nested scopes' columns are visited too, matching
+	// upstream.
+	for _, column := range expression.FindAll(expressions.KindColumn) {
+		// column.parts[0]: the leftmost present qualifier, in catalog/schema/table order.
+		for _, key := range []string{"catalog", "schema", "table"} {
+			part := expressions.Expression(nil)
+			if value, ok := column.Arg(key).(expressions.Expression); ok {
+				part = value
+			}
+			if part == nil {
+				continue
+			}
+			if unnestAliases[part.Name()] {
+				column.Set(key, nil)
+			}
+			break
+		}
+	}
+
+	return expression
+}
+
+// findAllInScope ports optimizer.scope.find_all_in_scope: a walk that prunes nested query
+// scopes below the root. The generator cannot import the optimizer package, so the two-line
+// walk is repeated here.
+func findAllInScope(root expressions.Expression, kind expressions.Kind) []expressions.Expression {
+	if root == nil {
+		return nil
+	}
+	out := []expressions.Expression{}
+	for _, node := range root.WalkWithPrune(false, func(node expressions.Expression) bool {
+		return node != root && node.Is(expressions.TraitQuery)
+	}) {
+		if node.Kind() == kind {
+			out = append(out, node)
+		}
+	}
+	return out
+}
