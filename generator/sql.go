@@ -553,11 +553,17 @@ func (g *Generator) divSQL(e expressions.Expression) string {
 	}
 
 	if g.dialect.TypedDivision && !truthy(e.Arg("typed")) {
-		if !l.IsType(divRealTypes...) && !r.IsType(divRealTypes...) {
+		if !divOperandIsType(l, divRealTypes...) && !divOperandIsType(r, divRealTypes...) {
 			l.Replace(expressions.Cast(expressions.Args{"this": l.Copy(), "to": expressions.DTypeDouble.IntoExpr(nil)}))
 		}
 	} else if !g.dialect.TypedDivision && truthy(e.Arg("typed")) {
-		if l.IsType(divIntegerTypes...) && r.IsType(divIntegerTypes...) {
+		// The operands read the locals captured above, not e.Expr(): after the NULLIF
+		// replacement above they are stale on purpose — upstream builds `l / r` from the
+		// same pre-replacement locals (generator.py:4465), so a typed integer division
+		// keeps the raw divisor inside the BIGINT cast (oracle: sqlite
+		// CAST(a AS INT) / CAST(b AS INT) -> base
+		// CAST(CAST(a AS INT) / CAST(b AS INT) AS BIGINT), no NULLIF).
+		if divOperandIsType(l, divIntegerTypes...) && divOperandIsType(r, divIntegerTypes...) {
 			return g.gen(expressions.Cast(expressions.Args{
 				"this": expressions.New(expressions.KindDiv, expressions.Args{"this": l, "expression": r}),
 				"to":   expressions.DTypeBigInt.IntoExpr(nil),
@@ -567,6 +573,24 @@ func (g *Generator) divSQL(e expressions.Expression) string {
 
 	return g.binary(e, "/")
 }
+
+// divOperandIsType ports the operand type checks in div_sql (generator.py:4458, 4462):
+// a cast operand checks its target type — Cast.is_type (functions.py:57-70) — while any
+// other operand checks the type annotate_types recorded (Expression.is_type,
+// core.py:984-986). Node.IsType deliberately excludes a cast's target (its annotation is
+// nil at parse time), so the cast case goes through DataTypeIsType, which reads the `to`
+// arg exactly like upstream's override.
+func divOperandIsType(e expressions.Expression, dtypes ...any) bool {
+	if e == nil {
+		return false
+	}
+	switch e.Kind() {
+	case expressions.KindCast, expressions.KindTryCast, expressions.KindJSONCast:
+		return expressions.DataTypeIsType(e, false, dtypes...)
+	}
+	return e.IsType(dtypes...)
+}
+
 func (g *Generator) eqSQL(e expressions.Expression) string         { return g.binary(e, "=") }
 func (g *Generator) neqSQL(e expressions.Expression) string        { return g.binary(e, "<>") }
 func (g *Generator) gtSQL(e expressions.Expression) string         { return g.binary(e, ">") }

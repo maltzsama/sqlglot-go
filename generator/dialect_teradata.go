@@ -33,7 +33,7 @@ func teradataDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindPow:              func(g *Generator, e exp.Expression) string { return g.binary(e, "**") },
 		exp.KindRand:             teradataRandomSQL,
 		exp.KindSelect:           teradataSelect,
-		exp.KindStrPosition:      instrStrPositionSQL,
+		exp.KindStrPosition:      opaqueStrPosition(instrStrPositionSQL),
 		exp.KindStrToDate:        teradataStrToDateSQL,
 		exp.KindToChar:           func(g *Generator, e exp.Expression) string { return g.functionFallbackSQL(e) },
 		exp.KindToNumber:         teradataToNumberSQL,
@@ -123,13 +123,13 @@ func eliminateSemiAndAntiJoins(expression exp.Expression) exp.Expression {
 			condition = exp.Not(exp.Args{"this": condition})
 		}
 		join.Pop()
-		// Select.where with append (query.py:265 -> core.py:2735-2758): the new
-		// condition is ANDed with the existing WHERE body and re-wrapped in Where.
+		// Select.where with append (query.py:265 -> _apply_conjunction_builder, core.py:
+		// 2735-2758): the new condition is ANDed with the existing WHERE body through and_
+		// -> _combine(..., wrap=True), which parenthesizes any Connector operand (core.py:
+		// 2775-2783) — so an existing `a OR b` body renders `(a OR b) AND EXISTS (...)`
+		// instead of re-associating as `a OR (b AND EXISTS ...)`.
 		if where := asExpression(expression.Arg("where")); where != nil {
-			expression.Set("where", exp.Where(exp.Args{"this": exp.And(exp.Args{
-				"this":       where.This(),
-				"expression": condition,
-			})}))
+			expression.Set("where", exp.Where(exp.Args{"this": exp.And_(where.This(), condition)}))
 		} else {
 			expression.Set("where", exp.Where(exp.Args{"this": condition}))
 		}
@@ -137,14 +137,19 @@ func eliminateSemiAndAntiJoins(expression exp.Expression) exp.Expression {
 	return expression
 }
 
-// teradataStrToDateSQL ports the StrToDate transform (generators/teradata.py:100-102):
-// CAST(this AS DATE FORMAT <format>).
+// teradataStrToDateSQL ports the StrToDate transform (generators/teradata.py:84-86):
+// CAST(this AS DATE FORMAT <format_time(format)>). format_time (generator.py:4712-4722)
+// runs on the SQL-RENDERED format arg, so a literal's quote doubling passes through the
+// mapping verbatim — that is what keeps a format containing an escaped quote valid, and
+// why a non-literal format (e.g. hive's adjacent-string Concat) renders as its converted
+// SQL (CONCAT('YYYY', 'MM')) rather than being dropped.
 func teradataStrToDateSQL(g *Generator, e exp.Expression) string {
-	format := ""
-	if f := asExpression(e.Arg("format")); f != nil && f.IsString() {
-		if converted, ok := dialects.FormatTime(f.Name(), g.dialect.InverseTimeMapping); ok {
-			format = " FORMAT '" + converted + "'"
-		}
+	// Oracle: STR_TO_DATE(x, '%Y''%m') -> CAST(x AS DATE FORMAT 'YYYY''MM').
+	format := g.sqlKey(e, "format")
+	if converted, ok := dialects.FormatTime(format, g.dialect.InverseTimeMapping); ok && converted != "" {
+		format = " FORMAT " + converted
+	} else {
+		format = ""
 	}
 	return "CAST(" + g.sqlKey(e, "this") + " AS DATE" + format + ")"
 }
@@ -158,21 +163,44 @@ func teradataToNumberSQL(g *Generator, e exp.Expression) string {
 	}, "(", ")", true)
 }
 
-// teradataDateDeltaSQL ports _date_add_sql (generators/teradata.py:19-39): a literal amount
-// renders as `<this> +/- INTERVAL '<value>' <unit>`.
+// teradataDateDeltaSQL ports _date_add_sql (generators/teradata.py:19-39): the amount
+// renders inside the interval as a string literal, and a Neg operand flips the operator.
 func teradataDateDeltaSQL(kind string) func(*Generator, exp.Expression) string {
 	return func(g *Generator, e exp.Expression) string {
 		value := asExpression(e.Arg("expression"))
 		unit := e.Arg("unit")
 		op := kind
+		// Upstream simplifies a non-literal amount first (_simplify_unless_literal,
+		// generator.py:5380-5386) and only then type-checks it; the simplify pass lives in
+		// the optimizer package, which imports this one, so a generator-side call would be
+		// an import cycle — a foldable amount such as `1 + 1` stays unfolded here
+		// (DEVIATIONS.md §1.31).
+		if value == nil || value.Kind() != exp.KindLiteral {
+			g.unsupported("Cannot add non literal")
+		}
 		if value != nil && value.Kind() == exp.KindNeg {
-			value = exp.LiteralString(value.This().Name())
+			// generators/teradata.py:31-33: a Neg amount inverts the operator.
 			if kind == "+" {
 				op = "-"
 			} else {
 				op = "+"
 			}
-		} else if value != nil {
+			inner := asExpression(value.Arg("this"))
+			if inner != nil && inner.Kind() == exp.KindLiteral {
+				// generators/teradata.py:32 exp.Literal.string(value.this.to_py()).
+				value = exp.LiteralString(inner.Name())
+			} else {
+				// Upstream does value.this.to_py() here, which raises ValueError for a
+				// non-literal inner (`INTERVAL -n DAY` -> "n cannot be converted to a
+				// Python object"); this port keeps the operand bare instead of crashing —
+				// the flipped operator still yields the semantically correct interval
+				// (DEVIATIONS.md §1.31).
+				value = inner
+			}
+		} else if value != nil && value.Kind() == exp.KindLiteral {
+			// generators/teradata.py:37 value.set("is_string", True): the amount renders
+			// quoted. A non-literal amount stays bare (upstream sets the flag on a node
+			// that ignores it, so e.g. a column renders as itself).
 			value = exp.LiteralString(value.Name())
 		}
 		interval := exp.Interval(exp.Args{"this": value, "unit": unit})
@@ -267,13 +295,12 @@ func teradataUpdateSQL(g *Generator, e exp.Expression) string {
 	return g.prependCtes(e, "UPDATE "+this+from+" SET "+set+where)
 }
 
-// teradataDataTypeSQL ports the TZ_TO_WITH_TIME_ZONE branch (generator.py: TZ_TO_WITH_TIME_ZONE):
-// a timezone-aware TIMESTAMP renders WITH TIME ZONE.
+// teradataDataTypeSQL is datatype_sql with TZ_TO_WITH_TIME_ZONE = True (generator.py:
+// 1789-1793, wired by generators/teradata.py:54): TIMETZ and TIMESTAMPTZ render WITH TIME
+// ZONE after their parameters — CAST(x AS TIMESTAMP(3) WITH TIME ZONE) keeps the
+// precision instead of collapsing to a bare TIMESTAMP.
 func teradataDataTypeSQL(g *Generator, e exp.Expression) string {
-	if dtype, ok := e.Arg("this").(exp.DType); ok && dtype == exp.DTypeTimestampTz {
-		return "TIMESTAMP WITH TIME ZONE"
-	}
-	return g.dataTypeSQL(e)
+	return tzToWithTimeZone(g, e)
 }
 
 // teradataCreateable ports TeradataGenerator.createable_sql (generators/teradata.py:148-160):

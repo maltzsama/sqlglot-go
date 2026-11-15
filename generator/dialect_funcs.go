@@ -154,9 +154,9 @@ func (g *Generator) localtimestampSQL(e expressions.Expression) string {
 // testdata/identity.sql's STR_POSITION(haystack, needle[, pos]) cases. The mysql-family
 // branch covers generators/mysql.py:188-190 `exp.StrPosition:
 // strposition_sql(self, e, func_name="LOCATE", supports_position=True)` (mariadb, doris
-// and starrocks inherit it through the dialectParents walk); occurrence is unsupported by
-// LOCATE and silently dropped — upstream only warns there (dialect.py:1355-1357), a
-// message-only divergence.
+// and starrocks inherit it through the dialectParents walk); occurrence has no LOCATE
+// equivalent, so locateStrPositionSQL reports it through g.unsupported (dialect.py:1353)
+// before dropping the argument, exactly as upstream does.
 func (g *Generator) strPositionSQL(e expressions.Expression) string {
 	// opaque_functions: only POSITION(a IN b) parses to StrPosition, so render that grammar
 	// back verbatim — never the STR_POSITION/LOCATE canonicalization.
@@ -169,6 +169,20 @@ func (g *Generator) strPositionSQL(e expressions.Expression) string {
 	return locateStrPositionSQL(g, e)
 }
 
+// opaqueStrPosition keeps the OpaqueFunctions guard in front of a dialect-specific
+// StrPosition renderer. Under the flag only the keyword form `POSITION(a IN b)` parses to
+// StrPosition (DEVIATIONS, Opaque function calls), so it must round-trip back to that form
+// instead of the dialect's canonicalization (bigquery/hive/teradata INSTR, LOCATE). The
+// flag is off by default, so the common path is the dialect renderer unchanged.
+func opaqueStrPosition(render func(*Generator, expressions.Expression) string) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		if g.dialect.OpaqueFunctions {
+			return g.strPositionSQL(e)
+		}
+		return render(g, e)
+	}
+}
+
 // locateStrPositionSQL ports strposition_sql with func_name="LOCATE" and
 // supports_position=True (generators/mysql.py:188-190, generators/hive.py:343-345, and
 // the spark2/spark/databricks chain through them): LOCATE(substr, haystack[, position]).
@@ -178,6 +192,12 @@ func (g *Generator) strPositionSQL(e expressions.Expression) string {
 // branch, dialect.py:1341-1343,1364-1367, is therefore dead for this caller and is
 // elided). formatArgs drops a nil position, matching upstream's None-filtered args.
 func locateStrPositionSQL(g *Generator, e expressions.Expression) string {
+	// dialect.py:1352-1353: LOCATE has no occurrence parameter — report the lossy
+	// conversion (UnsupportedLevel RAISE fails the generation) instead of silently
+	// requesting the first occurrence.
+	if asExpression(e.Arg("occurrence")) != nil {
+		g.unsupported("LOCATE does not support the occurrence parameter.")
+	}
 	return g.funcCall("LOCATE", []any{e.Arg("substr"), e.Arg("this"), e.Arg("position")}, "(", ")", true)
 }
 

@@ -18,8 +18,9 @@ func Teradata() *Dialect {
 	d.TypedDivision = true
 	// generators/teradata.py:53 CAN_IMPLEMENT_ARRAY_ANY = True.
 	d.CanImplementArrayAny = true
-	// parsers/teradata.py:163-170 EXPONENT[DSTAR] = Pow.
-	d.ExponentOperators = true
+	// parsers/teradata.py:99-101 EXPONENT[DSTAR] = Pow — Teradata's `^` is BitwiseXor, so
+	// CARET is deliberately absent here.
+	d.ExponentOperators = map[tokens.TokenType]bool{tokens.DSTAR: true}
 	// parsers/teradata.py:14-15 TABLESAMPLE_CSV = True, VALUES_FOLLOWED_BY_PAREN = False.
 	d.TablesampleCSV = true
 	d.ValuesFollowedByParen = false

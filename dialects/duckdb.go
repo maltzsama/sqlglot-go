@@ -141,7 +141,8 @@ func DuckDB() *Dialect {
 	d.NormalizeExtractDateParts = true
 	d.IgnoreNullsInFunc = true
 	d.IgnoreNullsBeforeOrder = false
-	d.ExponentOperators = true
+	// parsers/duckdb.py:106-110 EXPONENT: `**` and `^` both parse as Pow.
+	d.ExponentOperators = map[tokens.TokenType]bool{tokens.CARET: true, tokens.DSTAR: true}
 	d.RegexpRangeOperators = true
 	d.CaretAtStartsWith = true
 	d.ArrayOverlapsDAMP = true

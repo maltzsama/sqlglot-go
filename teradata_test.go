@@ -190,6 +190,12 @@ func TestTeradataMod(t *testing.T) {
 func TestTeradataPower(t *testing.T) {
 	assertRoundTrip(t, "teradata", "a ** b", "a ** b")
 	assertTeradataWrite(t, "mysql", "a ** b", "POWER(a, b)")
+	// parsers/teradata.py:99-101 EXPONENT only lists DSTAR, so Teradata's `^` stays
+	// BitwiseXor while duckdb's {CARET, DSTAR} table (parsers/duckdb.py:106-110) turns
+	// both spellings into Pow — which teradata re-renders as `**`.
+	assertRoundTrip(t, "teradata", "2 ^ 3", "2 ^ 3")
+	assertTeradataRead(t, "duckdb", "2 ^ 3", "2 ** 3")
+	assertTeradataRead(t, "duckdb", "2 ** 3", "2 ** 3")
 }
 
 // TestTeradataAbbrev ports test_abbrev (tests/dialects/test_teradata.py:199-214).
@@ -258,6 +264,12 @@ func TestTeradataTime(t *testing.T) {
 	assertRoundTrip(t, "teradata", "CAST(CURRENT_TIMESTAMP(6) AS TIMESTAMP WITH TIME ZONE)",
 		"CAST(CURRENT_TIMESTAMP(6) AS TIMESTAMP WITH TIME ZONE)")
 
+	// TZ_TO_WITH_TIME_ZONE (generators/teradata.py:54): the timezone-aware types render
+	// WITH TIME ZONE after their parameters — precision is kept, not dropped.
+	assertRoundTrip(t, "teradata", "CAST(x AS TIMESTAMP(3) WITH TIME ZONE)",
+		"CAST(x AS TIMESTAMP(3) WITH TIME ZONE)")
+	assertRoundTrip(t, "teradata", "CAST(x AS TIMETZ)", "CAST(x AS TIMETZ WITH TIME ZONE)")
+
 	assertRoundTrip(t, "teradata", "CURRENT_TIMESTAMP", "CURRENT_TIMESTAMP")
 	assertTeradataRead(t, "snowflake", "CURRENT_TIMESTAMP()", "CURRENT_TIMESTAMP")
 
@@ -306,4 +318,79 @@ func TestTeradataQueryBand(t *testing.T) {
 	} {
 		assertRoundTrip(t, "teradata", sql, sql)
 	}
+}
+
+// TestTeradataSetScopedForms guards the SET_PARSERS init order (parsers/teradata.py:135-140
+// extends the base table; the copy must run after stmt_set.go builds it): a scoped
+// assignment parses to a structured Set, exactly as upstream, instead of degrading to a
+// raw Command when only QUERY_BAND is in the trie.
+func TestTeradataSetScopedForms(t *testing.T) {
+	for _, sql := range []string{"SET SESSION x = 1", "SET LOCAL x = 1", "SET x = 1"} {
+		e, err := sqlglot.ParseOne(sql, "teradata")
+		if err != nil {
+			t.Fatalf("ParseOne(%q): %v", sql, err)
+		}
+		if got := expressions.ClassName(e.Kind()); got != "Set" {
+			t.Errorf("%q parsed to %s, want Set", sql, got)
+		}
+		assertRoundTrip(t, "teradata", sql, sql)
+	}
+}
+
+// TestTeradataSemiAntiWhere guards the SEMI/ANTI -> EXISTS rewrite's WHERE merge: the new
+// EXISTS condition is combined through and_, which parenthesizes a Connector operand, so an
+// existing OR body cannot re-associate past the AND (transforms.py:616-631 ->
+// core.py:2775-2783).
+func TestTeradataSemiAntiWhere(t *testing.T) {
+	cases := map[string]string{
+		"SELECT * FROM t1 SEMI JOIN t2 ON t1.id = t2.id":                "SELECT * FROM t1 WHERE EXISTS(SELECT 1 FROM t2 WHERE t1.id = t2.id)",
+		"SELECT * FROM t1 WHERE t1.y > 0 SEMI JOIN t2 ON t1.id = t2.id": "SELECT * FROM t1 WHERE t1.y > 0 AND EXISTS(SELECT 1 FROM t2 WHERE t1.id = t2.id)",
+		"SELECT * FROM t1 WHERE a OR b SEMI JOIN t2 ON t1.id = t2.id":   "SELECT * FROM t1 WHERE (a OR b) AND EXISTS(SELECT 1 FROM t2 WHERE t1.id = t2.id)",
+		"SELECT * FROM t1 WHERE a AND b SEMI JOIN t2 ON t1.id = t2.id":  "SELECT * FROM t1 WHERE (a AND b) AND EXISTS(SELECT 1 FROM t2 WHERE t1.id = t2.id)",
+		"SELECT * FROM t1 WHERE a OR b ANTI JOIN t2 ON t1.id = t2.id":   "SELECT * FROM t1 WHERE (a OR b) AND NOT EXISTS(SELECT 1 FROM t2 WHERE t1.id = t2.id)",
+	}
+	for sql, want := range cases {
+		assertTeradataRead(t, "teradata", sql, want)
+	}
+}
+
+// TestTeradataStrToDateFormat guards the FORMAT literal rendering (generators/teradata.py:
+// 84-86): format_time runs on the SQL-rendered format, so quote doubling survives the
+// mapping (a quote inside the format cannot break the literal) and a non-literal format
+// renders as its converted SQL instead of being dropped.
+func TestTeradataStrToDateFormat(t *testing.T) {
+	assertTeradataRead(t, "", "SELECT STR_TO_DATE(x, '%Y''%m')",
+		"SELECT CAST(x AS DATE FORMAT 'YYYY''MM')")
+	assertTeradataRead(t, "hive", "SELECT STR_TO_DATE(x, '%Y-%m')",
+		"SELECT CAST(x AS DATE FORMAT 'YYYY-MM')")
+	assertTeradataRead(t, "hive", "SELECT STR_TO_DATE(x, '%Y''%m')",
+		"SELECT CAST(x AS DATE FORMAT CONCAT('YYYY', 'MM'))")
+}
+
+// TestTeradataDateAdd guards _date_add_sql (generators/teradata.py:19-39): a literal amount
+// renders quoted, a non-literal amount stays bare (reported unsupported) instead of being
+// frozen into a string literal, and a Neg operand flips the operator.
+func TestTeradataDateAdd(t *testing.T) {
+	assertTeradataRead(t, "bigquery", "SELECT DATE_ADD(d, INTERVAL 5 DAY)",
+		"SELECT d + INTERVAL '5' DAY")
+	assertTeradataRead(t, "bigquery", "SELECT DATE_ADD(d, INTERVAL -5 DAY)",
+		"SELECT d + INTERVAL '-5' DAY")
+	assertTeradataRead(t, "bigquery", "SELECT DATE_SUB(d, INTERVAL -5 DAY)",
+		"SELECT d - INTERVAL '-5' DAY")
+	assertTeradataRead(t, "bigquery", "SELECT DATE_ADD(d, INTERVAL n DAY)",
+		"SELECT d + INTERVAL n DAY")
+	// Upstream crashes here (ValueError from to_py); the port keeps the operand bare with
+	// the flipped operator (DEVIATIONS.md §1.31).
+	assertTeradataRead(t, "bigquery", "SELECT DATE_ADD(d, INTERVAL -n DAY)",
+		"SELECT d - INTERVAL n DAY")
+	// Teradata's own parser keeps the whole INTERVAL node as the amount, so it nests.
+	assertTeradataRead(t, "teradata", "SELECT DATE_ADD(d, INTERVAL 5 DAY)",
+		"SELECT d + INTERVAL (INTERVAL '5' DAY)")
+	assertTeradataRead(t, "teradata", "SELECT DATE_ADD(d, INTERVAL n DAY)",
+		"SELECT d + INTERVAL (INTERVAL n DAY)")
+	// A foldable amount stays unfolded: the port cannot call the optimizer's simplify
+	// from the generator (import cycle), where upstream folds 1 + 1 to 2 (DEVIATIONS.md
+	// §1.31).
+	assertTeradataRead(t, "bigquery", "SELECT DATE_ADD(d, INTERVAL 1 + 1 DAY)",
+		"SELECT d + INTERVAL (1 + 1) DAY")
 }

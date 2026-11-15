@@ -29,14 +29,10 @@ func init() {
 		// column is a Teradata output-format override, not a function call.
 		ColumnOps: parseTeradataColumnOps,
 	})
-
-	// parsers/teradata.py:135-140 SET_PARSERS adds QUERY_BAND.
-	teradataSetParsers = make(map[string]func(*Parser) exp.Expression, len(setParsers)+1)
-	for k, v := range setParsers {
-		teradataSetParsers[k] = v
-	}
-	teradataSetParsers["QUERY_BAND"] = (*Parser).parseTeradataQueryBand
-	teradataSetTrie = newTrie(setParserKeys(teradataSetParsers))
+	// parsers/teradata.py:135-140 SET_PARSERS adds QUERY_BAND — the table itself is built
+	// in stmt_set.go's init, after the base SET_PARSERS/SET_TRIE it extends (this file's
+	// init runs first under lexical file ordering, so building it here would copy a nil
+	// map and leave `SET SESSION …` dispatching to a Command).
 }
 
 var (

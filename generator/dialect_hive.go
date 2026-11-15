@@ -31,7 +31,7 @@ func init() {
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
 		// generators/hive.py:343-345 exp.StrPosition: strposition_sql(func_name="LOCATE",
 		// supports_position=True); spark2/spark/databricks inherit it through dialectParents.
-		expressions.KindStrPosition: locateStrPositionSQL,
+		expressions.KindStrPosition: opaqueStrPosition(locateStrPositionSQL),
 		expressions.KindParameter:   (*Generator).hiveParameterSQL,
 		expressions.KindVersion: func(g *Generator, e expressions.Expression) string {
 			return e.Name() + " " + e.Text("kind") + " " + g.sqlKey(e, "expression")

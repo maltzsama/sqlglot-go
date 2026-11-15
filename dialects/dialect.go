@@ -437,8 +437,14 @@ type Dialect struct {
 	// NormalizeExtractDateParts ports NORMALIZE_EXTRACT_DATE_PARTS (base False; duckdb True):
 	// EXTRACT's date part is folded through DATE_PART_MAPPING before rendering.
 	NormalizeExtractDateParts bool
-	// ExponentOperators ports a non-empty EXPONENT table (duckdb's `**`/`^` -> Pow).
-	ExponentOperators bool
+	// ExponentOperators ports the EXPONENT table (parser.py:989 base {}, parsers/duckdb.py:
+	// 106-110 `{CARET, DSTAR} -> Pow`, parsers/teradata.py:99-101 `{DSTAR} -> Pow`): the
+	// token types that bind tighter than `*`/`/` and parse as Pow. Keyed by token so a
+	// dialect can take only one of the two spellings — Teradata's `^` stays BitwiseXor,
+	// only `**` is exponentiation. Postgres's `{CARET} -> Pow` (parsers/postgres.py:168-170)
+	// is not set here yet: main never wired it, so `2 ^ 3` stays xor under postgres in this
+	// port (upstream generates POWER(2, 3)) — a pre-existing gap, tracked as a follow-up.
+	ExponentOperators map[tokens.TokenType]bool
 	// RegexpRangeOperators ports duckdb's RANGE_PARSERS[TILDE] = RegexpFullMatch.
 	RegexpRangeOperators bool
 	// CaretAtStartsWith ports duckdb's RANGE_PARSERS[CARET_AT] = StartsWith.

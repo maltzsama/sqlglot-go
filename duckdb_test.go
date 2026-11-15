@@ -244,7 +244,10 @@ func TestDuckDBNodeShapes(t *testing.T) {
 // TestDuckDBCanonicalizations pins a few generator normalizations.
 func TestDuckDBCanonicalizations(t *testing.T) {
 	cases := map[string]string{
-		"SELECT a ** b":                  "SELECT POWER(a, b)",
+		"SELECT a ** b": "SELECT POWER(a, b)",
+		// parsers/duckdb.py:106-110 EXPONENT lists both CARET and DSTAR (Teradata takes
+		// only DSTAR), so `^` is exponentiation here, not xor.
+		"SELECT 2 ^ 3":                   "SELECT POWER(2, 3)",
 		"SELECT x ~ y":                   "SELECT REGEXP_FULL_MATCH(x, y)",
 		"SELECT x !~ y":                  "SELECT NOT REGEXP_FULL_MATCH(x, y)",
 		"SELECT a ^@ b":                  "SELECT STARTS_WITH(a, b)",

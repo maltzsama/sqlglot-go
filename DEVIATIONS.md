@@ -380,6 +380,28 @@ Upstream's `windowspec_sql` returns `RANGE CURRENT ROW` for any `RANGE` frame wh
 and any `EXCLUDE` clause — which changes the window aggregate. The port abbreviates only when
 no end and no EXCLUDE are present. Guarding test: `TestSQLiteWindowFrames`.
 
+### 1.31 Teradata date-add amount is not simplified, and a non-literal never crashes
+
+Upstream's `_date_add_sql` runs `_simplify_unless_literal` on the amount before type-checking
+it (generators/teradata.py:25, generator.py:5380-5386 — a lazy in-method import of the
+optimizer, there to break the same cycle Go forbids outright: `optimizer` imports `generator`,
+so `generator` cannot import `optimizer`). Two consequences:
+
+- **A foldable amount stays unfolded.** `DATE_ADD(d, INTERVAL 1 + 1 DAY)` generates
+  `d + INTERVAL (INTERVAL 2 DAY)` upstream (the `1 + 1` folds to `2`, quoted by the
+  `is_string` set) but `d + INTERVAL (INTERVAL (1 + 1) DAY)` here; read from bigquery the
+  split is `d + INTERVAL '2' DAY` vs `d + INTERVAL (1 + 1) DAY`. Non-foldable amounts
+  (`n`, `n + 1`) are identical to upstream.
+- **A `Neg` over a non-literal does not crash.** Upstream takes `value.this.to_py()` on the
+  negated operand and raises `ValueError: n cannot be converted to a Python object` for
+  `INTERVAL -n DAY`; the port reports it unsupported like upstream does, keeps the operand
+  bare and flips the operator (`d - INTERVAL n DAY`), which is semantically the interval
+  upstream failed to emit. The literal side of `Neg` is unreachable from the parser in both
+  implementations (`INTERVAL -5 DAY` parses to a `-5` literal), so only this crash-for-
+  output case differs.
+
+Guarding test: `TestTeradataDateAdd`.
+
 ## 2. Cross-dialect-only deviations (never affect same-dialect round-trip)
 
 Cross-dialect transpilation between the registered dialects is exercised and gap-tracked by

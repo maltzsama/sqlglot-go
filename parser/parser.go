@@ -2681,10 +2681,10 @@ func (p *Parser) parseFactor() exp.Expression {
 	return this
 }
 
-// parseFactorOperand ports _parse_factor_operand (parser.py:6365-6376): with a dialect
-// EXPONENT table, `**`/`^` bind tighter than `*`/`/`.
+// parseFactorOperand ports _parse_factor_operand (parser.py:6365-6376): with a non-empty
+// dialect EXPONENT table, `**`/`^` bind tighter than `*`/`/`.
 func (p *Parser) parseFactorOperand() exp.Expression {
-	if p.dialect.ExponentOperators {
+	if len(p.dialect.ExponentOperators) > 0 {
 		return p.parseExponent()
 	}
 	// parsers/sqlite.py:100-123: sqlite's ||/->/->> tier binds tighter than multiplication.
@@ -2694,9 +2694,12 @@ func (p *Parser) parseFactorOperand() exp.Expression {
 	return p.parseUnary()
 }
 
+// parseExponent ports _parse_exponent (parser.py:6368-6376): `while self._match_set(self.
+// EXPONENT)` — only the dialect's own table's token types are exponent operators, so
+// Teradata's CARET never reaches the Pow constructor here.
 func (p *Parser) parseExponent() exp.Expression {
 	this := p.parseUnary()
-	for p.dialect.ExponentOperators && (p.curr.TokenType == tokens.CARET || p.curr.TokenType == tokens.DSTAR) {
+	for p.dialect.ExponentOperators[p.curr.TokenType] {
 		comments := p.prevComments
 		p.advance()
 		this = p.expression(exp.Pow(exp.Args{"this": this, "expression": p.parseUnary()}), nil, comments)
