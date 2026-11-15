@@ -58,7 +58,7 @@ and every registered dialect meets its floor in the per-dialect corpus
 (`testdata/dialect_identity.jsonl`, 6575 records); the open rows are 35 DuckDB cases and 333
 Snowflake cases (`testdata/parity_gaps.txt`). Cross-dialect transpilation is verified the same way
 against upstream's `validate_all` read/write pairs (`testdata/transpile_corpus.jsonl`,
-`TestTranspileCorpus`): 6322/8881 pairs pass, with the open pairs in `testdata/transpile_gaps.txt`.
+`TestTranspileCorpus`): 6326/8881 pairs pass, with the open pairs in `testdata/transpile_gaps.txt`.
 AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
 `exp.Command` where upstream builds a structured node (`fidelity_test.go` +
 `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
@@ -67,7 +67,7 @@ tokenizer, the AST + node model, the parser, the generator (`Expression → SQL`
 `schema.MappingSchema` + `DataType.build`, the `qualify` pass (qualify_tables → normalize_identifiers →
 qualify_columns → quote_identifiers → validate), `traverse_scope` + the full `Scope` API, and the
 `eliminate_ctes` (+ `journal`), `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries` and
-`merge_subqueries` rewrite passes.
+`merge_subqueries` rewrite passes; the optimizer fixture suite passes in full.
 
 On top of that faithful core, a set of **opt-in, additive** enabler APIs (all in DEVIATIONS.md, none
 change default same-dialect output) landed for the downstream lineage/gating consumer: search-path

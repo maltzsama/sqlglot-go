@@ -61,7 +61,6 @@
 {"read":"","write":"databricks","category":"gen: cast/type","sql":"TIME_STR_TO_TIME('2020-01-01 12:13:14-08:00', 'America/Los_Angeles')"}
 {"read":"","write":"databricks","category":"gen: cast/type","sql":"TIME_STR_TO_TIME('2020-01-01')"}
 {"read":"","write":"databricks","category":"gen: cast/type","sql":"TIME_STR_TO_TIME(col, 'America/Los_Angeles')"}
-{"read":"","write":"databricks","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
 {"read":"","write":"databricks","category":"gen: transpile mismatch","sql":"ARRAY_SLICE(x, 1, 3)"}
 {"read":"","write":"databricks","category":"gen: transpile mismatch","sql":"LTRIM('Hello World', 'H')"}
 {"read":"","write":"databricks","category":"gen: transpile mismatch","sql":"RTRIM('Hello World', 'd')"}
@@ -360,7 +359,6 @@
 {"read":"","write":"spark","category":"gen: cast/type","sql":"TIME_STR_TO_TIME('2020-01-01')"}
 {"read":"","write":"spark","category":"gen: cast/type","sql":"TIME_STR_TO_TIME(col, 'America/Los_Angeles')"}
 {"read":"","write":"spark","category":"gen: cast/type","sql":"TS_OR_DI_TO_DI(x)"}
-{"read":"","write":"spark","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"ARRAY_FILTER(the_array, x -> x > 0)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"ARRAY_SLICE(x, 1, 3)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"CONCAT_WS('-', 'a', 'b')"}
@@ -380,7 +378,6 @@
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"TIMESTAMP_TRUNC(x, YEAR)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"TS_OR_DS_ADD('2021-02-01', 1, 'DAY')"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"TS_OR_DS_TO_DATE(x, '%-d')"}
-{"read":"","write":"spark2","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
 {"read":"","write":"spark2","category":"gen: transpile mismatch","sql":"ARRAY_SLICE(x, 1, 3)"}
 {"read":"","write":"spark2","category":"gen: transpile mismatch","sql":"LTRIM('Hello World', 'H')"}
 {"read":"","write":"spark2","category":"gen: transpile mismatch","sql":"RTRIM('Hello World', 'd')"}
@@ -2119,7 +2116,6 @@
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE test_table (id NUMERIC NOT NULL AUTOINCREMENT)"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"\n            SELECT col:\"customer's department\"\n            "}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"\n            SELECT id as \"ID\",\n              f.value AS \"Contact\",\n              f1.value:type AS \"Type\",\n              f1.value:content AS \"Details\"\n            FROM persons p,\n              lateral flatten(input => p.c, path => 'contact') f,\n              lateral flatten(input => f.value:business) f1\n            "}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"\n            SELECT id as \"ID\",\n              value AS \"Contact\"\n            FROM persons p,\n              lateral flatten(input => p.c, path => 'contact')\n            "}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"DATE('01-01-2000', 'MM-DD-YYYY')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"DESCRIBE db.table"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"DIV0NULL(a - b, c - d)"}

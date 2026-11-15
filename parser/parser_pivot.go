@@ -69,7 +69,24 @@ func (p *Parser) parseLateral() exp.Expression {
 		tableAlias = p.parseTableAlias(nil)
 	}
 
-	return p.expression(exp.Lateral(exp.Args{"this": this, "view": view, "outer": outer, "alias": tableAlias, "cross_apply": crossApply, "ordinality": ordinality}), nil, nil)
+	lateral := p.expression(exp.Lateral(exp.Args{"this": this, "view": view, "outer": outer, "alias": tableAlias, "cross_apply": crossApply, "ordinality": ordinality}), nil, nil)
+
+	// parsers/snowflake.py:1084-1096: Snowflake's FLATTEN parses as an Explode, and its table
+	// alias columns default to FLATTEN_COLUMNS when the query does not spell them out.
+	if p.dialectIs("snowflake") && lateral != nil {
+		if unnest := lateral.This(); unnest != nil && unnest.Kind() == exp.KindExplode {
+			columns := snowflakeFlattenColumns()
+			if alias := asExpr(lateral.Arg("alias")); alias != nil {
+				if existing, _ := alias.Arg("columns").([]exp.Expression); len(existing) == 0 {
+					alias.Set("columns", columns)
+				}
+			} else {
+				lateral.Set("alias", exp.TableAlias(exp.Args{"this": exp.ToIdentifier("_flattened"), "columns": columns}))
+			}
+		}
+	}
+
+	return lateral
 }
 
 func (p *Parser) parseUnnest(withAlias bool) exp.Expression {

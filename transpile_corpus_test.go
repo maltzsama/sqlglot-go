@@ -211,7 +211,7 @@ const (
 	minPassTranspileAthena      = 8
 	minPassTranspileBigQuery    = 598
 	minPassTranspileClickhouse  = 185
-	minPassTranspileDatabricks  = 215
+	minPassTranspileDatabricks  = 216
 	minPassTranspileDoris       = 72
 	minPassTranspileDremio      = 31
 	minPassTranspileDuckDB      = 641
@@ -223,9 +223,9 @@ const (
 	minPassTranspilePresto      = 419
 	minPassTranspileRedshift    = 154
 	minPassTranspileRisingWave  = 4
-	minPassTranspileSnowflake   = 672
-	minPassTranspileSpark       = 657
-	minPassTranspileSpark2      = 56
+	minPassTranspileSnowflake   = 673
+	minPassTranspileSpark       = 659
+	minPassTranspileSpark2      = 57
 	minPassTranspileSQLite      = 123
 	minPassTranspileStarrocks   = 82
 	minPassTranspileTeradata    = 74

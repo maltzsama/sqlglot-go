@@ -320,7 +320,7 @@ func mergeable(outerScope, innerScope *Scope, leaveTablesIsolated bool, fromOrJo
 			numberLiteralAliases[name] = true
 		}
 		for _, node := range s.Walk() {
-			if node.Is(exp.TraitAggFunc) || node.Kind() == exp.KindSelect || node.Kind() == exp.KindExplode {
+			if node.Is(exp.TraitAggFunc) || node.Kind() == exp.KindSelect || isExplodeFamily(node.Kind()) {
 				return false
 			}
 			if node.Kind() == exp.KindWindow {
@@ -636,4 +636,15 @@ func popCTE(innerScope *Scope) {
 	} else {
 		cte.Pop()
 	}
+}
+
+// isExplodeFamily ports the isinstance(node, exp.Explode) guard in _mergeable
+// (merge_subqueries.py:303-305): _ExplodeOuter subclasses Explode upstream (array.py:248-256),
+// so an EXPLODE_OUTER projection must block a subquery merge just like EXPLODE does.
+func isExplodeFamily(kind exp.Kind) bool {
+	switch kind {
+	case exp.KindExplode, exp.KindExplodeOuter:
+		return true
+	}
+	return false
 }

@@ -30,7 +30,7 @@ targeted slice of the optimizer:
   fallback where upstream builds a structured node (guarded by a committed fidelity test).
 - **Cross-dialect transpilation** — reading one registered dialect and writing another, verified
   against upstream's `validate_all` read/write pairs: `TestTranspileCorpus` runs every pair whose
-  dialects are all registered — **8881 pairs total, 6760 of them crossing dialects, 6322 passing
+  dialects are all registered — **8881 pairs total, 6760 of them crossing dialects, 6326 passing
   today** — with monotonic per-target-dialect
   floors, and the open pairs are the burndown list in `testdata/transpile_gaps.txt` (mostly the
   per-dialect generator `TRANSFORMS`/`TYPE_MAPPING` remaps).
@@ -80,7 +80,7 @@ case-folding, to match real engines).
 | Tokenize | `tokens` | base tokenizer plus per-dialect overrides for every registered dialect |
 | Parse → AST | `parser`, `expressions` | full: SELECT/set-ops/CTE/subqueries, all query clauses, predicates, functions, DML + DDL (INSERT/UPDATE/DELETE/MERGE/CREATE + properties), CAST/DataType, PIVOT/LATERAL/VALUES/TABLESAMPLE, INTERVAL, JSON/JSONB ops, window functions |
 | Generate (AST → SQL) | `generator` | **100% round-trip** on the upstream identity corpus for base (980/980) and every registered dialect (see [Dialects](#dialects)) |
-| Transpile (read one dialect, write another) | `parser`, `generator` | every registered-dialect pair from upstream's `validate_all` corpus runs green or is tracked — 6760 of the 8881 pairs cross dialects, 6322/8881 pass overall; open pairs in `testdata/transpile_gaps.txt` |
+| Transpile (read one dialect, write another) | `parser`, `generator` | every registered-dialect pair from upstream's `validate_all` corpus runs green or is tracked — 6760 of the 8881 pairs cross dialects, 6326/8881 pass overall; open pairs in `testdata/transpile_gaps.txt` |
 | Schema | `schema` | `MappingSchema`, `DataType.build`, type-category sets |
 | Qualify | `optimizer` | `qualify` (qualify_tables, normalize_identifiers, qualify_columns, quote_identifiers, validate) |
 | Rewrite passes | `optimizer` | `EliminateCTEs`, `EliminateSubqueries`, `OptimizeJoins`, `UnnestSubqueries`, `MergeSubqueries`, `Normalize`, `EliminateJoins`, `PushdownPredicates`, `PushdownProjections`, `Canonicalize`, `Simplify`, `AnnotateTypes` |

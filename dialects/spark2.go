@@ -13,6 +13,8 @@ import (
 // registered in the generator package (generator/dialect_spark2.go).
 func Spark2() *Dialect {
 	d := Hive()
+	// generators/spark2.py:113 CAN_IMPLEMENT_ARRAY_ANY = True (spark inherits it).
+	d.CanImplementArrayAny = true
 	d.Name = "spark2"
 	// generators/spark2.py:115 PARSE_JSON_NAME = None (bare value).
 	d.ParseJSONName = stringPtr("")

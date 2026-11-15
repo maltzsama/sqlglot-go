@@ -247,8 +247,7 @@ func (r *Resolver) GetSourceColumns(name string, onlyVisible ...bool) []string {
 		} else if sourceExpr != nil && sourceExpr.Is(exp.TraitSetOperation) {
 			columns = r.GetSourceColumnsFromSetOp(sourceExpr)
 		} else if sourceExpr != nil {
-			// TODO(slice 5): QueryTransform Spark schema branch.
-			columns = sourceExpr.NamedSelects()
+			columns = r.selectableSourceColumns(sourceExpr)
 		}
 	}
 
@@ -529,4 +528,23 @@ func (r *Resolver) getColumnTypeFromScope(source any, column exp.Expression, vis
 		}
 	}
 	return nil
+}
+
+// selectableSourceColumns ports resolver.py:193-203: a Selectable's source columns, with the
+// Spark SELECT TRANSFORM special case — a QueryTransform exposes its declared schema columns,
+// or key/value when it has no schema.
+func (r *Resolver) selectableSourceColumns(sourceExpr exp.Expression) []string {
+	if sourceExpr != nil && sourceExpr.Kind() == exp.KindSelect {
+		if selects := sourceExpr.Selects(); len(selects) > 0 && selects[0].Kind() == exp.KindQueryTransform {
+			if schema := asExpression(selects[0].Arg("schema")); schema != nil {
+				columns := make([]string, 0, len(schema.Expressions()))
+				for _, column := range schema.Expressions() {
+					columns = append(columns, column.Name())
+				}
+				return columns
+			}
+			return []string{"key", "value"}
+		}
+	}
+	return sourceExpr.NamedSelects()
 }
