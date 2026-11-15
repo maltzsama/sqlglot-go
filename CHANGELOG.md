@@ -18,6 +18,15 @@ merged, tags the version and publishes the GitHub release. See
 [AGENTS.md § Releasing](./AGENTS.md#releasing). Entries for **v0.5.0 and earlier** were written by hand
 before release-please was adopted.
 
+## [0.41.0](https://github.com/maltzsama/sqlglot-go/compare/v0.40.0...v0.41.0) (2026-11-15)
+
+
+### Features
+
+* **dialects:** parse Oracle q-quoted strings and scope the TABLE value constructor ([#71](https://github.com/maltzsama/sqlglot-go/issues/71)) ([c610da4](https://github.com/maltzsama/sqlglot-go/commit/c610da42e65fc90c2300e779c39ec88068bee85f))
+* **jsonpath:** port the JSONPath tokenizer and close the canonicalize gaps ([#68](https://github.com/maltzsama/sqlglot-go/issues/68)) ([f404033](https://github.com/maltzsama/sqlglot-go/commit/f404033dff35e71e227e74b222b8ee98fcd2e623))
+* **optimizer:** close the six optimize fixture gaps ([#70](https://github.com/maltzsama/sqlglot-go/issues/70)) ([edfcb74](https://github.com/maltzsama/sqlglot-go/commit/edfcb74e04ed12fe5def82bfa9ad193b65c710f8))
+
 ## [0.40.0](https://github.com/maltzsama/sqlglot-go/compare/v0.39.0...v0.40.0) (2026-11-15)
 
 
