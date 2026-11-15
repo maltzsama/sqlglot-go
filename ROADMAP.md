@@ -114,7 +114,7 @@ differential-check against the pinned Python):
   `eliminate_ctes` + `journal`, `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries`,
   `merge_subqueries`, `annotate_types`, `simplify`, `normalize`, `eliminate_joins`,
   `pushdown_predicates`, `pushdown_projections` and `canonicalize`, plus the query builder API
-  they share. `optimizer.sql` passes with only the six tracked `optimizeGaps` rows skipped
+  they share. `optimizer.sql` passes in full — the six former `optimizeGaps` rows now close
   (explode folding, the Spark decorrelation/TRANSFORM cases, and the two Snowflake #40 rows),
   and the TPC-H and TPC-DS fixture sets pass in full.
 - annotate_types is ported (#27), and the function nodes it previously parsed as `Anonymous` are
@@ -122,7 +122,7 @@ differential-check against the pinned Python):
   `optimizer/testdata/annotate_gaps.txt`.
 - CROSS-DIALECT transpilation: verified against upstream's `validate_all` read/write pairs —
   `TestTranspileCorpus` runs every pair whose dialects are all registered (`testdata/transpile_corpus.jsonl`,
-  8881 pairs, 6322 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
+  8881 pairs, 6326 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
   What remains are the per-dialect override tables that make cross-dialect output correct — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
@@ -866,7 +866,7 @@ Corpus: 227 `spark` and 176 `databricks` `validate_identity` cases from
 `tests/dialects/test_spark.py` and `tests/dialects/test_databricks.py`
 (`scripts/extract_dialect_corpus.py`), at **227/227** and **176/176**. Regression tests:
 `spark2_test.go`, `spark_test.go`, `databricks_test.go`.
-The optimizer fixtures that do not pass yet are recorded in `optimizeGaps`.
+The optimizer fixture suite passes in full.
 
 ## BigQuery dialect — DONE (issue #41)
 

@@ -54,7 +54,11 @@ func AliasExpr(expression any, alias any, table bool, quoted ...bool) Expression
 		expr.Set("alias", TableAlias(Args{"this": aliasExpr}))
 		return expr
 	}
-	if supportsArg(expr.Kind(), "alias") && expr.Kind() != KindExpression {
+	// We don't set the "alias" arg for Window expressions, because that would add an
+	// IDENTIFIER node in the AST, representing a named window (e.g. BigQuery's
+	// `WINDOW w AS (...)`); the whole Window expression must be wrapped in an Alias
+	// instead (expressions/core.py:3041-3051).
+	if supportsArg(expr.Kind(), "alias") && expr.Kind() != KindExpression && expr.Kind() != KindWindow {
 		expr.Set("alias", aliasExpr)
 		return expr
 	}

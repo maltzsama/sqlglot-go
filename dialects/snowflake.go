@@ -180,6 +180,10 @@ func snowflakeDateUnit(unit exp.Expression) exp.Expression {
 func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expression {
 	out := map[string]func([]exp.Expression) exp.Expression{}
 
+	// parsers/snowflake.py:524: FLATTEN parses as exp.Explode; the lateral parse site then
+	// defaults its alias columns to FLATTEN_COLUMNS.
+	out["FLATTEN"] = exp.FromArgListFunc(exp.KindExplode)
+
 	out["DATE_TRUNC"] = snowflakeDateTruncBuilder
 	out["DATETRUNC"] = snowflakeDateTruncBuilder
 	out["DATEADD"] = func(args []exp.Expression) exp.Expression {

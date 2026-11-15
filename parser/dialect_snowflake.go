@@ -79,3 +79,15 @@ func (p *Parser) parseSnowflakeDatePart() exp.Expression {
 	}
 	return p.expression(exp.Extract(exp.Args{"this": this, "expression": expression}), nil, nil)
 }
+
+// snowflakeFlattenColumns ports SnowflakeParser.FLATTEN_COLUMNS
+// (parsers/snowflake.py:866): the output columns FLATTEN produces when the query does not
+// alias them itself.
+func snowflakeFlattenColumns() []exp.Expression {
+	names := []string{"SEQ", "KEY", "PATH", "INDEX", "VALUE", "THIS"}
+	out := make([]exp.Expression, 0, len(names))
+	for _, name := range names {
+		out = append(out, exp.ToIdentifier(name))
+	}
+	return out
+}

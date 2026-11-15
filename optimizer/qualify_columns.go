@@ -1174,10 +1174,9 @@ func QualifyOutputs(scopeOrExpression any, dialectArg ...dialects.DialectType) {
 			break
 		}
 		selection := selects[i]
-		// Python also breaks on exp.QueryTransform (qualify_columns.py:958). The QueryTransform
-		// node kind does not exist in the Go port yet (Spark SELECT TRANSFORM — slice 5), so only
-		// the nil case is reachable. TODO(slice 5): break on KindQueryTransform once it exists.
-		if selection == nil {
+		// qualify_columns.py:1138: a QueryTransform (Spark SELECT TRANSFORM) exposes its own
+		// declared schema, so the aliasing loop stops there instead of wrapping it.
+		if selection == nil || selection.Kind() == exp.KindQueryTransform {
 			break
 		}
 

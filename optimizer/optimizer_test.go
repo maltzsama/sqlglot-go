@@ -81,7 +81,7 @@ func TestOptimize(t *testing.T) {
 	}
 
 	infer := true
-	checkOptimizeFile(t, "optimizer.sql", true, optimizeGaps, optimizer.OptimizeOpts{
+	checkOptimizeFile(t, "optimizer.sql", true, nil, optimizer.OptimizeOpts{
 		Schema: schema.M(
 			"x", schema.M("a", "INT", "b", "INT"),
 			"y", schema.M("b", "INT", "c", "INT"),
@@ -100,20 +100,6 @@ func TestTPCH(t *testing.T) {
 // TestTPCDS ports test_tpcds (tests/test_optimizer.py:1825-1826).
 func TestTPCDS(t *testing.T) {
 	checkOptimizeFile(t, "tpc-ds/tpc-ds.sql", true, nil, optimizer.OptimizeOpts{Schema: loadTSVSchema(t, "tpc-ds/schema.tsv")})
-}
-
-// optimizeGaps are optimizer.sql fixtures this port can't reproduce yet.
-var optimizeGaps = map[string]string{
-	// #35: merge_subqueries folds the EXPLODE_OUTER projection subquery into the outer SELECT;
-	// upstream's eliminate_subqueries keeps it as a top-level CTE.
-	"explode_outer": "merge_subqueries folds an explode projection instead of keeping a CTE (#35 follow-up)",
-	// #35: fixtures that only run now that spark is registered.
-	"decorrelate subquery and transpile ArrayAny correctly when generating spark": "subquery decorrelation for the ArrayAny rewrite is not ported",
-	"SELECT TRANSFORM ... Spark clause when schema is provided":                   "qualify aliases a TRANSFORM projection instead of exposing its schema columns",
-	"SELECT TRANSFORM ... Spark clause when schema is not provided":               "qualify aliases a TRANSFORM projection instead of exposing its key/value columns",
-	// #40: fixtures that only run now that snowflake is registered.
-	"flatten over object_construct": "ObjectConstruct/flatten rewriting is not ported (#40)",
-	"array_agg within group over":   "ArrayAgg WITHIN GROUP ordering is not ported (#40)",
 }
 
 // TestOptimizeFileSchema ports test_file_schema (tests/test_optimizer.py:1828-1835).
