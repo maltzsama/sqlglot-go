@@ -130,10 +130,14 @@ differential-check against the pinned Python):
   Snowflake (#40), SQLite (#38), MariaDB (#37, a beyond-upstream identity over MySQL), Dremio and
   Teradata are ported; upstream ships 30+ and the rest are out of scope for now (queued: DAX,
   Tableau).
-- TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): the v30.17.0 bump removed
-  the FOR VERSION/TIMESTAMP and hive AS OF compound keywords but did not port `VERSION_PHRASES` +
-  `_parse_version` (parser.py:1738-1745, 5120-5146); the constructs now fail closed (parse error)
-  instead of building `Table.version`. Port with a dialect that needs them.
+- TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): **DONE.** `VERSION_PHRASES`
+  (parser/parser.go:1682, ports parser.py:1738-1745) and `_parse_version` (parser/parser.go:1695,
+  ports parser.py:5120-5146) are wired into table parsing, and the v30.17.0 keyword removals are
+  handled by phrase matching (`FOR SYSTEM TIME AS OF` normalizes to `FOR SYSTEM_TIME AS OF`).
+  Verified byte-identical to the pinned Python for bigquery, hive, presto, spark/databricks, trino,
+  dremio and postgres; guarding tests in `version_test.go` (identity + the upstream dremio
+  validate_all read/write pairs). Snowflake's separate `BEFORE (STATEMENT => …)` / `AT (…)`
+  historical-data clauses are the remaining gap (see Snowflake identity gaps).
 - PARSER coverage is bounded by the ported corpus: constructs upstream parses that are NOT exercised
   by the identity fixtures may still be gaps — e.g. any long `FUNCTIONS`/`FUNCTION_PARSERS` tail or
   DDL detail not hit by a fixture. Treat a not-yet-parsed construct upstream parses as a gap to
