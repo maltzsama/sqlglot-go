@@ -32,7 +32,11 @@ func (p *Parser) parseTableSample(asModifier bool) exp.Expression {
 	matchedLParen := p.match(tokens.L_PAREN)
 
 	var num exp.Expression
-	if p.match(tokens.NUMBER, false) {
+	var expressions []exp.Expression
+	if p.dialect.TablesampleCSV {
+		// parsers/teradata.py:14 TABLESAMPLE_CSV: SAMPLE 0.33, .25, .1.
+		expressions = p.parseCsv(func() exp.Expression { return p.parsePrimary() })
+	} else if p.match(tokens.NUMBER, false) {
 		num = p.parseFactor()
 	} else {
 		num = p.parsePrimary()
@@ -71,6 +75,7 @@ func (p *Parser) parseTableSample(asModifier bool) exp.Expression {
 
 	sample := p.expression(exp.TableSample(exp.Args{
 		"method":             method,
+		"expressions":        expressions,
 		"bucket_numerator":   bucketNumerator,
 		"bucket_denominator": bucketDenominator,
 		"bucket_field":       bucketField,

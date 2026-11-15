@@ -110,7 +110,7 @@ func init() {
 		expressions.KindSHA2Digest:            bigQuerySHA2SQL,
 		expressions.KindStabilityProperty:     bigQueryStabilityPropertySQL,
 		expressions.KindString:                clickhouseRename("STRING"),
-		expressions.KindStrPosition:           (*Generator).strPositionSQL,
+		expressions.KindStrPosition:           instrStrPositionSQL,
 		expressions.KindStrToDate:             bigQueryStrToDatetimeSQL,
 		expressions.KindStrToTime:             bigQueryStrToDatetimeSQL,
 		expressions.KindSessionUser:           func(*Generator, expressions.Expression) string { return "SESSION_USER()" },

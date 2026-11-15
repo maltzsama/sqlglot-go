@@ -364,7 +364,6 @@ annotate_functions.sql|mysql|1631
 annotate_functions.sql|mysql|1632
 annotate_functions.sql|mysql|1633
 annotate_functions.sql|mysql|1634
-annotate_functions.sql|mysql|1635
 annotate_functions.sql|mysql|1637
 annotate_functions.sql|mysql|1639
 annotate_functions.sql|mysql|1640

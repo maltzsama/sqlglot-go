@@ -397,7 +397,6 @@ func TestBigQueryMiscFunctions(t *testing.T) {
 		"SELECT REGEXP_EXTRACT(a, 'b')",
 		"SELECT REGEXP_EXTRACT_ALL(a, 'b')",
 		"SELECT REGEXP_REPLACE(a, 'b', c)",
-		"SELECT STRPOS(a, b)",
 		"SELECT SPLIT(a, ',')",
 		"SELECT SPLIT(a, b)",
 		"SELECT TRANSLATE(x, y, z)",
@@ -417,6 +416,10 @@ func TestBigQueryMiscFunctions(t *testing.T) {
 	} {
 		assertRoundTrip(t, "bigquery", sql, sql)
 	}
+	// STRPOS is not a same-sql round-trip under bigquery: the write side canonicalizes it
+	// to INSTR via strposition_sql(func_name="INSTR") (generators/bigquery.py:405-407),
+	// matching upstream's validate_all pair in tests/dialects/test_bigquery.py:1978-1983.
+	assertRoundTrip(t, "bigquery", "SELECT STRPOS(a, b)", "SELECT INSTR(a, b)")
 }
 
 // TestBigQueryPseudoColumns ports test_pseudocolumns (tests/dialects/test_bigquery.py:4029).

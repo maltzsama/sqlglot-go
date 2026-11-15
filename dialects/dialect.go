@@ -61,12 +61,16 @@ type Dialect struct {
 	// forms (CAST, EXTRACT ... FROM, TRIM ... FROM, SUBSTRING ... FROM/FOR, POSITION ... IN,
 	// CHAR ... USING, CEIL ... TO) keep their structured nodes and render form-faithfully.
 	// Set via the `opaque_functions` dialect setting at GetOrRaise resolve time.
-	OpaqueFunctions         bool
-	NormalizationStrategy   NormalizationStrategy
-	DPipeIsStringConcat     bool
-	StrictStringConcat      bool
-	TypedDivision           bool
-	SafeDivision            bool
+	OpaqueFunctions       bool
+	NormalizationStrategy NormalizationStrategy
+	DPipeIsStringConcat   bool
+	StrictStringConcat    bool
+	TypedDivision         bool
+	SafeDivision          bool
+	// CanImplementArrayAny ports CAN_IMPLEMENT_ARRAY_ANY (generator.py:520, base False):
+	// when true the generator rewrites ARRAY_ANY into an ARRAY_SIZE/FILTER emptiness
+	// check (generator.py:5252-5257) instead of warning and emitting the call verbatim.
+	CanImplementArrayAny    bool
 	SupportsColumnJoinMarks bool
 	ColonIsVariantExtract   bool
 	// ColonChainIsSingleExtract ports COLON_CHAIN_IS_SINGLE_EXTRACT (parser.py:1880, base True;
@@ -387,6 +391,9 @@ type Dialect struct {
 	// A nil/empty map (the base Dialect's zero value) means "no per-dialect overrides",
 	// so p.dialect.Functions is safe to index even when unset.
 	Functions map[string]func([]exp.Expression) exp.Expression
+	// TablesampleCSV ports TABLESAMPLE_CSV (parser.py:1851, base False; teradata True): the
+	// TABLESAMPLE/SAMPLE argument list is a CSV of primary expressions instead of one number.
+	TablesampleCSV bool
 	// ValuesFollowedByParen ports the parser flag of the same name (parser.py:1801): whether a
 	// bare VALUES keyword not immediately followed by "(" can be reparsed as a plain identifier
 	// (e.g. `SELECT values`, `values.c`). MySQL overrides to False (parsers/mysql.py:303),
@@ -1076,6 +1083,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return Doris(), nil
 	case "dremio":
 		return Dremio(), nil
+	case "teradata":
+		return Teradata(), nil
 	case "oracle":
 		return Oracle(), nil
 	case "redshift":

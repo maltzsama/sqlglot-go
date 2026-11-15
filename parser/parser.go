@@ -4128,6 +4128,12 @@ func (p *Parser) parseSubquery(this exp.Expression, parseAlias bool) exp.Express
 // parseFunction ports _parse_function (parser.py:7147-7175), including the ODBC `{fn ...}`
 // wrapper.
 func (p *Parser) parseFunction(functions map[string]func([]exp.Expression) exp.Expression, anonymous bool, optionalParens bool, anyToken bool) exp.Expression {
+	// parsers/teradata.py:190-198: a `(FORMAT ...)` suffix is a Teradata output-format
+	// override, so the name is not a function call.
+	if p.dialect.Name == "teradata" && p.next.IsValid() && p.next.TokenType == tokens.L_PAREN &&
+		p.index+2 < len(p.tokens) && p.tokens[p.index+2].TokenType == tokens.FORMAT {
+		return nil
+	}
 	fnSyntax := false
 	if p.curr.TokenType == tokens.L_BRACE && p.next.IsValid() && stringsUpper(p.next.Text) == "FN" {
 		p.advance(2)

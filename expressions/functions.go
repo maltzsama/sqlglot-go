@@ -179,16 +179,20 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	// subclass's sql_name in FUNCTION_BY_NAME (parser.py:374), so FROM_BASE parses
 	// structurally in every dialect — Redshift renames it to STRTOL on write
 	// (generator/dialect_redshift.go). Without this entry it degrades to Anonymous.
-	"FROM_BASE":           genericFunction(KindFromBase),
-	"MD5":                 genericFunction(KindMD5),
-	"ST_POINT":            genericFunction(KindStPoint),
-	"ST_MAKEPOINT":        genericFunction(KindStPoint),
-	"ST_DISTANCE":         genericFunction(KindStDistance),
-	"GENERATE_SERIES":     genericFunction(KindGenerateSeries),
-	"DATE":                genericFunction(KindDate),
-	"ADD_MONTHS":          genericFunction(KindAddMonths),
-	"DATE_ADD":            genericFunction(KindDateAdd),
-	"DATEADD":             genericFunction(KindDateAdd),
+	"FROM_BASE":       genericFunction(KindFromBase),
+	"MD5":             genericFunction(KindMD5),
+	"ST_POINT":        genericFunction(KindStPoint),
+	"ST_MAKEPOINT":    genericFunction(KindStPoint),
+	"ST_DISTANCE":     genericFunction(KindStDistance),
+	"GENERATE_SERIES": genericFunction(KindGenerateSeries),
+	"DATE":            genericFunction(KindDate),
+	"ADD_MONTHS":      genericFunction(KindAddMonths),
+	"DATE_ADD":        genericFunction(KindDateAdd),
+	"DATEADD":         genericFunction(KindDateAdd),
+	// DATE_SUB is a base FUNCTIONS entry (Parser.FUNCTIONS["DATE_SUB"] =
+	// DateSub.from_arg_list, verified against the pinned source); base renders it via the
+	// function fallback like upstream, which has no datesub_sql.
+	"DATE_SUB":            genericFunction(KindDateSub),
 	"DATEDIFF":            genericFunction(KindDateDiff),
 	"DATE_DIFF":           genericFunction(KindDateDiff),
 	"JSON_EXTRACT":        jsonExtractFunction(KindJSONExtract),
@@ -293,9 +297,15 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	// parenthesized CURRENT_DATE() / CURRENT_DATE(<zone>) forms build a CurrentDate node too
 	// (currentdate_sql renders CURRENT_DATE without the empty parens an Anonymous call emits).
 	"CURRENT_DATE": genericFunction(KindCurrentDate),
-	"FIRST":        genericFunction(KindFirst),
-	"SHA2":         genericFunction(KindSHA2),
-	"LAST":         genericFunction(KindLast),
+	// CURRENT_TIMESTAMP is likewise a base FUNCTIONS entry (CurrentTimestamp.from_arg_list),
+	// so the parenthesized CURRENT_TIMESTAMP() / CURRENT_TIMESTAMP(n) forms build a
+	// CurrentTimestamp node instead of an Anonymous call — the same AST the bare
+	// NO_PAREN_FUNCTIONS keyword produces, which is what keeps e.g. snowflake's
+	// CURRENT_TIMESTAMP() round-tripping through teradata's bare render.
+	"CURRENT_TIMESTAMP": genericFunction(KindCurrentTimestamp),
+	"FIRST":             genericFunction(KindFirst),
+	"SHA2":              genericFunction(KindSHA2),
+	"LAST":              genericFunction(KindLast),
 	// Spark/Databricks cluster: the base FUNCTION_BY_NAME entries for the new Func
 	// classes, keyed by each class's sql_names() (expressions/__init__.py:50), so base
 	// parses them typed exactly as upstream does. Dialect-specific spellings (AGGREGATE,
@@ -452,6 +462,24 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"UTC_DATE":                 genericFunction(KindUtcDate),
 	"UTC_TIME":                 genericFunction(KindUtcTime),
 	"WIDTH_BUCKET":             genericFunction(KindWidthBucket),
+	// parser.py:449-452 base FUNCTIONS: the whole STR_POSITION family parses structurally
+	// in every dialect that doesn't overlay these names (presto STRPOS, bigquery STRPOS,
+	// tsql/snowflake CHARINDEX, mysql-family INSTR via its own entry upstream).
+	"STR_POSITION": genericFunction(KindStrPosition),
+	"STRPOS":       genericFunction(KindStrPosition),
+	"INSTR":        genericFunction(KindStrPosition),
+	"CHARINDEX":    buildLocateStrPosition,
+	"LOCATE":       buildLocateStrPosition,
+}
+
+// buildLocateStrPosition ports build_locate_strposition (parser.py:185-190): LOCATE and
+// CHARINDEX take substr first (this=args[1], substr=args[0], position=args[2]).
+func buildLocateStrPosition(args []Expression) Expression {
+	return newNode(KindStrPosition, Args{
+		"this":     seqGetExpr(args, 1),
+		"substr":   seqGetExpr(args, 0),
+		"position": seqGetExpr(args, 2),
+	})
 }
 
 // buildMod ports build_mod (parser.py:121-129): MOD(x, y) -> exp.Mod, parenthesizing either

@@ -155,6 +155,8 @@ func (p *Parser) parseSetItem() exp.Expression {
 		parsers, trie = sparkSetParsers, sparkSetTrie
 	case "duckdb":
 		parsers, trie = duckdbSetParsers, duckdbSetTrie
+	case "teradata":
+		parsers, trie = teradataSetParsers, teradataSetTrie
 	}
 	// Capture the index BEFORE findParser (which consumes the dispatch keyword) so a dispatched
 	// special-form parser that fails on a malformed tail can be retreated ATOMICALLY — the whole item,

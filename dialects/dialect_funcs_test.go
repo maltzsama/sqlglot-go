@@ -41,7 +41,7 @@ func TestMySQLFunctionsOverlayKeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetOrRaise(mysql): %v", err)
 	}
-	wantKeys := []string{"CURDATE", "CURTIME", "DATABASE", "SCHEMA", "INSTR", "TIME_STR_TO_UNIX"}
+	wantKeys := []string{"CURDATE", "CURTIME", "DATABASE", "SCHEMA", "TIME_STR_TO_UNIX"}
 	for _, key := range wantKeys {
 		if mysql.Functions[key] == nil {
 			t.Errorf("mysql.Functions[%q] = nil, want a builder", key)
@@ -49,7 +49,7 @@ func TestMySQLFunctionsOverlayKeys(t *testing.T) {
 	}
 	// The base-scope names that moved to exp.FunctionByName must no longer be in the mysql
 	// overlay (mysql resolves them through the merged base map instead).
-	for _, key := range []string{"DAY_OF_MONTH", "DAY_OF_WEEK", "DAY_OF_YEAR", "WEEK_OF_YEAR", "LCASE", "UCASE"} {
+	for _, key := range []string{"DAY_OF_MONTH", "DAY_OF_WEEK", "DAY_OF_YEAR", "WEEK_OF_YEAR", "LCASE", "UCASE", "INSTR"} {
 		if mysql.Functions[key] != nil {
 			t.Errorf("mysql.Functions[%q] should now be unset (moved to base exp.FunctionByName)", key)
 		}

@@ -19,6 +19,11 @@ func init() {
 		expressions.DTypeTimestampLtz: "TIMESTAMPLTZ",
 		expressions.DTypeTimestampTz:  "TIMESTAMPTZ",
 	})
+	// generators/snowflake.py:670-671 exp.SetProperty / exp.VolatileProperty: UNSUPPORTED.
+	registerDialectPropertyLocations("snowflake", map[expressions.Kind]propertyLocation{
+		expressions.KindSetProperty:      propertyLocationUnsupported,
+		expressions.KindVolatileProperty: propertyLocationUnsupported,
+	})
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
 		expressions.KindApproxDistinct:     clickhouseRename("APPROX_COUNT_DISTINCT"),
@@ -121,8 +126,13 @@ func init() {
 		expressions.KindPivot:       snowflakePivot,
 		expressions.KindExtract:     snowflakeExtractSQL,
 		expressions.KindDate:        snowflakeDateSQL,
-		expressions.KindUndrop:      snowflakeUndropSQL,
-		expressions.KindDescribe:    snowflakeDescribeSQL,
+		// generators/snowflake.py:567 exp.Rand: lambda e: func("RANDOM", e.this) — only the
+		// seed is rendered; the parser-injected lower/upper bounds are dropped.
+		expressions.KindRand: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("RANDOM", []any{e.Arg("this")}, "(", ")", true)
+		},
+		expressions.KindUndrop:   snowflakeUndropSQL,
+		expressions.KindDescribe: snowflakeDescribeSQL,
 	}
 	registerDialectDispatch("snowflake", handlers)
 }

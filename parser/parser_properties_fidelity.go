@@ -7,30 +7,326 @@ import (
 	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
-// parsePropertyBefore ports _parse_property_before (parser.py:2767-2790). The property
-// subset in this port only consumes the DEFAULT prefix; the other Teradata-only modifiers
-// are left untouched so unsupported forms fail closed through CREATE's Command fallback.
+// propertyKwargs carries the modifier flags _parse_property_before matches ahead of the
+// property key (parser.py:2859-2869) into the PROPERTY_PARSERS entry it dispatches to.
+// `local` holds the "LOCAL"/"NOT LOCAL" string upstream stores (parser.py:2864-2865); the
+// rest are booleans, with upstream's `default` field named isDefault because default is a
+// Go keyword.
+type propertyKwargs struct {
+	no        bool
+	dual      bool
+	before    bool
+	isDefault bool
+	local     string
+	after     bool
+	minimum   bool
+	maximum   bool
+}
+
+// truthy returns only the set kwargs, mirroring upstream's truthy filter before the
+// dispatch call (parser.py:2874).
+func (kw propertyKwargs) truthy() map[string]bool {
+	set := map[string]bool{}
+	if kw.no {
+		set["no"] = true
+	}
+	if kw.dual {
+		set["dual"] = true
+	}
+	if kw.before {
+		set["before"] = true
+	}
+	if kw.isDefault {
+		set["default"] = true
+	}
+	if kw.local != "" {
+		set["local"] = true
+	}
+	if kw.after {
+		set["after"] = true
+	}
+	if kw.minimum {
+		set["minimum"] = true
+	}
+	if kw.maximum {
+		set["maximum"] = true
+	}
+	return set
+}
+
+// propertyBeforeKwargAccepts maps each PROPERTY_PARSERS entry whose upstream lambda takes
+// **kwargs (parser.py:1301-1413) to the _parse_property_before kwargs it can forward.
+// Every other entry takes no kwargs, so a truthy kwarg there makes upstream's dispatch
+// call raise TypeError, which _parse_property_before turns into ParseError
+// (parser.py:2874-2876); the Go port records raiseError instead and returns nil so the
+// enclosing CREATE fails closed through parseCreateStructured's tail guard. No dialect
+// overlay in this port redefines any of these seven keys (parser/dialect_*.go), so the
+// table is authoritative for every dialect.
+var propertyBeforeKwargAccepts = map[string]map[string]bool{
+	"CHARSET":         {"default": true},
+	"COLLATE":         {"default": true},
+	"DATABLOCKSIZE":   {"default": true, "minimum": true, "maximum": true},
+	"FALLBACK":        {"no": true},
+	"JOURNAL":         {"no": true, "dual": true, "before": true, "local": true, "after": true},
+	"LOG":             {"no": true},
+	"MERGEBLOCKRATIO": {"no": true, "default": true},
+}
+
+// propertyBeforeParsers holds the five **kwargs PROPERTY_PARSERS entries that build their
+// node from the _parse_property_before kwargs (parser.py:2871-2876). The non-before path
+// reaches the same entries through the base propertyParsers wrappers in parser_ddl.go,
+// which pass at most the DEFAULT flag as a zero-or-default kwargs value.
+var propertyBeforeParsers = map[string]func(*Parser, propertyKwargs) exp.Expression{
+	"DATABLOCKSIZE":   (*Parser).parseDatablocksize,
+	"FALLBACK":        (*Parser).parseFallback,
+	"JOURNAL":         (*Parser).parseJournal,
+	"LOG":             (*Parser).parseLog,
+	"MERGEBLOCKRATIO": (*Parser).parseMergeBlockRatio,
+}
+
+// parsePropertyBefore ports _parse_property_before (parser.py:2855-2881), reached from
+// CREATE's POST_NAME position (parser.py:2641-2642) for every dialect. Like upstream it
+// never retreats: the comma and every matched modifier stay consumed even when no property
+// key follows, so a miss falls through to CREATE's tail guard (parser.py:2719-2721)
+// instead of rewinding into the schema.
 func (p *Parser) parsePropertyBefore() exp.Expression {
-	index := p.index
 	p.match(tokens.COMMA)
 
-	if p.matchTextSeq("NO") || p.matchTextSeq("DUAL") || p.matchTextSeq("BEFORE") ||
-		p.matchTextSeq("LOCAL") || p.matchTextSeq("NOT", "LOCAL") || p.matchTextSeq("AFTER") ||
-		p.matchTexts(map[string]bool{"MIN": true, "MINIMUM": true, "MAX": true, "MAXIMUM": true}) {
-		p.retreat(index)
-		return nil
+	kw := propertyKwargs{
+		no:        p.matchTextSeq("NO"),
+		dual:      p.matchTextSeq("DUAL"),
+		before:    p.matchTextSeq("BEFORE"),
+		isDefault: p.matchTextSeq("DEFAULT"),
 	}
+	switch {
+	case p.matchTextSeq("LOCAL"):
+		kw.local = "LOCAL"
+	case p.matchTextSeq("NOT", "LOCAL"):
+		kw.local = "NOT LOCAL"
+	}
+	kw.after = p.matchTextSeq("AFTER")
+	kw.minimum = p.matchTexts(map[string]bool{"MIN": true, "MINIMUM": true})
+	kw.maximum = p.matchTexts(map[string]bool{"MAX": true, "MAXIMUM": true})
 
-	isDefault := p.matchTextSeq("DEFAULT")
 	if p.matchTexts(p.propertyParserKeys()) {
-		return p.propertyParser(stringsUpper(p.prev.Text))(p, isDefault)
+		key := stringsUpper(p.prev.Text)
+		truthy := kw.truthy()
+		if accepts, ok := propertyBeforeKwargAccepts[key]; ok {
+			for name := range truthy {
+				if !accepts[name] {
+					p.raiseError("Cannot parse property '" + p.prev.Text + "'")
+					return nil
+				}
+			}
+		} else if len(truthy) > 0 {
+			p.raiseError("Cannot parse property '" + p.prev.Text + "'")
+			return nil
+		}
+		if parse := propertyBeforeParsers[key]; parse != nil {
+			return parse(p, kw)
+		}
+		if fn := p.propertyParser(key); fn != nil {
+			return fn(p, kw.isDefault)
+		}
+		return nil
 	}
 	// "CHARACTER SET" is two tokens since v30.17 (parser.py:2878-2880).
 	if p.matchTextSeq("CHARACTER", "SET") {
-		return p.parseCharacterSet(isDefault)
+		return p.parseCharacterSet(kw.isDefault)
 	}
-	p.retreat(index)
 	return nil
+}
+
+// parseFallback ports _parse_fallback (parser.py:2994-2997).
+func (p *Parser) parseFallback(kw propertyKwargs) exp.Expression {
+	args := exp.Args{"no": kw.no}
+	if p.matchTextSeq("PROTECTION") {
+		args["protection"] = true
+	}
+	return p.expression(exp.FallbackProperty(args), nil, nil)
+}
+
+// parseJournal ports _parse_journal (parser.py:3174-3175): upstream builds the node from
+// the truthy _parse_property_before kwargs only (parser.py:2874), so unset modifiers stay
+// absent from args.
+func (p *Parser) parseJournal(kw propertyKwargs) exp.Expression {
+	args := exp.Args{}
+	if kw.no {
+		args["no"] = true
+	}
+	if kw.dual {
+		args["dual"] = true
+	}
+	if kw.before {
+		args["before"] = true
+	}
+	if kw.local != "" {
+		args["local"] = kw.local
+	}
+	if kw.after {
+		args["after"] = true
+	}
+	return p.expression(exp.JournalProperty(args), nil, nil)
+}
+
+// parseLog ports _parse_log (parser.py:3177-3178); `no` is a required arg (properties.py
+// LogProperty arg_types), so it is always set.
+func (p *Parser) parseLog(kw propertyKwargs) exp.Expression {
+	return p.expression(exp.LogProperty(exp.Args{"no": kw.no}), nil, nil)
+}
+
+// parseChecksum ports _parse_checksum (parser.py:3180-3190): ON/OFF record the `on` flag
+// (False for the explicit OFF form, absent for the bare `CHECKSUM =` upstream leaves as
+// None), and a trailing DEFAULT wins over both.
+func (p *Parser) parseChecksum(_ propertyKwargs) exp.Expression {
+	p.match(tokens.EQ)
+	args := exp.Args{}
+	if p.match(tokens.ON) {
+		args["on"] = true
+	} else if p.matchTextSeq("OFF") {
+		args["on"] = false
+	}
+	if p.match(tokens.DEFAULT) {
+		args["default"] = true
+	}
+	return p.expression(exp.ChecksumProperty(args), nil, nil)
+}
+
+// parseFreespace ports _parse_freespace (parser.py:3226-3231); `this` is required.
+func (p *Parser) parseFreespace(_ propertyKwargs) exp.Expression {
+	p.match(tokens.EQ)
+	args := exp.Args{"this": p.parseNumber()}
+	if p.match(tokens.PERCENT) {
+		args["percent"] = true
+	}
+	return p.expression(exp.FreespaceProperty(args), nil, nil)
+}
+
+// parseDatablocksize ports _parse_datablocksize (parser.py:3234-3253); the size/units half
+// is the `= <number> [BYTES|KBYTES|KILOBYTES]` form, the kwarg half is the leading
+// DEFAULT/MINIMUM/MAXIMUM modifier.
+func (p *Parser) parseDatablocksize(kw propertyKwargs) exp.Expression {
+	p.match(tokens.EQ)
+	args := exp.Args{}
+	if size := p.parseNumber(); size != nil {
+		args["size"] = size
+	}
+	if p.matchTexts(map[string]bool{"BYTES": true, "KBYTES": true, "KILOBYTES": true}) {
+		args["units"] = p.prev.Text
+	}
+	if kw.isDefault {
+		args["default"] = true
+	}
+	if kw.minimum {
+		args["minimum"] = true
+	}
+	if kw.maximum {
+		args["maximum"] = true
+	}
+	return p.expression(exp.DataBlocksizeProperty(args), nil, nil)
+}
+
+// parseBlockCompression ports _parse_blockcompression (parser.py:3255-3274).
+func (p *Parser) parseBlockCompression(_ propertyKwargs) exp.Expression {
+	p.match(tokens.EQ)
+	args := exp.Args{}
+	if p.matchTextSeq("ALWAYS") {
+		args["always"] = true
+	}
+	if p.matchTextSeq("MANUAL") {
+		args["manual"] = true
+	}
+	if p.matchTextSeq("NEVER") {
+		args["never"] = true
+	}
+	if p.matchTextSeq("DEFAULT") {
+		args["default"] = true
+	}
+	if p.matchTextSeq("AUTOTEMP") {
+		// _parse_schema with no `this` (parser.py:7477-7489): the AUTOTEMP argument list
+		// is parenthesized, or the arg stays unset.
+		if schema := p.parseSchema(nil); schema != nil {
+			args["autotemp"] = schema
+		}
+	}
+	return p.expression(exp.BlockCompressionProperty(args), nil, nil)
+}
+
+// parseMergeBlockRatio ports _parse_mergeblockratio (parser.py:3214-3225): the `= <n>
+// [PERCENT]` form carries the value, otherwise the NO/DEFAULT modifier lands on the node.
+func (p *Parser) parseMergeBlockRatio(kw propertyKwargs) exp.Expression {
+	args := exp.Args{}
+	if p.match(tokens.EQ) {
+		if this := p.parseNumber(); this != nil {
+			args["this"] = this
+		}
+		if p.match(tokens.PERCENT) {
+			args["percent"] = true
+		}
+		return p.expression(exp.MergeBlockRatioProperty(args), nil, nil)
+	}
+	if kw.no {
+		args["no"] = true
+	}
+	if kw.isDefault {
+		args["default"] = true
+	}
+	return p.expression(exp.MergeBlockRatioProperty(args), nil, nil)
+}
+
+// parseWithJournalTable ports _parse_withjournaltable (parser.py:3170-3173).
+func (p *Parser) parseWithJournalTable() exp.Expression {
+	p.match(tokens.TABLE)
+	p.match(tokens.EQ)
+	return p.expression(exp.WithJournalTableProperty(exp.Args{
+		"this": p.parseTableParts(false, false, false, false),
+	}), nil, nil)
+}
+
+// parseWithIsolatedLoading ports _parse_withisolatedloading (parser.py:3276-3290): the
+// optional NO/CONCURRENT modifiers are only committed once ISOLATED LOADING matches, so a
+// `WITH <other>` continuation retreats to the position it started from.
+func (p *Parser) parseWithIsolatedLoading() exp.Expression {
+	index := p.index
+	no := p.matchTextSeq("NO")
+	concurrent := p.matchTextSeq("CONCURRENT")
+	if !p.matchTextSeq("ISOLATED", "LOADING") {
+		p.retreat(index)
+		return nil
+	}
+	args := exp.Args{}
+	if no {
+		args["no"] = true
+	}
+	if concurrent {
+		args["concurrent"] = true
+	}
+	if target := p.parseVarFromOptions(isolatedLoadingOptions, false); target != nil {
+		args["target"] = target
+	}
+	return p.expression(exp.IsolatedLoadingProperty(args), nil, nil)
+}
+
+// isolatedLoadingOptions mirrors ISOLATED_LOADING_OPTIONS (parser.py:1694): upstream's
+// flat value tuple is equivalent to this port's one-word continuation sequences.
+var isolatedLoadingOptions = optionsType{
+	"FOR": {{"ALL"}, {"INSERT"}, {"NONE"}},
+}
+
+// parseVolatileProperty ports _parse_volatile_property (parser.py:3018-3027): only
+// CREATE/REPLACE/UNIQUE directly before VOLATILE (PRE_VOLATILE_TOKENS, parser.py:1641)
+// yield the Teradata VolatileProperty; anything else is the stability modifier. The token
+// two positions back is the one before the matched VOLATILE (parser.py:3020-3022); a
+// chunk that starts at VOLATILE has no predecessor, which cannot occur behind a CREATE
+// keyword, so the guard takes the stability form instead of upstream's _tokens[-1] wrap.
+func (p *Parser) parseVolatileProperty() exp.Expression {
+	if p.index >= 2 {
+		switch p.tokens[p.index-2].TokenType {
+		case tokens.CREATE, tokens.REPLACE, tokens.UNIQUE:
+			return p.expression(exp.VolatileProperty(nil), nil, nil)
+		}
+	}
+	return p.expression(exp.StabilityProperty(exp.Args{"this": exp.LiteralString("VOLATILE")}), nil, nil)
 }
 
 // parseWrappedProperties ports _parse_wrapped_properties (parser.py:2792-2793), flattening
@@ -323,6 +619,14 @@ func (p *Parser) parseWithProperty() exp.Expression {
 	if p.match(tokens.L_PAREN, false) {
 		return p.expression(exp.Properties(exp.Args{"expressions": p.parseWrappedProperties()}), nil, nil)
 	}
+	// parser.py:3112-3113: WITH JOURNAL TABLE=<name> (Teradata) sits ahead of the DATA
+	// branches; the VIEW_ATTRIBUTES / SCHEMA / PROCEDURE_OPTIONS branches upstream has
+	// between them (parser.py:3115-3133) are not part of this port's registry subset and
+	// fall through to the isolated-loading attempt below exactly as they would return
+	// nothing there.
+	if p.matchTextSeq("JOURNAL") {
+		return p.parseWithJournalTable()
+	}
 	if p.matchTextSeq("DATA") {
 		return p.parseWithData(false)
 	}
@@ -332,7 +636,13 @@ func (p *Parser) parseWithProperty() exp.Expression {
 	if p.match(tokens.SERDE_PROPERTIES, false) {
 		return p.parseSerdeProperties(true)
 	}
-	return nil
+	// parser.py:3135-3138: only a trailing WITH (no next token) stops before the
+	// ISOLATED LOADING attempt; otherwise a non-matching tail retreats inside
+	// parseWithIsolatedLoading and the caller sees nil.
+	if !p.next.IsValid() {
+		return nil
+	}
+	return p.parseWithIsolatedLoading()
 }
 
 // parseLocking ports _parse_locking (parser.py:3205-3250).

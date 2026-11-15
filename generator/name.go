@@ -35,6 +35,10 @@ var sqlNameOverrides = map[expressions.Kind]string{
 	// Spark cluster: _sql_names[0] for TimestampDiff is TIMESTAMPDIFF, while the
 	// camelToSnake split would emit TIMESTAMP_DIFF (temporal.py:136-138).
 	expressions.KindTimestampDiff: "TIMESTAMPDIFF",
+	// ArrayFilter's _sql_names[0] is FILTER (array.py:63); camelToSnake would emit
+	// ARRAY_FILTER. Dialects that rename it (clickhouse arrayFilter, duckdb LIST_FILTER,
+	// ...) go through their own dispatch entries and never hit this default.
+	expressions.KindArrayFilter: "FILTER",
 }
 
 func (g *Generator) sqlName(kind expressions.Kind) string {

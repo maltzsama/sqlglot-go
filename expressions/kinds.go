@@ -764,6 +764,24 @@ const (
 	KindNoPrimaryIndexProperty
 	KindOnCommitProperty
 	KindOnProperty
+	// Teradata CREATE TABLE property nodes (properties.py: the SetProperty .. WithJournalTable
+	// cluster), built by the PROPERTY_PARSERS entries _parse_property_before dispatches to
+	// (parser.py:2855-2881 + 3171-3240). SetProperty's `multi` arg and LogProperty's /
+	// FallbackProperty's / JournalProperty's / IsolatedLoadingProperty's / WithJournalTable's
+	// required args are marked required exactly like upstream arg_types; JournalProperty's
+	// `local` holds the "LOCAL"/"NOT LOCAL" string (parser.py:2864-2865).
+	KindSetProperty
+	KindFallbackProperty
+	KindJournalProperty
+	KindChecksumProperty
+	KindFreespaceProperty
+	KindDataBlocksizeProperty
+	KindBlockCompressionProperty
+	KindMergeBlockRatioProperty
+	KindGlobalProperty
+	KindLogProperty
+	KindIsolatedLoadingProperty
+	KindWithJournalTableProperty
 	KindPartitionedByProperty
 	KindPartitionByRangeProperty
 	KindPartitionByListProperty
@@ -936,6 +954,19 @@ const (
 	// KindNvl2 (functions.py:160, `class Nvl2(Expression, Func)`): NVL2(expr, true, false),
 	// which dialects without native NVL2 (dremio) rewrite as a CASE expression.
 	KindNvl2
+	// KindTranslateCharacters (query.py:1969, `class TranslateCharacters(Expression)`):
+	// Teradata TRANSLATE(x USING <charset> [WITH ERROR]).
+	KindTranslateCharacters
+	// KindRangeN (functions.py:510, `class RangeN(Expression, Func)`): Teradata RANGE_N.
+	KindRangeN
+	// KindQueryBand (query.py:438, `class QueryBand(Expression)`): Teradata SET QUERY_BAND.
+	KindQueryBand
+	// KindLockingStatement (core.py:1601, `class LockingStatement(Expression)`): Teradata
+	// LOCKING <clause> <select>.
+	KindLockingStatement
+	// KindFormatPhrase (core.py:2290, `class FormatPhrase(Expression)`): Teradata
+	// `col (FORMAT '<fmt>')` output-format override.
+	KindFormatPhrase
 	// KindPrevValueFor mirrors NextValueFor for MariaDB's `PREVIOUS VALUE FOR <seq>` sequence
 	// access (beyond upstream, which has no MariaDB dialect). See DEVIATIONS
 	// "Opt-in behavioral extensions".
@@ -1715,6 +1746,18 @@ var argTypes = map[Kind][]argSpec{
 	KindNoPrimaryIndexProperty:       {},
 	KindOnCommitProperty:             {{"delete", false}},
 	KindOnProperty:                   {{"this", true}},
+	KindSetProperty:                  {{"multi", true}},
+	KindFallbackProperty:             {{"no", true}, {"protection", false}},
+	KindJournalProperty:              {{"no", false}, {"dual", false}, {"before", false}, {"local", false}, {"after", false}},
+	KindChecksumProperty:             {{"on", false}, {"default", false}},
+	KindFreespaceProperty:            {{"this", true}, {"percent", false}},
+	KindDataBlocksizeProperty:        {{"size", false}, {"units", false}, {"minimum", false}, {"maximum", false}, {"default", false}},
+	KindBlockCompressionProperty:     {{"autotemp", false}, {"always", false}, {"default", false}, {"manual", false}, {"never", false}},
+	KindMergeBlockRatioProperty:      {{"this", false}, {"no", false}, {"default", false}, {"percent", false}},
+	KindGlobalProperty:               {},
+	KindLogProperty:                  {{"no", true}},
+	KindIsolatedLoadingProperty:      {{"no", false}, {"concurrent", false}, {"target", false}},
+	KindWithJournalTableProperty:     {{"this", true}},
 	KindPartitionedByProperty:        {{"this", true}},
 	KindPartitionByRangeProperty:     {{"partition_expressions", true}, {"create_expressions", true}},
 	KindPartitionByListProperty:      {{"partition_expressions", true}, {"create_expressions", true}},
@@ -1835,6 +1878,11 @@ var argTypes = map[Kind][]argSpec{
 	KindNextValueFor:                  {{"this", true}, {"order", false}},
 	KindPrevValueFor:                  {{"this", true}},
 	KindNvl2:                          {{"this", true}, {"true", true}, {"false", false}},
+	KindTranslateCharacters:           {{"this", true}, {"expression", true}, {"with_error", false}},
+	KindRangeN:                        {{"this", true}, {"expressions", true}, {"each", false}},
+	KindQueryBand:                     {{"this", true}, {"scope", false}, {"update", false}},
+	KindLockingStatement:              {{"this", true}, {"expression", true}},
+	KindFormatPhrase:                  {{"this", true}, {"format", true}},
 	KindClusteredColumnConstraint:     defaultArgTypes,
 	KindNonClusteredColumnConstraint:  defaultArgTypes,
 	KindOpenJSON:                      {{"this", true}, {"path", false}, {"expressions", false}},
@@ -2509,6 +2557,8 @@ var traitsOf = map[Kind]Trait{
 	KindNextValueFor:        TraitCondition | TraitFunc,
 	KindPrevValueFor:        TraitCondition | TraitFunc,
 	KindNvl2:                TraitCondition | TraitFunc,
+	KindRangeN:              TraitCondition | TraitFunc,
+	KindTranslateCharacters: TraitCondition,
 	KindOpenJSON:            TraitCondition | TraitFunc,
 
 	// ClickHouse cluster.
@@ -3187,6 +3237,18 @@ var className = map[Kind]string{
 	KindNoPrimaryIndexProperty:              "NoPrimaryIndexProperty",
 	KindOnCommitProperty:                    "OnCommitProperty",
 	KindOnProperty:                          "OnProperty",
+	KindSetProperty:                         "SetProperty",
+	KindFallbackProperty:                    "FallbackProperty",
+	KindJournalProperty:                     "JournalProperty",
+	KindChecksumProperty:                    "ChecksumProperty",
+	KindFreespaceProperty:                   "FreespaceProperty",
+	KindDataBlocksizeProperty:               "DataBlocksizeProperty",
+	KindBlockCompressionProperty:            "BlockCompressionProperty",
+	KindMergeBlockRatioProperty:             "MergeBlockRatioProperty",
+	KindGlobalProperty:                      "GlobalProperty",
+	KindLogProperty:                         "LogProperty",
+	KindIsolatedLoadingProperty:             "IsolatedLoadingProperty",
+	KindWithJournalTableProperty:            "WithJournalTableProperty",
 	KindPartitionedByProperty:               "PartitionedByProperty",
 	KindPartitionByRangeProperty:            "PartitionByRangeProperty",
 	KindPartitionByListProperty:             "PartitionByListProperty",
@@ -3316,6 +3378,11 @@ var className = map[Kind]string{
 	KindNextValueFor:                  "NextValueFor",
 	KindPrevValueFor:                  "PrevValueFor",
 	KindNvl2:                          "Nvl2",
+	KindTranslateCharacters:           "TranslateCharacters",
+	KindRangeN:                        "RangeN",
+	KindQueryBand:                     "QueryBand",
+	KindLockingStatement:              "LockingStatement",
+	KindFormatPhrase:                  "FormatPhrase",
 	KindClusteredColumnConstraint:     "ClusteredColumnConstraint",
 	KindNonClusteredColumnConstraint:  "NonClusteredColumnConstraint",
 	KindOpenJSON:                      "OpenJSON",

@@ -207,56 +207,58 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 // Read-side parse gaps surface under their target's bucket with a "parse:" category.
 // Pass and total floors are monotonic: raise them, never lower them.
 const (
-	minPassTranspileBase        = 760
-	minPassTranspileAthena      = 7
-	minPassTranspileBigQuery    = 588
-	minPassTranspileClickhouse  = 181
-	minPassTranspileDatabricks  = 207
-	minPassTranspileDoris       = 70
+	minPassTranspileBase        = 811
+	minPassTranspileAthena      = 8
+	minPassTranspileBigQuery    = 595
+	minPassTranspileClickhouse  = 185
+	minPassTranspileDatabricks  = 214
+	minPassTranspileDoris       = 72
 	minPassTranspileDremio      = 31
-	minPassTranspileDuckDB      = 625
-	minPassTranspileHive        = 390
+	minPassTranspileDuckDB      = 632
+	minPassTranspileHive        = 393
 	minPassTranspileMaterialize = 26
-	minPassTranspileMySQL       = 219
-	minPassTranspileOracle      = 160
-	minPassTranspilePostgres    = 307
-	minPassTranspilePresto      = 410
-	minPassTranspileRedshift    = 150
+	minPassTranspileMySQL       = 227
+	minPassTranspileOracle      = 167
+	minPassTranspilePostgres    = 316
+	minPassTranspilePresto      = 419
+	minPassTranspileRedshift    = 154
 	minPassTranspileRisingWave  = 4
-	minPassTranspileSnowflake   = 665
-	minPassTranspileSpark       = 648
-	minPassTranspileSpark2      = 54
-	minPassTranspileSQLite      = 115
-	minPassTranspileStarrocks   = 81
-	minPassTranspileTrino       = 85
-	minPassTranspileTSQL        = 291
+	minPassTranspileSnowflake   = 672
+	minPassTranspileSpark       = 657
+	minPassTranspileSpark2      = 56
+	minPassTranspileSQLite      = 123
+	minPassTranspileStarrocks   = 82
+	minPassTranspileTeradata    = 74
+	minPassTranspileTrino       = 89
+	minPassTranspileTSQL        = 301
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
 const (
-	minTotalTranspileBase        = 928
+	minTotalTranspileBase        = 945
 	minTotalTranspileAthena      = 11
-	minTotalTranspileBigQuery    = 728
-	minTotalTranspileClickhouse  = 240
-	minTotalTranspileDatabricks  = 258
+	minTotalTranspileBigQuery    = 730
+	minTotalTranspileClickhouse  = 241
+	minTotalTranspileDatabricks  = 262
 	minTotalTranspileDoris       = 104
 	minTotalTranspileDremio      = 31
-	minTotalTranspileDuckDB      = 1427
-	minTotalTranspileHive        = 512
+	minTotalTranspileDuckDB      = 1428
+	minTotalTranspileHive        = 513
 	minTotalTranspileMaterialize = 32
-	minTotalTranspileMySQL       = 345
-	minTotalTranspileOracle      = 187
-	minTotalTranspilePostgres    = 443
-	minTotalTranspilePresto      = 613
-	minTotalTranspileRedshift    = 188
+	minTotalTranspileMySQL       = 350
+	minTotalTranspileOracle      = 190
+	minTotalTranspilePostgres    = 445
+	minTotalTranspilePresto      = 615
+	minTotalTranspileRedshift    = 190
 	minTotalTranspileRisingWave  = 6
-	minTotalTranspileSnowflake   = 988
-	minTotalTranspileSpark       = 839
+	minTotalTranspileSnowflake   = 991
+	minTotalTranspileSpark       = 841
 	minTotalTranspileSpark2      = 89
-	minTotalTranspileSQLite      = 152
-	minTotalTranspileStarrocks   = 100
-	minTotalTranspileTrino       = 149
-	minTotalTranspileTSQL        = 388
+	minTotalTranspileSQLite      = 153
+	minTotalTranspileStarrocks   = 101
+	minTotalTranspileTeradata    = 74
+	minTotalTranspileTrino       = 150
+	minTotalTranspileTSQL        = 389
 )
 
 // TestTranspileCorpus is the cross-dialect harness over upstream's validate_all read/write
@@ -318,6 +320,7 @@ func TestTranspileCorpus(t *testing.T) {
 		{"spark2", minPassTranspileSpark2, minTotalTranspileSpark2},
 		{"sqlite", minPassTranspileSQLite, minTotalTranspileSQLite},
 		{"starrocks", minPassTranspileStarrocks, minTotalTranspileStarrocks},
+		{"teradata", minPassTranspileTeradata, minTotalTranspileTeradata},
 		{"trino", minPassTranspileTrino, minTotalTranspileTrino},
 		{"tsql", minPassTranspileTSQL, minTotalTranspileTSQL},
 	}

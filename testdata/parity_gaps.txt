@@ -50,7 +50,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"COPY INTO test (c1) FROM (SELECT $1.c1 FROM @mystage)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"CURRENT_TIMESTAMP - INTERVAL '1 w' AND (1 = 1)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DATE('01-01-2000', 'MM-DD-YYYY')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DATEADD(y, 5, x)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC API INTEGRATION int1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC APPLICATION PACKAGE pkg1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC CATALOG INTEGRATION int1"}

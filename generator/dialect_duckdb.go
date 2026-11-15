@@ -31,6 +31,25 @@ func init() {
 		expressions.DTypeTimestampNs:  "TIMESTAMP_NS",
 		expressions.DTypeBigDecimal:   "DECIMAL",
 	})
+	// generators/duckdb.py:1939-1949: DuckDB's PROPERTIES_LOCATION blanket marks every
+	// base-registered property UNSUPPORTED (Like/Temporary/Returns/Sequence/Iceberg are
+	// the exceptions), so the Teradata CREATE TABLE property set this port added to the
+	// base table is explicitly unsupported here too.
+	registerDialectPropertyLocations("duckdb", map[expressions.Kind]propertyLocation{
+		expressions.KindBlockCompressionProperty: propertyLocationUnsupported,
+		expressions.KindChecksumProperty:         propertyLocationUnsupported,
+		expressions.KindDataBlocksizeProperty:    propertyLocationUnsupported,
+		expressions.KindFallbackProperty:         propertyLocationUnsupported,
+		expressions.KindFreespaceProperty:        propertyLocationUnsupported,
+		expressions.KindGlobalProperty:           propertyLocationUnsupported,
+		expressions.KindIsolatedLoadingProperty:  propertyLocationUnsupported,
+		expressions.KindJournalProperty:          propertyLocationUnsupported,
+		expressions.KindLogProperty:              propertyLocationUnsupported,
+		expressions.KindMergeBlockRatioProperty:  propertyLocationUnsupported,
+		expressions.KindSetProperty:              propertyLocationUnsupported,
+		expressions.KindVolatileProperty:         propertyLocationUnsupported,
+		expressions.KindWithJournalTableProperty: propertyLocationUnsupported,
+	})
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
 		expressions.KindAnyValue:          duckDBAnyValueSQL,

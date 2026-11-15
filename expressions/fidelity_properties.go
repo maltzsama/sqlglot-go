@@ -30,3 +30,22 @@ func SqlReadWriteProperty(args Args) Expression    { return newNode(KindSqlReadW
 func TemporaryProperty(args Args) Expression       { return newNode(KindTemporaryProperty, args) }
 func UnloggedProperty(args Args) Expression        { return newNode(KindUnloggedProperty, args) }
 func WithDataProperty(args Args) Expression        { return newNode(KindWithDataProperty, args) }
+
+// Teradata CREATE TABLE properties (properties.py: exp.SetProperty .. exp.VolatileProperty),
+// dispatched from _parse_property_before / PROPERTY_PARSERS (parser.py:2855-2881, 3171-3240).
+func SetProperty(args Args) Expression           { return newNode(KindSetProperty, args) }
+func FallbackProperty(args Args) Expression      { return newNode(KindFallbackProperty, args) }
+func JournalProperty(args Args) Expression       { return newNode(KindJournalProperty, args) }
+func ChecksumProperty(args Args) Expression      { return newNode(KindChecksumProperty, args) }
+func FreespaceProperty(args Args) Expression     { return newNode(KindFreespaceProperty, args) }
+func DataBlocksizeProperty(args Args) Expression { return newNode(KindDataBlocksizeProperty, args) }
+func BlockCompressionProperty(args Args) Expression {
+	return newNode(KindBlockCompressionProperty, args)
+}
+func MergeBlockRatioProperty(args Args) Expression { return newNode(KindMergeBlockRatioProperty, args) }
+func GlobalProperty(args Args) Expression          { return newNode(KindGlobalProperty, args) }
+func LogProperty(args Args) Expression             { return newNode(KindLogProperty, args) }
+func IsolatedLoadingProperty(args Args) Expression { return newNode(KindIsolatedLoadingProperty, args) }
+func WithJournalTableProperty(args Args) Expression {
+	return newNode(KindWithJournalTableProperty, args)
+}

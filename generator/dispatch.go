@@ -55,6 +55,9 @@ func init() {
 	dispatch[expressions.KindNextValueFor] = (*Generator).nextValueForSQL
 	dispatch[expressions.KindConvertTimezone] = (*Generator).convertTimezoneSQL
 	dispatch[expressions.KindNvl2] = (*Generator).nvl2SQL
+	dispatch[expressions.KindQueryBand] = (*Generator).queryBandSQL
+	dispatch[expressions.KindTranslateCharacters] = (*Generator).translateCharactersSQL
+	dispatch[expressions.KindFormatPhrase] = (*Generator).formatPhraseSQL
 	dispatch[expressions.KindToChar] = (*Generator).toCharSQL
 	dispatch[expressions.KindPrevValueFor] = (*Generator).prevValueForSQL
 	dispatch[expressions.KindSimilarTo] = (*Generator).similarToSQL
@@ -195,10 +198,12 @@ func init() {
 	dispatch[expressions.KindFormatJson] = (*Generator).formatJSONSQL
 	dispatch[expressions.KindArrayAgg] = (*Generator).arrayAggSQL
 	dispatch[expressions.KindArraySize] = (*Generator).arraySizeSQL
+	dispatch[expressions.KindArrayAny] = (*Generator).arrayAnySQL
 	dispatch[expressions.KindInitcap] = (*Generator).initcapSQL
 	dispatch[expressions.KindHex] = (*Generator).hexSQL
 	dispatch[expressions.KindLowerHex] = (*Generator).lowerHexSQL
 	dispatch[expressions.KindDateAdd] = (*Generator).dateAddSQL
+	dispatch[expressions.KindRand] = (*Generator).randSQL
 	dispatch[expressions.KindPartition] = (*Generator).partitionSQL
 	dispatch[expressions.KindPragma] = (*Generator).pragmaSQL
 	dispatch[expressions.KindParameter] = (*Generator).parameterSQL
