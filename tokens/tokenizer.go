@@ -67,7 +67,10 @@ type TokenizerConfig struct {
 	NumbersCanBeUnderscoreSeparated  bool
 	NumbersCanHaveDecimals           bool
 	IdentifiersCanStartWithDigit     bool
-	KeywordTrie                      *trie.Node
+	// OracleQQuotes enables Oracle's q'[...]' alternative string literal. The
+	// delimiter is chosen dynamically from the character following q'.
+	OracleQQuotes bool
+	KeywordTrie   *trie.Node
 	// BatchSeparator names the client-tool batch separator line the dialect recognizes.
 	// Upstream has none; BatchSeparatorNone (the zero value) keeps that behavior. See
 	// DEVIATIONS §1.22.

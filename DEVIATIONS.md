@@ -104,11 +104,16 @@ as `Alias`/`Column` (some `XA` forms error). The port degrades the whole stateme
 top-level only, so the words stay usable as identifiers and nested values.
 `parser/stmt_mysql_command.go`; tests `TestMySQLCommandLeaders*`.
 
-### 1.15 MySQL `TABLE tbl` → `SELECT * FROM tbl`
-Upstream parses `TABLE users` as an `Alias`. The port builds the equivalent `Select` (MySQL defines
-`TABLE t` as exactly that), top-level, plain table identifier only; trailer forms
-(`ORDER BY`/`UNION`/…) fail closed. Qualified `TABLE db.users` is ledgered (`mysql-table-value`).
-`parser/stmt_mysql_table.go`; tests `TestMySQLTableStatement*`.
+### 1.15 `TABLE tbl` → `SELECT * FROM tbl` in MySQL/MariaDB and Trino
+Upstream parses `TABLE users` as an `Alias` in every dialect. The port builds the equivalent
+`Select` only where the grammar defines the constructor — MySQL 8.0.19+ and MariaDB through the
+mysql dialect chain, plus Trino's `TABLE table_name` query — top-level, plain table identifier
+only; trailer forms (`ORDER BY`/`UNION`/…) fail closed. Every other dialect keeps upstream's
+`Alias` mis-parse (and its parse error for the qualified form), so the port stays faithful.
+Qualified `TABLE db.users` (MySQL/MariaDB) and `TABLE cat.schema.table` (Trino) are grammar
+beyond upstream and ledgered (`mysql-table-value`, `trino-table-value`).
+`parser/stmt_mysql_table.go`; tests `TestMySQLTableStatement*`,
+`TestTableStatementQualifiedAcrossDialects`.
 
 ### 1.16 MySQL `DROP INDEX idx ON db.users`
 Upstream errors on the db-qualified target (single-id `_parse_on_property`). The port parses the ON
@@ -308,6 +313,8 @@ reconciliation note); malformed/engine-invalid forms fail closed to `Command` or
 
 | ledger id | construct → node |
 |---|---|
+| `mysql-table-value`, `trino-table-value` | Qualified `TABLE db.users` (MySQL/MariaDB) and `TABLE cat.schema.table` (Trino) → `Select{Table}` (§1.15); the unqualified form is the same-dialect correctness fix, these are the beyond-upstream qualified spellings |
+| `oracle-qquote` | Oracle `q'X...X'` / `nq'...'` alternative string literals → `Literal` with the verbatim payload (no escape processing); the generator re-emits a standard escaped single-quoted string |
 | `mysql-explain-modifier-table`, `pg-explain-table` | `TABLE t` as an EXPLAIN target with modifiers (MySQL manual §15.8.2 explainable_stmt; PG accepts the SELECT-shorthand — both engine-verified). All EXPLAIN forms share the `Describe` node. Discriminators differ per dialect: MySQL → `Describe{kind:"TABLE", this:Table}`; PG → `Describe{kind:"EXPLAIN"}` with `this.Kind()==Table` (kind stays the EXPLAIN label — key off the target's Kind, not the string). Generator keeps the `TABLE` keyword (upstream's `EXPLAIN TABLE t` → `DESCRIBE t` conflates a query-explain with a metadata describe) |
 | `oracle-plsql-function`, `oracle-plsql-trigger`, `oracle-plsql-package`, `oracle-plsql-anonymous-block` | Oracle PL/SQL units kept whole (§1.24): stored units → `Create{kind, this: Command}` with the verbatim unit text; anonymous blocks → `Command{this: BEGIN\|DECLARE}` |
 | `pg-explain` | Postgres `EXPLAIN` → `Describe{kind:"EXPLAIN"}` with structured options + parsed inner statement |

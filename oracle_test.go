@@ -60,6 +60,49 @@ func TestOracleIdentity(t *testing.T) {
 	}
 }
 
+// TestOracleQQuotes covers Oracle's alternative string literals, q'X...X' with the [] {} ()
+// <> delimiter pairs or any other single character, and the national nq'...' form. Pinned
+// upstream does not tokenize them (ledger oracle-qquote); the payload is exact — a quote or
+// semicolon inside the literal does not terminate it — and the generator re-emits an
+// equivalent escaped single-quoted string.
+func TestOracleQQuotes(t *testing.T) {
+	cases := []struct{ sql, want, wantSQL string }{
+		{`SELECT q'[a';b]' FROM dual`, "a';b", "SELECT 'a'';b' FROM dual"},
+		{`SELECT q'{ab}' FROM dual`, "ab", "SELECT 'ab' FROM dual"},
+		{`SELECT q'(a b)' FROM dual`, "a b", "SELECT 'a b' FROM dual"},
+		{`SELECT q'<a>b>' FROM dual`, "a>b", "SELECT 'a>b' FROM dual"},
+		{`SELECT q'!a!' FROM dual`, "a", "SELECT 'a' FROM dual"},
+		{`SELECT Q'[UPPER]' FROM dual`, "UPPER", "SELECT 'UPPER' FROM dual"},
+		{`SELECT nq'[nat]' FROM dual`, "nat", "SELECT 'nat' FROM dual"},
+	}
+	for _, tc := range cases {
+		expr, err := sqlglot.ParseOne(tc.sql, "oracle")
+		if err != nil {
+			t.Fatalf("ParseOne(%q): %v", tc.sql, err)
+		}
+		literal := expr.Find(exp.KindLiteral)
+		if literal == nil || literal.Text("this") != tc.want {
+			t.Fatalf("%q literal = %v, want payload %q", tc.sql, literal, tc.want)
+		}
+		got, err := sqlglot.Generate(expr, "oracle", generator.Options{})
+		if err != nil {
+			t.Fatalf("Generate(%q): %v", tc.sql, err)
+		}
+		if got != tc.wantSQL {
+			t.Fatalf("%q generated %q, want %q", tc.sql, got, tc.wantSQL)
+		}
+	}
+
+	// A q-quote that never closes is a tokenizer error, and a q glued to an identifier is an
+	// ordinary variable, not a q-quote (the delimiter must follow the q directly).
+	if _, err := sqlglot.ParseOne(`SELECT q'[unterminated FROM dual`, "oracle"); err == nil {
+		t.Fatal("unterminated q-quote should fail to tokenize")
+	}
+	if _, err := sqlglot.ParseOne(`SELECT xq'[no]' FROM dual`, "oracle"); err == nil {
+		t.Fatal("xq'[no]' is not a q-quote and should not parse as one")
+	}
+}
+
 // TestOracleASTShapes asserts the structured nodes behind the Oracle grammar, so a
 // degradation to raw-text Command (which would still round-trip) fails the test.
 func TestOracleASTShapes(t *testing.T) {
@@ -250,6 +293,8 @@ func TestOracleSlashTerminator(t *testing.T) {
 			[]scriptStatement{{sel, "SELECT 1 FROM dual"}, {sel, "SELECT 2 FROM dual"}}},
 		{"SELECT 1 FROM dual\r\n/\r\nSELECT 2 FROM dual",
 			[]scriptStatement{{sel, "SELECT 1 FROM dual"}, {sel, "SELECT 2 FROM dual"}}},
+		{"SELECT q'[a';b]' FROM dual;\n/\nSELECT 2 FROM dual",
+			[]scriptStatement{{sel, "SELECT q'[a';b]' FROM dual"}, {sel, "SELECT 2 FROM dual"}}},
 		// Division is untouched when `/` shares its line with an operand.
 		{"SELECT a\n/ b FROM t", []scriptStatement{{sel, "SELECT a\n/ b FROM t"}}},
 		{"SELECT 10 /\n2 FROM dual", []scriptStatement{{sel, "SELECT 10 /\n2 FROM dual"}}},

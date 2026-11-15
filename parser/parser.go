@@ -748,9 +748,9 @@ func (p *Parser) parseStatement() exp.Expression {
 		if stmt := p.parseMysqlCommandStatement(); stmt != nil {
 			return stmt
 		}
-		// MySQL `TABLE tbl` (= SELECT * FROM tbl, 8.0.19+): dispatched by the leading TABLE token so
+		// `TABLE tbl` (= SELECT * FROM tbl): dispatched by the leading TABLE token so
 		// it becomes a real Select instead of upstream's Alias mis-parse. Returns nil otherwise.
-		if stmt := p.parseMysqlTableStatement(); stmt != nil {
+		if stmt := p.parseTableStatement(); stmt != nil {
 			return stmt
 		}
 	}
