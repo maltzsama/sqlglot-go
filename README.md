@@ -49,11 +49,13 @@ targeted slice of the optimizer:
 - **`pushdown_predicates`** and **`pushdown_projections`** — predicate pushdown and unused
   projection pruning.
 - **`canonicalize`** — type-driven canonical rewrites (CONCAT, date coercion, boolean predicates).
+- **`canonicalize_internal_names`** — canonical structural form: data-contract names (base tables,
+  base columns, top-level aliases) preserved, internal names (table aliases, CTE/subquery names,
+  inner aliases) rewritten to `_tN`/`_cN`. Not one of `optimize()`'s default rules.
 - **`scope` / `traverse_scope` + the full `Scope` API** — sources, columns, unions, CTEs, subqueries:
   the foundation for **column lineage**.
 
 **Not ported (yet):**
-- `canonicalize_internal_names`, which is not one of `optimize()`'s default rules.
 - **Dialects beyond the ones listed under [Dialects](#dialects)** (upstream ships 30+).
 
 **Beyond upstream — opt-in, additive (default output unchanged):**
