@@ -5,13 +5,11 @@ import (
 	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
-// parseMysqlTableStatement models MySQL 8.0.19+ `TABLE tbl` — the table value constructor that is
-// exactly `SELECT * FROM tbl` — as a real Select so a consumer gets the same column lineage it would
-// for the SELECT form. divergence: pinned upstream leaves the leading TABLE keyword to its generic
-// expression path and mis-parses `TABLE users` as an Alias (“ `TABLE` AS users“); real MySQL reads
-// every column of the table. Dispatched by the leading TABLE token at statement start (like the
-// sibling command leaders), MySQL-only, so CREATE/DROP/ALTER TABLE (their own statement parsers) and
-// a TABLE keyword inside a query block are untouched.
+// parseTableStatement models `TABLE tbl` — the table value constructor that is exactly `SELECT *
+// FROM tbl` — as a real Select so a consumer gets the same column lineage it would for the SELECT
+// form. The generic expression path mis-parses the leading TABLE keyword as an Alias. Dispatched by
+// the leading TABLE token at statement start, so CREATE/DROP/ALTER TABLE (their own statement
+// parsers) and a TABLE keyword inside a query block are untouched.
 //
 // Scope: only the bare `TABLE tbl_name` (optionally schema/catalog-qualified) is modeled. The
 // operand must be a plain table identifier — a table function (`TABLE f()`), placeholder (`TABLE ?`)
@@ -23,8 +21,14 @@ import (
 // upstream's wrong Alias. The schema-qualified spelling `TABLE db.users` is grammar beyond pinned
 // upstream (it parse-errors at the dot), tracked in testdata/upstream_extensions.jsonl; the
 // unqualified `TABLE users` is the DEVIATIONS §1.15 correctness fix. See DEVIATIONS §1.15.
-func (p *Parser) parseMysqlTableStatement() exp.Expression {
-	if !p.dialectIs("mysql") || p.curr.TokenType != tokens.TABLE {
+func (p *Parser) parseTableStatement() exp.Expression {
+	// The dialects whose grammar defines the TABLE value constructor: MySQL 8.0.19+ (and
+	// MariaDB through the mysql chain) and Trino's `TABLE table_name` query. Elsewhere the
+	// leading TABLE keyword keeps upstream's Alias mis-parse so the port stays faithful.
+	if !p.dialectIs("mysql") && !p.dialectIs("trino") {
+		return nil
+	}
+	if p.curr.TokenType != tokens.TABLE {
 		return nil
 	}
 	comments := p.curr.Comments

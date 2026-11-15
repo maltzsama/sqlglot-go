@@ -62,6 +62,7 @@ type TokenizerCore struct {
 	numbersCanBeUnderscoreSeparated  bool
 	numbersCanHaveDecimals           bool
 	identifiersCanStartWithDigit     bool
+	oracleQQuotes                    bool
 	unescapedSequences               map[string]string
 	batchSeparator                   BatchSeparator
 }
@@ -100,6 +101,7 @@ func NewTokenizerCore(cfg TokenizerConfig) *TokenizerCore {
 		numbersCanBeUnderscoreSeparated:  cfg.NumbersCanBeUnderscoreSeparated,
 		numbersCanHaveDecimals:           cfg.NumbersCanHaveDecimals,
 		identifiersCanStartWithDigit:     cfg.IdentifiersCanStartWithDigit,
+		oracleQQuotes:                    cfg.OracleQQuotes,
 		unescapedSequences:               cfg.UnescapedSequences,
 		batchSeparator:                   cfg.BatchSeparator,
 		line:                             1,
@@ -407,6 +409,9 @@ func (c *TokenizerCore) add(tokenType TokenType, text ...string) {
 }
 
 func (c *TokenizerCore) scanKeywords() {
+	if c.oracleQQuotes && c.scanOracleQQuote() {
+		return
+	}
 	size := 0
 	word := ""
 	chars := string(c.char)
@@ -483,6 +488,57 @@ func (c *TokenizerCore) scanKeywords() {
 	}
 
 	c.scanVar()
+}
+
+// scanOracleQQuote scans Oracle's alternative string literals: q'X...X' (any delimiter X,
+// with [] {} () <> pairing) and its national form nq'...'. It is checked before ordinary
+// keyword/identifier scanning because q is otherwise tokenized as a variable followed by a
+// normal string literal. Oracle does not process escapes inside a q-quote, so the literal
+// ends only at the closing delimiter followed by a quote.
+func (c *TokenizerCore) scanOracleQQuote() bool {
+	// Locate the q without consuming anything, so a non-matching q or n stays a variable.
+	// c.current is the index of the next rune after c.char, so the q index is current-1 for
+	// a plain q literal and current for the national nq form (where c.char is the n).
+	qPos := -1
+	switch {
+	case c.char == 'q' || c.char == 'Q':
+		qPos = c.current - 1
+	case (c.char == 'n' || c.char == 'N') && c.peek == 'q' && c.current+1 < c.size && c.input.at(c.current+1) == '\'':
+		qPos = c.current
+	}
+	if qPos < 0 || qPos+1 >= c.size || c.input.at(qPos+1) != '\'' {
+		return false
+	}
+	if c.start > 0 && (isIdentifierChar(c.input.at(c.start-1)) || unicode.IsDigit(c.input.at(c.start-1))) {
+		return false
+	}
+
+	delimiterPos := qPos + 2
+	if delimiterPos >= c.size {
+		return false
+	}
+	opener := c.input.at(delimiterPos)
+	closing := map[rune]rune{'[': ']', '{': '}', '(': ')', '<': '>'}[opener]
+	if closing == 0 {
+		closing = opener
+	}
+
+	contentStart := delimiterPos + 1
+	end := -1
+	for i := contentStart; i+1 < c.size; i++ {
+		if c.input.at(i) == closing && c.input.at(i+1) == '\'' {
+			end = i
+			break
+		}
+	}
+	if end < 0 {
+		panic(&sqlerrors.TokenError{Msg: fmt.Sprintf("Missing %c from %d:%d", closing, c.line, c.start)})
+	}
+	for c.current < end+2 {
+		c.advance(1, false)
+	}
+	c.add(STRING, c.input.slice(contentStart, end))
+	return true
 }
 
 // lineCommentSuppressed reports whether commentStart, though matched as a line-comment

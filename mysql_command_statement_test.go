@@ -203,9 +203,9 @@ func TestMySQLCommandStatementDoesNotDuplicateComment(t *testing.T) {
 	}
 }
 
-// MySQL 8.0.19+ `TABLE tbl` is exactly `SELECT * FROM tbl` (verified on MySQL 8.0.46: identical
-// rows). Pinned upstream mis-parses it as an Alias (“ `TABLE` AS users“); the port builds a real
-// Select so a consumer gets the same column lineage as the SELECT form. See DEVIATIONS §1.
+// `TABLE tbl` is exactly `SELECT * FROM tbl` (verified on MySQL 8.0.46: identical rows). Pinned
+// upstream mis-parses it as an Alias (“ `TABLE` AS users“); the port builds a real Select so a
+// consumer gets the same column lineage as the SELECT form. See DEVIATIONS §1.
 func TestMySQLTableStatementIsSelectStar(t *testing.T) {
 	for _, tc := range []struct{ table, selectStar string }{
 		{"TABLE users", "SELECT * FROM users"},
@@ -235,6 +235,44 @@ func TestMySQLTableStatementIsSelectStar(t *testing.T) {
 			}
 			if out != sql {
 				t.Fatalf("round-trip = %q, want %q", out, sql)
+			}
+		})
+	}
+}
+
+// TestTableStatementQualifiedAcrossDialects covers the dialects whose grammar defines the
+// TABLE value constructor (MySQL 8.0.19+, MariaDB through the mysql chain, and Trino's
+// TABLE table_name query); every other dialect keeps upstream's behavior, asserted below.
+func TestTableStatementQualifiedAcrossDialects(t *testing.T) {
+	for _, dialect := range []string{"mysql", "mariadb", "trino"} {
+		t.Run(dialect, func(t *testing.T) {
+			expr, err := sqlglot.ParseOne("TABLE lake.sales.orders", dialect)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			if expr.Kind() != exp.KindSelect {
+				t.Fatalf("kind = %v, want Select:\n%s", exp.ClassName(expr.Kind()), expr.ToS())
+			}
+			table := expr.Find(exp.KindTable)
+			if table == nil || table.CatalogName() != "lake" || table.SchemaName() != "sales" || table.Name() != "orders" {
+				t.Fatalf("table = %v, want lake.sales.orders", table)
+			}
+		})
+	}
+
+	// Elsewhere the leading TABLE keyword keeps pinned upstream's behavior: the unqualified
+	// form is an Alias, the qualified form is a parse error.
+	for _, dialect := range []string{"postgres", "tsql", "oracle", "sqlite", "clickhouse"} {
+		t.Run(dialect+" keeps upstream", func(t *testing.T) {
+			expr, err := sqlglot.ParseOne("TABLE users", dialect)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			if expr.Kind() != exp.KindAlias {
+				t.Fatalf("%s TABLE users kind = %v, want Alias", dialect, exp.ClassName(expr.Kind()))
+			}
+			if _, err := sqlglot.ParseOne("TABLE lake.sales.orders", dialect); err == nil {
+				t.Fatalf("%s TABLE lake.sales.orders should fail closed like upstream", dialect)
 			}
 		})
 	}

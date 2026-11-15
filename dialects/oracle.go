@@ -51,6 +51,7 @@ func Oracle() *Dialect {
 	cfg.FormatStrings = maps.Clone(cfg.FormatStrings)
 	cfg.FormatStrings["U'"] = tokens.FormatString{End: "'", TokenType: tokens.UNICODE_STRING}
 	cfg.FormatStrings["u'"] = tokens.FormatString{End: "'", TokenType: tokens.UNICODE_STRING}
+	cfg.OracleQQuotes = true
 
 	// dialects/oracle.py:66-80 KEYWORDS deltas.
 	cfg.Keywords = maps.Clone(cfg.Keywords)
