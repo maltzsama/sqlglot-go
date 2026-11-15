@@ -107,8 +107,10 @@ The parse → generate round-trip is done for the ported corpus (see Status). Th
 mostly the **optimizer** (port 1:1 from `.reference/`, port the matching upstream tests,
 differential-check against the pinned Python):
 
-- THE OPTIMIZER is ported, with the top-level `optimize()` rule pipeline (`Optimize`, `Rules`);
-  only `canonicalize_internal_names`, which is not a default rule, is left. Ported: `qualify` +
+- THE OPTIMIZER is ported, with the top-level `optimize()` rule pipeline (`Optimize`, `Rules`)
+  and `canonicalize_internal_names` (not a default rule; its 65-fixture upstream suite runs with
+  six documented gaps that depend on the deferred JSONPath tokenizer and BigQuery UNNEST
+  qualification). Ported: `qualify` +
   `scope`/`traverse_scope` (+ `isolate_table_selects`),
   `eliminate_ctes` + `journal`, `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries`,
   `merge_subqueries`, `annotate_types`, `simplify`, `normalize`, `eliminate_joins`,

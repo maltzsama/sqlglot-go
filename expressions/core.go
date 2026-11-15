@@ -446,6 +446,32 @@ func (n *Node) OutputName() string {
 		return n.Alias()
 	case KindCast, KindTryCast, KindCastToStrType:
 		return n.Name()
+	case KindBracket:
+		// core.py Bracket.output_name: a single subscript names its projection after the
+		// key, e.g. j['name'] -> "name"; multiple subscripts have no single name.
+		if expressionList := expressionsOf(n, "expressions"); len(expressionList) == 1 {
+			return expressionList[0].OutputName()
+		}
+	case KindJSONExtract:
+		// json.py:118-120: JSON_EXTRACT names itself after the path unless it is the
+		// var-len form (extra expressions).
+		if len(expressionsOf(n, "expressions")) == 0 {
+			if path := n.Expr(); path != nil {
+				return path.OutputName()
+			}
+		}
+	case KindJSONExtractScalar:
+		// json.py:141-143.
+		if path := n.Expr(); path != nil {
+			return path.OutputName()
+		}
+	case KindJSONPath:
+		// query.py:1984-1987: JSONPath.output_name is the last segment when it is a string.
+		if expressionList := expressionsOf(n, "expressions"); len(expressionList) > 0 {
+			if name, ok := expressionList[len(expressionList)-1].Arg("this").(string); ok {
+				return name
+			}
+		}
 	}
 	return ""
 }
@@ -1276,6 +1302,13 @@ func asExpression(value any) Expression {
 		return expr
 	}
 	return nil
+}
+
+// expressionsOf returns a list-valued arg as []Expression — upstream's
+// `expression.args.get(key, [])` for list args such as `expressions`.
+func expressionsOf(n *Node, key string) []Expression {
+	values, _ := n.Arg(key).([]Expression)
+	return values
 }
 
 func cloneScalar(value any) any {
