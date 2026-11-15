@@ -121,14 +121,14 @@ differential-check against the pinned Python):
   `optimizer/testdata/annotate_gaps.txt`.
 - CROSS-DIALECT transpilation: verified against upstream's `validate_all` read/write pairs —
   `TestTranspileCorpus` runs every pair whose dialects are all registered (`testdata/transpile_corpus.jsonl`,
-  8758 pairs, 6074 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
+  8881 pairs, 6308 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
   What remains are the per-dialect override tables that make cross-dialect output correct — per-dialect
   parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
 - DIALECTS: base, MySQL, Postgres, TSQL, ClickHouse, StarRocks, Doris, Presto, Trino, Hive, Athena,
   Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery (#41), DuckDB (#39),
-  Snowflake (#40), SQLite (#38), MariaDB (#37, a beyond-upstream identity over MySQL) and Dremio
-  are ported; upstream ships 30+ and the rest are out of scope for now (queued: Teradata, DAX,
+  Snowflake (#40), SQLite (#38), MariaDB (#37, a beyond-upstream identity over MySQL), Dremio and
+  Teradata are ported; upstream ships 30+ and the rest are out of scope for now (queued: DAX,
   Tableau).
 - TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): the v30.17.0 bump removed
   the FOR VERSION/TIMESTAMP and hive AS OF compound keywords but did not port `VERSION_PHRASES` +
@@ -975,8 +975,8 @@ each read pair asserts `parse_one(read_sql, read_dialect).sql(self.dialect) == s
 pair asserts `expression.sql(write_dialect) == write_sql`.
 
 - **Extraction** — `scripts/extract_dialect_corpus.py --transpile-only` records every pair whose
-  dialects are all registered into `testdata/transpile_corpus.jsonl`: **8758 records across 325
-  dialect pairs** (6658 cross-dialect, 2100 same-dialect), deduped and sorted for a byte-stable
+  dialects are all registered into `testdata/transpile_corpus.jsonl`: **8881 records across 355
+  dialect pairs** (6760 cross-dialect, 2121 same-dialect), deduped and sorted for a byte-stable
   rerun (verified: two consecutive runs are identical). `REGISTERED` mirrors `dialects.GetOrRaise`,
   so it also holds `spark2` — which upstream's test classes only ever name as a read/write key,
   111 of them, with no `TestSpark2` class of its own to run — and `mariadb`, though upstream ships
@@ -997,8 +997,8 @@ pair asserts `expression.sql(write_dialect) == write_sql`.
   `parse:` category), (c) per-write-dialect total floors against dropped records. Regenerate the
   gaps file and print observed counts with
   `SQLGLOT_TRANSPILE_UPDATE=1 go test . -run TestTranspileCorpus -v`.
-- **Initial state** — **6074/8758 pass (69%)**, 2684 tracked gaps: 1779 `gen: transpile mismatch`,
-  793 `gen: cast/type`, 69 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
+- **Initial state** — **6308/8881 pass (71%)**, 2573 tracked gaps: 1691 `gen: transpile mismatch`,
+  770 `gen: cast/type`, 69 `gen: ddl/properties`, 43 parse/generate errors. Closing them slice by
   slice is the per-dialect generator work listed under Remaining work.
 - **Bug found by the first run** — `SELECT e'Hello\nworld'` (duckdb → bigquery) crashed the test
   binary with a stack overflow: `bytestringSQL`'s cast-wrap branch rebuilt its child ByteString
@@ -1025,7 +1025,7 @@ policy.
 
 Corpus: 136 `validate_identity` cases from `tests/dialects/test_sqlite.py`, at **136/136**, with no
 SQLite rows in `testdata/parity_gaps.txt`; the same-dialect write pairs and cross-dialect read/write
-pairs are exercised by `TestTranspileCorpus` (152 SQLite write-bucket pairs, 115 passing, the rest
+pairs are exercised by `TestTranspileCorpus` (153 SQLite write-bucket pairs, 123 passing, the rest
 tracked in `testdata/transpile_gaps.txt`). `sqlite_test.go` ports the upstream methods.
 
 The slice also closed four base-parser/base-generator gaps the upstream corpus exposed: the
@@ -1047,7 +1047,7 @@ modeled from the upstream class attributes: StarRocks/Doris `CAST_MAPPING = {}` 
 `registerDialectCastMapping`), Doris `TIMESTAMP_FUNC_TYPES = set()`, StarRocks's base `TRIM` and
 `SQL_SECURITY_VIEW_LOCATION = POST_SCHEMA`, and the per-dialect `PARSE_JSON_NAME`
 (`ParseJSONName`). Those fixes cleared the StarRocks/Doris corpus gaps (StarRocks identity
-145/145, Doris 56/56; transpile StarRocks 81/100, Doris 70/104) and corrected Redshift's
+145/145, Doris 56/56; transpile StarRocks 82/101, Doris 72/104) and corrected Redshift's
 `PARSE_JSON` rendering.
 
 MariaDB-only grammar, each tracked in `testdata/upstream_extensions.jsonl` with a DEVIATIONS
@@ -1073,8 +1073,35 @@ through the Dremio `TIME_MAPPING`, the numeric `TO_CHAR` form, `DATE_PART`, `REP
 literal folding, and the multi-argument `DISTINCT` rewrite.
 
 Corpus: 46 `validate_identity` cases at **46/46**; the transpile corpus adds 31 Dremio
-write-bucket pairs at **31/31** (6074/8758 overall). The slice also ported the shared pieces
+write-bucket pairs at **31/31** (6308/8881 overall). The slice also ported the shared pieces
 those behaviours need: `TRY_SUPPORTED`, `NVL2_SUPPORTED`, `LIMIT_ONLY_LITERALS`,
 `MULTI_ARG_DISTINCT`, `SUPPORTS_CONVERT_TIMEZONE` and `SUPPORTS_BETWEEN_FLAGS` are now driven
 by dialect flags, with the `Nvl2` node and the base `CONVERT_TIMEZONE` builder added (which
 also corrected Redshift's `BETWEEN` flag behaviour).
+
+## Teradata dialect — DONE (queued extension)
+
+Ported `.reference/sqlglot-v30.17.0/sqlglot/{dialects,parsers,generators}/teradata.py` as
+`dialects/teradata.go`, `parser/dialect_teradata.go` and `generator/dialect_teradata.go`: the
+Teradata tokenizer keyword set (`SEL`/`UPD`/`DEL`/`INS`, `LOCKING`, `SAMPLE`, `TOP`, `MOD`,
+`MINUS`, the `EQ`/`NE`/`^=`/`NOT=` inequality spellings and `**`), the `X'..'`/`0x` hex strings,
+`TIME_MAPPING`/`FORMAT`, `TABLESAMPLE_CSV`/`VALUES_FOLLOWED_BY_PAREN`, `TYPED_DIVISION`,
+`LIMIT_IS_TOP`, `TRY_SUPPORTED = False`, the `DATABASE`/`LOCK`/`REPLACE` statement parsers,
+`QUERY_BAND`, the `TRYCAST`/`RANGE_N`/`TRANSLATE` function grammars, the charset translators, the
+column-level `(FORMAT '<fmt>')` override, the `CARDINALITY`/`RANDOM` FUNCTIONS additions, and the
+generator overrides (`MAX_BY`/`MIN_BY`, `**`, `MOD`, `EXTRACT`, interval/cast/table-sample
+rendering, `UPDATE`, the Teradata type map and the `SELECT` preprocess chain).
+
+Corpus: 84 `validate_identity` cases at **84/84**; the transpile corpus adds 74 Teradata
+write-bucket pairs at **74/74** (6308/8881 overall). `teradata_test.go` ports all 15 methods of
+upstream's `tests/dialects/test_teradata.py`.
+
+The slice also closed shared generator/parser gaps the Teradata corpus exposed, each ported 1:1
+from upstream: `div_sql` (typed/safe division casts), `arrayany_sql` behind a new
+`CanImplement_ARRAY_ANY`-style dialect flag (`CanImplementArrayAny`, true only for teradata), the
+Teradata `ARRAY_SIZE_NAME = CARDINALITY`, the `eliminate_distinct_on` /
+`eliminate_semi_and_anti_joins` SELECT preprocess chain, the `strposition_sql` renderers
+(`INSTR` for bigquery/teradata, `LOCATE` for the mysql and hive families), the base `FUNCTIONS`
+entries for the whole `STR_POSITION` family (`STR_POSITION`/`STRPOS`/`INSTR`/`CHARINDEX`/`LOCATE`),
+the `ArrayFilter` default SQL name (`FILTER`), and mysql's `INSTR` moved to the shared base map
+(verified against the pinned oracle that `parsers/mysql.py` does not register it).

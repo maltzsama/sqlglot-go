@@ -61,12 +61,16 @@ type Dialect struct {
 	// forms (CAST, EXTRACT ... FROM, TRIM ... FROM, SUBSTRING ... FROM/FOR, POSITION ... IN,
 	// CHAR ... USING, CEIL ... TO) keep their structured nodes and render form-faithfully.
 	// Set via the `opaque_functions` dialect setting at GetOrRaise resolve time.
-	OpaqueFunctions         bool
-	NormalizationStrategy   NormalizationStrategy
-	DPipeIsStringConcat     bool
-	StrictStringConcat      bool
-	TypedDivision           bool
-	SafeDivision            bool
+	OpaqueFunctions       bool
+	NormalizationStrategy NormalizationStrategy
+	DPipeIsStringConcat   bool
+	StrictStringConcat    bool
+	TypedDivision         bool
+	SafeDivision          bool
+	// CanImplementArrayAny ports CAN_IMPLEMENT_ARRAY_ANY (generator.py:520, base False):
+	// when true the generator rewrites ARRAY_ANY into an ARRAY_SIZE/FILTER emptiness
+	// check (generator.py:5252-5257) instead of warning and emitting the call verbatim.
+	CanImplementArrayAny    bool
 	SupportsColumnJoinMarks bool
 	ColonIsVariantExtract   bool
 	// ColonChainIsSingleExtract ports COLON_CHAIN_IS_SINGLE_EXTRACT (parser.py:1880, base True;
@@ -387,6 +391,9 @@ type Dialect struct {
 	// A nil/empty map (the base Dialect's zero value) means "no per-dialect overrides",
 	// so p.dialect.Functions is safe to index even when unset.
 	Functions map[string]func([]exp.Expression) exp.Expression
+	// TablesampleCSV ports TABLESAMPLE_CSV (parser.py:1851, base False; teradata True): the
+	// TABLESAMPLE/SAMPLE argument list is a CSV of primary expressions instead of one number.
+	TablesampleCSV bool
 	// ValuesFollowedByParen ports the parser flag of the same name (parser.py:1801): whether a
 	// bare VALUES keyword not immediately followed by "(" can be reparsed as a plain identifier
 	// (e.g. `SELECT values`, `values.c`). MySQL overrides to False (parsers/mysql.py:303),
@@ -430,8 +437,14 @@ type Dialect struct {
 	// NormalizeExtractDateParts ports NORMALIZE_EXTRACT_DATE_PARTS (base False; duckdb True):
 	// EXTRACT's date part is folded through DATE_PART_MAPPING before rendering.
 	NormalizeExtractDateParts bool
-	// ExponentOperators ports a non-empty EXPONENT table (duckdb's `**`/`^` -> Pow).
-	ExponentOperators bool
+	// ExponentOperators ports the EXPONENT table (parser.py:989 base {}, parsers/duckdb.py:
+	// 106-110 `{CARET, DSTAR} -> Pow`, parsers/teradata.py:99-101 `{DSTAR} -> Pow`): the
+	// token types that bind tighter than `*`/`/` and parse as Pow. Keyed by token so a
+	// dialect can take only one of the two spellings — Teradata's `^` stays BitwiseXor,
+	// only `**` is exponentiation. Postgres's `{CARET} -> Pow` (parsers/postgres.py:168-170)
+	// is not set here yet: main never wired it, so `2 ^ 3` stays xor under postgres in this
+	// port (upstream generates POWER(2, 3)) — a pre-existing gap, tracked as a follow-up.
+	ExponentOperators map[tokens.TokenType]bool
 	// RegexpRangeOperators ports duckdb's RANGE_PARSERS[TILDE] = RegexpFullMatch.
 	RegexpRangeOperators bool
 	// CaretAtStartsWith ports duckdb's RANGE_PARSERS[CARET_AT] = StartsWith.
@@ -1076,6 +1089,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return Doris(), nil
 	case "dremio":
 		return Dremio(), nil
+	case "teradata":
+		return Teradata(), nil
 	case "oracle":
 		return Oracle(), nil
 	case "redshift":

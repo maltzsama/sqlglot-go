@@ -88,7 +88,11 @@ func init() {
 	}
 	registerDialectDispatch("presto", table)
 	registerDialectTypeMapping("presto", map[exp.DType]string{exp.DTypeBinary: "VARBINARY", exp.DTypeBit: "BOOLEAN", exp.DTypeDatetime: "TIMESTAMP", exp.DTypeDatetime64: "TIMESTAMP", exp.DTypeFloat: "REAL", exp.DTypeHllSketch: "HYPERLOGLOG", exp.DTypeInt: "INTEGER", exp.DTypeStruct: "ROW", exp.DTypeText: "VARCHAR", exp.DTypeTimestampTz: "TIMESTAMP", exp.DTypeTimestampNtz: "TIMESTAMP", exp.DTypeTimeTz: "TIME"})
-	registerDialectPropertyLocations("presto", map[exp.Kind]propertyLocation{exp.KindLocationProperty: propertyLocationUnsupported})
+	// generators/presto.py:285 exp.VolatileProperty: UNSUPPORTED.
+	registerDialectPropertyLocations("presto", map[exp.Kind]propertyLocation{
+		exp.KindLocationProperty: propertyLocationUnsupported,
+		exp.KindVolatileProperty: propertyLocationUnsupported,
+	})
 }
 
 func prestoRename(name string) func(*Generator, exp.Expression) string {

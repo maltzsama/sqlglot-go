@@ -518,11 +518,79 @@ func (g *Generator) binary(e expressions.Expression, op string) string {
 	return strings.Join(sqls, "")
 }
 
-func (g *Generator) addSQL(e expressions.Expression) string        { return g.binary(e, "+") }
-func (g *Generator) subSQL(e expressions.Expression) string        { return g.binary(e, "-") }
-func (g *Generator) mulSQL(e expressions.Expression) string        { return g.binary(e, "*") }
-func (g *Generator) divSQL(e expressions.Expression) string        { return g.binary(e, "/") }
-func (g *Generator) modSQL(e expressions.Expression) string        { return g.binary(e, "%") }
+func (g *Generator) addSQL(e expressions.Expression) string { return g.binary(e, "+") }
+func (g *Generator) subSQL(e expressions.Expression) string { return g.binary(e, "-") }
+func (g *Generator) mulSQL(e expressions.Expression) string { return g.binary(e, "*") }
+func (g *Generator) modSQL(e expressions.Expression) string { return g.binary(e, "%") }
+
+// dtypeSetArgs expands a DType set into the variadic form Node.IsType accepts, mirroring
+// upstream's `*exp.DataType.REAL_TYPES` argument unpacking in div_sql.
+func dtypeSetArgs(set map[expressions.DType]bool) []any {
+	out := make([]any, 0, len(set))
+	for dt := range set {
+		out = append(out, dt)
+	}
+	return out
+}
+
+var (
+	divRealTypes    = dtypeSetArgs(expressions.RealTypes)
+	divIntegerTypes = dtypeSetArgs(expressions.IntegerTypes)
+)
+
+// divSQL ports div_sql (generator.py:4451-4468): under a non-SAFE_DIVISION dialect a
+// parsed `safe` divisor is wrapped in NULLIF(…, 0); a TYPED_DIVISION dialect casts an
+// unannotated non-real dividend to DOUBLE (both sides annotated as integer under an
+// untyped dialect cast the whole division back to BIGINT). Mutations go through
+// Node.Replace on the tree Generate already copied (generator.go:193), exactly like
+// upstream's generate(copy=True).
+func (g *Generator) divSQL(e expressions.Expression) string {
+	l := e.This()
+	r := e.Expr()
+
+	if !g.dialect.SafeDivision && truthy(e.Arg("safe")) {
+		r.Replace(expressions.Nullif(expressions.Args{"this": r.Copy(), "expression": expressions.LiteralNumber(0)}))
+	}
+
+	if g.dialect.TypedDivision && !truthy(e.Arg("typed")) {
+		if !divOperandIsType(l, divRealTypes...) && !divOperandIsType(r, divRealTypes...) {
+			l.Replace(expressions.Cast(expressions.Args{"this": l.Copy(), "to": expressions.DTypeDouble.IntoExpr(nil)}))
+		}
+	} else if !g.dialect.TypedDivision && truthy(e.Arg("typed")) {
+		// The operands read the locals captured above, not e.Expr(): after the NULLIF
+		// replacement above they are stale on purpose — upstream builds `l / r` from the
+		// same pre-replacement locals (generator.py:4465), so a typed integer division
+		// keeps the raw divisor inside the BIGINT cast (oracle: sqlite
+		// CAST(a AS INT) / CAST(b AS INT) -> base
+		// CAST(CAST(a AS INT) / CAST(b AS INT) AS BIGINT), no NULLIF).
+		if divOperandIsType(l, divIntegerTypes...) && divOperandIsType(r, divIntegerTypes...) {
+			return g.gen(expressions.Cast(expressions.Args{
+				"this": expressions.New(expressions.KindDiv, expressions.Args{"this": l, "expression": r}),
+				"to":   expressions.DTypeBigInt.IntoExpr(nil),
+			}))
+		}
+	}
+
+	return g.binary(e, "/")
+}
+
+// divOperandIsType ports the operand type checks in div_sql (generator.py:4458, 4462):
+// a cast operand checks its target type — Cast.is_type (functions.py:57-70) — while any
+// other operand checks the type annotate_types recorded (Expression.is_type,
+// core.py:984-986). Node.IsType deliberately excludes a cast's target (its annotation is
+// nil at parse time), so the cast case goes through DataTypeIsType, which reads the `to`
+// arg exactly like upstream's override.
+func divOperandIsType(e expressions.Expression, dtypes ...any) bool {
+	if e == nil {
+		return false
+	}
+	switch e.Kind() {
+	case expressions.KindCast, expressions.KindTryCast, expressions.KindJSONCast:
+		return expressions.DataTypeIsType(e, false, dtypes...)
+	}
+	return e.IsType(dtypes...)
+}
+
 func (g *Generator) eqSQL(e expressions.Expression) string         { return g.binary(e, "=") }
 func (g *Generator) neqSQL(e expressions.Expression) string        { return g.binary(e, "<>") }
 func (g *Generator) gtSQL(e expressions.Expression) string         { return g.binary(e, ">") }
@@ -1718,8 +1786,45 @@ func (g *Generator) insertSQL(e expressions.Expression) string {
 	return g.prependCtes(e, sql)
 }
 
+// updateFromJoinsSQL ports _update_from_joins_sql (generator.py:2658-2688): dialects whose
+// UPDATE has no FROM clause (UPDATE_STATEMENT_SUPPORTS_FROM = False, e.g. mysql) rewrite the
+// parsed FROM into `JOIN ... ON TRUE` clauses placed after the target table, qualify
+// unqualified SET columns with the target's alias, and drop the FROM from the output.
 func (g *Generator) updateFromJoinsSQL(e expressions.Expression) (string, string) {
-	return "", g.sqlKey(e, "from_")
+	fromExpr := asExpression(e.Arg("from_"))
+	if g.dialect.UpdateStatementSupportsFrom || fromExpr == nil {
+		return "", g.sqlKey(e, "from_")
+	}
+
+	// Qualify unqualified columns in the SET clause with the target table: MySQL requires
+	// qualified column names in a multi-table UPDATE to avoid ambiguity.
+	if targetTable := asExpression(e.Arg("this")); targetTable != nil && targetTable.Kind() == expressions.KindTable {
+		targetName := expressions.ToIdentifier(targetTable.AliasOrName())
+		for _, eq := range e.Expressions() {
+			col := asExpression(eq.Arg("this"))
+			if col != nil && col.Kind() == expressions.KindColumn && !truthy(col.Arg("table")) {
+				col.Set("table", targetName)
+			}
+		}
+	}
+
+	table := asExpression(fromExpr.Arg("this"))
+	var nestedJoins []expressions.Expression
+	if table != nil {
+		if joins, ok := table.Arg("joins").([]expressions.Expression); ok && len(joins) > 0 {
+			nestedJoins = joins
+			table.Set("joins", nil)
+		}
+	}
+
+	joinSQL := g.gen(expressions.Join(expressions.Args{"this": table, "on": expressions.True_()}))
+	for _, nested := range nestedJoins {
+		if !truthy(nested.Arg("on")) && !truthy(nested.Arg("using")) {
+			nested.Set("on", expressions.True_())
+		}
+		joinSQL += g.gen(nested)
+	}
+	return joinSQL, ""
 }
 
 func (g *Generator) updateSQL(e expressions.Expression) string {
@@ -2002,6 +2107,14 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 	if g.isDialect("clickhouse") && clickhouseOnClusterTargets[kind] {
 		if postName := propertyLocations[propertyLocationPostName]; len(postName) > 0 {
 			this = g.clickhouseCreateable(e, postName)
+		}
+	}
+	// createable_sql override (generators/teradata.py:148-160): a TABLE's POST_NAME
+	// properties sit between the name and its column list. The base createable_sql drops
+	// POST_NAME silently (generator.py:1315-1316), which is why only Teradata renders them.
+	if g.isDialect("teradata") && strings.ToUpper(kind) == "TABLE" {
+		if postName := propertyLocations[propertyLocationPostName]; len(postName) > 0 {
+			this = g.teradataCreateable(e, postName)
 		}
 	}
 
@@ -2789,7 +2902,45 @@ func (g *Generator) arraySizeSQL(e expressions.Expression) string {
 		}
 		dim = nil
 	}
-	return g.funcCall("ARRAY_LENGTH", []any{e.Arg("this"), dim}, "(", ")", true)
+	// ARRAY_SIZE_NAME (generator.py:593) defaults to ARRAY_LENGTH; teradata overrides it
+	// with CARDINALITY (generators/teradata.py:55). The other per-dialect names (hive
+	// SIZE, presto CARDINALITY, ...) are dispatch-level renames upstream of this method.
+	name := "ARRAY_LENGTH"
+	if g.isDialect("teradata") {
+		name = "CARDINALITY"
+	}
+	return g.funcCall(name, []any{e.Arg("this"), dim}, "(", ")", true)
+}
+
+// arrayAnySQL ports arrayany_sql (generator.py:5252-5265): a CAN_IMPLEMENT_ARRAY_ANY
+// dialect rewrites ARRAY_ANY into an emptiness check on the array versus on its
+// FILTERed copy; every other dialect warns (upstream skips exactly the base Dialect,
+// generator.py:5260-5262) and falls back to the plain function call. The ArrayFilter
+// children are copied because Go nodes track their parent, while upstream re-parents
+// the same objects freely.
+func (g *Generator) arrayAnySQL(e expressions.Expression) string {
+	if g.dialect.CanImplementArrayAny {
+		filtered := expressions.ArrayFilter(expressions.Args{
+			"this":       e.This().Copy(),
+			"expression": e.Expr().Copy(),
+		})
+		filteredNotEmpty := expressions.NEQ(expressions.Args{
+			"this":       expressions.ArraySize(expressions.Args{"this": filtered}),
+			"expression": expressions.LiteralNumber(0),
+		})
+		originalIsEmpty := expressions.EQ(expressions.Args{
+			"this":       expressions.ArraySize(expressions.Args{"this": e.This().Copy()}),
+			"expression": expressions.LiteralNumber(0),
+		})
+		return g.gen(expressions.Paren(expressions.Args{
+			"this": expressions.Or(expressions.Args{"this": originalIsEmpty, "expression": filteredNotEmpty}),
+		}))
+	}
+
+	if g.dialect.Name != "base" {
+		g.unsupported("ARRAY_ANY is unsupported")
+	}
+	return g.functionFallbackSQL(e)
 }
 
 func (g *Generator) initcapSQL(e expressions.Expression) string {
@@ -2822,6 +2973,19 @@ func (g *Generator) dateAddSQL(e expressions.Expression) string {
 		return g.postgresDateAddSQL("+", e)
 	}
 	return g.funcCall("DATE_ADD", []any{e.Arg("this"), e.Arg("expression"), unitToStr(e)}, "(", ")", true)
+}
+
+// randSQL ports rand_sql (generator.py:5554-5560): with both bounds present the base
+// generator renders the uniform-range expansion `(upper - lower) * RAND(this) + lower`,
+// otherwise a plain RAND(this).
+func (g *Generator) randSQL(e expressions.Expression) string {
+	lower := g.sqlKey(e, "lower")
+	upper := g.sqlKey(e, "upper")
+	rand := g.funcCall("RAND", []any{e.Arg("this")}, "(", ")", true)
+	if lower != "" && upper != "" {
+		return "(" + upper + " - " + lower + ") * " + rand + " + " + lower
+	}
+	return rand
 }
 
 // mysqlDateAddSQL ports date_add_sql (generators/mysql.py:74-83): reconstructs
@@ -3459,4 +3623,32 @@ func (g *Generator) nvl2SQL(e expressions.Expression) string {
 		args["default"] = falseArg
 	}
 	return g.gen(expressions.Case(args))
+}
+
+// queryBandSQL ports queryband_sql (generator.py:2975-2982).
+func (g *Generator) queryBandSQL(e expressions.Expression) string {
+	this := g.sqlKey(e, "this")
+	update := ""
+	if boolValue(e.Arg("update")) {
+		update = " UPDATE"
+	}
+	scope := ""
+	if s := g.sqlKey(e, "scope"); s != "" {
+		scope = " FOR " + s
+	}
+	return "QUERY_BAND = " + this + update + scope
+}
+
+// translateCharactersSQL ports translatecharacters_sql (generator.py:6137-6141).
+func (g *Generator) translateCharactersSQL(e expressions.Expression) string {
+	withError := ""
+	if boolValue(e.Arg("with_error")) {
+		withError = " WITH ERROR"
+	}
+	return "TRANSLATE(" + g.sqlKey(e, "this") + " USING " + g.sqlKey(e, "expression") + withError + ")"
+}
+
+// formatPhraseSQL ports formatphrase_sql (generator.py:3827-3832).
+func (g *Generator) formatPhraseSQL(e expressions.Expression) string {
+	return g.sqlKey(e, "this") + " (FORMAT " + g.sqlKey(e, "format") + ")"
 }

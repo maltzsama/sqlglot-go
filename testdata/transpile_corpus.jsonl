@@ -1606,6 +1606,21 @@
 {"read": "", "write": "starrocks", "sql": "YEAR(TS_OR_DS_TO_DATE(x))", "want": "YEAR(x)", "pretty": false, "identify": false}
 {"read": "", "write": "starrocks", "sql": "a / b", "want": "a / b", "pretty": false, "identify": false}
 {"read": "", "write": "starrocks", "sql": "x ILIKE '%y'", "want": "LOWER(x) LIKE LOWER('%y')", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "ARRAY_ANY(arr, x -> pred)", "want": "(CARDINALITY(arr) = 0 OR CARDINALITY(FILTER(arr, x -> pred)) <> 0)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "CAST(x AS some_udt)", "want": "CAST(x AS some_udt)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "REGR_COUNT(x, y)", "want": "REGR_COUNT(x, y)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "REGR_INTERCEPT(x, y)", "want": "REGR_INTERCEPT(x, y)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "REGR_R2(x, y)", "want": "REGR_R2(x, y)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "REGR_SLOPE(x, y)", "want": "REGR_SLOPE(x, y)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "REGR_SXX(x, y)", "want": "REGR_SXX(x, y)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "REGR_SXY(x, y)", "want": "REGR_SXY(x, y)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "REGR_SYY(x, y)", "want": "REGR_SYY(x, y)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "SELECT NVL2(a, b)", "want": "SELECT NVL2(a, b)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "SELECT NVL2(a, b, c)", "want": "SELECT NVL2(a, b, c)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "STR_POSITION(haystack, needle)", "want": "INSTR(haystack, needle)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "STR_POSITION(haystack, needle, position)", "want": "INSTR(haystack, needle, position)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "STR_POSITION(haystack, needle, position, occurrence)", "want": "INSTR(haystack, needle, position, occurrence)", "pretty": false, "identify": false}
+{"read": "", "write": "teradata", "sql": "a / b", "want": "CAST(a AS DOUBLE PRECISION) / b", "pretty": false, "identify": false}
 {"read": "", "write": "trino", "sql": "ARRAY_ANY(arr, x -> pred)", "want": "ANY_MATCH(arr, x -> pred)", "pretty": false, "identify": false}
 {"read": "", "write": "trino", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
 {"read": "", "write": "trino", "sql": "ARRAY_MAX(x)", "want": "ARRAY_MAX(x)", "pretty": false, "identify": false}
@@ -2720,6 +2735,9 @@
 {"read": "bigquery", "write": "starrocks", "sql": "DATE_DIFF(DATE '2010-07-07', DATE '2008-12-25', DAY)", "want": "DATE_DIFF('DAY', CAST('2010-07-07' AS DATE), CAST('2008-12-25' AS DATE))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "starrocks", "sql": "DATE_DIFF(DATE '2010-07-07', DATE '2008-12-25', MINUTE)", "want": "DATE_DIFF('MINUTE', CAST('2010-07-07' AS DATE), CAST('2008-12-25' AS DATE))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "starrocks", "sql": "REGEXP_CONTAINS('foo', '.*')", "want": "REGEXP('foo', '.*')", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "teradata", "sql": "CAST('1992-01' AS DATE FORMAT 'YYYY-DD')", "want": "CAST('1992-01' AS DATE FORMAT 'YYYY-DD')", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "teradata", "sql": "EXTRACT(MONTH FROM x)", "want": "EXTRACT(MONTH FROM x)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "teradata", "sql": "EXTRACT(QUARTER FROM x)", "want": "CAST(TO_CHAR(x, 'Q') AS INT)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "trino", "sql": "ARRAY_CONCAT([1, 2], [3, 4], [5, 6])", "want": "CONCAT(ARRAY[1, 2], ARRAY[3, 4], ARRAY[5, 6])", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "trino", "sql": "LOWER(TO_HEX(x))", "want": "LOWER(TO_HEX(x))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "trino", "sql": "MD5(x)", "want": "MD5(x)", "pretty": false, "identify": false}
@@ -3141,6 +3159,7 @@
 {"read": "databricks", "write": "spark", "sql": "SELECT c1:item[1].price", "want": "SELECT GET_JSON_OBJECT(c1, '$.item[1].price')", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "WITH RECURSIVE t(n) AS (SELECT * FROM VALUES (1) AS _values) SELECT n FROM t", "want": "WITH RECURSIVE t(n) AS (SELECT * FROM VALUES (1) AS _values) SELECT n FROM t", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark2", "sql": "SELECT X'1A2B'", "want": "SELECT X'1A2B'", "pretty": false, "identify": false}
+{"read": "databricks", "write": "teradata", "sql": "USE tduser", "want": "DATABASE tduser", "pretty": false, "identify": false}
 {"read": "databricks", "write": "tsql", "sql": "CREATE TABLE foo (x INT GENERATED ALWAYS AS (YEAR(y)))", "want": "CREATE TABLE foo (x AS YEAR(y))", "pretty": false, "identify": false}
 {"read": "databricks", "write": "tsql", "sql": "SELECT DATEADD(year, 1, '2020-01-01')", "want": "SELECT DATEADD(YEAR, 1, '2020-01-01')", "pretty": false, "identify": false}
 {"read": "databricks", "write": "tsql", "sql": "SELECT DATEDIFF(year, 'start', 'end')", "want": "SELECT DATEDIFF(YEAR, 'start', 'end')", "pretty": false, "identify": false}
@@ -3812,6 +3831,8 @@
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT TIMESTAMP 'foo'", "want": "SELECT CAST('foo' AS DATETIME)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT [1, 2, 3] @> [1, 2]", "want": "SELECT ARRAY_CONTAINS_ALL([1, 2, 3], [1, 2])", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT [1, 2] <@ [1, 2, 3]", "want": "SELECT ARRAY_CONTAINS_ALL([1, 2, 3], [1, 2])", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "teradata", "sql": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE NOT EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "teradata", "sql": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "trino", "sql": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE NOT EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "trino", "sql": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "trino", "sql": "SELECT DATEDIFF('day', t1.\"A\", t1.\"B\") FROM \"table\" AS t1", "want": "SELECT DATE_DIFF('DAY', t1.\"A\", t1.\"B\") FROM \"table\" AS t1", "pretty": false, "identify": false}
@@ -4669,6 +4690,14 @@
 {"read": "mysql", "write": "starrocks", "sql": "SELECT x'0000CC'", "want": "SELECT x'0000CC'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "starrocks", "sql": "SELECT x'CC'", "want": "SELECT x'CC'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "starrocks", "sql": "a / b", "want": "a / b", "pretty": false, "identify": false}
+{"read": "mysql", "write": "teradata", "sql": "SELECT 0b1011", "want": "SELECT 11", "pretty": false, "identify": false}
+{"read": "mysql", "write": "teradata", "sql": "SELECT 0x0000CC", "want": "SELECT X'0000CC'", "pretty": false, "identify": false}
+{"read": "mysql", "write": "teradata", "sql": "SELECT 0xCC", "want": "SELECT X'CC'", "pretty": false, "identify": false}
+{"read": "mysql", "write": "teradata", "sql": "SELECT 0xCC ", "want": "SELECT X'CC'", "pretty": false, "identify": false}
+{"read": "mysql", "write": "teradata", "sql": "SELECT b'1011'", "want": "SELECT 11", "pretty": false, "identify": false}
+{"read": "mysql", "write": "teradata", "sql": "SELECT x'0000CC'", "want": "SELECT X'0000CC'", "pretty": false, "identify": false}
+{"read": "mysql", "write": "teradata", "sql": "SELECT x'CC'", "want": "SELECT X'CC'", "pretty": false, "identify": false}
+{"read": "mysql", "write": "teradata", "sql": "a / b", "want": "CAST(a AS DOUBLE PRECISION) / NULLIF(b, 0)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "trino", "sql": "SELECT * FROM test LIMIT 0 + 1, 0 + 1", "want": "SELECT * FROM test OFFSET 1 LIMIT 1", "pretty": false, "identify": false}
 {"read": "mysql", "write": "trino", "sql": "SELECT 0b1011", "want": "SELECT 11", "pretty": false, "identify": false}
 {"read": "mysql", "write": "trino", "sql": "SELECT 0x0000CC", "want": "SELECT x'0000CC'", "pretty": false, "identify": false}
@@ -4891,6 +4920,9 @@
 {"read": "oracle", "write": "spark", "sql": "TRUNC(CAST(x AS TIMESTAMP), 'YEAR')", "want": "TRUNC(CAST(x AS TIMESTAMP), 'YEAR')", "pretty": false, "identify": false}
 {"read": "oracle", "write": "spark2", "sql": "TO_NUMBER(x)", "want": "CAST(x AS DOUBLE)", "pretty": false, "identify": false}
 {"read": "oracle", "write": "starrocks", "sql": "TO_NUMBER(x)", "want": "CAST(x AS DOUBLE)", "pretty": false, "identify": false}
+{"read": "oracle", "write": "teradata", "sql": "TO_NUMBER(expr, fmt, nlsparam)", "want": "TO_NUMBER(expr, fmt, nlsparam)", "pretty": false, "identify": false}
+{"read": "oracle", "write": "teradata", "sql": "TO_NUMBER(x)", "want": "TO_NUMBER(x)", "pretty": false, "identify": false}
+{"read": "oracle", "write": "teradata", "sql": "TO_NUMBER(x, fmt)", "want": "TO_NUMBER(x, fmt)", "pretty": false, "identify": false}
 {"read": "oracle", "write": "tsql", "sql": "SELECT * FROM t FETCH FIRST 10 ROWS ONLY", "want": "SELECT * FROM t ORDER BY (SELECT NULL) OFFSET 0 ROWS FETCH FIRST 10 ROWS ONLY", "pretty": false, "identify": false}
 {"read": "oracle", "write": "tsql", "sql": "SELECT NEXT VALUE FOR db.schema.sequence_name", "want": "SELECT NEXT VALUE FOR db.schema.sequence_name", "pretty": false, "identify": false}
 {"read": "oracle", "write": "tsql", "sql": "TRUNC(3.14159)", "want": "ROUND(3.14159, 0, 1)", "pretty": false, "identify": false}
@@ -5298,6 +5330,7 @@
 {"read": "postgres", "write": "starrocks", "sql": "SELECT ARRAY[1, 2, 3] @> ARRAY[1, 2]", "want": "SELECT ARRAY_CONTAINS_ALL([1, 2, 3], [1, 2])", "pretty": false, "identify": false}
 {"read": "postgres", "write": "starrocks", "sql": "SELECT ARRAY[1, 2] <@ ARRAY[1, 2, 3]", "want": "SELECT ARRAY_CONTAINS_ALL([1, 2, 3], [1, 2])", "pretty": false, "identify": false}
 {"read": "postgres", "write": "starrocks", "sql": "UPDATE foo SET a = bar.a, b = bar.b FROM bar WHERE foo.id = bar.id", "want": "UPDATE foo SET a = bar.a, b = bar.b FROM bar WHERE foo.id = bar.id", "pretty": false, "identify": false}
+{"read": "postgres", "write": "teradata", "sql": "ARRAY_LENGTH(arr, 1)", "want": "CARDINALITY(arr)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "trino", "sql": "BEGIN", "want": "START TRANSACTION", "pretty": false, "identify": false}
 {"read": "postgres", "write": "trino", "sql": "GENERATE_SERIES('2019-01-01'::TIMESTAMP, NOW(), '1day')", "want": "UNNEST(SEQUENCE(CAST('2019-01-01' AS TIMESTAMP), CAST(CURRENT_TIMESTAMP AS TIMESTAMP), INTERVAL '1' DAY))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "trino", "sql": "GENERATE_SERIES(a, b, '  2   days  ')", "want": "UNNEST(SEQUENCE(a, b, INTERVAL '2' DAY))", "pretty": false, "identify": false}
@@ -5843,6 +5876,9 @@
 {"read": "presto", "write": "starrocks", "sql": "SELECT MAP(ARRAY['a', 'b'], ARRAY[1, 2])", "want": "SELECT MAP('a', 1, 'b', 2)", "pretty": false, "identify": false}
 {"read": "presto", "write": "starrocks", "sql": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "want": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "pretty": false, "identify": false}
 {"read": "presto", "write": "starrocks", "sql": "SIGN(x)", "want": "SIGN(x)", "pretty": false, "identify": false}
+{"read": "presto", "write": "teradata", "sql": "SELECT MAX_BY(a.id, a.timestamp) FROM a", "want": "SELECT MAX_BY(a.id, a.timestamp) FROM a", "pretty": false, "identify": false}
+{"read": "presto", "write": "teradata", "sql": "SELECT MIN_BY(a.id, a.timestamp, 3) FROM a", "want": "SELECT MIN_BY(a.id, a.timestamp, 3) FROM a", "pretty": false, "identify": false}
+{"read": "presto", "write": "teradata", "sql": "STRPOS(haystack, needle, occurrence)", "want": "INSTR(haystack, needle, 1, occurrence)", "pretty": false, "identify": false}
 {"read": "presto", "write": "trino", "sql": "ARRAY_AGG(x ORDER BY y DESC)", "want": "ARRAY_AGG(x ORDER BY y DESC)", "pretty": false, "identify": false}
 {"read": "presto", "write": "trino", "sql": "CURRENT_USER", "want": "CURRENT_USER", "pretty": false, "identify": false}
 {"read": "presto", "write": "trino", "sql": "INTERVAL '1 day'", "want": "INTERVAL '1' DAY", "pretty": false, "identify": false}
@@ -6037,6 +6073,7 @@
 {"read": "redshift", "write": "sqlite", "sql": "SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC", "want": "SELECT a, b FROM (SELECT a AS a, b AS b, ROW_NUMBER() OVER (PARTITION BY a ORDER BY c DESC NULLS FIRST) AS _row_number FROM x) AS _t WHERE _row_number = 1", "pretty": false, "identify": false}
 {"read": "redshift", "write": "sqlite", "sql": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "want": "SELECT '{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}' ->> '$.farm.barn.color'", "pretty": false, "identify": false}
 {"read": "redshift", "write": "starrocks", "sql": "SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC", "want": "SELECT a, b FROM (SELECT a AS a, b AS b, ROW_NUMBER() OVER (PARTITION BY a ORDER BY CASE WHEN c IS NULL THEN 1 ELSE 0 END DESC, c DESC) AS _row_number FROM x) AS _t WHERE _row_number = 1", "pretty": false, "identify": false}
+{"read": "redshift", "write": "teradata", "sql": "SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC", "want": "SELECT a, b FROM (SELECT a AS a, b AS b, ROW_NUMBER() OVER (PARTITION BY a ORDER BY c DESC NULLS FIRST) AS _row_number FROM x) AS _t WHERE _row_number = 1", "pretty": false, "identify": false}
 {"read": "redshift", "write": "trino", "sql": "CREATE TABLE t1 (LIKE t2)", "want": "CREATE TABLE t1 (LIKE t2)", "pretty": false, "identify": false}
 {"read": "redshift", "write": "trino", "sql": "CREATE TABLE t1 (col VARCHAR, LIKE t2)", "want": "CREATE TABLE t1 (col VARCHAR, LIKE t2)", "pretty": false, "identify": false}
 {"read": "redshift", "write": "trino", "sql": "SELECT ADD_MONTHS('2008-03-31', 1)", "want": "SELECT DATE_ADD('MONTH', 1, CAST('2008-03-31' AS TIMESTAMP))", "pretty": false, "identify": false}
@@ -7451,6 +7488,19 @@
 {"read": "snowflake", "write": "starrocks", "sql": "SELECT ST_DISTANCE(a, b)", "want": "SELECT ST_DISTANCE_SPHERE(ST_X(a), ST_Y(a), ST_X(b), ST_Y(b))", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "starrocks", "sql": "SELECT ST_MAKEPOINT(10, 20)", "want": "SELECT ST_POINT(10, 20)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "starrocks", "sql": "SQUARE(x)", "want": "POWER(x, 2)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "CURRENT_TIMESTAMP()", "want": "CURRENT_TIMESTAMP", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "DATE_PART(MONTH, x)", "want": "EXTRACT(MONTH FROM x)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "DATE_PART(QUARTER, x)", "want": "CAST(TO_CHAR(x, 'Q') AS INT)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "SELECT DATEADD(QUARTER, 5, '2023-01-01')", "want": "SELECT '2023-01-01' + (90 * INTERVAL '5' DAY)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "SELECT DATEADD(WEEK, 5, '2023-01-01')", "want": "SELECT '2023-01-01' + (7 * INTERVAL '5' DAY)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "SELECT DATEADD(YEAR, -5, '2023-01-01')", "want": "SELECT '2023-01-01' - INTERVAL '5' YEAR", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "SELECT DATEADD(YEAR, 5, '2023-01-01')", "want": "SELECT '2023-01-01' + INTERVAL '5' YEAR", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "SELECT INTERVAL '1' QUARTER", "want": "SELECT (90 * INTERVAL '1' DAY)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "SELECT INTERVAL '1' WEEK", "want": "SELECT (7 * INTERVAL '1' DAY)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "SQUARE(x)", "want": "x ** 2", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "TO_CHAR(x, y)", "want": "TO_CHAR(x, y)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "TRY_CAST('-2.5' AS DECIMAL(5, 2))", "want": "TRYCAST('-2.5' AS DECIMAL(5, 2))", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "teradata", "sql": "quarter(x)", "want": "CAST(TO_CHAR(x, 'Q') AS INT)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "trino", "sql": "SELECT APPROX_PERCENTILE(a, 0.5) FROM t", "want": "SELECT APPROX_PERCENTILE(a, 0.5) FROM t", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "trino", "sql": "SELECT CURRENT_VERSION()", "want": "SELECT VERSION()", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "trino", "sql": "SELECT LISTAGG(DISTINCT col, '|SEPARATOR|') WITHIN GROUP (ORDER BY col2) FROM t", "want": "SELECT LISTAGG(DISTINCT col, '|SEPARATOR|') WITHIN GROUP (ORDER BY col2) FROM t", "pretty": false, "identify": false}
@@ -8140,6 +8190,8 @@
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%Y-%m-%d', '2020-01-01 12:05:03')", "want": "SELECT STRFTIME('%Y-%m-%d', '2020-01-01 12:05:03')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%Y-%m-%d', CURRENT_TIMESTAMP)", "want": "SELECT STRFTIME('%Y-%m-%d', CURRENT_TIMESTAMP)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "want": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "teradata", "sql": "SELECT DATE_SUB('2023-01-01', -5, YEAR)", "want": "SELECT '2023-01-01' + INTERVAL '5' YEAR", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "teradata", "sql": "SELECT DATE_SUB('2023-01-01', 5, YEAR)", "want": "SELECT '2023-01-01' - INTERVAL '5' YEAR", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "tsql", "sql": "SELECT * FROM t LIMIT 5, 10", "want": "SELECT * FROM t ORDER BY (SELECT NULL) OFFSET 5 ROWS FETCH FIRST 10 ROWS ONLY", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "tsql", "sql": "SELECT IIF(cond, 'True', 'False')", "want": "SELECT IIF(cond <> 0, 'True', 'False')", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
@@ -8192,6 +8244,76 @@
 {"read": "starrocks", "write": "starrocks", "sql": "SELECT id, t.type, t.scores FROM example_table, unnest(split(type, \";\"), scores) AS t(type,scores)", "want": "SELECT id, t.type, t.scores FROM example_table, UNNEST(SPLIT(type, ';'), scores) AS t(type, scores)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "starrocks", "sql": "SELECT id, t.type, t.scores FROM example_table_2 CROSS JOIN LATERAL unnest(split(type, \";\"), scores) AS t(type,scores)", "want": "SELECT id, t.type, t.scores FROM example_table_2 CROSS JOIN LATERAL UNNEST(SPLIT(type, ';'), scores) AS t(type, scores)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "starrocks", "sql": "SELECT student, score, unnest FROM tests CROSS JOIN LATERAL UNNEST(scores)", "want": "SELECT student, score, unnest FROM tests CROSS JOIN LATERAL UNNEST(scores) AS unnest(unnest)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "CAST('1992-01' AS DATE FORMAT 'YYYY-DD')", "want": "STR_TO_DATE('1992-01', '%Y-%d')", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "INSTR(haystack, needle)", "want": "STR_POSITION(haystack, needle)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "INSTR(haystack, needle, position)", "want": "STR_POSITION(haystack, needle, position)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "INSTR(haystack, needle, position, occurrence)", "want": "STR_POSITION(haystack, needle, position, occurrence)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "LOCATE(needle, haystack)", "want": "STR_POSITION(haystack, needle)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "LOCATE(needle, haystack, position)", "want": "STR_POSITION(haystack, needle, position)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "LOG(x)", "want": "LOG(x)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "POSITION(needle in haystack)", "want": "STR_POSITION(haystack, needle)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "RANDOM(l, u)", "want": "(u - l) * RAND() + l", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "REGR_COUNT(x, y)", "want": "REGR_COUNT(x, y)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "REGR_INTERCEPT(x, y)", "want": "REGR_INTERCEPT(x, y)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "REGR_R2(x, y)", "want": "REGR_R2(x, y)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "REGR_SLOPE(x, y)", "want": "REGR_SLOPE(x, y)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "REGR_SXX(x, y)", "want": "REGR_SXX(x, y)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "REGR_SXY(x, y)", "want": "REGR_SXY(x, y)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "REGR_SYY(x, y)", "want": "REGR_SYY(x, y)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "", "sql": "SELECT TOP 10 x FROM y", "want": "SELECT x FROM y LIMIT 10", "pretty": false, "identify": false}
+{"read": "teradata", "write": "bigquery", "sql": "CAST('1992-01' AS DATE FORMAT 'YYYY-DD')", "want": "PARSE_DATE('%Y-%d', '1992-01')", "pretty": false, "identify": false}
+{"read": "teradata", "write": "bigquery", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "clickhouse", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "databricks", "sql": "CAST('1992-01' AS DATE FORMAT 'YYYY-DD')", "want": "TO_DATE('1992-01', 'yyyy-d')", "pretty": false, "identify": false}
+{"read": "teradata", "write": "databricks", "sql": "CREATE TABLE t1 AS (SELECT c FROM t2) WITH DATA", "want": "CREATE TABLE t1 AS (SELECT c FROM t2)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "databricks", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "databricks", "sql": "DATABASE tduser", "want": "USE tduser", "pretty": false, "identify": false}
+{"read": "teradata", "write": "duckdb", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "hive", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "mysql", "sql": "CAST('1992-01' AS DATE FORMAT 'YYYY-DD')", "want": "STR_TO_DATE('1992-01', '%Y-%d')", "pretty": false, "identify": false}
+{"read": "teradata", "write": "mysql", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "mysql", "sql": "UPDATE A FROM schema.tableA AS A, (SELECT col1 FROM schema.tableA GROUP BY col1) AS B SET col2 = '' WHERE A.col1 = B.col1", "want": "UPDATE A JOIN `schema`.tableA AS A ON TRUE JOIN (SELECT col1 FROM `schema`.tableA GROUP BY col1) AS B ON TRUE SET A.col2 = '' WHERE A.col1 = B.col1", "pretty": false, "identify": false}
+{"read": "teradata", "write": "mysql", "sql": "a ** b", "want": "POWER(a, b)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "mysql", "sql": "a MOD b", "want": "a % b", "pretty": false, "identify": false}
+{"read": "teradata", "write": "oracle", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "oracle", "sql": "TO_NUMBER(expr, fmt, nlsparam)", "want": "TO_NUMBER(expr, fmt, nlsparam)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "oracle", "sql": "TO_NUMBER(x, fmt)", "want": "TO_NUMBER(x, fmt)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "postgres", "sql": "CARDINALITY(arr)", "want": "ARRAY_LENGTH(arr, 1)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "postgres", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "presto", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "presto", "sql": "SELECT MAX_BY(a.id, a.timestamp) FROM a", "want": "SELECT MAX_BY(a.id, a.timestamp) FROM a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "redshift", "sql": "CREATE TABLE z (a ST_GEOMETRY(1))", "want": "CREATE TABLE z (a GEOMETRY(1))", "pretty": false, "identify": false}
+{"read": "teradata", "write": "redshift", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "snowflake", "sql": "CREATE MULTISET TABLE a (b INT)", "want": "CREATE TABLE a (b INT)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "snowflake", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "snowflake", "sql": "TRYCAST('-2.5' AS DECIMAL(5, 2))", "want": "TRY_CAST('-2.5' AS DECIMAL(5, 2))", "pretty": false, "identify": false}
+{"read": "teradata", "write": "spark", "sql": "CAST('1992-01' AS DATE FORMAT 'YYYY-DD')", "want": "TO_DATE('1992-01', 'yyyy-d')", "pretty": false, "identify": false}
+{"read": "teradata", "write": "spark", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "sqlite", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "starrocks", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "\n            CREATE SET TABLE test, NO FALLBACK, NO BEFORE JOURNAL, NO AFTER JOURNAL,\n            CHECKSUM = DEFAULT (x INT, y INT, z CHAR(30), a INT, b DATE, e INT)\n            PRIMARY INDEX (a),\n            INDEX(x, y)\n            ", "want": "CREATE SET TABLE test, NO FALLBACK, NO BEFORE JOURNAL, NO AFTER JOURNAL, CHECKSUM=DEFAULT (x INT, y INT, z CHAR(30), a INT, b DATE, e INT) PRIMARY INDEX (a) INDEX (x, y)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "CAST('1992-01' AS DATE FORMAT 'YYYY-DD')", "want": "CAST('1992-01' AS DATE FORMAT 'YYYY-DD')", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "CAST(TO_CHAR(x, 'Q') AS INT)", "want": "CAST(TO_CHAR(x, 'Q') AS INT)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "CREATE TABLE z (a ST_GEOMETRY(1))", "want": "CREATE TABLE z (a ST_GEOMETRY(1))", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE VOLATILE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "CURRENT_TIMESTAMP", "want": "CURRENT_TIMESTAMP", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "DATABASE tduser", "want": "DATABASE tduser", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "EXTRACT(MONTH FROM x)", "want": "EXTRACT(MONTH FROM x)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "INS INTO x SELECT * FROM y", "want": "INSERT INTO x SELECT * FROM y", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "RANDOM(l, u)", "want": "RANDOM(l, u)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "REPLACE VIEW a AS (SELECT b FROM c)", "want": "CREATE OR REPLACE VIEW a AS (SELECT b FROM c)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "SELECT '2023-01-01' + (7 * INTERVAL '5' DAY)", "want": "SELECT '2023-01-01' + (7 * INTERVAL '5' DAY)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "SELECT '2023-01-01' + (90 * INTERVAL '5' DAY)", "want": "SELECT '2023-01-01' + (90 * INTERVAL '5' DAY)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "SELECT '2023-01-01' + INTERVAL '5' YEAR", "want": "SELECT '2023-01-01' + INTERVAL '5' YEAR", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "SELECT '2023-01-01' - INTERVAL '5' YEAR", "want": "SELECT '2023-01-01' - INTERVAL '5' YEAR", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "SELECT (7 * INTERVAL '1' DAY)", "want": "SELECT (7 * INTERVAL '1' DAY)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "SELECT (90 * INTERVAL '1' DAY)", "want": "SELECT (90 * INTERVAL '1' DAY)", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "TRYCAST('-2.5' AS DECIMAL(5, 2))", "want": "TRYCAST('-2.5' AS DECIMAL(5, 2))", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "UPDATE A FROM schema.tableA AS A, (SELECT col1 FROM schema.tableA GROUP BY col1) AS B SET col2 = '' WHERE A.col1 = B.col1", "want": "UPDATE A FROM schema.tableA AS A, (SELECT col1 FROM schema.tableA GROUP BY col1) AS B SET col2 = '' WHERE A.col1 = B.col1", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "a ** b", "want": "a ** b", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "a MOD b", "want": "a MOD b", "pretty": false, "identify": false}
+{"read": "teradata", "write": "trino", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
+{"read": "teradata", "write": "tsql", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
 {"read": "trino", "write": "", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
 {"read": "trino", "write": "", "sql": "FROM_BASE32(x)", "want": "FROM_BASE32(x)", "pretty": false, "identify": false}
 {"read": "trino", "write": "", "sql": "LEVENSHTEIN_DISTANCE(col1, col2)", "want": "LEVENSHTEIN(col1, col2)", "pretty": false, "identify": false}
@@ -8577,6 +8699,7 @@
 {"read": "tsql", "write": "sqlite", "sql": "STRING_AGG(x, '|') WITHIN GROUP (ORDER BY z ASC)", "want": "GROUP_CONCAT(x, '|')", "pretty": false, "identify": false}
 {"read": "tsql", "write": "sqlite", "sql": "STRING_AGG(x, y) WITHIN GROUP (ORDER BY z DESC)", "want": "GROUP_CONCAT(x, y)", "pretty": false, "identify": false}
 {"read": "tsql", "write": "starrocks", "sql": "ALTER TABLE a ALTER COLUMN b INTEGER NOT NULL", "want": "ALTER TABLE a MODIFY COLUMN b INT NOT NULL", "pretty": false, "identify": false}
+{"read": "tsql", "write": "teradata", "sql": "SELECT DISTINCT TOP 3 * FROM A", "want": "SELECT DISTINCT TOP 3 * FROM A", "pretty": false, "identify": false}
 {"read": "tsql", "write": "tsql", "sql": "\n            CREATE FUNCTION udfProductInYear (\n                @model_year INT\n            )\n            RETURNS TABLE\n            AS\n            RETURN\n                SELECT\n                    product_name,\n                    model_year,\n                    list_price\n                FROM\n                    production.products\n                WHERE\n                    model_year = @model_year\n            ", "want": "CREATE FUNCTION udfProductInYear(\n    @model_year INTEGER\n)\nRETURNS TABLE AS\nRETURN SELECT\n  product_name,\n  model_year,\n  list_price\nFROM production.products\nWHERE\n  model_year = @model_year", "pretty": true, "identify": false}
 {"read": "tsql", "write": "tsql", "sql": "\n            SELECT *\n            FROM OPENJSON ( @json )\n            WITH (\n                          Number   VARCHAR(200)   '$.Order.Number',\n                          Date     DATETIME       '$.Order.Date',\n                          Customer VARCHAR(200)   '$.AccountNumber',\n                          Quantity INT            '$.Item.Quantity',\n                          [Order]  NVARCHAR(MAX)  AS JSON\n             )\n            ", "want": "SELECT\n  *\nFROM OPENJSON(@json) WITH (\n    Number VARCHAR(200) '$.Order.Number',\n    Date DATETIME '$.Order.Date',\n    Customer VARCHAR(200) '$.AccountNumber',\n    Quantity INTEGER '$.Item.Quantity',\n    [Order] NVARCHAR(MAX) AS JSON\n)", "pretty": true, "identify": false}
 {"read": "tsql", "write": "tsql", "sql": "ALTER TABLE a ADD b INTEGER, c INTEGER", "want": "ALTER TABLE a ADD b INTEGER, c INTEGER", "pretty": false, "identify": false}

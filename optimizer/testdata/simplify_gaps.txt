@@ -1,6 +1,5 @@
 # simplify.sql cases that don't pass yet: index|sql. See optimizer/simplify_test.go.
 221|TS_OR_DS_TO_DATE('1998-12-01 00:00:01') - interval '90' day
-223|DATE_SUB(CAST('2023-01-02' AS DATE), 1 + 1, 'DAY')
 305|RAND() > 0 OR RAND() > 1
 363|DATE_TRUNC('week', CAST('2023-12-15' AS DATE))
 364|DATE_TRUNC('week', CAST('2023-12-16' AS DATE))

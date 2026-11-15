@@ -1015,7 +1015,49 @@ func init() {
 		"UNLOGGED": func(p *Parser, _ bool) exp.Expression {
 			return p.expression(exp.UnloggedProperty(nil), nil, nil)
 		},
-		"WITH": func(p *Parser, _ bool) exp.Expression { return p.parseWithProperty() },
+		// The Teradata CREATE TABLE PROPERTY_PARSERS subset (parser.py:1311-1412): SET /
+		// MULTISET / VOLATILE / GLOBAL lead the CREATE (parser.py:2494-2500 POST_CREATE
+		// properties), the rest are the Teradata table properties reachable from both the
+		// POST_NAME (before) and POST_SCHEMA positions. Upstream's single registry entry is
+		// reached here through propertyParser; the before path additionally validates its
+		// kwargs against propertyBeforeKwargAccepts first.
+		"BLOCKCOMPRESSION": func(p *Parser, _ bool) exp.Expression {
+			return p.parseBlockCompression(propertyKwargs{})
+		},
+		"CHECKSUM": func(p *Parser, _ bool) exp.Expression {
+			return p.parseChecksum(propertyKwargs{})
+		},
+		"DATABLOCKSIZE": func(p *Parser, isDefault bool) exp.Expression {
+			return p.parseDatablocksize(propertyKwargs{isDefault: isDefault})
+		},
+		"FALLBACK": func(p *Parser, isDefault bool) exp.Expression {
+			return p.parseFallback(propertyKwargs{isDefault: isDefault})
+		},
+		"FREESPACE": func(p *Parser, _ bool) exp.Expression {
+			return p.parseFreespace(propertyKwargs{})
+		},
+		"GLOBAL": func(p *Parser, _ bool) exp.Expression {
+			return p.expression(exp.GlobalProperty(nil), nil, nil)
+		},
+		"JOURNAL": func(p *Parser, isDefault bool) exp.Expression {
+			return p.parseJournal(propertyKwargs{isDefault: isDefault})
+		},
+		"LOG": func(p *Parser, isDefault bool) exp.Expression {
+			return p.parseLog(propertyKwargs{isDefault: isDefault})
+		},
+		"MERGEBLOCKRATIO": func(p *Parser, isDefault bool) exp.Expression {
+			return p.parseMergeBlockRatio(propertyKwargs{isDefault: isDefault})
+		},
+		"MULTISET": func(p *Parser, _ bool) exp.Expression {
+			return p.expression(exp.SetProperty(exp.Args{"multi": true}), nil, nil)
+		},
+		"SET": func(p *Parser, _ bool) exp.Expression {
+			// generators/postgres.py overrides SET -> SetConfigProperty through the dialect
+			// overlay, which wins over this base entry (parser.py:1391).
+			return p.expression(exp.SetProperty(exp.Args{"multi": false}), nil, nil)
+		},
+		"VOLATILE": func(p *Parser, _ bool) exp.Expression { return p.parseVolatileProperty() },
+		"WITH":     func(p *Parser, _ bool) exp.Expression { return p.parseWithProperty() },
 	}
 	// parsers/base.py:8-13 BaseParser (which dialects/dialect.py:773 sets as the default `Dialect`'s
 	// parser_class) adds LOCALTIME/LOCALTIMESTAMP/CURRENT_CATALOG/SESSION_USER on top of

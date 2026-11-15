@@ -102,6 +102,11 @@ func TestOpaqueFunctionsGrammarFormsStructured(t *testing.T) {
 		{"postgres, opaque_functions=true", "SELECT TRIM(BOTH 'x' FROM s)", "SELECT TRIM(BOTH 'x' FROM s)", exp.KindTrim},
 		{"postgres, opaque_functions=true", "SELECT SUBSTRING('hello' FROM 1 FOR 3)", "SELECT SUBSTRING('hello' FROM 1 FOR 3)", exp.KindSubstring},
 		{"postgres, opaque_functions=true", "SELECT POSITION('l' IN 'hello')", "SELECT POSITION('l' IN 'hello')", exp.KindStrPosition},
+		// The dialects whose canonical form is INSTR/LOCATE must still emit the keyword
+		// grammar under the flag (the opaque guard sits in front of their renderer).
+		{"bigquery, opaque_functions=true", "SELECT POSITION('l' IN 'hello')", "SELECT POSITION('l' IN 'hello')", exp.KindStrPosition},
+		{"hive, opaque_functions=true", "SELECT POSITION('l' IN 'hello')", "SELECT POSITION('l' IN 'hello')", exp.KindStrPosition},
+		{"teradata, opaque_functions=true", "SELECT POSITION('l' IN 'hello')", "SELECT POSITION('l' IN 'hello')", exp.KindStrPosition},
 		{"mysql, opaque_functions=true", "SELECT SUBSTRING('hello' FROM 1 FOR 3)", "SELECT SUBSTRING('hello' FROM 1 FOR 3)", exp.KindSubstring},
 		{"mysql, opaque_functions=true", "SELECT CHAR(65 USING utf8)", "SELECT CHAR(65 USING utf8)", exp.KindChr},
 		{"mysql, opaque_functions=true", "SELECT CEIL(x TO unit)", "SELECT CEIL(x TO unit)", exp.KindCeil},

@@ -3,6 +3,7 @@ package generator_test
 import (
 	sqlglot "github.com/maltzsama/sqlglot-go"
 	"github.com/maltzsama/sqlglot-go/dialects"
+	sqlerrors "github.com/maltzsama/sqlglot-go/errors"
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/generator"
 	"testing"
@@ -216,5 +217,27 @@ func TestHiveParameterGenerator(t *testing.T) {
 				t.Fatalf("got %q, %v; want %q", got, err, want)
 			}
 		}
+	}
+}
+
+// TestHiveLocateOccurrenceUnsupported pins strposition_sql's occurrence guard
+// (dialects/dialect.py:1352-1353): LOCATE has no occurrence parameter, so the lossy
+// conversion is reported — RAISE fails the generation — before the argument is dropped.
+func TestHiveLocateOccurrenceUnsupported(t *testing.T) {
+	// bigquery's INSTR carries occurrence through the parse (defaulted position=1).
+	e, err := sqlglot.ParseOne("SELECT INSTR('banana', 'a', 1, 2)", "bigquery")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := sqlglot.Generate(e, "hive", generator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "SELECT LOCATE('a', 'banana', 1)"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	level := sqlerrors.RAISE
+	if _, err := sqlglot.Generate(e, "hive", generator.Options{UnsupportedLevel: &level}); err == nil {
+		t.Fatal("dropping the occurrence argument must fail the generation at UnsupportedLevel=RAISE")
 	}
 }

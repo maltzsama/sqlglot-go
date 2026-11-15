@@ -90,6 +90,23 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindDuplicateKeyProperty:   propertyLocationPostSchema,
 	expressions.KindForceProperty:          propertyLocationPostCreate,
 	expressions.KindRefreshTriggerProperty: propertyLocationPostSchema,
+	// generator.py:694-796: the Teradata CREATE TABLE property set. The ten POST_NAME
+	// entries are rendered between the table name and its schema by teradataCreateable
+	// (generators/teradata.py:148-160); the base createable_sql silently drops them, so
+	// only Teradata keeps them on transpile out (generator.py:1315-1316).
+	expressions.KindBlockCompressionProperty: propertyLocationPostName,
+	expressions.KindChecksumProperty:         propertyLocationPostName,
+	expressions.KindDataBlocksizeProperty:    propertyLocationPostName,
+	expressions.KindFallbackProperty:         propertyLocationPostName,
+	expressions.KindFreespaceProperty:        propertyLocationPostName,
+	expressions.KindIsolatedLoadingProperty:  propertyLocationPostName,
+	expressions.KindJournalProperty:          propertyLocationPostName,
+	expressions.KindLogProperty:              propertyLocationPostName,
+	expressions.KindMergeBlockRatioProperty:  propertyLocationPostName,
+	expressions.KindWithJournalTableProperty: propertyLocationPostName,
+	expressions.KindGlobalProperty:           propertyLocationPostCreate,
+	expressions.KindSetProperty:              propertyLocationPostCreate,
+	expressions.KindVolatileProperty:         propertyLocationPostCreate,
 }
 
 // propertyNames is the worklist-scoped port of Properties.PROPERTY_TO_NAME. Kinds with
@@ -131,6 +148,20 @@ func init() {
 	dispatch[expressions.KindPartitionBoundSpec] = (*Generator).partitionBoundSpecSQL
 	dispatch[expressions.KindPartitionedOfProperty] = (*Generator).partitionedOfPropertySQL
 	dispatch[expressions.KindWithDataProperty] = (*Generator).withDataPropertySQL
+	// The Teradata CREATE TABLE property set (generator.py:1311-1412 PROPERTY_PARSERS).
+	dispatch[expressions.KindSetProperty] = (*Generator).setPropertySQL
+	dispatch[expressions.KindGlobalProperty] = (*Generator).globalPropertySQL
+	dispatch[expressions.KindVolatileProperty] = (*Generator).volatilePropertySQL
+	dispatch[expressions.KindLogProperty] = (*Generator).logPropertySQL
+	dispatch[expressions.KindFallbackProperty] = (*Generator).fallbackPropertySQL
+	dispatch[expressions.KindJournalProperty] = (*Generator).journalPropertySQL
+	dispatch[expressions.KindChecksumProperty] = (*Generator).checksumPropertySQL
+	dispatch[expressions.KindFreespaceProperty] = (*Generator).freespacePropertySQL
+	dispatch[expressions.KindDataBlocksizeProperty] = (*Generator).dataBlocksizePropertySQL
+	dispatch[expressions.KindBlockCompressionProperty] = (*Generator).blockCompressionPropertySQL
+	dispatch[expressions.KindMergeBlockRatioProperty] = (*Generator).mergeBlockRatioPropertySQL
+	dispatch[expressions.KindIsolatedLoadingProperty] = (*Generator).isolatedLoadingPropertySQL
+	dispatch[expressions.KindWithJournalTableProperty] = (*Generator).withJournalTablePropertySQL
 }
 
 func (g *Generator) propertyLocation(property expressions.Expression) (propertyLocation, bool) {
@@ -436,4 +467,154 @@ func (g *Generator) withDataPropertySQL(e expressions.Expression) string {
 		sql += " AND " + statisticsNo + "STATISTICS"
 	}
 	return sql
+}
+
+// The Teradata CREATE TABLE property renderers: exp.SetProperty/GlobalProperty/
+// LogProperty/VolatileProperty/WithJournalTableProperty are TRANSFORMS lambdas
+// (generator.py:197,215,257,290,291), the rest are the *_property_sql methods at
+// generator.py:2140-2224.
+
+func (g *Generator) setPropertySQL(e expressions.Expression) string {
+	if boolValue(e.Arg("multi")) {
+		return "MULTISET"
+	}
+	return "SET"
+}
+
+func (g *Generator) globalPropertySQL(expressions.Expression) string { return "GLOBAL" }
+
+func (g *Generator) volatilePropertySQL(expressions.Expression) string { return "VOLATILE" }
+
+func (g *Generator) logPropertySQL(e expressions.Expression) string {
+	if boolValue(e.Arg("no")) {
+		return "NO LOG"
+	}
+	return "LOG"
+}
+
+func (g *Generator) fallbackPropertySQL(e expressions.Expression) string {
+	no := ""
+	if boolValue(e.Arg("no")) {
+		no = "NO "
+	}
+	protection := ""
+	if boolValue(e.Arg("protection")) {
+		protection = " PROTECTION"
+	}
+	return no + "FALLBACK" + protection
+}
+
+func (g *Generator) journalPropertySQL(e expressions.Expression) string {
+	no := ""
+	if boolValue(e.Arg("no")) {
+		no = "NO "
+	}
+	local := stringValue(e.Arg("local"))
+	if local != "" {
+		local += " "
+	}
+	dual := ""
+	if boolValue(e.Arg("dual")) {
+		dual = "DUAL "
+	}
+	before := ""
+	if boolValue(e.Arg("before")) {
+		before = "BEFORE "
+	}
+	after := ""
+	if boolValue(e.Arg("after")) {
+		after = "AFTER "
+	}
+	return no + local + dual + before + after + "JOURNAL"
+}
+
+func (g *Generator) checksumPropertySQL(e expressions.Expression) string {
+	switch {
+	case boolValue(e.Arg("default")):
+		return "CHECKSUM=DEFAULT"
+	case boolValue(e.Arg("on")):
+		return "CHECKSUM=ON"
+	default:
+		return "CHECKSUM=OFF"
+	}
+}
+
+func (g *Generator) freespacePropertySQL(e expressions.Expression) string {
+	percent := ""
+	if boolValue(e.Arg("percent")) {
+		percent = " PERCENT"
+	}
+	return "FREESPACE=" + g.sqlKey(e, "this") + percent
+}
+
+func (g *Generator) dataBlocksizePropertySQL(e expressions.Expression) string {
+	if boolValue(e.Arg("default")) || boolValue(e.Arg("minimum")) || boolValue(e.Arg("maximum")) {
+		prop := "MAXIMUM"
+		switch {
+		case boolValue(e.Arg("default")):
+			prop = "DEFAULT"
+		case boolValue(e.Arg("minimum")):
+			prop = "MINIMUM"
+		}
+		return prop + " DATABLOCKSIZE"
+	}
+	units := stringValue(e.Arg("units"))
+	if units != "" {
+		units = " " + units
+	}
+	return "DATABLOCKSIZE=" + g.sqlKey(e, "size") + units
+}
+
+func (g *Generator) blockCompressionPropertySQL(e expressions.Expression) string {
+	// generator.py:2198-2215: a value is always present for the forms this port parses;
+	// upstream leaves `prop` unbound for a bare BLOCKCOMPRESSION=, so the empty string
+	// mirrors the UnboundLocalError-less rendering of a valueless flag set.
+	prop := ""
+	switch {
+	case e.Arg("autotemp") != nil:
+		prop = "AUTOTEMP(" + g.expressions(exprsOptions{expression: asExpression(e.Arg("autotemp"))}) + ")"
+	case boolValue(e.Arg("always")):
+		prop = "ALWAYS"
+	case boolValue(e.Arg("default")):
+		prop = "DEFAULT"
+	case boolValue(e.Arg("manual")):
+		prop = "MANUAL"
+	case boolValue(e.Arg("never")):
+		prop = "NEVER"
+	}
+	return "BLOCKCOMPRESSION=" + prop
+}
+
+func (g *Generator) mergeBlockRatioPropertySQL(e expressions.Expression) string {
+	if boolValue(e.Arg("no")) {
+		return "NO MERGEBLOCKRATIO"
+	}
+	if boolValue(e.Arg("default")) {
+		return "DEFAULT MERGEBLOCKRATIO"
+	}
+	percent := ""
+	if boolValue(e.Arg("percent")) {
+		percent = " PERCENT"
+	}
+	return "MERGEBLOCKRATIO=" + g.sqlKey(e, "this") + percent
+}
+
+func (g *Generator) isolatedLoadingPropertySQL(e expressions.Expression) string {
+	no := ""
+	if boolValue(e.Arg("no")) {
+		no = " NO"
+	}
+	concurrent := ""
+	if boolValue(e.Arg("concurrent")) {
+		concurrent = " CONCURRENT"
+	}
+	target := g.sqlKey(e, "target")
+	if target != "" {
+		target = " " + target
+	}
+	return "WITH" + no + concurrent + " ISOLATED LOADING" + target
+}
+
+func (g *Generator) withJournalTablePropertySQL(e expressions.Expression) string {
+	return "WITH JOURNAL TABLE=" + g.sqlKey(e, "this")
 }

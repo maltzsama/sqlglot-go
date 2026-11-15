@@ -11,6 +11,10 @@ import (
 // PostgresGenerator subclasses.
 func init() {
 	registerDialectDispatch("postgres", postgresDispatch())
+	// generators/postgres.py:426 exp.VolatileProperty: UNSUPPORTED.
+	registerDialectPropertyLocations("postgres", map[exp.Kind]propertyLocation{
+		exp.KindVolatileProperty: propertyLocationUnsupported,
+	})
 }
 
 func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
@@ -36,6 +40,13 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindColumnDef: postgresColumnDef,
 		// generators/postgres.py:338 exp.Getbit: getbit_sql (dialects/dialect.py:2626-2644).
 		exp.KindGetbit: getbitSQL,
+		// generators/postgres.py:369 exp.Rand: rename_func("RANDOM") — flatten the node's
+		// args in declaration order (this, lower, upper), skipping absent ones the way
+		// Generator.func skips a None arg, so e.g. a bounds-only Rand renders
+		// RANDOM(lower, upper).
+		exp.KindRand: func(g *Generator, e exp.Expression) string {
+			return g.funcCall("RANDOM", g.fallbackArgs(e), "(", ")", true)
+		},
 	}
 }
 

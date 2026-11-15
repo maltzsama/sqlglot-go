@@ -95,6 +95,9 @@ func MySQL() *Dialect {
 	d.SafeDivision = true
 	// generators/mysql.py:216 TRY_SUPPORTED = False.
 	d.TrySupported = false
+	// generators/mysql.py:141 UPDATE_STATEMENT_SUPPORTS_FROM = False: a parsed UPDATE ... FROM
+	// is rewritten into JOIN ... ON TRUE by the generator's updateFromJoinsSQL.
+	d.UpdateStatementSupportsFrom = false
 	// parsers/mysql.py:68 FUNC_TOKENS adds TokenType.VALUES (see ValuesIsFunction doc).
 	d.ValuesIsFunction = true
 	// parsers/mysql.py:69 FUNC_TOKENS adds TokenType.CHARACTER_SET (see CharsetIsFunction doc).
@@ -142,15 +145,16 @@ func MySQL() *Dialect {
 	// overrides (generator/dialect_funcs.go). What remains here is genuinely mysql-only:
 	// CURDATE/CURTIME (:110-112) and DATABASE/SCHEMA -> CurrentSchema (:134-135) - verified
 	// against the pinned oracle that base does NOT register those. INSTR -> StrPosition
-	// (parser.py:405) and TIME_STR_TO_UNIX (temporal.py:472) are also base-scope upstream but
-	// kept mysql-local for now (not needed to close any base/postgres parity gap; deferred to
-	// avoid changing base STR_POSITION/TIME_STR_TO_UNIX rendering that no fixture exercises).
+	// (parser.py:451) also moved to the shared exp.FunctionByName (base-scope upstream,
+	// verified against parsers/mysql.py which does not register it); mysql still resolves it
+	// there and canonicalizes it to LOCATE on write. TIME_STR_TO_UNIX (temporal.py:472) is
+	// the last base-scope name kept mysql-local (deferred: no fixture exercises the base
+	// rendering it would change).
 	d.Functions = map[string]func([]exp.Expression) exp.Expression{
 		"CURDATE":          exp.FromArgListFunc(exp.KindCurrentDate),
 		"CURTIME":          exp.FromArgListFunc(exp.KindCurrentTime),
 		"DATABASE":         exp.FromArgListFunc(exp.KindCurrentSchema),
 		"SCHEMA":           exp.FromArgListFunc(exp.KindCurrentSchema),
-		"INSTR":            exp.FromArgListFunc(exp.KindStrPosition),
 		"TIME_STR_TO_UNIX": exp.FromArgListFunc(exp.KindTimeStrToUnix),
 		// parsers/mysql.py:108-110 (v30.17.0): MySQL DATEDIFF counts date-part boundaries.
 		"DATEDIFF": func(args []exp.Expression) exp.Expression {

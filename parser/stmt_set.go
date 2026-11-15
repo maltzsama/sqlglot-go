@@ -69,6 +69,18 @@ func init() {
 	}
 	duckdbSetParsers["VARIABLE"] = func(p *Parser) exp.Expression { return p.parseSetItemAssignment("VARIABLE") }
 	duckdbSetTrie = newTrie(setParserKeys(duckdbSetParsers))
+
+	// parsers/teradata.py:135-140 TeradataParser.SET_PARSERS: the base table plus QUERY_BAND.
+	// Built here — not in dialect_teradata.go — because this init runs after the base
+	// SET_PARSERS/SET_TRIE assignment above (lexical file ordering within the package), so
+	// the copy sees the initialized base forms; building it earlier copied a nil map and
+	// `SET SESSION x = 1` degraded to a Command.
+	teradataSetParsers = make(map[string]func(*Parser) exp.Expression, len(setParsers)+1)
+	for k, v := range setParsers {
+		teradataSetParsers[k] = v
+	}
+	teradataSetParsers["QUERY_BAND"] = (*Parser).parseTeradataQueryBand
+	teradataSetTrie = newTrie(setParserKeys(teradataSetParsers))
 }
 
 // setParsers/setTrie port the base SET_PARSERS/SET_TRIE (parser.py:1553-1558, 1855).
@@ -155,6 +167,8 @@ func (p *Parser) parseSetItem() exp.Expression {
 		parsers, trie = sparkSetParsers, sparkSetTrie
 	case "duckdb":
 		parsers, trie = duckdbSetParsers, duckdbSetTrie
+	case "teradata":
+		parsers, trie = teradataSetParsers, teradataSetTrie
 	}
 	// Capture the index BEFORE findParser (which consumes the dispatch keyword) so a dispatched
 	// special-form parser that fails on a malformed tail can be retreated ATOMICALLY — the whole item,

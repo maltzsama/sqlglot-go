@@ -130,3 +130,9 @@ func DataDeletionProperty(args Args) Expression { return newNode(KindDataDeletio
 
 // VolatileProperty ports exp.VolatileProperty (expressions/properties.py:556).
 func VolatileProperty(args Args) Expression { return newNode(KindVolatileProperty, args) }
+
+func TranslateCharacters(args Args) Expression { return newNode(KindTranslateCharacters, args) }
+func RangeN(args Args) Expression              { return newNode(KindRangeN, args) }
+func QueryBand(args Args) Expression           { return newNode(KindQueryBand, args) }
+func LockingStatement(args Args) Expression    { return newNode(KindLockingStatement, args) }
+func FormatPhrase(args Args) Expression        { return newNode(KindFormatPhrase, args) }

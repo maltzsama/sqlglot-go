@@ -164,6 +164,15 @@ func Snowflake() *Dialect {
 	return d
 }
 
+// snowflakeDateUnit ports the unit arg of snowflake's date-delta builders
+// (parsers/snowflake.py:506-623): map_date_part first — with the default dialect, so the
+// base DATE_PART_MAPPING — then the TimeUnit constructor's normalization
+// (expressions/core.py:2055-2066), which turns a single-part Column/Literal/Var unit into
+// an uppercase, unabbreviated Var. exp.TimeUnitVar ports that constructor.
+func snowflakeDateUnit(unit exp.Expression) exp.Expression {
+	return exp.TimeUnitVar(mapDatePart(unit))
+}
+
 // snowflakeFunctions builds the SnowflakeParser.FUNCTIONS overlay
 // (parsers/snowflake.py:396-733) for the identity-relevant entries.
 func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expression {
@@ -172,22 +181,22 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	out["DATE_TRUNC"] = snowflakeDateTruncBuilder
 	out["DATETRUNC"] = snowflakeDateTruncBuilder
 	out["DATEADD"] = func(args []exp.Expression) exp.Expression {
-		return exp.DateAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": seqGet(args, 0)})
+		return exp.DateAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
 	}
 	out["TIMESTAMPADD"] = func(args []exp.Expression) exp.Expression {
-		return exp.TimestampAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": seqGet(args, 0)})
+		return exp.TimestampAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
 	}
 	out["TIMEADD"] = func(args []exp.Expression) exp.Expression {
-		return exp.TimeAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": seqGet(args, 0)})
+		return exp.TimeAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
 	}
 	out["DATEDIFF"] = func(args []exp.Expression) exp.Expression {
-		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": seqGet(args, 0)})
+		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
 	}
 	out["TIMESTAMPDIFF"] = func(args []exp.Expression) exp.Expression {
-		return exp.TimestampDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": seqGet(args, 0)})
+		return exp.TimestampDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
 	}
 	out["TIMEDIFF"] = func(args []exp.Expression) exp.Expression {
-		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": seqGet(args, 0)})
+		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
 	}
 	out["CHARINDEX"] = func(args []exp.Expression) exp.Expression {
 		return exp.StrPosition(exp.Args{

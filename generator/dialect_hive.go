@@ -25,9 +25,14 @@ func init() {
 		expressions.KindFileFormatProperty:     propertyLocationPostSchema,
 		expressions.KindPartitionedByProperty:  propertyLocationPostSchema,
 		expressions.KindWithDataProperty:       propertyLocationUnsupported,
+		// generators/hive.py:401 exp.VolatileProperty: UNSUPPORTED.
+		expressions.KindVolatileProperty: propertyLocationUnsupported,
 	})
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
-		expressions.KindParameter: (*Generator).hiveParameterSQL,
+		// generators/hive.py:343-345 exp.StrPosition: strposition_sql(func_name="LOCATE",
+		// supports_position=True); spark2/spark/databricks inherit it through dialectParents.
+		expressions.KindStrPosition: opaqueStrPosition(locateStrPositionSQL),
+		expressions.KindParameter:   (*Generator).hiveParameterSQL,
 		expressions.KindVersion: func(g *Generator, e expressions.Expression) string {
 			return e.Name() + " " + e.Text("kind") + " " + g.sqlKey(e, "expression")
 		},
