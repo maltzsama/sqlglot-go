@@ -136,6 +136,19 @@ func (p *Parser) advance(times ...int) {
 	}
 }
 
+// plsqlUnitClosesWithEnd reports whether a unit chunk ends with its body's END (optionally
+// labeled: `END p`), which is what makes the terminating `;` part of the unit. A call
+// specification (`... LANGUAGE C ... LIBRARY lib;`) has no END, so its `;` is an ordinary
+// statement terminator and stays out of the span.
+func plsqlUnitClosesWithEnd(chunk []tokens.Token) bool {
+	for i := len(chunk) - 1; i >= 0 && i >= len(chunk)-2; i-- {
+		if chunk[i].TokenType == tokens.END {
+			return true
+		}
+	}
+	return false
+}
+
 // chunkEndedByBatchSeparator reports whether chunk k was terminated by a client-tool batch
 // separator (T-SQL GO, Oracle /) rather than an ordinary `;` (DEVIATIONS §1.22).
 func (p *Parser) chunkEndedByBatchSeparator(k int) bool {
@@ -498,7 +511,16 @@ func (p *Parser) parseBatchStatements(parseMethod func() exp.Expression, sepFirs
 		p.advanceChunk()
 		if unit, ok := p.plsqlUnits[p.chunkIndex-1]; ok && !sepFirstStatement {
 			startTok := p.curr
-			expressions = append(expressions, p.statementSpanned(p.parseOraclePLSQLUnit(unit), startTok, p.prev))
+			stmt := p.parseOraclePLSQLUnit(unit)
+			endTok := p.prev
+			// The unit's terminating `;` is part of the unit (an anonymous block or stored
+			// unit needs it to execute), so it belongs in the span even though the chunk
+			// splitter drops the separator token (DEVIATIONS §6.2).
+			if unit.terminator.IsValid() && unit.terminator.TokenType == tokens.SEMICOLON &&
+				unit.terminator.Text == ";" && plsqlUnitClosesWithEnd(p.tokens) {
+				endTok = unit.terminator
+			}
+			expressions = append(expressions, p.statementSpanned(stmt, startTok, endTok))
 			continue
 		}
 		if p.match(tokens.ELSE, false) {
@@ -706,22 +728,37 @@ func (p *Parser) parse(parseMethod func() exp.Expression, rawTokens []tokens.Tok
 	chunks := [][]tokens.Token{{}}
 	separators := []tokens.Token{tokens.SentinelNone}
 	for i, token := range rawTokens {
-		if token.TokenType == tokens.SEMICOLON {
-			separators[len(chunks)-1] = token
-			// A separator's own trailing comment stays attached only for a real statement
-			// terminator (`; -- c`), where the extra chunk carries it onto the Semicolon
-			// node. A client-tool batch separator (T-SQL GO, Oracle /) is stripped whole,
-			// comment included — it is a boundary, never a statement (DEVIATIONS §1.22).
-			if len(token.Comments) > 0 && token.Text == ";" {
-				chunks = append(chunks, []tokens.Token{token})
-				separators = append(separators, tokens.SentinelNone)
+		if token.TokenType != tokens.SEMICOLON {
+			chunks[len(chunks)-1] = append(chunks[len(chunks)-1], token)
+			continue
+		}
+		// A client-tool batch separator (T-SQL GO, Oracle /) closes the batch: it never
+		// becomes a statement. Empty chunks a trailing `;` left at the end of the batch are
+		// dropped (no empty statement slot), and tokens after the separator start a fresh
+		// chunk. The token itself is still emitted by the tokenizer, so a consumer can locate
+		// every boundary (DEVIATIONS §1.22/§1.23).
+		if token.Text != ";" {
+			for len(chunks) > 1 && len(chunks[len(chunks)-1]) == 0 {
+				chunks = chunks[:len(chunks)-1]
+				separators = separators[:len(separators)-1]
 			}
-			if i < total-1 {
+			separators[len(chunks)-1] = token
+			if i < total-1 && len(chunks[len(chunks)-1]) > 0 {
 				chunks = append(chunks, []tokens.Token{})
 				separators = append(separators, tokens.SentinelNone)
 			}
-		} else {
-			chunks[len(chunks)-1] = append(chunks[len(chunks)-1], token)
+			continue
+		}
+		separators[len(chunks)-1] = token
+		// A separator's own trailing comment stays attached only for a real statement
+		// terminator (`; -- c`), where the extra chunk carries it onto the Semicolon node.
+		if len(token.Comments) > 0 {
+			chunks = append(chunks, []tokens.Token{token})
+			separators = append(separators, tokens.SentinelNone)
+		}
+		if i < total-1 {
+			chunks = append(chunks, []tokens.Token{})
+			separators = append(separators, tokens.SentinelNone)
 		}
 	}
 	p.chunks = chunks
@@ -3873,6 +3910,16 @@ func (p *Parser) spanned(this exp.Expression, start, end tokens.Token) exp.Expre
 // statements), no in-source slice can represent either half with its wrapper — the span is
 // left unset (absent, never wrong).
 func (p *Parser) statementSpanned(this exp.Expression, start, end tokens.Token) exp.Expression {
+	// A statement span covers its attached comments (DEVIATIONS §6.2): leading comments ride
+	// on the first token, trailing comments (same line, before a `;`, or at EOF) on the last
+	// one, so a consumer slicing the source keeps them and never mistakes a `;` inside a
+	// comment for a boundary.
+	if start.HasLeadingComment && start.LeadingCommentStart < start.Start {
+		start.Start = start.LeadingCommentStart
+	}
+	if end.HasTrailingComment && end.TrailingCommentEnd > end.End {
+		end.End = end.TrailingCommentEnd
+	}
 	if start.WrapEnd > 0 && start.WrapStart < start.Start {
 		start.Start = start.WrapStart
 	}

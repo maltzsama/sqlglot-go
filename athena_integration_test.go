@@ -223,7 +223,8 @@ func TestAthenaMixedBatchSpans(t *testing.T) {
 		spans []string
 	}{
 		{`SHOW TABLES; SELECT "$path" FROM t`, exp.KindShow, []string{"SHOW TABLES", `SELECT "$path" FROM t`}},
-		{"-- lead\nCREATE TABLE `t` (x INT); SELECT \"x\" FROM \"t\";", exp.KindCreate, []string{"CREATE TABLE `t` (x INT)", `SELECT "x" FROM "t"`}},
+		// The statement span covers its leading comment (DEVIATIONS §6.2).
+		{"-- lead\nCREATE TABLE `t` (x INT); SELECT \"x\" FROM \"t\";", exp.KindCreate, []string{"-- lead\nCREATE TABLE `t` (x INT)", `SELECT "x" FROM "t"`}},
 	} {
 		expressions, err := sqlglot.Parse(tc.sql, "athena")
 		if err != nil || len(expressions) != len(tc.spans) {

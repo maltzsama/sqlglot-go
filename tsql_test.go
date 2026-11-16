@@ -444,24 +444,39 @@ func TestTSQLGoBatchSeparator(t *testing.T) {
 
 // TestTSQLGoBatchSeparatorToken pins the token the separator line lexes to: a SEMICOLON
 // whose Text and Start/End cover the separator text (`GO 5`), so token consumers split on it
-// like `;` and can still recover the original line.
+// like `;` and can still recover the original line. The separator is emitted even right after
+// a `;` (DEVIATIONS §1.22), so every batch boundary is locatable from the stream.
 func TestTSQLGoBatchSeparatorToken(t *testing.T) {
-	sql := "SELECT 1\nGO 5\nSELECT 2"
-	toks, err := sqlglot.Tokenize(sql, "tsql")
-	if err != nil {
-		t.Fatal(err)
+	cases := []struct {
+		sql  string
+		want []string
+	}{
+		{"SELECT 1\nGO 5\nSELECT 2", []string{"GO 5"}},
+		{"SELECT 1;\nGO\nSELECT 2", []string{";", "GO"}},
 	}
-	var separators []string
-	for _, tok := range toks {
-		if tok.TokenType == tokens.SEMICOLON {
-			separators = append(separators, tok.Text)
-			if got := string([]rune(sql)[tok.Start : tok.End+1]); got != "GO 5" {
-				t.Errorf("separator source slice = %q, want %q", got, "GO 5")
+	for _, tc := range cases {
+		toks, err := sqlglot.Tokenize(tc.sql, "tsql")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var separators []string
+		for _, tok := range toks {
+			if tok.TokenType == tokens.SEMICOLON {
+				separators = append(separators, tok.Text)
+				got := string([]rune(tc.sql)[tok.Start : tok.End+1])
+				if got != tok.Text {
+					t.Errorf("%q: separator source slice = %q, want %q", tc.sql, got, tok.Text)
+				}
 			}
 		}
-	}
-	if len(separators) != 1 || separators[0] != "GO 5" {
-		t.Fatalf("separator tokens = %q, want [\"GO 5\"]", separators)
+		if len(separators) != len(tc.want) {
+			t.Fatalf("%q: separators = %q, want %q", tc.sql, separators, tc.want)
+		}
+		for i := range separators {
+			if separators[i] != tc.want[i] {
+				t.Fatalf("%q: separators = %q, want %q", tc.sql, separators, tc.want)
+			}
+		}
 	}
 }
 

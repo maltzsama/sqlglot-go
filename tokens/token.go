@@ -28,6 +28,15 @@ type Token struct {
 	// executable MySQL (`SELECT 1 /*!40101 + 2` has no closing `*/`).
 	WrapStart int
 	WrapEnd   int
+	// LeadingCommentStart is the source start (inclusive rune offset) of the first comment
+	// attached to this token that precedes it; HasLeadingComment disambiguates offset 0.
+	// TrailingCommentEnd is the inclusive end of the last comment attached to it that follows
+	// it. Together they let a statement span cover its attached comments without re-scanning
+	// the source (Go-only source spans, DEVIATIONS §6.2).
+	LeadingCommentStart int
+	HasLeadingComment   bool
+	TrailingCommentEnd  int
+	HasTrailingComment  bool
 	// Keyword is set iff TokenType came from the Keywords table of the tokenizer that scanned this
 	// token (Hive or Trino under Athena); that table also holds operators such as `::` and `<=`.
 	Keyword bool
