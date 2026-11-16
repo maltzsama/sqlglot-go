@@ -724,7 +724,12 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 				if len(c.comments) > 0 {
 					comments := append([]string(nil), c.comments...)
 					bodyTokens[0].Comments = append(comments, bodyTokens[0].Comments...)
+					if c.hasCommentRun {
+						bodyTokens[0].LeadingCommentStart = c.commentRunStart
+						bodyTokens[0].HasLeadingComment = true
+					}
 					c.comments = nil
+					c.hasCommentRun = false
 				}
 				c.tokens = append(c.tokens, bodyTokens...)
 				c.prevTokenLine = bodyTokens[len(bodyTokens)-1].Line
@@ -761,6 +766,7 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 		last.Comments = append(last.Comments, c.comments...)
 		c.noteTrailingComment(last)
 		c.comments = nil
+		c.hasCommentRun = false
 		c.prevTokenLine = c.line
 	}
 

@@ -170,6 +170,12 @@ func TestStatementSpansCoverCommentsAndOracleUnits(t *testing.T) {
 		{"-- lead\nSELECT 1", "postgres", []string{"-- lead\nSELECT 1"}},
 		{"SELECT 1 /* tail */", "postgres", []string{"SELECT 1 /* tail */"}},
 		{"SELECT 'a;b' -- c;d", "postgres", []string{"SELECT 'a;b' -- c;d"}},
+		// The next statement's leading comment starts a fresh run: the `;` chunk keeps
+		// `-- tail`, and the following `-- lead` belongs only to SELECT 2.
+		{"SELECT 1; -- tail\n-- lead\nSELECT 2", "postgres",
+			[]string{"SELECT 1", "; -- tail", "-- lead\nSELECT 2"}},
+		// Consecutive trailing comments on one statement are one run, so both stay inside it.
+		{"SELECT 1 -- a\n-- b\nFROM t", "postgres", []string{"SELECT 1 -- a\n-- b\nFROM t"}},
 		{"SELECT 1 /* t */; SELECT 2", "postgres", []string{"SELECT 1 /* t */", "SELECT 2"}},
 		// The `;` inside the comment is not a boundary; the comment trails the first statement.
 		{"SELECT 1 -- a;b\n; SELECT 2", "postgres", []string{"SELECT 1 -- a;b", "SELECT 2"}},
