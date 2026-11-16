@@ -63,6 +63,9 @@ type TokenizerCore struct {
 	numbersCanHaveDecimals           bool
 	identifiersCanStartWithDigit     bool
 	oracleQQuotes                    bool
+	commentRunStart                  int
+	commentRunEnd                    int
+	hasCommentRun                    bool
 	unescapedSequences               map[string]string
 	batchSeparator                   BatchSeparator
 }
@@ -206,7 +209,9 @@ func (c *TokenizerCore) scan(checkSemicolon bool) {
 	}
 
 	if len(c.tokens) > 0 && len(c.comments) > 0 {
-		c.tokens[len(c.tokens)-1].Comments = append(c.tokens[len(c.tokens)-1].Comments, c.comments...)
+		last := &c.tokens[len(c.tokens)-1]
+		last.Comments = append(last.Comments, c.comments...)
+		c.noteTrailingComment(last)
 	}
 }
 
@@ -306,10 +311,38 @@ func (c *TokenizerCore) lineEndsAt(pos int, allowComment bool) bool {
 // SEMICOLON boundary, unless the statement before it is already closed — by a `;`, an
 // earlier separator, or nothing at all — so a separator never opens an empty statement.
 func (c *TokenizerCore) addBatchSeparator() {
-	if len(c.tokens) == 0 || c.tokens[len(c.tokens)-1].TokenType == SEMICOLON {
+	// The separator token is emitted for every separator line, even at the start of input or
+	// right after a `;`/another separator, so a token consumer can locate each batch boundary
+	// from the stream (DEVIATIONS §1.22/§1.23). The chunk builder drops the empty statement a
+	// bare separator would otherwise produce.
+	c.add(SEMICOLON)
+}
+
+// noteCommentSpan records a scanned comment's source extent, so the run attached to the next
+// token (or to the previous one when it trails) can be recovered for span stamping.
+func (c *TokenizerCore) noteCommentSpan(start, end int) {
+	if !c.hasCommentRun {
+		c.commentRunStart, c.commentRunEnd, c.hasCommentRun = start, end, true
 		return
 	}
-	c.add(SEMICOLON)
+	if start < c.commentRunStart {
+		c.commentRunStart = start
+	}
+	if end > c.commentRunEnd {
+		c.commentRunEnd = end
+	}
+}
+
+// noteTrailingComment records the current comment run on a token that keeps the comments after
+// it (same-line trailing comments, a `;` carrying the comments before it, and EOF).
+func (c *TokenizerCore) noteTrailingComment(token *Token) {
+	if !c.hasCommentRun {
+		return
+	}
+	if !token.HasTrailingComment || c.commentRunEnd > token.TrailingCommentEnd {
+		token.TrailingCommentEnd = c.commentRunEnd
+		token.HasTrailingComment = true
+	}
 }
 
 func (c *TokenizerCore) chars(size int) string {
@@ -381,7 +414,9 @@ func (c *TokenizerCore) add(tokenType TokenType, text ...string) {
 	c.prevTokenLine = c.line
 
 	if len(c.comments) > 0 && tokenType == SEMICOLON && len(c.tokens) > 0 {
-		c.tokens[len(c.tokens)-1].Comments = append(c.tokens[len(c.tokens)-1].Comments, c.comments...)
+		last := &c.tokens[len(c.tokens)-1]
+		last.Comments = append(last.Comments, c.comments...)
+		c.noteTrailingComment(last)
 		c.comments = nil
 	}
 
@@ -393,8 +428,14 @@ func (c *TokenizerCore) add(tokenType TokenType, text ...string) {
 	}
 
 	comments := append([]string(nil), c.comments...)
-	c.tokens = append(c.tokens, NewTokenFull(tokenType, tokenText, c.line, c.col, c.start, c.current-1, comments))
+	token := NewTokenFull(tokenType, tokenText, c.line, c.col, c.start, c.current-1, comments)
+	if len(comments) > 0 && c.hasCommentRun {
+		token.LeadingCommentStart = c.commentRunStart
+		token.HasLeadingComment = true
+	}
+	c.tokens = append(c.tokens, token)
 	c.comments = nil
+	c.hasCommentRun = false
 
 	if c.commands[tokenType] && c.peek != ';' && (len(c.tokens) == 1 || c.commandPrefixTokens[c.tokens[len(c.tokens)-2].TokenType]) {
 		start := c.current
@@ -699,6 +740,7 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 		}
 		c.comments = append(c.comments, string(textRunes[commentStartSize:end]))
 		c.advance(commentEndSize-1, false)
+		c.noteCommentSpan(c.start, c.current-1)
 	} else {
 		peek := c.peek
 		for !c.end && peek != '\n' && peek != '\r' {
@@ -707,6 +749,7 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 		}
 		textRunes := []rune(c.text())
 		c.comments = append(c.comments, string(textRunes[commentStartSize:]))
+		c.noteCommentSpan(c.start, c.current-1)
 	}
 
 	if commentStart == c.hintStart && len(c.tokens) > 0 && c.tokensPrecedingHint[c.tokens[len(c.tokens)-1].TokenType] {
@@ -714,7 +757,9 @@ func (c *TokenizerCore) scanComment(commentStart string) bool {
 	}
 
 	if commentStartLine == c.prevTokenLine && len(c.tokens) > 0 {
-		c.tokens[len(c.tokens)-1].Comments = append(c.tokens[len(c.tokens)-1].Comments, c.comments...)
+		last := &c.tokens[len(c.tokens)-1]
+		last.Comments = append(last.Comments, c.comments...)
+		c.noteTrailingComment(last)
 		c.comments = nil
 		c.prevTokenLine = c.line
 	}

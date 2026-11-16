@@ -33,6 +33,9 @@ type plsqlUnit struct {
 	kind string
 	// terminated reports whether the unit's block nesting was closed before the unit ended.
 	terminated bool
+	// terminator is the `;` token that closed the unit, so the statement span can include it
+	// (DEVIATIONS §6.2). Invalid for an unterminated unit.
+	terminator tokens.Token
 }
 
 // plsqlWord is the uppercased keyword text of tok, or "" for a quoted identifier or a string
@@ -195,9 +198,10 @@ func splitOracleChunks(rawTokens []tokens.Token) ([][]tokens.Token, map[int]plsq
 	chunks := [][]tokens.Token{{}}
 	var units map[int]plsqlUnit
 	var scanner *plsqlScanner
-	finishUnit := func(chunk int) {
+	finishUnit := func(chunk int, terminator tokens.Token) {
 		unit := units[chunk]
 		unit.terminated = !scanner.open() && !scanner.broken
+		unit.terminator = terminator
 		units[chunk] = unit
 		scanner = nil
 	}
@@ -215,26 +219,37 @@ func splitOracleChunks(rawTokens []tokens.Token) ([][]tokens.Token, map[int]plsq
 		if scanner != nil {
 			terminator := token.TokenType == tokens.SEMICOLON && token.Text != ";"
 			if token.TokenType == tokens.SEMICOLON && (terminator || !scanner.open()) {
-				finishUnit(current)
+				finishUnit(current, token)
 			} else {
 				scanner.feed(rawTokens, i)
 				chunks[current] = append(chunks[current], token)
 				continue
 			}
 		}
-		if token.TokenType == tokens.SEMICOLON {
-			if len(token.Comments) > 0 {
-				chunks = append(chunks, []tokens.Token{token})
+		if token.TokenType != tokens.SEMICOLON {
+			chunks[current] = append(chunks[current], token)
+			continue
+		}
+		// A client-tool batch separator (`/`) closes the batch without becoming a statement;
+		// trailing empty chunks are dropped and following tokens start a fresh chunk.
+		if token.Text != ";" {
+			for len(chunks) > 1 && len(chunks[len(chunks)-1]) == 0 {
+				chunks = chunks[:len(chunks)-1]
 			}
-			if i < total-1 {
+			if i < total-1 && len(chunks[len(chunks)-1]) > 0 {
 				chunks = append(chunks, []tokens.Token{})
 			}
-		} else {
-			chunks[current] = append(chunks[current], token)
+			continue
+		}
+		if len(token.Comments) > 0 {
+			chunks = append(chunks, []tokens.Token{token})
+		}
+		if i < total-1 {
+			chunks = append(chunks, []tokens.Token{})
 		}
 	}
 	if scanner != nil {
-		finishUnit(len(chunks) - 1)
+		finishUnit(len(chunks)-1, tokens.SentinelNone)
 	}
 	return chunks, units
 }

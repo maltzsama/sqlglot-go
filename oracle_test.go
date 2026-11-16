@@ -10,6 +10,7 @@ import (
 	"github.com/maltzsama/sqlglot-go/generator"
 	"github.com/maltzsama/sqlglot-go/optimizer"
 	"github.com/maltzsama/sqlglot-go/schema"
+	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 // TestOracleIdentity is the same-dialect round-trip oracle for Oracle, ported from
@@ -327,21 +328,21 @@ func TestOraclePLSQLUnitBoundaries(t *testing.T) {
 	}{
 		// The issue's inputs.
 		{"CREATE OR REPLACE PROCEDURE p IS BEGIN NULL; END;",
-			[]scriptStatement{{create, "CREATE OR REPLACE PROCEDURE p IS BEGIN NULL; END"}}},
+			[]scriptStatement{{create, "CREATE OR REPLACE PROCEDURE p IS BEGIN NULL; END;"}}},
 		{"CREATE OR REPLACE FUNCTION f RETURN NUMBER IS BEGIN RETURN 1; END;",
-			[]scriptStatement{{create, "CREATE OR REPLACE FUNCTION f RETURN NUMBER IS BEGIN RETURN 1; END"}}},
+			[]scriptStatement{{create, "CREATE OR REPLACE FUNCTION f RETURN NUMBER IS BEGIN RETURN 1; END;"}}},
 		{"CREATE OR REPLACE TRIGGER trg BEFORE INSERT ON t FOR EACH ROW BEGIN :new.id := 1; END;",
-			[]scriptStatement{{create, "CREATE OR REPLACE TRIGGER trg BEFORE INSERT ON t FOR EACH ROW BEGIN :new.id := 1; END"}}},
-		{"BEGIN NULL; END;", []scriptStatement{{command, "BEGIN NULL; END"}}},
-		{"DECLARE x NUMBER; BEGIN x := 1; END;", []scriptStatement{{command, "DECLARE x NUMBER; BEGIN x := 1; END"}}},
+			[]scriptStatement{{create, "CREATE OR REPLACE TRIGGER trg BEFORE INSERT ON t FOR EACH ROW BEGIN :new.id := 1; END;"}}},
+		{"BEGIN NULL; END;", []scriptStatement{{command, "BEGIN NULL; END;"}}},
+		{"DECLARE x NUMBER; BEGIN x := 1; END;", []scriptStatement{{command, "DECLARE x NUMBER; BEGIN x := 1; END;"}}},
 		// The `/` terminator after a unit (§1.23) closes it; the next statement stands alone.
 		{"CREATE OR REPLACE PROCEDURE p IS BEGIN UPDATE t SET a = 1; COMMIT; END;\n/\nSELECT 1 FROM dual",
 			[]scriptStatement{
-				{create, "CREATE OR REPLACE PROCEDURE p IS BEGIN UPDATE t SET a = 1; COMMIT; END"},
+				{create, "CREATE OR REPLACE PROCEDURE p IS BEGIN UPDATE t SET a = 1; COMMIT; END;"},
 				{sel, "SELECT 1 FROM dual"},
 			}},
 		{"BEGIN NULL; END;\n/\nBEGIN NULL; END;\n/",
-			[]scriptStatement{{command, "BEGIN NULL; END"}, {command, "BEGIN NULL; END"}}},
+			[]scriptStatement{{command, "BEGIN NULL; END;"}, {command, "BEGIN NULL; END;"}}},
 		// Nesting: a local subprogram, IF/LOOP/CASE statements with their `END IF`/`END LOOP`/
 		// `END CASE`, a CASE expression, and a labeled final END.
 		{"CREATE PROCEDURE p IS x NUMBER; PROCEDURE inner IS BEGIN NULL; END; BEGIN " +
@@ -352,26 +353,26 @@ func TestOraclePLSQLUnitBoundaries(t *testing.T) {
 				{create, "CREATE PROCEDURE p IS x NUMBER; PROCEDURE inner IS BEGIN NULL; END; BEGIN " +
 					"IF x > 1 THEN inner; ELSIF x = 0 THEN NULL; END IF; " +
 					"FOR i IN 1..3 LOOP x := CASE WHEN i = 1 THEN 1 ELSE 2 END; END LOOP; " +
-					"CASE x WHEN 1 THEN NULL; END CASE; END p"},
+					"CASE x WHEN 1 THEN NULL; END CASE; END p;"},
 				{sel, "SELECT 2 FROM dual"},
 			}},
 		// A package spec has no BEGIN: its AS opens the unit, forward declarations end in `;`.
 		{"CREATE OR REPLACE PACKAGE pkg AS PROCEDURE p; FUNCTION f RETURN NUMBER; END pkg;\nSELECT 1 FROM dual",
 			[]scriptStatement{
-				{create, "CREATE OR REPLACE PACKAGE pkg AS PROCEDURE p; FUNCTION f RETURN NUMBER; END pkg"},
+				{create, "CREATE OR REPLACE PACKAGE pkg AS PROCEDURE p; FUNCTION f RETURN NUMBER; END pkg;"},
 				{sel, "SELECT 1 FROM dual"},
 			}},
 		{"CREATE OR REPLACE PACKAGE BODY pkg AS PROCEDURE p IS BEGIN NULL; END p; BEGIN NULL; END pkg;",
-			[]scriptStatement{{create, "CREATE OR REPLACE PACKAGE BODY pkg AS PROCEDURE p IS BEGIN NULL; END p; BEGIN NULL; END pkg"}}},
+			[]scriptStatement{{create, "CREATE OR REPLACE PACKAGE BODY pkg AS PROCEDURE p IS BEGIN NULL; END p; BEGIN NULL; END pkg;"}}},
 		{"CREATE OR REPLACE TYPE BODY t AS MEMBER FUNCTION f RETURN NUMBER IS BEGIN RETURN 1; END; END;",
-			[]scriptStatement{{create, "CREATE OR REPLACE TYPE BODY t AS MEMBER FUNCTION f RETURN NUMBER IS BEGIN RETURN 1; END; END"}}},
+			[]scriptStatement{{create, "CREATE OR REPLACE TYPE BODY t AS MEMBER FUNCTION f RETURN NUMBER IS BEGIN RETURN 1; END; END;"}}},
 		{"CREATE OR REPLACE EDITIONABLE PROCEDURE p AS BEGIN NULL; END;",
-			[]scriptStatement{{create, "CREATE OR REPLACE EDITIONABLE PROCEDURE p AS BEGIN NULL; END"}}},
+			[]scriptStatement{{create, "CREATE OR REPLACE EDITIONABLE PROCEDURE p AS BEGIN NULL; END;"}}},
 		// A compound trigger: each timing point is its own BEGIN...END inside the trigger body.
 		{"CREATE OR REPLACE TRIGGER trg FOR INSERT ON t COMPOUND TRIGGER x NUMBER; " +
 			"BEFORE STATEMENT IS BEGIN x := 0; END BEFORE STATEMENT; END trg;",
 			[]scriptStatement{{create, "CREATE OR REPLACE TRIGGER trg FOR INSERT ON t COMPOUND TRIGGER x NUMBER; " +
-				"BEFORE STATEMENT IS BEGIN x := 0; END BEFORE STATEMENT; END trg"}}},
+				"BEFORE STATEMENT IS BEGIN x := 0; END BEFORE STATEMENT; END trg;"}}},
 		// A call specification has no PL/SQL body, so its first `;` ends it.
 		{"CREATE FUNCTION f RETURN NUMBER AS LANGUAGE C NAME \"f\" LIBRARY lib;\nSELECT 1 FROM dual",
 			[]scriptStatement{
@@ -380,10 +381,10 @@ func TestOraclePLSQLUnitBoundaries(t *testing.T) {
 			}},
 		// `;` inside string literals never counts.
 		{"BEGIN x := 'a;b'; y := q'[c;d]'; END;\nSELECT 1 FROM dual",
-			[]scriptStatement{{command, "BEGIN x := 'a;b'; y := q'[c;d]'; END"}, {sel, "SELECT 1 FROM dual"}}},
+			[]scriptStatement{{command, "BEGIN x := 'a;b'; y := q'[c;d]'; END;"}, {sel, "SELECT 1 FROM dual"}}},
 		// Units mixed with ordinary statements.
 		{"SELECT 1 FROM dual; BEGIN NULL; END; SELECT 2 FROM dual",
-			[]scriptStatement{{sel, "SELECT 1 FROM dual"}, {command, "BEGIN NULL; END"}, {sel, "SELECT 2 FROM dual"}}},
+			[]scriptStatement{{sel, "SELECT 1 FROM dual"}, {command, "BEGIN NULL; END;"}, {sel, "SELECT 2 FROM dual"}}},
 		// A CREATE TYPE spec is not a PL/SQL unit and keeps the ordinary path.
 		{"CREATE OR REPLACE TYPE t2 AS OBJECT (a NUMBER); SELECT 1 FROM dual",
 			[]scriptStatement{{command, "CREATE OR REPLACE TYPE t2 AS OBJECT (a NUMBER)"}, {sel, "SELECT 1 FROM dual"}}},
@@ -426,5 +427,33 @@ func TestOraclePLSQLUnitBoundaries(t *testing.T) {
 		if _, err := sqlglot.Parse(sql, "oracle"); err == nil || !strings.Contains(err.Error(), "Unterminated PL/SQL block") {
 			t.Errorf("%q: got err %v, want an unterminated PL/SQL block error", sql, err)
 		}
+	}
+}
+
+// TestOracleSlashSeparatorToken pins that the `/` terminator line is emitted as a SEMICOLON
+// token with `Text` `/` and a Start/End covering the slash — including right after a `;` —
+// so a token consumer can locate every batch boundary without re-scanning the source
+// (DEVIATIONS §1.23).
+func TestOracleSlashSeparatorToken(t *testing.T) {
+	sql := "SELECT 1 FROM dual;\n/\nSELECT 2 FROM dual"
+	toks, err := sqlglot.Tokenize(sql, "oracle")
+	if err != nil {
+		t.Fatal(err)
+	}
+	type sep struct {
+		text  string
+		slice string
+	}
+	var seps []sep
+	for _, tok := range toks {
+		if tok.TokenType == tokens.SEMICOLON {
+			seps = append(seps, sep{tok.Text, string([]rune(sql)[tok.Start : tok.End+1])})
+		}
+	}
+	if len(seps) != 2 || seps[0].text != ";" || seps[1].text != "/" {
+		t.Fatalf("separator tokens = %#v, want [\";\" \"/\"]", seps)
+	}
+	if seps[1].slice != "/" {
+		t.Fatalf("slash separator slice = %q, want \"/\"", seps[1].slice)
 	}
 }

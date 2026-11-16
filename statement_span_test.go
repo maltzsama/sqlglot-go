@@ -22,7 +22,7 @@ func TestStatementSpans(t *testing.T) {
 		{"SELECT 'a;b' FROM t; SELECT 2", "postgres",
 			[]string{"SELECT 'a;b' FROM t", "SELECT 2"}},
 		{"select id,   ssn from t -- keep me", "postgres",
-			[]string{"select id,   ssn from t"}},
+			[]string{"select id,   ssn from t -- keep me"}},
 		{"CREATE PROCEDURE p() BEGIN UPDATE t SET a = 1; SELECT 1; END", "mysql",
 			[]string{"CREATE PROCEDURE p() BEGIN UPDATE t SET a = 1; SELECT 1; END"}},
 		// divergence (DEVIATIONS §1.18): END terminates the block, so a statement after it is
@@ -32,21 +32,23 @@ func TestStatementSpans(t *testing.T) {
 			[]string{"CREATE PROCEDURE p() BEGIN SELECT 1; END", "SELECT 9"}},
 		{"CREATE FUNCTION f() RETURNS INT AS $fn$ SELECT '$$'; $fn$ LANGUAGE plpgsql; SELECT 9", "postgres",
 			[]string{"CREATE FUNCTION f() RETURNS INT AS $fn$ SELECT '$$'; $fn$ LANGUAGE plpgsql", "SELECT 9"}},
-		// The trailing-comment `;` chunk parses to exp.Semicolon (its span is the `;`).
+		// The trailing-comment `;` chunk parses to exp.Semicolon; the comment rides on the
+		// chunk's `;` and stays inside its span.
 		{"SELECT 1; -- note", "postgres",
-			[]string{"SELECT 1", ";"}},
+			[]string{"SELECT 1", "; -- note"}},
 		// A comment-bearing `;` mid-batch is its own chunk; the following bare `;` leaves an
 		// empty chunk = a nil slot ("" below), matching upstream's [Select, Semicolon, None,
 		// Select].
 		{"SELECT 1; /* c */ ; SELECT 2", "postgres",
-			[]string{"SELECT 1", ";", "", "SELECT 2"}},
+			[]string{"SELECT 1", "; /* c */", "", "SELECT 2"}},
 		// Rune (not byte) offsets: multibyte text before and inside a statement.
 		{"SELECT '한글' FROM t; SELECT 'β'", "postgres",
 			[]string{"SELECT '한글' FROM t", "SELECT 'β'"}},
-		// The span is the statement's token range: leading trivia (whitespace, a detached
-		// comment) and inter-statement whitespace sit in gaps outside every span.
+		// The span covers the statement's tokens plus its attached comments: leading trivia
+		// (whitespace) and inter-statement whitespace sit in gaps outside every span, but a
+		// leading comment is part of the statement.
 		{"  /* c */  SELECT 1;   \n  SELECT 2", "postgres",
-			[]string{"SELECT 1", "SELECT 2"}},
+			[]string{"/* c */  SELECT 1", "SELECT 2"}},
 		// An activated MySQL executable comment splices body tokens into the statement; the
 		// span is widened back to the `/*!NNNNN ... */` delimiters (Token.WrapStart/WrapEnd) so
 		// the slice stays executable MySQL — both trailing and leading wrapper positions.
@@ -149,6 +151,59 @@ func TestTrailingCommentSemicolon(t *testing.T) {
 		// generator.py:5421-5422: the node body renders empty; only the comment survives.
 		if got, err := sqlglot.Generate(statements[1], dialect, generator.Options{}); err != nil || got != "/* note */" {
 			t.Errorf("[%s] Generate(Semicolon)=%q,%v, want \"/* note */\"", dialect, got, err)
+		}
+	}
+}
+
+// TestStatementSpansCoverCommentsAndOracleUnits pins the issue #74 contract: a statement span
+// covers its attached comments (leading on the first token, trailing on the same line, before a
+// `;`, or at EOF), and an Oracle PL/SQL unit's terminating `;` is part of the unit. A `;` inside
+// a comment or a string is never a boundary, and a call specification with no END keeps its `;`
+// outside the span, as an ordinary statement terminator.
+func TestStatementSpansCoverCommentsAndOracleUnits(t *testing.T) {
+	cases := []struct {
+		sql     string
+		dialect string
+		want    []string
+	}{
+		{"/* lead */ SELECT 1", "postgres", []string{"/* lead */ SELECT 1"}},
+		{"-- lead\nSELECT 1", "postgres", []string{"-- lead\nSELECT 1"}},
+		{"SELECT 1 /* tail */", "postgres", []string{"SELECT 1 /* tail */"}},
+		{"SELECT 'a;b' -- c;d", "postgres", []string{"SELECT 'a;b' -- c;d"}},
+		{"SELECT 1 /* t */; SELECT 2", "postgres", []string{"SELECT 1 /* t */", "SELECT 2"}},
+		// The `;` inside the comment is not a boundary; the comment trails the first statement.
+		{"SELECT 1 -- a;b\n; SELECT 2", "postgres", []string{"SELECT 1 -- a;b", "SELECT 2"}},
+		{"BEGIN NULL; END;", "oracle", []string{"BEGIN NULL; END;"}},
+		{"CREATE PROCEDURE p AS BEGIN NULL; END;", "oracle", []string{"CREATE PROCEDURE p AS BEGIN NULL; END;"}},
+		{`CREATE FUNCTION f RETURN NUMBER AS LANGUAGE C NAME "f" LIBRARY lib; SELECT 1 FROM dual`, "oracle",
+			[]string{`CREATE FUNCTION f RETURN NUMBER AS LANGUAGE C NAME "f" LIBRARY lib`, "SELECT 1 FROM dual"}},
+	}
+	for _, tc := range cases {
+		statements, err := sqlglot.Parse(tc.sql, tc.dialect)
+		if err != nil {
+			t.Fatalf("%q [%s]: parse: %v", tc.sql, tc.dialect, err)
+		}
+		if len(statements) != len(tc.want) {
+			t.Fatalf("%q [%s]: got %d statements, want %d", tc.sql, tc.dialect, len(statements), len(tc.want))
+		}
+		for i, stmt := range statements {
+			if stmt == nil {
+				t.Fatalf("%q [%s] stmt %d: got nil, want %q", tc.sql, tc.dialect, i, tc.want[i])
+			}
+			if text, ok := stmt.SpanText(); !ok || text != tc.want[i] {
+				t.Fatalf("%q [%s] stmt %d: span %q, want %q", tc.sql, tc.dialect, i, text, tc.want[i])
+			}
+			start, end, ok := stmt.Span()
+			if !ok {
+				t.Fatalf("%q [%s] stmt %d: no span", tc.sql, tc.dialect, i)
+			}
+			runes := []rune(tc.sql)
+			if start < 0 || end > len(runes) {
+				t.Fatalf("%q [%s] stmt %d: span %d..%d out of range", tc.sql, tc.dialect, i, start, end)
+			}
+			if got := string(runes[start:end]); got != tc.want[i] {
+				t.Fatalf("%q [%s] stmt %d: span slice %q, want %q", tc.sql, tc.dialect, i, got, tc.want[i])
+			}
 		}
 	}
 }

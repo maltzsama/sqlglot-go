@@ -93,11 +93,19 @@ func newAthenaTokenizer() *tokens.Tokenizer {
 					token.WrapStart += base
 					token.WrapEnd += base
 				}
+				if token.HasLeadingComment {
+					token.LeadingCommentStart += base
+				}
+				if token.HasTrailingComment {
+					token.TrailingCommentEnd += base
+				}
 			}
 			if len(routed) > 0 {
 				// Comments before the chunk's first token lie outside the re-tokenized slice.
 				if start > 0 {
 					routed[0].Comments = append([]string{}, chunk[0].Comments...)
+					routed[0].LeadingCommentStart = chunk[0].LeadingCommentStart
+					routed[0].HasLeadingComment = chunk[0].HasLeadingComment
 				}
 				// A same-line comment after the `;` belongs to it (tokenizer_core.py:862) but lies
 				// past the slice; re-read it with the routed engine so `/*+` keeps its payload.
@@ -105,6 +113,10 @@ func newAthenaTokenizer() *tokens.Tokenizer {
 					trailing := string(runes[classified[end].End+1 : classified[end+1].Start])
 					if commentTokens, err := tokenizer.Tokenize(";" + trailing); err == nil && len(commentTokens) == 1 {
 						routed[len(routed)-1].Comments = append([]string{}, commentTokens[0].Comments...)
+						if commentTokens[0].HasTrailingComment {
+							routed[len(routed)-1].TrailingCommentEnd = commentTokens[0].TrailingCommentEnd + classified[end].Start
+							routed[len(routed)-1].HasTrailingComment = true
+						}
 					}
 				}
 			}

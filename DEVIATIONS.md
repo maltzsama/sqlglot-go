@@ -187,19 +187,20 @@ upstream pops into the same `Identifier` offset, so the check is parser-only. Te
 
 Upstream lexes `GO` as a Command keyword, so `SELECT 1\nGO` aliases the Select as `GO`,
 `SELECT 1;\nGO\nSELECT 2` hides the second batch inside a `Command "GO\nSELECT 2"`, and
-`SELECT 1\nGO\nSELECT 2` fails to parse. sqlcmd and SSMS strip a line holding only `GO [count]` and
-end the batch there, which is what a script splitter has to match. Under `tsql` the tokenizer
+`SELECT 1\nGO\nSELECT 2` fails to parse. sqlcmd and SSMS strip a line holding only `GO [count]`
+and end the batch there, which is what a script splitter has to match. Under `tsql` the tokenizer
 (`TokenizerConfig.BatchSeparator`) lexes such a line, case-insensitive with surrounding spaces/tabs,
 an optional repeat count, and an optional trailing `--` comment, as a `SEMICOLON` token whose
-`Text` is the separator (`GO 5`). Every consumer then splits on it like `;`, and a Command's packed
-tail stops before it. A separator right after a `;`, another separator, or at the start of input is
-dropped, so it never yields an empty statement, and its trailing `--` comment is stripped with the
-line instead of surfacing as an orphan `Semicolon` statement. The separator also terminates a
-routine body: `CREATE PROCEDURE p AS SELECT 1` followed by GO keeps the Create and gives the next
-batch's statement back as its own statement (a plain `;` still folds into the body, as upstream's
-`_parse_block` does). The repeat count is not modeled. `GO` inside a
-string, a block comment, or sharing its line with other SQL is unchanged. An input holding nothing
-but the separator line keeps upstream's `Command "GO"`, because there is no batch to separate.
+`Text` is the separator (`GO 5`). The token is emitted for every separator line — including after a
+`;` or another separator — so a token consumer can locate each boundary; the chunk builder drops
+the empty statement slot such a separator would otherwise produce. Every consumer then splits on it
+like `;`, and a Command's packed tail stops before it. The separator's trailing `--` comment is
+stripped with the line instead of surfacing as an orphan `Semicolon` statement, and the separator
+also terminates a routine body: `CREATE PROCEDURE p AS SELECT 1` followed by GO keeps the Create
+and gives the next batch's statement back as its own statement (a plain `;` still folds into the
+body, as upstream's `_parse_block` does). The repeat count is not modeled. `GO` inside a string, a
+block comment, or sharing its line with other SQL is unchanged. An input holding nothing but the
+separator line keeps upstream's `Command "GO"`, because there is no batch to separate.
 Tests `TestTSQLGoBatchSeparator`, `TestTSQLGoBatchSeparatorToken` (`tsql_test.go`).
 
 ### 1.23 Oracle `/` terminator line is a statement boundary
@@ -209,9 +210,10 @@ is the only terminator for a PL/SQL unit). Upstream lexes it as division, so
 `SELECT 1 FROM dual\n/\nSELECT 2 FROM dual` fails to parse and `SELECT 1 FROM dual;\n/` fails with
 `'this' missing for Div`. Under `oracle` the tokenizer lexes such a line (surrounding spaces/tabs
 allowed) as a `SEMICOLON` token with `Text` `/`, through the same `TokenizerConfig.BatchSeparator`
-mechanism as §1.22: it splits like `;`, and after a `;` it is dropped. A `/` that shares its line
-with anything else, including a comment, stays division. Test `TestOracleSlashTerminator`
-(`oracle_test.go`).
+mechanism as §1.22: the token is emitted for every separator line — after a `;` too — so a token
+consumer can find the boundary, the chunk builder drops the empty statement slot, and it splits
+like `;`. A `/` that shares its line with anything else, including a comment, stays division.
+Test `TestOracleSlashTerminator` (`oracle_test.go`).
 
 ### 1.24 Oracle PL/SQL units are one statement
 
@@ -489,10 +491,15 @@ its spacing), both-or-neither, via the span helpers (`parseSpanned`/`spanned`). 
 Every top-level statement `Parse` returns is stamped the same way (a multi-chunk statement — a
 procedure `BEGIN…END` body — spans all its chunks, inner semicolons included), so a batch consumer
 can split a multi-statement input into verbatim per-statement slices without a `Generate()`
-rewrite. The span is the statement's token range: separators and comment text outside the first/
-last token are not covered (the slice is exact, not exhaustive). A boundary token spliced from an
-activated MySQL executable comment widens to the `/*!NNNNN … */` delimiters — statement spans only
-— so the slice stays executable MySQL.
+rewrite. A statement span covers the statement's tokens **plus its attached comments**: leading
+line/block comments attached to the first token, and trailing comments on the statement's same
+line, before its `;`, or at end of input — so a `;` inside a comment is never mistaken for a
+boundary. An Oracle PL/SQL unit's terminating `;` is part of the unit (an anonymous block or a
+stored unit needs it to execute) and is included in the span; a call specification with no END
+keeps its `;` outside, as an ordinary statement terminator. Inter-statement separators and
+surrounding whitespace are not covered. A boundary token spliced from an activated MySQL
+executable comment widens to the `/*!NNNNN … */` delimiters — statement spans only — so the slice
+stays executable MySQL.
 Bind-parameter spans let a consumer bind ordered parameters lexically; tree walk order is not lexical
 across CTEs, joins and WHERE. Tests `expressions/span_test.go`, `parser/parser_span_test.go`,
 `parser/placeholder_span_test.go`, `optimizer/qualify_span_test.go`, `statement_span_test.go`.
