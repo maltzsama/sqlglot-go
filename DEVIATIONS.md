@@ -193,7 +193,11 @@ end the batch there, which is what a script splitter has to match. Under `tsql` 
 an optional repeat count, and an optional trailing `--` comment, as a `SEMICOLON` token whose
 `Text` is the separator (`GO 5`). Every consumer then splits on it like `;`, and a Command's packed
 tail stops before it. A separator right after a `;`, another separator, or at the start of input is
-dropped, so it never yields an empty statement. The repeat count is not modeled. `GO` inside a
+dropped, so it never yields an empty statement, and its trailing `--` comment is stripped with the
+line instead of surfacing as an orphan `Semicolon` statement. The separator also terminates a
+routine body: `CREATE PROCEDURE p AS SELECT 1` followed by GO keeps the Create and gives the next
+batch's statement back as its own statement (a plain `;` still folds into the body, as upstream's
+`_parse_block` does). The repeat count is not modeled. `GO` inside a
 string, a block comment, or sharing its line with other SQL is unchanged. An input holding nothing
 but the separator line keeps upstream's `Command "GO"`, because there is no batch to separate.
 Tests `TestTSQLGoBatchSeparator`, `TestTSQLGoBatchSeparatorToken` (`tsql_test.go`).

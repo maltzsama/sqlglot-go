@@ -39,8 +39,12 @@ type Parser struct {
 	// an exp.Anonymous with the verbatim name. Set by parseFunctionCall just before dispatch.
 	opaqueFuncName string
 	chunks         [][]tokens.Token
-	chunkIndex     int
-	nodeCount      int
+	// chunkSeparators holds, per chunk, the SEMICOLON token that terminated it (SentinelNone
+	// when the chunk ended without one). A batch separator (T-SQL GO, Oracle /) is a SEMICOLON
+	// whose Text is not ";", which lets a routine body stop at the batch boundary.
+	chunkSeparators []tokens.Token
+	chunkIndex      int
+	nodeCount       int
 	// plsqlUnits marks the chunks that hold one whole Oracle PL/SQL unit, keyed by chunk index
 	// (see dialect_oracle_plsql.go). Nil for every other dialect.
 	plsqlUnits map[int]plsqlUnit
@@ -96,6 +100,7 @@ func (p *Parser) Reset() {
 	p.prev = tokens.SentinelNone
 	p.prevComments = nil
 	p.chunks = nil
+	p.chunkSeparators = nil
 	p.chunkIndex = 0
 	p.plsqlUnits = nil
 	p.nodeCount = 0
@@ -129,6 +134,16 @@ func (p *Parser) advance(times ...int) {
 		p.prev = tokens.SentinelNone
 		p.prevComments = nil
 	}
+}
+
+// chunkEndedByBatchSeparator reports whether chunk k was terminated by a client-tool batch
+// separator (T-SQL GO, Oracle /) rather than an ordinary `;` (DEVIATIONS §1.22).
+func (p *Parser) chunkEndedByBatchSeparator(k int) bool {
+	if k < 0 || k >= len(p.chunkSeparators) {
+		return false
+	}
+	sep := p.chunkSeparators[k]
+	return sep.IsValid() && sep.TokenType == tokens.SEMICOLON && sep.Text != ";"
 }
 
 func (p *Parser) advanceChunk() {
@@ -473,6 +488,13 @@ func (p *Parser) parseBatchStatements(parseMethod func() exp.Expression, sepFirs
 	}
 	chunksLength := len(p.chunks)
 	for p.chunkIndex < chunksLength {
+		// divergence (DEVIATIONS §1.22): a client-tool batch separator ends a routine body.
+		// A single-statement body (`CREATE PROCEDURE p AS SELECT 1` followed by GO) is one
+		// batch, so the block must stop at the separator instead of consuming the next
+		// batch's statement. Upstream has no batch separator and folds everything.
+		if sepFirstStatement && p.chunkEndedByBatchSeparator(p.chunkIndex-1) {
+			break
+		}
 		p.advanceChunk()
 		if unit, ok := p.plsqlUnits[p.chunkIndex-1]; ok && !sepFirstStatement {
 			startTok := p.curr
@@ -682,19 +704,28 @@ func (p *Parser) parse(parseMethod func() exp.Expression, rawTokens []tokens.Tok
 	}
 	total := len(rawTokens)
 	chunks := [][]tokens.Token{{}}
+	separators := []tokens.Token{tokens.SentinelNone}
 	for i, token := range rawTokens {
 		if token.TokenType == tokens.SEMICOLON {
-			if len(token.Comments) > 0 {
+			separators[len(chunks)-1] = token
+			// A separator's own trailing comment stays attached only for a real statement
+			// terminator (`; -- c`), where the extra chunk carries it onto the Semicolon
+			// node. A client-tool batch separator (T-SQL GO, Oracle /) is stripped whole,
+			// comment included — it is a boundary, never a statement (DEVIATIONS §1.22).
+			if len(token.Comments) > 0 && token.Text == ";" {
 				chunks = append(chunks, []tokens.Token{token})
+				separators = append(separators, tokens.SentinelNone)
 			}
 			if i < total-1 {
 				chunks = append(chunks, []tokens.Token{})
+				separators = append(separators, tokens.SentinelNone)
 			}
 		} else {
 			chunks[len(chunks)-1] = append(chunks[len(chunks)-1], token)
 		}
 	}
 	p.chunks = chunks
+	p.chunkSeparators = separators
 	return p.parseBatchStatements(parseMethod, false)
 }
 
