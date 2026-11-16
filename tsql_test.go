@@ -418,10 +418,12 @@ func TestTSQLGoBatchSeparator(t *testing.T) {
 		{"GO\nSELECT 1\nGO\nGO\n", []scriptStatement{{sel, "SELECT 1"}}},
 		// A Command's packed tail stops at the separator line.
 		{"EXEC sp_who\nGO\nSELECT 2", []scriptStatement{{exp.KindExecute, "EXEC sp_who"}, {sel, "SELECT 2"}}},
-		// A trailing `--` comment on the GO line is allowed; like the comment after a `;`, it
-		// surfaces as the separator's own Semicolon node.
+		// A trailing `--` comment on the GO line is allowed and stripped with the separator:
+		// a batch separator is a boundary, never a statement (no orphan Semicolon node).
 		{"SELECT 1\nGO -- end of batch\nSELECT 2",
-			[]scriptStatement{{sel, "SELECT 1"}, {exp.KindSemicolon, "GO"}, {sel, "SELECT 2"}}},
+			[]scriptStatement{{sel, "SELECT 1"}, {sel, "SELECT 2"}}},
+		{"SELECT 1;\nGO -- end of batch\nSELECT 2",
+			[]scriptStatement{{sel, "SELECT 1"}, {sel, "SELECT 2"}}},
 		// Not separators: GO inside a string or a block comment, GO not alone on its line,
 		// and a longer word that starts with GO.
 		{"SELECT 'a\nGO\nb'", []scriptStatement{{sel, "SELECT 'a\nGO\nb'"}}},
@@ -461,4 +463,41 @@ func TestTSQLGoBatchSeparatorToken(t *testing.T) {
 	if len(separators) != 1 || separators[0] != "GO 5" {
 		t.Fatalf("separator tokens = %q, want [\"GO 5\"]", separators)
 	}
+}
+
+// TestTSQLGoEndsRoutineBody pins the batch boundary inside a routine body: a
+// single-statement body (`CREATE PROCEDURE p AS SELECT 1`, no BEGIN...END) is one batch, so
+// the GO separator must end it instead of letting the body block swallow the next batch's
+// statement. The structured Create keeps a one-statement Block body; a plain `;` still folds
+// the following statement into the body, as upstream's _parse_block does.
+func TestTSQLGoEndsRoutineBody(t *testing.T) {
+	statements, err := sqlglot.Parse("CREATE PROCEDURE p AS SELECT 1\ngo\nSELECT 2", "tsql")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(statements) != 2 {
+		t.Fatalf("got %d statements, want 2:\n%s", len(statements), statements[0].ToS())
+	}
+	create := statements[0]
+	if create.Kind() != exp.KindCreate {
+		t.Fatalf("first statement = %s, want Create", exp.ClassName(create.Kind()))
+	}
+	body := create.Arg("expression")
+	block, ok := body.(*exp.Node)
+	if !ok || block.Kind() != exp.KindBlock {
+		t.Fatalf("create body = %v, want Block", body)
+	}
+	if got := len(block.Expressions()); got != 1 {
+		t.Fatalf("body has %d expressions, want 1:\n%s", got, block.ToS())
+	}
+	if statements[1].Kind() != exp.KindSelect {
+		t.Fatalf("second statement = %s, want Select", exp.ClassName(statements[1].Kind()))
+	}
+
+	// BEGIN...END bodies already stop at the separator; keep that covered alongside the bare
+	// form, and confirm a bare body still folds a plain `;`-separated statement.
+	assertScriptStatements(t, "CREATE PROCEDURE p AS BEGIN SELECT 1 END\ngo\nSELECT 2", "tsql",
+		[]scriptStatement{{exp.KindCommand, "CREATE PROCEDURE p AS BEGIN SELECT 1 END"}, {exp.KindSelect, "SELECT 2"}})
+	assertScriptStatements(t, "CREATE PROCEDURE p AS SELECT 1; SELECT 2", "tsql",
+		[]scriptStatement{{exp.KindCreate, "CREATE PROCEDURE p AS SELECT 1; SELECT 2"}})
 }
