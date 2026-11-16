@@ -18,6 +18,13 @@ merged, tags the version and publishes the GitHub release. See
 [AGENTS.md § Releasing](./AGENTS.md#releasing). Entries for **v0.5.0 and earlier** were written by hand
 before release-please was adopted.
 
+## [0.41.1](https://github.com/maltzsama/sqlglot-go/compare/v0.41.0...v0.41.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* **tsql:** end a routine body at the GO batch separator ([#72](https://github.com/maltzsama/sqlglot-go/issues/72)) ([6807bde](https://github.com/maltzsama/sqlglot-go/commit/6807bded2c9c896397b950323f0bdf94280a68a5))
+
 ## [0.41.0](https://github.com/maltzsama/sqlglot-go/compare/v0.40.0...v0.41.0) (2026-11-15)
 
 
