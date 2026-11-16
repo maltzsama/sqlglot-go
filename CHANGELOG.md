@@ -18,6 +18,13 @@ merged, tags the version and publishes the GitHub release. See
 [AGENTS.md § Releasing](./AGENTS.md#releasing). Entries for **v0.5.0 and earlier** were written by hand
 before release-please was adopted.
 
+## [0.42.0](https://github.com/maltzsama/sqlglot-go/compare/v0.41.1...v0.42.0) (2026-11-16)
+
+
+### Features
+
+* **spans:** cover comments and Oracle units, tokenize the slash separator ([#75](https://github.com/maltzsama/sqlglot-go/issues/75)) ([f43e37c](https://github.com/maltzsama/sqlglot-go/commit/f43e37cf0d5d916b6edc80cec169972e020fdb1c))
+
 ## [0.41.1](https://github.com/maltzsama/sqlglot-go/compare/v0.41.0...v0.41.1) (2026-11-16)
 
 
