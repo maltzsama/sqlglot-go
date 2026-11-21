@@ -18,6 +18,14 @@ merged, tags the version and publishes the GitHub release. See
 [AGENTS.md § Releasing](./AGENTS.md#releasing). Entries for **v0.5.0 and earlier** were written by hand
 before release-please was adopted.
 
+## [0.42.2](https://github.com/maltzsama/sqlglot-go/compare/v0.42.1...v0.42.2) (2026-11-21)
+
+
+### Documentation
+
+* describe merge-commit merges in the contributor guides ([19f765d](https://github.com/maltzsama/sqlglot-go/commit/19f765d16af7c7a231c2e5166721f98206978d5c))
+* merge pull requests with a merge commit ([f98041e](https://github.com/maltzsama/sqlglot-go/commit/f98041ed92b026e268a663cc3921301e57c7a5a6))
+
 ## [0.42.1](https://github.com/maltzsama/sqlglot-go/compare/v0.42.0...v0.42.1) (2026-11-21)
 
 
