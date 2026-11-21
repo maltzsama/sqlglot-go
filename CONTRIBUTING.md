@@ -46,8 +46,9 @@ This project uses **[Conventional Commits](https://www.conventionalcommits.org/)
 [release-please](https://github.com/googleapis/release-please) derives the next version and the
 changelog from them, so the format is required.
 
-- PRs are **squash-merged**, and the **PR title becomes the commit** — so the **PR title must be a
-  Conventional Commit**. CI lints it.
+- PRs are merged with a **merge commit**, never squashed or rebased, so **every commit** reaches
+  `main` and must be an atomic Conventional Commit. The **PR title must be a Conventional Commit**
+  too; CI lints it.
 - Types: `feat` (→ minor, pre-1.0), `fix` (→ patch), `perf`, `docs`, `refactor`, `test`, `build`,
   `ci`, `chore`, `revert`. A breaking change uses `type!:` or a `BREAKING CHANGE:` footer.
 - Examples: `feat: add opt-in search-path qualification`, `fix(tokenizer): require space after --`,

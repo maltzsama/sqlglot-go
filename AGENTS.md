@@ -133,20 +133,21 @@ by [**Conventional Commits**](https://www.conventionalcommits.org/) and versione
 workflow: `.github/workflows/release-please.yml`. Pre-1.0, `bump-minor-pre-major` is set, so both
 features and breaking changes bump the **minor** (`fix` bumps the patch).
 
-- **PRs are squash-merged, and the PR title is the commit** — so the **PR title must be a Conventional
-  Commit** (`feat:`, `fix:`, `feat!:`, `docs:`, `ci:`, `chore:`, …). `.github/workflows/pr-title.yml`
-  lints it. `CHANGELOG.md` sections come from `changelog-sections` in the config.
+- **PRs are merged with a merge commit** (`gh pr merge <n> --merge`), never squashed or rebased: the
+  PR's atomic commits reach `main` as they are. **Every commit is a Conventional Commit**
+  (`feat:`, `fix:`, `feat!:`, `docs:`, `ci:`, `chore:`, …), and so is the **PR title**, which
+  `.github/workflows/pr-title.yml` lints. release-please reads each commit, and the merge commit
+  carries the title too, so a PR whose title repeats a commit subject lists that entry twice.
+  `CHANGELOG.md` sections come from `changelog-sections` in the config.
 - On each push to `main`, release-please opens/updates a **release PR** (`chore(main): release X.Y.Z`)
   that bumps `.release-please-manifest.json` and prepends the generated `CHANGELOG.md` section.
 - **To cut the release, merge that release PR.** release-please then tags `vX.Y.Z` and publishes the
   GitHub release automatically. Nothing is tagged by hand.
 
-- **Keep nested parentheses out of squash-commit bodies** — phrases like `Alias(Column(TABLE) AS
+- **Keep nested parentheses out of commit bodies** — phrases like `Alias(Column(TABLE) AS
   t)` or `Cast(Literal, DataType(...))` make release-please's commit parser **silently skip the
   commit**: the workflow run reports success but no release PR is opened (bit v0.31.0 via #87 and
-  v0.33.0 via #93). Since the PR body becomes the squash body, this applies to PR descriptions
-  too — write such AST shapes as `Alias of Column TABLE` or put them in backticked inline code on
-  the title-less lines only if needed, or plain prose. Recovery if it happens: push an empty
+  v0.33.0 via #93). Write such AST shapes as `Alias of Column TABLE`, or plain prose. Recovery if it happens: push an empty
   `feat:` commit with a clean message via a nudge PR; the release PR then appears.
 
 Do **not** hand-edit `CHANGELOG.md` or create version tags manually — release-please owns both.
