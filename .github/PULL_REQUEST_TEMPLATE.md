@@ -1,6 +1,7 @@
 <!--
-The PR title MUST be a Conventional Commit — it becomes the squash commit and drives
-release-please (version + changelog). e.g. "feat: ...", "fix(tokenizer): ...", "docs: ...".
+The PR title and every commit MUST be Conventional Commits — the PR is merged with a merge
+commit, and release-please reads each commit (version + changelog).
+e.g. "feat: ...", "fix(tokenizer): ...", "docs: ...".
 -->
 
 ## What & why

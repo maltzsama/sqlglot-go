@@ -1,7 +1,7 @@
 name: PR Title
 
 # release-please derives the next version + CHANGELOG from Conventional Commits.
-# With squash-merge, the squash commit is the PR title, so lint the title.
+# PRs are merged with a merge commit, which carries the PR title, so lint the title.
 on:
   pull_request_target:
     types: [opened, edited, synchronize, reopened]
