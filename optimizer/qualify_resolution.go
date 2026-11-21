@@ -69,13 +69,19 @@ func populateResolutionReportForScopes(expression exp.Expression, scopes []*Scop
 
 		semiAntiTables := scope.SemiOrAntiJoinTables()
 		for _, ref := range scope.References() {
-			if ref.Node == nil || semiAntiTables[ref.Name] {
+			if ref.Node == nil {
 				continue
 			}
 			if _, selected := selectedNodes[ref.Node]; selected {
 				continue
 			}
 			classifiedNodes[ref.Node] = struct{}{}
+			if semiAntiTables[ref.Name] {
+				// A SEMI or ANTI JOIN source is read but never selected, so it
+				// is classified from the scope's sources instead.
+				report[ref.Node] = classifySelectedSource(scope.Sources[ref.Name])
+				continue
+			}
 			report[ref.Node] = ResolvedSource{Kind: Unresolved}
 		}
 
