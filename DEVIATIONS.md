@@ -260,7 +260,8 @@ Additive analysis features; default behavior and fixture output unchanged.
   unproven stays unqualified (fail-closed). Names fold role-aware (§1.2). Empty path = upstream path.
 - **Qualify resolution report** (`QualifyOpts.ResolutionReport` → `SourceKind` per source): exposes
   the source classification the qualify scope pass already computes. `Unresolved` is the zero value.
-  DML roots populate from the §6.1 analysis traversal.
+  DML roots populate from the §6.1 analysis traversal. A SEMI or ANTI JOIN source, read but never
+  selected, is classified from the scope's sources like a selected one.
 - **Opaque function calls** (`opaque_functions` dialect setting, resolve-time like
   `mysql_ansi_quotes`): name-lookup builtin calls (FunctionByName + dialect overlays + convenience
   functionParsers + `IF(`) parse as `Anonymous` with the name as written; the generator renders

@@ -164,6 +164,26 @@ func TestQualifyResolutionReport(t *testing.T) {
 		assertASTInvariants(t, result)
 	})
 
+	t.Run("SEMI and ANTI JOIN sources are classified", func(t *testing.T) {
+		result, report := qualifyWithResolutionReport(t,
+			"WITH recent AS (SELECT id FROM audit) SELECT o.id FROM orders AS o LEFT SEMI JOIN customers AS c ON o.customer_id = c.id LEFT ANTI JOIN refunds AS r ON o.id = r.order_id SEMI JOIN recent ON o.id = recent.id",
+			schema.M(
+				"orders", schema.M("id", "INT", "customer_id", "INT"),
+				"customers", schema.M("id", "INT"),
+				"refunds", schema.M("order_id", "INT"),
+				"audit", schema.M("id", "INT"),
+			),
+			func(opts *optimizer.QualifyOpts) { opts.ValidateQualifyColumns = false },
+		)
+
+		assertResolvedSource(t, report, findTableByName(t, result, "orders"), optimizer.Physical, "", "", "orders")
+		assertResolvedSource(t, report, findTableByName(t, result, "customers"), optimizer.Physical, "", "", "customers")
+		assertResolvedSource(t, report, findTableByName(t, result, "refunds"), optimizer.Physical, "", "", "refunds")
+		assertResolvedSource(t, report, findTableByName(t, result, "audit"), optimizer.Physical, "", "", "audit")
+		assertResolvedSource(t, report, findTableByName(t, result, "recent"), optimizer.CTE, "", "", "")
+		assertASTInvariants(t, result)
+	})
+
 	t.Run("report works when column qualification is disabled", func(t *testing.T) {
 		result, report := qualifyWithResolutionReport(t,
 			"SELECT id FROM sales",
