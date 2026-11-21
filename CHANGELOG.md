@@ -18,6 +18,14 @@ merged, tags the version and publishes the GitHub release. See
 [AGENTS.md § Releasing](./AGENTS.md#releasing). Entries for **v0.5.0 and earlier** were written by hand
 before release-please was adopted.
 
+## [0.42.1](https://github.com/maltzsama/sqlglot-go/compare/v0.42.0...v0.42.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **optimizer:** classify SEMI and ANTI JOIN sources in the resolution report ([852915a](https://github.com/maltzsama/sqlglot-go/commit/852915acaf25736902c22399b1875719d726282f))
+* **optimizer:** classify SEMI and ANTI JOIN sources in the resolution report ([978fc6e](https://github.com/maltzsama/sqlglot-go/commit/978fc6ea737737bfb0f279a46a62b28abd37f63e))
+
 ## [0.42.0](https://github.com/maltzsama/sqlglot-go/compare/v0.41.1...v0.42.0) (2026-11-16)
 
 
