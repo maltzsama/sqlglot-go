@@ -1,7 +1,6 @@
 name: PR Title
 
-# release-please derives the next version + CHANGELOG from Conventional Commits.
-# PRs are merged with a merge commit, which carries the PR title, so lint the title.
+# PR titles are plain sentences; commits carry the Conventional Commit metadata.
 on:
   pull_request_target:
     types: [opened, edited, synchronize, reopened]
@@ -11,22 +10,21 @@ permissions:
 
 jobs:
   lint:
-    name: conventional title
+    name: plain sentence title
     runs-on: ubuntu-latest
     steps:
-      - uses: amannn/action-semantic-pull-request@v6
+      - name: Reject Conventional Commit prefixes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          # Allowed types (keep in sync with release-please changelog-sections).
-          types: |
-            feat
-            fix
-            perf
-            docs
-            refactor
-            test
-            build
-            ci
-            chore
-            revert
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [[ "$PR_HEAD_REF" == release-please--branches--main--components--* ]]; then
+            echo "Allowing the generated release-please title."
+            exit 0
+          fi
+
+          title_pattern='^(feat|fix|perf|docs|refactor|test|build|ci|chore|revert)(\([^)]*\))?(!)?:'
+          if [[ "$PR_TITLE" =~ $title_pattern ]]; then
+            echo "::error::Use a plain sentence for the PR title; keep Conventional Commit prefixes in commit subjects."
+            exit 1
+          fi

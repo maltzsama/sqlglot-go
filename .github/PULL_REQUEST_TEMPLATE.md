@@ -1,8 +1,4 @@
-<!--
-The PR title and every commit MUST be Conventional Commits — the PR is merged with a merge
-commit, and release-please reads each commit (version + changelog).
-e.g. "feat: ...", "fix(tokenizer): ...", "docs: ...".
--->
+<!-- Use a plain sentence for the PR title. Every commit must use a Conventional Commit subject. -->
 
 ## What & why
 
@@ -14,5 +10,5 @@ e.g. "feat: ...", "fix(tokenizer): ...", "docs: ...".
 - [ ] New behavior has tests; ported behavior reuses the upstream `.sql` fixtures
 - [ ] Ported 1:1 from `.reference/sqlglot-v30.12.0/` where applicable (cite reference lines for any divergence)
 - [ ] Any intentional difference from upstream is recorded in `DEVIATIONS.md` with a rationale
-- [ ] PR title is a Conventional Commit
+- [ ] PR title is a plain sentence; commit subjects are Conventional Commits
 - [ ] Did **not** hand-edit `CHANGELOG.md` or version tags (release-please owns those)
