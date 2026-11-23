@@ -1171,6 +1171,11 @@ const (
 	KindDateFromUnixDate
 	KindReadParquet
 	KindFormat
+	// ksqlDB (beyond-upstream dialect, DEVIATIONS.md "Beyond-upstream dialects"): the
+	// WINDOW clause of a ksqlDB query — TUMBLING/HOPPING/SESSION with its SIZE, ADVANCE BY,
+	// RETENTION and GRACE PERIOD clauses (SqlBase.g4 windowExpression). Appended at the end
+	// of the iota block so existing Kind values are not renumbered (values aren't serialized).
+	KindKsqlWindow
 )
 
 type Trait uint32
@@ -1268,12 +1273,15 @@ var argTypes = map[Kind][]argSpec{
 	KindILike:      {{"this", true}, {"expression", true}, {"negate", false}},
 	// SimilarTo/Escape mirror Binary's default arg_types (parser.py:1623-1624): no "negate"
 	// arg (unlike Like/ILike), so NOT ... is wrapped in exp.Not by parseRange.
-	KindSimilarTo:           {{"this", true}, {"expression", true}},
-	KindEscape:              {{"this", true}, {"expression", true}},
-	KindIn:                  {{"this", true}, {"expressions", false}, {"query", false}, {"unnest", false}, {"field", false}, {"is_global", false}},
-	KindSelect:              withQueryModifiers(argSpec{"with_", false}, argSpec{"kind", false}, argSpec{"expressions", false}, argSpec{"hint", false}, argSpec{"distinct", false}, argSpec{"into", false}, argSpec{"from_", false}, argSpec{"operation_modifiers", false}, argSpec{"exclude", false}),
-	KindFrom:                defaultArgTypes,
-	KindJoin:                {{"this", true}, {"on", false}, {"side", false}, {"kind", false}, {"using", false}, {"method", false}, {"global_", false}, {"hint", false}, {"match_condition", false}, {"directed", false}, {"expressions", false}, {"pivots", false}},
+	KindSimilarTo: {{"this", true}, {"expression", true}},
+	KindEscape:    {{"this", true}, {"expression", true}},
+	KindIn:        {{"this", true}, {"expressions", false}, {"query", false}, {"unnest", false}, {"field", false}, {"is_global", false}},
+	KindSelect:    withQueryModifiers(argSpec{"with_", false}, argSpec{"kind", false}, argSpec{"expressions", false}, argSpec{"hint", false}, argSpec{"distinct", false}, argSpec{"into", false}, argSpec{"from_", false}, argSpec{"operation_modifiers", false}, argSpec{"exclude", false}, argSpec{"partition_by", false}, argSpec{"emit", false}),
+	KindFrom:      defaultArgTypes,
+	// ksqlDB (beyond-upstream): `WITHIN <size> <unit> [(<before>, <after>)] [GRACE PERIOD ...]`
+	// between the joined relation and its ON criteria (SqlBase.g4 joinWindow), and the
+	// DROP ... DELETE TOPIC / INSERT INTO ... WITH (...) clauses on their own statements.
+	KindJoin:                {{"this", true}, {"on", false}, {"within", false}, {"grace", false}, {"side", false}, {"kind", false}, {"using", false}, {"method", false}, {"global_", false}, {"hint", false}, {"match_condition", false}, {"directed", false}, {"expressions", false}, {"pivots", false}},
 	KindTable:               {{"this", false}, {"alias", false}, {"schema", false}, {"catalog", false}, {"laterals", false}, {"joins", false}, {"pivots", false}, {"hints", false}, {"system_time", false}, {"version", false}, {"format", false}, {"pattern", false}, {"ordinality", false}, {"when", false}, {"only", false}, {"partition", false}, {"changes", false}, {"rows_from", false}, {"sample", false}, {"indexed", false}},
 	KindTableAlias:          {{"this", false}, {"columns", false}},
 	KindWhere:               defaultArgTypes,
@@ -1358,7 +1366,7 @@ var argTypes = map[Kind][]argSpec{
 	// The pinned .reference/sqlglot-v30.12.0/sqlglot/expressions/dml.py:195-215
 	// Insert has no "replace" arg. The mysql-replace extension appends it so
 	// existing Insert arg ordering stays stable.
-	KindInsert:     {{"hint", false}, {"with_", false}, {"is_function", false}, {"this", false}, {"expression", false}, {"conflict", false}, {"returning", false}, {"overwrite", false}, {"exists", false}, {"alternative", false}, {"where", false}, {"using", false}, {"ignore", false}, {"by_name", false}, {"stored", false}, {"partition", false}, {"settings", false}, {"source", false}, {"default", false}, {"replace", false}},
+	KindInsert:     {{"hint", false}, {"with_", false}, {"is_function", false}, {"this", false}, {"expression", false}, {"conflict", false}, {"returning", false}, {"overwrite", false}, {"exists", false}, {"alternative", false}, {"where", false}, {"using", false}, {"ignore", false}, {"by_name", false}, {"stored", false}, {"partition", false}, {"settings", false}, {"source", false}, {"default", false}, {"replace", false}, {"properties", false}},
 	KindUpdate:     {{"with_", false}, {"this", false}, {"expressions", false}, {"from_", false}, {"where", false}, {"returning", false}, {"order", false}, {"limit", false}, {"options", false}, {"hint", false}},
 	KindDelete:     {{"with_", false}, {"this", false}, {"using", false}, {"where", false}, {"returning", false}, {"order", false}, {"limit", false}, {"tables", false}, {"cluster", false}, {"hint", false}},
 	KindMerge:      {{"this", true}, {"using", true}, {"on", false}, {"using_cond", false}, {"whens", true}, {"with_", false}, {"returning", false}},
@@ -1575,7 +1583,7 @@ var argTypes = map[Kind][]argSpec{
 	// exists, actions, ...) — the order repr() reflects — rather than the class
 	// arg_types declaration order (ddl.py: this, kind, actions, exists, ...).
 	KindAlter:        {{"this", false}, {"kind", true}, {"exists", false}, {"actions", true}, {"only", false}, {"options", false}, {"cluster", false}, {"not_valid", false}, {"check", false}, {"cascade", false}, {"iceberg", false}},
-	KindDrop:         {{"this", false}, {"kind", false}, {"expressions", false}, {"exists", false}, {"temporary", false}, {"materialized", false}, {"cascade", false}, {"restrict", false}, {"constraints", false}, {"purge", false}, {"cluster", false}, {"concurrently", false}, {"sync", false}, {"iceberg", false}, {"force", false}},
+	KindDrop:         {{"this", false}, {"kind", false}, {"expressions", false}, {"exists", false}, {"temporary", false}, {"materialized", false}, {"cascade", false}, {"restrict", false}, {"constraints", false}, {"purge", false}, {"cluster", false}, {"concurrently", false}, {"sync", false}, {"iceberg", false}, {"force", false}, {"delete_topic", false}},
 	KindAlterColumn:  {{"this", true}, {"exists", false}, {"dtype", false}, {"collate", false}, {"using", false}, {"default", false}, {"drop", false}, {"comment", false}, {"allow_null", false}, {"visible", false}, {"rename_to", false}},
 	KindModifyColumn: {{"this", true}, {"rename_from", false}},
 	KindAlterIndex:   {{"this", true}, {"visible", true}},
@@ -2174,6 +2182,10 @@ var argTypes = map[Kind][]argSpec{
 	KindUtcDate:                {},
 	KindUtcTime:                {{"this", false}},
 	KindWidthBucket:            {{"this", true}, {"min_value", false}, {"max_value", false}, {"num_buckets", false}, {"threshold", false}},
+	// ksqlDB (beyond-upstream): the WINDOW clause of a query — TUMBLING/HOPPING/SESSION
+	// with SIZE (plus ADVANCE BY for HOPPING) and the optional RETENTION / GRACE PERIOD
+	// clauses (SqlBase.g4 windowExpression). Durations are bare `1 HOUR` Interval nodes.
+	KindKsqlWindow: {{"kind", true}, {"alias", false}, {"size", true}, {"advance", false}, {"retention", false}, {"grace", false}},
 }
 
 var traitsOf = map[Kind]Trait{
@@ -3636,6 +3648,7 @@ var className = map[Kind]string{
 	KindUtcDate:                "UtcDate",
 	KindUtcTime:                "UtcTime",
 	KindWidthBucket:            "WidthBucket",
+	KindKsqlWindow:             "KsqlWindow",
 }
 
 // varLenArgs is the authoritative is_var_len_args=True set (mirroring the upstream Func

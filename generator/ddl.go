@@ -96,7 +96,13 @@ func (g *Generator) dropSQL(e expressions.Expression) string {
 	if boolValue(e.Arg("force")) {
 		force = " FORCE"
 	}
-	return "DROP" + temporary + materialized + iceberg + " " + kind + concurrentlySQL + existsSQL + this + onCluster + exprs + cascade + restrict + constraints + purge + sync + force
+	// ksqlDB `DROP {STREAM|TABLE} (IF EXISTS)? sourceName (DELETE TOPIC)?`
+	// (SqlBase.g4:88-90): DELETE TOPIC trails the source name.
+	deleteTopic := ""
+	if boolValue(e.Arg("delete_topic")) && g.isDialect("ksqldb") {
+		deleteTopic = " DELETE TOPIC"
+	}
+	return "DROP" + temporary + materialized + iceberg + " " + kind + concurrentlySQL + existsSQL + this + deleteTopic + onCluster + exprs + cascade + restrict + constraints + purge + sync + force
 }
 
 // alterColumnSQL ports altercolumn_sql (generator.py:4157-4191) and the MySQL override

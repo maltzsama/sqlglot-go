@@ -1107,6 +1107,8 @@ func buildDialectByName(name string) (*Dialect, error) {
 		return Presto(), nil
 	case "trino":
 		return Trino(), nil
+	case "ksqldb", "ksql":
+		return KsqlDB(), nil
 	case "hive":
 		return Hive(), nil
 	case "athena":

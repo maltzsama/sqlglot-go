@@ -128,9 +128,9 @@ differential-check against the pinned Python):
   round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
 - DIALECTS: base, MySQL, Postgres, TSQL, ClickHouse, StarRocks, Doris, Presto, Trino, Hive, Athena,
   Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery (#41), DuckDB (#39),
-  Snowflake (#40), SQLite (#38), MariaDB (#37, a beyond-upstream identity over MySQL), Dremio and
-  Teradata are ported; upstream ships 30+ and the rest are out of scope for now (queued: DAX,
-  Tableau).
+  Snowflake (#40), SQLite (#38), MariaDB (#37, a beyond-upstream identity over MySQL), Dremio,
+  Teradata and ksqlDB (a beyond-upstream dialect ported from Confluent's SqlBase.g4) are ported;
+  upstream ships 30+ and the rest are out of scope for now (queued: DAX, Tableau).
 - TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): **DONE.** `VERSION_PHRASES`
   (parser/parser.go:1682, ports parser.py:1738-1745) and `_parse_version` (parser/parser.go:1695,
   ports parser.py:5120-5146) are wired into table parsing, and the v30.17.0 keyword removals are
@@ -1109,3 +1109,29 @@ Teradata `ARRAY_SIZE_NAME = CARDINALITY`, the `eliminate_distinct_on` /
 entries for the whole `STR_POSITION` family (`STR_POSITION`/`STRPOS`/`INSTR`/`CHARINDEX`/`LOCATE`),
 the `ArrayFilter` default SQL name (`FILTER`), and mysql's `INSTR` moved to the shared base map
 (verified against the pinned oracle that `parsers/mysql.py` does not register it).
+
+## ksqlDB dialect — DONE (beyond-upstream)
+
+ksqlDB has no upstream sqlglot dialect, so this is a beyond-upstream port rather than a 1:1 one:
+`dialects/ksqldb.go` (tokenizer/flags overlay), `parser/dialect_ksqldb.go` (statement and
+query-modifier parsers) and `generator/dialect_ksqldb.go` (dispatch + type map + clause order)
+are written against Confluent's `ksqldb-parser/src/main/antlr4/io/confluent/ksql/parser/SqlBase.g4`,
+pinned in the local `ksql` checkout. Registered as `ksqldb` with the alias `ksql`.
+
+Structured: the whole statement surface — `CREATE {STREAM|TABLE|SOURCE …|CONNECTOR|TYPE}` (with
+`tableElements`, `WITH (…)` and the `AS query` forms), `INSERT` (values and query forms),
+`DROP` (incl. `DELETE TOPIC`), `(LIST|SHOW) …`, `DESCRIBE`/`EXPLAIN`, `ALTER … ADD [COLUMN] …`,
+`TERMINATE`/`PAUSE`/`RESUME`, `SET`/`UNSET`/`DEFINE`/`UNDEFINE` — plus the query's `WINDOW`
+(TUMBLING/HOPPING/SESSION), `PARTITION BY`, `EMIT {CHANGES|FINAL}` and the join's
+`WITHIN … [GRACE PERIOD …]`. `PRINT`/`ASSERT`/`RUN SCRIPT` stay verbatim `Command`s (their
+`printClause`/`timeout` tails are not modeled). Engine-invalid forms fail closed to `Command`
+or a parse error; the rules are in DEVIATIONS "Beyond-upstream dialects".
+
+Corpus: 55 `dialect_identity.jsonl` rows at **55/55**, and 18 `upstream_extensions.jsonl` rows
+(each `upstream: parse_error`, since pinned upstream raises `Unknown dialect`). Guarding tests:
+`ksqldb_test.go`.
+
+One shared parser fix fell out of it: ksqlDB's `EMIT` is rejected as an implicit alias in the
+two alias positions (`parseTableAlias`, `parseAlias`), gated on the `EMIT (CHANGES|FINAL)`
+modifier spelling — without the guard, `FROM s EMIT CHANGES` aliased the preceding table to
+EMIT and stranded CHANGES, while a bare `FROM s emit` still aliases per SqlBase.g4.

@@ -6573,3 +6573,58 @@
 {"dialect": "", "sql": "VALUES (1) UNION SELECT * FROM x", "want": "SELECT * FROM (VALUES (1)) AS _values UNION SELECT * FROM x", "pretty": false}
 {"dialect": "", "sql": "WITH RECURSIVE T(n) AS (VALUES (1) UNION ALL SELECT n + 1 FROM t WHERE n < 100) SELECT SUM(n) FROM t", "want": "WITH RECURSIVE T(n) AS (SELECT * FROM (VALUES (1)) AS _values UNION ALL SELECT n + 1 FROM t WHERE n < 100) SELECT SUM(n) FROM t", "pretty": false}
 {"dialect": "", "sql": "WITH RECURSIVE T(n, m) AS (VALUES (1, 2) UNION ALL SELECT n + 1, n + 2 FROM t) SELECT SUM(n) FROM t", "want": "WITH RECURSIVE T(n, m) AS (SELECT * FROM (VALUES (1, 2)) AS _values UNION ALL SELECT n + 1, n + 2 FROM t) SELECT SUM(n) FROM t", "pretty": false}
+{"dialect": "ksqldb", "sql": "CREATE STREAM s (id INT, name STRING) WITH (KAFKA_TOPIC='t', VALUE_FORMAT='JSON')", "want": "CREATE STREAM s (id INT, name STRING) WITH (KAFKA_TOPIC='t', VALUE_FORMAT='JSON')", "pretty": false}
+{"dialect": "ksqldb", "sql": "CREATE OR REPLACE SOURCE STREAM s2 (a STRING) WITH (PARTITION_BY='a')", "want": "CREATE OR REPLACE SOURCE STREAM s2 (a STRING) WITH (PARTITION_BY='a')", "pretty": false}
+{"dialect": "ksqldb", "sql": "CREATE TABLE t AS SELECT id, COUNT(*) AS c FROM s GROUP BY id EMIT CHANGES", "want": "CREATE TABLE t AS SELECT id, COUNT(*) AS c FROM s GROUP BY id EMIT CHANGES", "pretty": false}
+{"dialect": "ksqldb", "sql": "CREATE OR REPLACE TABLE t2 (a INT) WITH (VALUE_FORMAT='AVRO')", "want": "CREATE OR REPLACE TABLE t2 (a INT) WITH (VALUE_FORMAT='AVRO')", "pretty": false}
+{"dialect": "ksqldb", "sql": "CREATE SINK CONNECTOR c WITH (CONNECTOR_CLASS='x')", "want": "CREATE SINK CONNECTOR c WITH (CONNECTOR_CLASS='x')", "pretty": false}
+{"dialect": "ksqldb", "sql": "CREATE SOURCE CONNECTOR c2 WITH (CONNECTOR_CLASS='y')", "want": "CREATE SOURCE CONNECTOR c2 WITH (CONNECTOR_CLASS='y')", "pretty": false}
+{"dialect": "ksqldb", "sql": "CREATE TYPE ty AS STRUCT<a INT>", "want": "CREATE TYPE ty AS STRUCT<a INT>", "pretty": false}
+{"dialect": "ksqldb", "sql": "INSERT INTO t (a, b) VALUES (1, 2)", "want": "INSERT INTO t (a, b) VALUES (1, 2)", "pretty": false}
+{"dialect": "ksqldb", "sql": "INSERT INTO t VALUES (1, 2)", "want": "INSERT INTO t VALUES (1, 2)", "pretty": false}
+{"dialect": "ksqldb", "sql": "INSERT INTO t WITH (KAFKA_TOPIC='x') SELECT a FROM s", "want": "INSERT INTO t WITH (KAFKA_TOPIC='x') SELECT a FROM s", "pretty": false}
+{"dialect": "ksqldb", "sql": "DROP STREAM s DELETE TOPIC", "want": "DROP STREAM s DELETE TOPIC", "pretty": false}
+{"dialect": "ksqldb", "sql": "DROP TABLE IF EXISTS t", "want": "DROP TABLE IF EXISTS t", "pretty": false}
+{"dialect": "ksqldb", "sql": "DROP CONNECTOR c", "want": "DROP CONNECTOR c", "pretty": false}
+{"dialect": "ksqldb", "sql": "DROP TYPE ty", "want": "DROP TYPE ty", "pretty": false}
+{"dialect": "ksqldb", "sql": "SHOW STREAMS", "want": "SHOW STREAMS", "pretty": false}
+{"dialect": "ksqldb", "sql": "SHOW ALL TOPICS", "want": "SHOW ALL TOPICS", "pretty": false}
+{"dialect": "ksqldb", "sql": "SHOW TOPICS EXTENDED", "want": "SHOW TOPICS EXTENDED", "pretty": false}
+{"dialect": "ksqldb", "sql": "LIST PROPERTIES", "want": "LIST PROPERTIES", "pretty": false}
+{"dialect": "ksqldb", "sql": "SHOW FUNCTIONS EXTENDED", "want": "SHOW FUNCTIONS EXTENDED", "pretty": false}
+{"dialect": "ksqldb", "sql": "LIST SOURCE CONNECTORS", "want": "LIST SOURCE CONNECTORS", "pretty": false}
+{"dialect": "ksqldb", "sql": "SHOW CONNECTOR PLUGINS", "want": "SHOW CONNECTOR PLUGINS", "pretty": false}
+{"dialect": "ksqldb", "sql": "LIST QUERIES", "want": "LIST QUERIES", "pretty": false}
+{"dialect": "ksqldb", "sql": "SHOW TYPES", "want": "SHOW TYPES", "pretty": false}
+{"dialect": "ksqldb", "sql": "DESCRIBE s", "want": "DESCRIBE s", "pretty": false}
+{"dialect": "ksqldb", "sql": "DESCRIBE s EXTENDED", "want": "DESCRIBE s EXTENDED", "pretty": false}
+{"dialect": "ksqldb", "sql": "DESCRIBE STREAMS EXTENDED", "want": "DESCRIBE STREAMS EXTENDED", "pretty": false}
+{"dialect": "ksqldb", "sql": "DESCRIBE FUNCTION f", "want": "DESCRIBE FUNCTION f", "pretty": false}
+{"dialect": "ksqldb", "sql": "DESCRIBE CONNECTOR c", "want": "DESCRIBE CONNECTOR c", "pretty": false}
+{"dialect": "ksqldb", "sql": "EXPLAIN query1", "want": "EXPLAIN query1", "pretty": false}
+{"dialect": "ksqldb", "sql": "EXPLAIN SELECT a FROM s", "want": "EXPLAIN SELECT a FROM s", "pretty": false}
+{"dialect": "ksqldb", "sql": "ALTER STREAM s ADD COLUMN z STRING", "want": "ALTER STREAM s ADD COLUMN z STRING", "pretty": false}
+{"dialect": "ksqldb", "sql": "ALTER TABLE t ADD COLUMN a INT, ADD COLUMN b STRING", "want": "ALTER TABLE t ADD COLUMN a INT, ADD COLUMN b STRING", "pretty": false}
+{"dialect": "ksqldb", "sql": "TERMINATE query1", "want": "TERMINATE query1", "pretty": false}
+{"dialect": "ksqldb", "sql": "TERMINATE ALL", "want": "TERMINATE ALL", "pretty": false}
+{"dialect": "ksqldb", "sql": "PAUSE ALL", "want": "PAUSE ALL", "pretty": false}
+{"dialect": "ksqldb", "sql": "RESUME q", "want": "RESUME q", "pretty": false}
+{"dialect": "ksqldb", "sql": "SET 'k' = 'v'", "want": "SET 'k' = 'v'", "pretty": false}
+{"dialect": "ksqldb", "sql": "UNSET 'k'", "want": "UNSET 'k'", "pretty": false}
+{"dialect": "ksqldb", "sql": "DEFINE x = 'y'", "want": "DEFINE x = 'y'", "pretty": false}
+{"dialect": "ksqldb", "sql": "UNDEFINE x", "want": "UNDEFINE x", "pretty": false}
+{"dialect": "ksqldb", "sql": "SELECT a FROM s WINDOW TUMBLING (SIZE 1 HOUR) WHERE a > 1 GROUP BY a HAVING COUNT(*) > 2 EMIT CHANGES", "want": "SELECT a FROM s WINDOW TUMBLING (SIZE 1 HOUR) WHERE a > 1 GROUP BY a HAVING COUNT(*) > 2 EMIT CHANGES", "pretty": false}
+{"dialect": "ksqldb", "sql": "SELECT a FROM s WINDOW w HOPPING (SIZE 30 SECONDS, ADVANCE BY 10 SECONDS) PARTITION BY a EMIT FINAL", "want": "SELECT a FROM s WINDOW w HOPPING (SIZE 30 SECONDS, ADVANCE BY 10 SECONDS) PARTITION BY a EMIT FINAL", "pretty": false}
+{"dialect": "ksqldb", "sql": "SELECT a FROM s WINDOW SESSION (5 MINUTES)", "want": "SELECT a FROM s WINDOW SESSION (5 MINUTES)", "pretty": false}
+{"dialect": "ksqldb", "sql": "SELECT a FROM s WINDOW TUMBLING (SIZE 1 HOUR)", "want": "SELECT a FROM s WINDOW TUMBLING (SIZE 1 HOUR)", "pretty": false}
+{"dialect": "ksqldb", "sql": "SELECT a FROM s WINDOW TUMBLING (SIZE 1 HOUR, RETENTION 24 HOURS, GRACE PERIOD 5 MINUTES)", "want": "SELECT a FROM s WINDOW TUMBLING (SIZE 1 HOUR, RETENTION 24 HOURS, GRACE PERIOD 5 MINUTES)", "pretty": false}
+{"dialect": "ksqldb", "sql": "SELECT a FROM s PARTITION BY a LIMIT 10", "want": "SELECT a FROM s PARTITION BY a LIMIT 10", "pretty": false}
+{"dialect": "ksqldb", "sql": "SELECT * FROM a JOIN b WITHIN 1 HOUR GRACE PERIOD 10 MINUTES ON a.id = b.id", "want": "SELECT * FROM a JOIN b WITHIN 1 HOUR GRACE PERIOD 10 MINUTES ON a.id = b.id", "pretty": false}
+{"dialect": "ksqldb", "sql": "SELECT * FROM a JOIN b WITHIN (1 HOUR, 2 HOURS) ON a.id = b.id", "want": "SELECT * FROM a JOIN b WITHIN (1 HOUR, 2 HOURS) ON a.id = b.id", "pretty": false}
+{"dialect": "ksqldb", "sql": "SELECT a, b -> c FROM s", "want": "SELECT a, b -> c FROM s", "pretty": false}
+{"dialect": "ksqldb", "sql": "PRINT t", "want": "PRINT t", "pretty": false}
+{"dialect": "ksqldb", "sql": "PRINT t FROM BEGINNING", "want": "PRINT t FROM BEGINNING", "pretty": false}
+{"dialect": "ksqldb", "sql": "RUN SCRIPT 'x.sql'", "want": "RUN SCRIPT 'x.sql'", "pretty": false}
+{"dialect": "ksqldb", "sql": "ASSERT NULL VALUES s KEY (1)", "want": "ASSERT NULL VALUES s KEY (1)", "pretty": false}
+{"dialect": "ksqldb", "sql": "ALTER TABLE t ADD a INT", "want": "ALTER TABLE t ADD COLUMN a INT", "pretty": false}
+{"dialect": "ksqldb", "sql": "ALTER STREAM s ADD z STRING", "want": "ALTER STREAM s ADD COLUMN z STRING", "pretty": false}

@@ -255,6 +255,7 @@ const (
 	minPassSQLite      = 136
 	minPassDremio      = 46
 	minPassTeradata    = 84
+	minPassKsqlDB      = 55
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
@@ -282,6 +283,7 @@ const (
 	minTotalSQLite      = 136
 	minTotalDremio      = 46
 	minTotalTeradata    = 84
+	minTotalKsqlDB      = 55
 )
 
 // TestCorpus is the single round-trip harness for both the base-dialect
@@ -351,6 +353,7 @@ func TestCorpus(t *testing.T) {
 		{"sqlite", minPassSQLite, minTotalSQLite},
 		{"dremio", minPassDremio, minTotalDremio},
 		{"teradata", minPassTeradata, minTotalTeradata},
+		{"ksqldb", minPassKsqlDB, minTotalKsqlDB},
 	}
 	var counts []string
 	for _, floor := range floors {

@@ -722,6 +722,12 @@ func (g *Generator) prependCtes(e expressions.Expression, sql string) string {
 }
 
 func (g *Generator) queryModifiers(e expressions.Expression, sqls ...string) string {
+	// ksqlDB's query (SqlBase.g4:117-127) orders WINDOW before WHERE, puts PARTITION BY
+	// between GROUP BY and HAVING, and renders EMIT just before the LIMIT clause —
+	// none of which the base order (generator.py:3271-3306) can express.
+	if g.isDialect("ksqldb") {
+		return g.ksqlQueryModifiers(e, sqls...)
+	}
 	limit := asExpression(e.Arg("limit"))
 	// generator.py:3275-3285 LIMIT_FETCH: rewrite between the LIMIT and FETCH spellings.
 	if g.dialect.LimitFetch == "FETCH" && limit != nil && limit.Kind() == expressions.KindLimit {
@@ -1229,6 +1235,19 @@ func (g *Generator) joinSQL(e expressions.Expression) string {
 	if exprs != "" {
 		thisSQL = thisSQL + "," + g.seg(exprs)
 	}
+	// ksqlDB `joinWindow: WITHIN withinExpression` (SqlBase.g4:251-252) renders between
+	// the joined relation and its ON criteria: `WITHIN <size>` or `WITHIN (<before>,
+	// <after>)`, each optionally followed by `GRACE PERIOD <size>`.
+	withinSQL := ""
+	if g.isDialect("ksqldb") {
+		within := g.sqlKey(e, "within")
+		if within != "" {
+			withinSQL = " WITHIN " + within
+		}
+		if grace := g.sqlKey(e, "grace"); grace != "" {
+			withinSQL += " GRACE PERIOD " + grace
+		}
+	}
 	if onSQL != "" {
 		onSQL = g.indent(onSQL, 0, nil, true, false)
 		space := " "
@@ -1257,7 +1276,7 @@ func (g *Generator) joinSQL(e expressions.Expression) string {
 		}
 	}
 	pivots := g.expressions(exprsOptions{expression: e, key: "pivots", emptySep: true, flat: true})
-	return g.seg(opSQL) + " " + thisSQL + matchCond + onSQL + pivots
+	return g.seg(opSQL) + " " + thisSQL + withinSQL + matchCond + onSQL + pivots
 }
 
 func (g *Generator) clusterSQL(e expressions.Expression) string {
@@ -1782,7 +1801,15 @@ func (g *Generator) insertSQL(e expressions.Expression) string {
 	if source != "" {
 		source = "TABLE " + source
 	}
-	sql := keyword + hint + alternative + ignore + this + stored + byName + exists + partitionBy + settings + where + using + expressionSQL + source
+	// ksqlDB `INSERT INTO sourceName (WITH tableProperties)? query`
+	// (SqlBase.g4:86): the WITH clause sits between the target and the source.
+	withProperties := ""
+	if g.isDialect("ksqldb") {
+		if props := g.withPropertiesSQL(asExpression(e.Arg("properties"))); props != "" {
+			withProperties = " " + props
+		}
+	}
+	sql := keyword + hint + alternative + ignore + this + stored + byName + exists + withProperties + partitionBy + settings + where + using + expressionSQL + source
 	return g.prependCtes(e, sql)
 }
 
