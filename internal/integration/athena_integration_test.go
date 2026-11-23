@@ -1,4 +1,4 @@
-package sqlglot_test
+package integration
 
 import (
 	"testing"

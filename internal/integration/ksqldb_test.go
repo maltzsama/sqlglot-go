@@ -1,4 +1,4 @@
-package sqlglot_test
+package integration
 
 import (
 	"testing"
@@ -78,6 +78,21 @@ var ksqlRoundTrips = []string{
 	"PRINT t FROM BEGINNING",
 	"RUN SCRIPT 'x.sql'",
 	"ASSERT NULL VALUES s KEY (1)",
+}
+
+func assertRoundTrip(t *testing.T, dialect, sql, want string) {
+	t.Helper()
+	expr, err := sqlglot.ParseOne(sql, dialect)
+	if err != nil {
+		t.Fatalf("%s: ParseOne(%q): %v", dialect, sql, err)
+	}
+	got, err := sqlglot.Generate(expr, dialect, generator.Options{})
+	if err != nil {
+		t.Fatalf("%s: Generate(%q): %v", dialect, sql, err)
+	}
+	if got != want {
+		t.Fatalf("%s: %q -> %q, want %q", dialect, sql, got, want)
+	}
 }
 
 // TestKsqlDBRoundTrip is the ksqlDB identity gate: each statement of SqlBase.g4 that the
