@@ -283,7 +283,7 @@ func (p *Parser) setPivotColumns(pivot exp.Expression, aggregations []exp.Expres
 					parts = append(parts, sql)
 					continue
 				}
-				// GenerateFunc may be unconfigured (see parser.go:4354); fall back to the
+				// GenerateFunc may be unconfigured (see parser.go:3633); fall back to the
 				// dialect-independent name rather than failing the parse.
 			}
 			parts = append(parts, fld.AliasOrName())

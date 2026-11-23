@@ -1700,10 +1700,10 @@ var argTypes = map[Kind][]argSpec{
 	// Expression default (mirroring e.g. KindLogicalOr above).
 	KindSlice:    {{"this", false}, {"expression", false}, {"step", false}},
 	KindNational: defaultArgTypes,
-	// range-ops cluster (parser.go parseRange/parseIs/columnOperators). All the plain
-	// Binary subclasses below inherit Binary's {"this": True, "expression": True}
-	// verbatim (core.py:1623/1624); only ArrayOverlaps/JSON/Operator/MatchAgainst/
-	// JSONArrayContains override with extra fields.
+	// range-ops cluster (parseRange/parseIs in parser_predicates.go, columnOperators in
+	// parser.go). All the plain Binary subclasses below inherit Binary's {"this": True,
+	// "expression": True} verbatim (core.py:1623/1624); only ArrayOverlaps/JSON/Operator/
+	// MatchAgainst/JSONArrayContains override with extra fields.
 	KindGlob:                    {{"this", true}, {"expression", true}},
 	KindMatch:                   {{"this", true}, {"expression", true}},
 	KindOverlaps:                {{"this", true}, {"expression", true}},

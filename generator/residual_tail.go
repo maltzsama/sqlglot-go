@@ -63,7 +63,7 @@ func (g *Generator) bytestringSQL(e expressions.Expression) string {
 		// Upstream casts exp.cast(delimited_byte_string, ...) (generator.py:1636-1643), which
 		// maybe-parses the rendered literal back under this dialect — parser.py:1223 rebuilds the
 		// ByteString with is_bytes = BYTE_STRING_IS_BYTES_TYPE or None (the Go parser does the
-		// same at parser.go:2847). A fresh ByteString must carry that same flag, or BigQuery's
+		// same at parser.go:2269). A fresh ByteString must carry that same flag, or BigQuery's
 		// branch below re-enters itself forever: the child would again read as a non-bytes literal
 		// needing a CAST, cycling bytestringSQL -> castSQL -> bytestringSQL (stack overflow).
 		// Cast the re-parse directly rather than a LiteralString, which would re-quote it as a

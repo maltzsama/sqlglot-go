@@ -239,7 +239,7 @@ func TestReviewFindingsFixes(t *testing.T) {
 // byte-string literal to a dialect whose ByteStringIsBytesType differs from the node's is_bytes
 // flag must rebuild the child carrying the *target* dialect's flag, exactly as upstream's
 // maybe_parse does when exp.cast re-parses the rendered literal (parser.py:1223:
-// is_bytes = BYTE_STRING_IS_BYTES_TYPE or None; the Go parser mirrors it at parser.go:2847).
+// is_bytes = BYTE_STRING_IS_BYTES_TYPE or None; the Go parser mirrors it at parser.go:2269).
 // Without the flag the child reads as a literal still needing a CAST, and bytestringSQL
 // re-enters its own cast-wrap branch forever — the first case below crashed the test binary
 // with a stack overflow before the fix.
