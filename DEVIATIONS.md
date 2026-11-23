@@ -426,6 +426,67 @@ so `generator` cannot import `optimizer`). Two consequences:
 
 Guarding test: `TestTeradataDateAdd`.
 
+## Beyond-upstream dialects
+
+A dialect upstream does not ship at all. There is no Python oracle for these — pinned v30.17.0
+raises `Unknown dialect` on every read — so each construct is registered in
+`testdata/upstream_extensions.jsonl` with `upstream: "parse_error"`, and the pin-tripwire
+(`TestUpstreamExtensionsTripwire`) fires the day upstream adds the dialect. The parse/generate
+identity gate is `testdata/dialect_identity.jsonl` (`dialect: ksqldb`, floors in `corpus_test.go`).
+
+### ksqlDB (`ksqldb`, alias `ksql`)
+
+Ported from Confluent `ksqldb-parser/src/main/antlr4/io/confluent/ksql/parser/SqlBase.g4`
+(verified against the ksqlDB source tree). Tokenizer/flags overlay in `dialects/ksqldb.go`,
+statement and query-modifier parsers in `parser/dialect_ksqldb.go`, rendering in
+`generator/dialect_ksqldb.go` (plus four guarded splices in the shared generators: the query
+clause order, the join's `WITHIN` window, `INSERT`'s `WITH` clause and `DROP`'s `DELETE TOPIC`).
+
+| ksqlDB construct | node |
+|---|---|
+| `CREATE [OR REPLACE] [SOURCE] {STREAM\|TABLE} [IF NOT EXISTS] name [(cols)] [WITH (…)] [AS query]`, `CREATE {SINK\|SOURCE} CONNECTOR`, `CREATE TYPE` | `Create` with `kind` `"STREAM"`/`"TABLE"`/`"SOURCE STREAM"`/`"SINK CONNECTOR"`/`"SOURCE CONNECTOR"`/`"TYPE"` |
+| `INSERT INTO t [(cols)] VALUES (…)`, `INSERT INTO t [WITH (…)] query` | `Insert` + `properties` |
+| `DROP {STREAM\|TABLE} [IF EXISTS] name [DELETE TOPIC]`, `DROP {CONNECTOR\|TYPE}` | `Drop` + `delete_topic` |
+| `(LIST\|SHOW) … [EXTENDED]` | `Show{this: "<VERB> <PHRASE>"}` — the verb is carried in `this` so `LIST` and `SHOW` stay distinct; `EXTENDED` → `full` |
+| `DESCRIBE … [EXTENDED]`, `DESCRIBE {FUNCTION\|CONNECTOR} x` | `Describe` — ksqlDB's `EXTENDED` is a **suffix**, so it lands in `style`, not the prefix `style` the base generator renders |
+| `EXPLAIN (stmt\|identifier)` | `Describe{kind: "EXPLAIN"}` (same shape as `pg-explain`) |
+| `ALTER {STREAM\|TABLE} t ADD [COLUMN] name type [, …]` | `Alter{kind, actions: [ColumnDef]}` |
+| `TERMINATE\|PAUSE\|RESUME (id\|ALL)` | `Kill{kind: <verb>}` |
+| `SET 'k' = 'v'`, `UNSET 'k'`, `DEFINE x = 'v'`, `UNDEFINE x` | `Set` — `tag` is the DEFINE/UNDEFINE discriminator, `unset` the UNSET/UNDEFINE one; a plain `SET` renders through base `setSQL` |
+| `WINDOW <name>? {TUMBLING\|HOPPING\|SESSION} (…)` | one `KindKsqlWindow` in `Select.windows`; the `WINDOW ` keyword is prefixed by `ksqlQueryModifiers`, so the node renders its body only |
+| `PARTITION BY …` | `Select.partition_by` |
+| `EMIT {CHANGES\|FINAL}` | `Select.emit` as a raw `Var` |
+| join `WITHIN <size> [(before, after)] [GRACE PERIOD <size>]` | `Join.within` (`Interval`, or a two-`Interval` `Tuple`) + `Join.grace` |
+| window/duration sizes (`1 HOUR`) | bare `Interval{this, unit}` — ksqlDB has no `INTERVAL` keyword here |
+| `a -> b` | `JSONExtract` rendered as the `->` operator |
+| `STRING` type | `DTypeText` mapped back to `STRING` (base would emit `TEXT`, which ksqlDB has no keyword for) |
+
+**Deliberately not modeled** (verbatim `Command`, still round-trip-stable): `PRINT … printClause`,
+`ASSERT … timeout`, `RUN SCRIPT`. Their trailing clauses are not worth a node.
+
+**Fail closed** — ksqlDB's grammar rejects these, so the port refuses to structure them and the
+statement degrades to a raw `Command` instead of admitting SQL the engine would refuse:
+`CREATE … (cols) … AS query` (the two CREATE forms are disjoint, SqlBase.g4:74-83),
+`INSERT INTO t (cols) SELECT …` and `INSERT INTO t WITH (…) VALUES …` (the two INSERT forms are
+disjoint, SqlBase.g4:86-87), and a dangling `EMIT` / `WINDOW` / `PARTITION BY` clause (each is
+peeked before it is consumed, so a malformed clause leaves its tokens in place and the statement
+errors out rather than silently dropping the clause).
+
+**Cross-cutting base change:** ksqlDB's `EMIT` is rejected as an implicit alias in the two alias
+positions — `parseTableAlias` (table alias in `FROM s EMIT CHANGES`) and `parseAlias` (expression
+alias in `PARTITION BY a EMIT CHANGES`) — via a `dialectIs("ksqldb")` guard in each. The guard
+fires only on the modifier spelling (EMIT followed by CHANGES/FINAL): EMIT is nonReserved
+(SqlBase.g4:428), so a bare `FROM s emit` / `SELECT a emit` still aliases exactly as ksqlDB's
+`aliasedRelation: relationPrimary (AS? sourceName)?` allows. Upstream computes
+`TABLE_ALIAS_TOKENS`/`ALIAS_TOKENS` once from the base `ID_VAR_TOKENS` (parsers/base.py:771), so
+a dialect's `ID_VAR_TOKENS` additions are never implicit-alias candidates; merging them here
+made `EMIT` swallow the preceding expression. The additions still apply everywhere else
+(`SELECT emit FROM t`, `SELECT a AS emit FROM t`).
+Guarding tests: `TestKsqlDBRoundTrip`, `TestKsqlDBFailClosed`.
+
+Guarding tests: `ksqldb_test.go` (`TestKsqlDBRoundTrip`, `TestKsqlDBAST`, `TestKsqlDBFailClosed`,
+`TestKsqlDBPrintStaysCommand`, `TestKsqlDBTypes`, `TestKsqlDBBaseDegrades`).
+
 ## 2. Cross-dialect-only deviations (never affect same-dialect round-trip)
 
 Cross-dialect transpilation between the registered dialects is exercised and gap-tracked by

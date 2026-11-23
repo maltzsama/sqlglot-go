@@ -7,7 +7,7 @@ and **lineage** build on, and the rest of the optimizer with its `optimize()` ru
 **not** a full port of sqlglot: cross-dialect transpilation *between* the registered dialects is
 verified against upstream's `validate_all` pairs (#33), but dialects beyond the ones `dialects.GetOrRaise` registers (base, MySQL, MariaDB, Postgres, Presto, Trino, Hive, Athena,
 TSQL, ClickHouse, StarRocks, Doris, Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark,
-Databricks, BigQuery, DuckDB, Snowflake, SQLite, MariaDB, Dremio, Teradata) are out of scope for now. This repo is
+Databricks, BigQuery, DuckDB, Snowflake, SQLite, MariaDB, Dremio, Teradata, ksqlDB) are out of scope for now. This repo is
 the SQL engine only; it has no application-specific code.
 
 ## Source of truth (READ THIS FIRST, always)
@@ -55,14 +55,14 @@ correctness rationale (matches the DB) or an explicit, tracked feature decision 
 `go test ./...` is green. The parse → generate pipeline is at **100% round-trip parity** for base +
 MySQL + Postgres — **1876/1876** base-corpus cases (base 980/980, MySQL 428/428, Postgres 468/468),
 and every registered dialect meets its floor in the per-dialect corpus
-(`testdata/dialect_identity.jsonl`, 6575 records); the open rows are 35 DuckDB cases and 333
+(`testdata/dialect_identity.jsonl`, 6632 records); the open rows are 35 DuckDB cases and 332
 Snowflake cases (`testdata/parity_gaps.txt`). Cross-dialect transpilation is verified the same way
 against upstream's `validate_all` read/write pairs (`testdata/transpile_corpus.jsonl`,
 `TestTranspileCorpus`): 6326/8881 pairs pass, with the open pairs in `testdata/transpile_gaps.txt`.
 AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
 `exp.Command` where upstream builds a structured node (`fidelity_test.go` +
 `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
-Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery, DuckDB, Snowflake, SQLite, MariaDB, Dremio, and Teradata: the
+Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery, DuckDB, Snowflake, SQLite, MariaDB, Dremio, Teradata, and ksqlDB: the
 tokenizer, the AST + node model, the parser, the generator (`Expression → SQL`),
 `schema.MappingSchema` + `DataType.build`, the `qualify` pass (qualify_tables → normalize_identifiers →
 qualify_columns → quote_identifiers → validate), `traverse_scope` + the full `Scope` API, and the

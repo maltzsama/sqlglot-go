@@ -452,6 +452,29 @@ const (
 	// ClickHouse cluster (dialects/clickhouse.py:110): the PROJECTION keyword opening a
 	// CREATE TABLE projection definition.
 	PROJECTION
+	// ksqlDB (Confluent ksqlDB, ksqldb-parser/SqlBase.g4) — a beyond-upstream dialect: sqlglot
+	// ships no ksql dialect, so these keywords have no upstream token. EMIT is a query-modifier
+	// root (KEYED lookup in the QUERY_MODIFIER_PARSERS overlay) and the rest are statement roots
+	// (KEYED lookup in the STATEMENT_PARSERS overlay). sqlglot-go tracks this in DEVIATIONS.md
+	// "Beyond-upstream dialects" and testdata/upstream_extensions.jsonl.
+	EMIT
+	PRINT
+	TERMINATE
+	PAUSE
+	RESUME
+	UNSET
+	DEFINE
+	UNDEFINE
+	ASSERT
+	// ksqlDB EXPLAIN/RUN: upstream maps the EXPLAIN *keyword* to COMMAND (raw-text statements)
+	// and has no RUN token at all; under ksqlDB both are structured statement roots.
+	EXPLAIN
+	RUN
+	// ksqlDB WITHIN (SqlBase.g4 joinWindow) is a reserved word sitting between the joined
+	// relation and its ON criteria. It needs its own token so it is never swallowed as a
+	// table alias (tableAliasTokens is keyed by token type, and a plain VAR would alias),
+	// letting the join parser see it as the join-window clause.
+	WITHIN
 	SENTINEL
 )
 
@@ -901,6 +924,18 @@ var tokenTypeNames = map[TokenType]string{
 	EXPORT:                  "EXPORT",
 	HIVE_TOKEN_STREAM:       "HIVE_TOKEN_STREAM",
 	PROJECTION:              "PROJECTION",
+	EMIT:                    "EMIT",
+	PRINT:                   "PRINT",
+	TERMINATE:               "TERMINATE",
+	PAUSE:                   "PAUSE",
+	RESUME:                  "RESUME",
+	UNSET:                   "UNSET",
+	DEFINE:                  "DEFINE",
+	UNDEFINE:                "UNDEFINE",
+	ASSERT:                  "ASSERT",
+	EXPLAIN:                 "EXPLAIN",
+	RUN:                     "RUN",
+	WITHIN:                  "WITHIN",
 	SENTINEL:                "SENTINEL",
 }
 

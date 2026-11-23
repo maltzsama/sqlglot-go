@@ -1814,6 +1814,14 @@ func (p *Parser) parseTableAlias(aliasTokensArg map[tokens.TokenType]bool) exp.E
 	if p.curr.TokenType == tokens.STRAIGHT_JOIN {
 		return nil
 	}
+	// ksqlDB's `EMIT (CHANGES|FINAL)` is a query modifier, never an implicit table alias
+	// (SqlBase.g4:117-127 places it after the relation). EMIT is nonReserved — so a bare
+	// `FROM s emit` still aliases — and only the modifier spelling (EMIT followed by
+	// CHANGES/FINAL) is rejected here; otherwise `FROM s EMIT CHANGES` would alias the
+	// table to EMIT and strand CHANGES.
+	if p.dialectIs("ksqldb") && p.curr.TokenType == tokens.EMIT && ksqlEmitModifierAhead(p) {
+		return nil
+	}
 	anyToken := p.match(tokens.ALIAS)
 	// v30.17.0 (parser.py:4261-4264): START is never an implicit alias when followed by
 	// WITH — it would swallow the beginning of a START WITH ... CONNECT BY clause.
@@ -1966,6 +1974,11 @@ func (p *Parser) parseJoinBase(skipJoinToken bool, parseBracket bool, aliasToken
 		kwargs["directed"] = true
 	}
 	joinThis := asExpr(kwargs["this"])
+	// ksqlDB `joinedSource: joinType JOIN aliasedRelation joinWindow? joinCriteria`
+	// (SqlBase.g4:248-251): the WITHIN window sits between the joined relation and ON.
+	if p.dialectIs("ksqldb") {
+		p.parseKsqlJoinWindow(kwargs)
+	}
 	if p.match(tokens.ON) {
 		kwargs["on"] = p.parseDisjunction()
 	} else if p.match(tokens.USING) {
@@ -3451,6 +3464,13 @@ func (p *Parser) parseAlias(this exp.Expression, explicit bool) exp.Expression {
 	if p.canParseNamedWindow() {
 		return this
 	}
+	// ksqlDB's `EMIT (CHANGES|FINAL)` is a query modifier, never an implicit expression alias
+	// (SqlBase.g4:117-127 places it after the relation). EMIT is nonReserved — a bare
+	// `SELECT a emit` still aliases — and only the modifier spelling is rejected here;
+	// otherwise `PARTITION BY a EMIT CHANGES` would alias the last value expression to EMIT.
+	if p.dialectIs("ksqldb") && p.curr.TokenType == tokens.EMIT && ksqlEmitModifierAhead(p) {
+		return this
+	}
 	anyToken := p.match(tokens.ALIAS)
 	comments := p.prevComments
 	if explicit && !anyToken {
@@ -3641,6 +3661,17 @@ func (p *Parser) parseIdVarCore(anyToken bool, toks map[tokens.TokenType]bool) e
 		}
 	}
 	return expression
+}
+
+// ksqlEmitModifierAhead reports whether the current EMIT token starts ksqlDB's query-modifier
+// spelling `EMIT (CHANGES | FINAL)` (SqlBase.g4:126) rather than being a bare nonReserved word.
+// Used by the implicit-alias guards so `FROM s emit` still aliases while `FROM s EMIT CHANGES`
+// leaves EMIT to the modifier loop (DEVIATIONS.md, beyond-upstream ksqlDB dialect).
+func ksqlEmitModifierAhead(p *Parser) bool {
+	if !p.next.IsValid() || textMatchExcludedTokens[p.next.TokenType] {
+		return false
+	}
+	return ksqlEmitResults[stringsUpper(p.next.Text)]
 }
 
 // idVarTokensFor is ID_VAR_TOKENS plus the dialect's ID_VAR_TOKENS additions.
