@@ -1,22 +1,67 @@
-# sqlglot-go — roadmap
+# sqlglot-go roadmap
 
-Goal: a faithful Go port of sqlglot v30.17.0's **parse → AST → generate** core (tokenizer, AST,
-parser, generator, schema) plus the `qualify` + `scope` optimizer passes that column qualification and
-**lineage** build on, for **base + MySQL + Postgres**. This is deliberately **not** a full port of
-sqlglot: the other 30+ dialects are out of scope for now, while cross-dialect transpilation between
-the registered dialects is verified against upstream's `validate_all` corpus (#33). Port 1:1 from
-.reference/sqlglot-v30.17.0/ file-by-file; port the matching upstream tests as the oracle.
+sqlglot-go tracks the tokenizer, parser, AST, generator, schema, and optimizer of
+[tobymao/sqlglot](https://github.com/tobymao/sqlglot) v30.17.0. Port behavior from the pinned
+Python checkout and use the matching upstream tests as the oracle. The
+[contributor guide](./CONTRIBUTING.md) covers local checks and [DEVIATIONS.md](./DEVIATIONS.md)
+records deliberate differences.
 
-Status: the parse → generate round-trip is at **100% parity on the ported upstream identity corpus** —
-1847/1847 cases (base 955/955, MySQL 424/424, Postgres 468/468), enforced by a monotonic corpus floor
-(`corpus_test.go` + `testdata/parity_gaps.txt`, now empty) and an AST-fidelity gate (`fidelity_test.go`
-+ `testdata/fidelity_cases.txt`: no statement fakes a round-trip via a raw-text `exp.Command` where
-upstream builds a structured node). The initial slices below stood up the parse→qualify→scope pipeline;
-the residual-tail and CREATE-properties fidelity slices then closed the last round-trip + fidelity gaps.
-Slices 0–5 are done and committed; each landed `go test ./...` green. **The CURRENT remaining work is
-the optimizer** — see "Remaining work" after the slice ledger.
+## Current status
 
-Slices (historical ledger; each landed `go test ./...` green before the next):
+- **Identity corpus.** 7,242 of 7,609 cases pass, including all 1,876 base, MySQL, and
+  PostgreSQL cases. The remaining rows are DuckDB (35) and Snowflake (332). The
+  [README dialect table](./README.md#dialects-and-verified-coverage) shows the per-dialect results.
+- **Transpile corpus.** 6,326 of 8,881 upstream `validate_all` read/write pairs pass. These
+  include same-dialect pairs. The initial harness shipped in
+  [#33](https://github.com/maltzsama/sqlglot-go/issues/33).
+- **Optimizer.** The default rule pipeline, including qualification and scope analysis, is
+  ported. The full `optimizer.sql`, TPC-H, and TPC-DS suites pass. Standalone annotation and
+  simplification fixtures have separate gap ledgers.
+- **AST fidelity.** The [fidelity corpus](./testdata/fidelity_cases.txt) checks structured
+  parsing against upstream. The [extension ledger](./testdata/upstream_extensions.jsonl)
+  tracks additional grammar and its reconciliation with future upstream versions.
+
+## Remaining work
+
+GitHub issues track scope and progress. The checked-in ledgers identify the exact failing
+cases. Close gaps in small slices, preserve existing corpus rows, and raise the corresponding
+pass floors as fixes land.
+
+| Work | Tracking | Evidence |
+| --- | --- | --- |
+| Improve read/write parity between registered dialects | [#90](https://github.com/maltzsama/sqlglot-go/issues/90) | [Transpile gaps](./testdata/transpile_gaps.txt) |
+| Close DuckDB identity gaps | [#91](https://github.com/maltzsama/sqlglot-go/issues/91) | [Identity gaps](./testdata/parity_gaps.txt) |
+| Close Snowflake identity gaps, including historical table clauses | [#92](https://github.com/maltzsama/sqlglot-go/issues/92) | [Identity gaps](./testdata/parity_gaps.txt) |
+| Port dialect-aware JSONPath construction for `->` and `->>` | [#93](https://github.com/maltzsama/sqlglot-go/issues/93) | [Current arrow AST construction](./parser/parser.go) |
+| Close standalone type annotation fixture gaps | [#94](https://github.com/maltzsama/sqlglot-go/issues/94) | [Annotation gaps](./optimizer/testdata/annotate_gaps.txt) |
+| Close standalone simplification fixture gaps | [#95](https://github.com/maltzsama/sqlglot-go/issues/95) | [Simplification gaps](./optimizer/testdata/simplify_gaps.txt) |
+
+DAX [#96](https://github.com/maltzsama/sqlglot-go/issues/96) and
+Tableau [#97](https://github.com/maltzsama/sqlglot-go/issues/97) are queued dialect ports.
+The pinned reference and its fixtures define the scope of each port.
+
+## Repository structure and performance
+
+Use the existing package boundaries and preserve public import paths, exported signatures,
+and behavior. If a replacement API is needed in the future, keep the existing entry point
+functional and document the replacement with a Go `Deprecated:` notice. Review file moves
+separately from allocation changes.
+
+| Work | Tracking |
+| --- | --- |
+| Extract DML scope traversal into a dedicated optimizer file | [#85](https://github.com/maltzsama/sqlglot-go/issues/85) |
+| Group predicates and operator precedence in the parser | [#86](https://github.com/maltzsama/sqlglot-go/issues/86) |
+| Group query rendering in the generator | [#87](https://github.com/maltzsama/sqlglot-go/issues/87) |
+| Move cross-package dialect suites out of the module root | [#88](https://github.com/maltzsama/sqlglot-go/issues/88) |
+| Benchmark and reduce AST construction and copy allocations | [#89](https://github.com/maltzsama/sqlglot-go/issues/89) |
+
+## Historical port notes
+
+The slice ledger and entries below describe their original milestones. Coverage numbers and
+deferred items in those entries reflect the state at the time. Use the sections above for
+current status and tracking.
+
+### Initial port slices
 
 0. FOUNDATION (this run) — DONE when green:
    errors, trie, tokens (TokenType/Token/TokenizerCore/Tokenizer), expressions core
@@ -100,50 +145,6 @@ Slices (historical ledger; each landed `go test ./...` green before the next):
 initial slices to drive/validate the API surface; it has since been removed — this repo is the SQL
 engine only. That validation confirmed the qualify/scope pipeline matches upstream on ~94 real
 queries across MySQL/Postgres.)
-
-## Remaining work
-
-The parse → generate round-trip is done for the ported corpus (see Status). The remaining work is
-mostly the **optimizer** (port 1:1 from `.reference/`, port the matching upstream tests,
-differential-check against the pinned Python):
-
-- THE OPTIMIZER is ported, with the top-level `optimize()` rule pipeline (`Optimize`, `Rules`)
-  and `canonicalize_internal_names` (not a default rule; its 65-fixture upstream suite runs
-  clean). Ported: `qualify` +
-  `scope`/`traverse_scope` (+ `isolate_table_selects`),
-  `eliminate_ctes` + `journal`, `eliminate_subqueries`, `optimize_joins`, `unnest_subqueries`,
-  `merge_subqueries`, `annotate_types`, `simplify`, `normalize`, `eliminate_joins`,
-  `pushdown_predicates`, `pushdown_projections` and `canonicalize`, plus the query builder API
-  they share. `optimizer.sql` passes in full — the six former `optimizeGaps` rows now close
-  (explode folding, the Spark decorrelation/TRANSFORM cases, and the two Snowflake #40 rows),
-  and the TPC-H and TPC-DS fixture sets pass in full.
-- annotate_types is ported (#27), and the function nodes it previously parsed as `Anonymous` are
-  now structured (#44). The fixture cases that still do not pass are recorded in
-  `optimizer/testdata/annotate_gaps.txt`.
-- CROSS-DIALECT transpilation: verified against upstream's `validate_all` read/write pairs —
-  `TestTranspileCorpus` runs every pair whose dialects are all registered (`testdata/transpile_corpus.jsonl`,
-  8881 pairs, 6326 passing), with the open pairs burndown-listed in `testdata/transpile_gaps.txt`.
-  What remains are the per-dialect override tables that make cross-dialect output correct — per-dialect
-  parser `FUNCTIONS` ↔ generator `TRANSFORMS`/`TYPE_MAPPING` remaps (must land paired to avoid
-  round-trip regressions), MySQL `||`/`&&`/`XOR` logical operators, MySQL `CAST(x AS TIMESTAMP/BLOB)`.
-- DIALECTS: base, MySQL, Postgres, TSQL, ClickHouse, StarRocks, Doris, Presto, Trino, Hive, Athena,
-  Oracle, Redshift, Materialize, RisingWave, Spark 2, Spark, Databricks, BigQuery (#41), DuckDB (#39),
-  Snowflake (#40), SQLite (#38), MariaDB (#37, a beyond-upstream identity over MySQL), Dremio,
-  Teradata and ksqlDB (a beyond-upstream dialect ported from Confluent's SqlBase.g4) are ported;
-  upstream ships 30+ and the rest are out of scope for now (queued: DAX, Tableau).
-- TIME-TRAVEL clauses (`FOR SYSTEM_TIME AS OF`, hive `TIMESTAMP AS OF`): **DONE.** `VERSION_PHRASES`
-  (parser/parser.go:1682, ports parser.py:1738-1745) and `_parse_version` (parser/parser.go:1695,
-  ports parser.py:5120-5146) are wired into table parsing, and the v30.17.0 keyword removals are
-  handled by phrase matching (`FOR SYSTEM TIME AS OF` normalizes to `FOR SYSTEM_TIME AS OF`).
-  Verified byte-identical to the pinned Python for bigquery, hive, presto, spark/databricks, trino,
-  dremio and postgres; guarding tests in `version_test.go` (identity + the upstream dremio
-  validate_all read/write pairs). Snowflake's separate `BEFORE (STATEMENT => …)` / `AT (…)`
-  historical-data clauses are the remaining gap (see Snowflake identity gaps).
-- PARSER coverage is bounded by the ported corpus: constructs upstream parses that are NOT exercised
-  by the identity fixtures may still be gaps — e.g. any long `FUNCTIONS`/`FUNCTION_PARSERS` tail or
-  DDL detail not hit by a fixture. Treat a not-yet-parsed construct upstream parses as a gap to
-  close. (Closed this way so far: `exp.Heredoc` postgres dollar-quoted bodies, and the
-  `exp.Block`/`WhileBlock`/`EndStatement` procedure-body machinery.)
 
 ## MySQL grammar + tokenizer correctness + typed dialect + Node.Meta — DONE (PR #2)
 
