@@ -6628,3 +6628,5 @@
 {"dialect": "ksqldb", "sql": "ASSERT NULL VALUES s KEY (1)", "want": "ASSERT NULL VALUES s KEY (1)", "pretty": false}
 {"dialect": "ksqldb", "sql": "ALTER TABLE t ADD a INT", "want": "ALTER TABLE t ADD COLUMN a INT", "pretty": false}
 {"dialect": "ksqldb", "sql": "ALTER STREAM s ADD z STRING", "want": "ALTER STREAM s ADD COLUMN z STRING", "pretty": false}
+{"dialect": "ksqldb", "sql": "CREATE STREAM pk (id BIGINT PRIMARY KEY) WITH (KAFKA_TOPIC='t')", "want": "CREATE STREAM pk (id BIGINT PRIMARY KEY) WITH (KAFKA_TOPIC='t')", "pretty": false}
+{"dialect": "ksqldb", "sql": "CREATE STREAM pk2 (k STRING KEY, v INT) WITH (VALUE_FORMAT='JSON')", "want": "CREATE STREAM pk2 (k STRING KEY, v INT) WITH (VALUE_FORMAT='JSON')", "pretty": false}

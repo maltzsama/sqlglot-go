@@ -1127,7 +1127,7 @@ Structured: the whole statement surface — `CREATE {STREAM|TABLE|SOURCE …|CON
 `printClause`/`timeout` tails are not modeled). Engine-invalid forms fail closed to `Command`
 or a parse error; the rules are in DEVIATIONS "Beyond-upstream dialects".
 
-Corpus: 55 `dialect_identity.jsonl` rows at **55/55**, and 18 `upstream_extensions.jsonl` rows
+Corpus: 57 `dialect_identity.jsonl` rows at **57/57**, and 18 `upstream_extensions.jsonl` rows
 (each `upstream: parse_error`, since pinned upstream raises `Unknown dialect`). Guarding tests:
 `ksqldb_test.go`.
 

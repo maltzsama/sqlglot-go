@@ -208,7 +208,10 @@ func (p *Parser) parseKsqlColumnDef() exp.Expression {
 constraintsLoop:
 	for {
 		switch {
-		case p.matchTextSeq("PRIMARY", "KEY"):
+		// The tokenizer folds "PRIMARY KEY" into one PRIMARY_KEY token (tokens/tokenizer.go),
+		// so matchTextSeq("PRIMARY", "KEY") can never match it — the constraint stayed
+		// unconsumed and the CREATE fell back to a raw Command.
+		case p.match(tokens.PRIMARY_KEY):
 			constraints = append(constraints, p.expression(exp.PrimaryKeyColumnConstraint(exp.Args{}), nil, nil))
 		case p.matchTextSeq("KEY"):
 			constraints = append(constraints, p.expression(exp.ColumnConstraint(exp.Args{
@@ -676,6 +679,12 @@ func (p *Parser) parseKsqlWindowBody() exp.Expression {
 		}
 	}
 	if p.match(tokens.COMMA) {
+		// SqlBase.g4:190-192 allows at most one GRACE PERIOD: `(',' retentionClause)?
+		// (',' gracePeriodClause)?`. A second grace clause overwrites the first instead of
+		// being rejected, so fail closed here.
+		if args["grace"] != nil {
+			return nil
+		}
 		if !p.matchTextSeq("GRACE", "PERIOD") {
 			return nil
 		}

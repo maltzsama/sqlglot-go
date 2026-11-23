@@ -255,7 +255,7 @@ const (
 	minPassSQLite      = 136
 	minPassDremio      = 46
 	minPassTeradata    = 84
-	minPassKsqlDB      = 55
+	minPassKsqlDB      = 57
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
@@ -283,7 +283,7 @@ const (
 	minTotalSQLite      = 136
 	minTotalDremio      = 46
 	minTotalTeradata    = 84
-	minTotalKsqlDB      = 55
+	minTotalKsqlDB      = 57
 )
 
 // TestCorpus is the single round-trip harness for both the base-dialect

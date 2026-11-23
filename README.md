@@ -118,7 +118,7 @@ Same-dialect round-trip parity against the ported upstream identity corpus
 | MariaDB | `mariadb` | n/a (no upstream fixture; beyond-upstream identity over MySQL) |
 | Dremio | `dremio` | 46/46 |
 | Teradata | `teradata` | 84/84 |
-| ksqlDB | `ksqldb` (alias `ksql`) | 55/55 (beyond-upstream; no upstream fixture, ported from Confluent's `SqlBase.g4`) |
+| ksqlDB | `ksqldb` (alias `ksql`) | 57/57 (beyond-upstream; no upstream fixture, ported from Confluent's `SqlBase.g4`) |
 | Spark 2 | `spark2` | n/a (no upstream fixture; exercised through Spark) |
 | RisingWave | `risingwave` | 7/7 |
 
