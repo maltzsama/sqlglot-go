@@ -125,6 +125,51 @@ confirm a claimed bug against `.reference/` before "fixing" it — some findings
 - Package layout mirrors the Python module layout (`expressions/`, `optimizer/`, `dialects/`,
   `generator/`, `parser/`, `tokens/`, `schema/`, …).
 
+## Pull requests
+
+Work is **sequential**: one PR at a time, from the latest `main`, until it is
+merged. Do not open parallel PRs or work on the next issue while one is in
+flight.
+
+1. **Write every PR, issue, and comment in English.** This includes the PR
+   title, body, review replies, and commit messages. Code comments and docs are
+   English too.
+2. Run the full DoD for what the PR touches (`DoD-standard`, `DoD-web`, or
+   both) **before** opening it. Open the PR with `Closes #<issue>` for every
+   issue it closes; group sibling issues into thematic PRs (one coherent theme
+   per PR, merged sequentially).
+3. **Trigger CodeRabbit on every PR** by commenting `@coderabbitai review`.
+   - If it reviews, read **all** findings (the review body and every inline
+     comment) before merging, fix the valid ones, push, and re-check.
+   - After fixing a finding, **resolve its review thread** with
+     `resolveReviewThread` in the GitHub GraphQL API; do not leave a fixed
+     finding open.
+   - If CodeRabbit is rate-limited or skips the review, merge based on the
+     remaining CI results.
+4. **Merge with a merge commit, and only a merge commit.** Never squash or
+   rebase merge. Use `gh pr merge <n> --merge --delete-branch`. The repository
+   history keeps the PR's atomic commits and a merge commit.
+5. After merging, switch to `main`, run `git pull --ff-only`, and verify that
+   every issue referenced by `Closes` is closed before starting the next PR.
+
+### Titles, commits, and the changelog
+
+release-please builds `CHANGELOG.md` from commits that reach `main`. It also
+turns each merge commit into an entry using the PR title. A PR title that is a
+Conventional Commit therefore repeats its own commits in the changelog, as does
+a subject shared by two commits in the same PR.
+
+- Every commit is atomic and conventional: `type(scope): subject`.
+- The **PR title is a plain sentence, not a Conventional Commit**: no `feat:` or
+  `fix(scope):` prefix (for example, `Federated search, glossary, palette and
+  MCP`). The merge commit then carries no changelog entry of its own; the PR's
+  commits are what the changelog lists.
+- **No two commits in a PR share a subject, and none repeats the PR title.**
+  Fold a fixup into the commit it fixes with `git commit --fixup=<sha>`, then
+  `git rebase -i --autosquash origin/main`, before merging. Rewriting your own
+  unmerged branch is fine with `git push --force-with-lease`; `main` is never
+  rewritten.
+
 ## Releasing
 
 Releases are automated with [**release-please**](https://github.com/googleapis/release-please), driven
@@ -133,22 +178,21 @@ by [**Conventional Commits**](https://www.conventionalcommits.org/) and versione
 workflow: `.github/workflows/release-please.yml`. Pre-1.0, `bump-minor-pre-major` is set, so both
 features and breaking changes bump the **minor** (`fix` bumps the patch).
 
-- **PRs are merged with a merge commit** (`gh pr merge <n> --merge`), never squashed or rebased: the
-  PR's atomic commits reach `main` as they are. **Every commit is a Conventional Commit**
-  (`feat:`, `fix:`, `feat!:`, `docs:`, `ci:`, `chore:`, …), and so is the **PR title**, which
-  `.github/workflows/pr-title.yml` lints. release-please reads each commit, and the merge commit
-  carries the title too, so a PR whose title repeats a commit subject lists that entry twice.
-  `CHANGELOG.md` sections come from `changelog-sections` in the config.
+- **Every commit is a Conventional Commit** (`feat:`, `fix:`, `feat!:`, `docs:`, `ci:`, `chore:`, …).
+  PR titles and merge behavior follow [Pull requests](#pull-requests): use a plain sentence for the
+  PR title and merge with a merge commit. `CHANGELOG.md` sections come from `changelog-sections` in
+  the config.
 - On each push to `main`, release-please opens/updates a **release PR** (`chore(main): release X.Y.Z`)
   that bumps `.release-please-manifest.json` and prepends the generated `CHANGELOG.md` section.
 - **To cut the release, merge that release PR.** release-please then tags `vX.Y.Z` and publishes the
   GitHub release automatically. Nothing is tagged by hand.
 
-- **Keep nested parentheses out of commit bodies** — phrases like `Alias(Column(TABLE) AS
-  t)` or `Cast(Literal, DataType(...))` make release-please's commit parser **silently skip the
-  commit**: the workflow run reports success but no release PR is opened (bit v0.31.0 via #87 and
-  v0.33.0 via #93). Write such AST shapes as `Alias of Column TABLE`, or plain prose. Recovery if it happens: push an empty
-  `feat:` commit with a clean message via a nudge PR; the release PR then appears.
+- **Keep nested parentheses out of commit bodies** — phrases like `Alias(Column(TABLE) AS t)` or
+  `Cast(Literal, DataType(...))` make release-please's commit parser **silently skip the commit**:
+  the workflow run reports success but no release PR is opened (seen in v0.31.0 via #87 and
+  v0.33.0 via #93). Write such AST shapes as `Alias of Column TABLE`, or use plain prose. If this
+  happens, push an empty `feat:` commit with a clean message via a nudge PR; the release PR then
+  appears.
 
 Do **not** hand-edit `CHANGELOG.md` or create version tags manually — release-please owns both.
 Entries for v0.5.0 and earlier predate release-please and were written by hand.
