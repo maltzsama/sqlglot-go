@@ -1,9 +1,9 @@
 package expressions
 
-// range-ops cluster builders: parser/parser.go's parseRange/parseIs/columnOperators build
-// these Kinds directly via the constructors below (mirroring e.g. Like/ILike/SimilarTo in
-// core.go). See the KindGlob..KindSoundex const-block comment in kinds.go for the exact
-// upstream class each one ports.
+// range-ops cluster builders: parseRange/parseIs (parser/parser_predicates.go) and
+// columnOperators (parser/parser.go) build these Kinds directly via the constructors below
+// (mirroring e.g. Like/ILike/SimilarTo in core.go). See the KindGlob..KindSoundex
+// const-block comment in kinds.go for the exact upstream class each one ports.
 func Glob(args Args) Expression                    { return newNode(KindGlob, args) }
 func Match(args Args) Expression                   { return newNode(KindMatch, args) }
 func Overlaps(args Args) Expression                { return newNode(KindOverlaps, args) }

@@ -1010,7 +1010,7 @@ pair asserts `expression.sql(write_dialect) == write_sql`.
   without the `is_bytes` flag upstream's `maybe_parse` carries (parser.py:1223,
   `is_bytes = BYTE_STRING_IS_BYTES_TYPE or None`), so BigQuery's `CAST(b'...' AS STRING)` re-entered
   the branch forever. Fixed in `generator/residual_tail.go` by mirroring the parser's flag
-  (parser.go:2847) on the fresh node — no output change on any previously passing case.
+  (parser.go:2269) on the fresh node — no output change on any previously passing case.
 - **Docs** — README moves cross-dialect transpilation out of "Not ported (yet)" into the ported
   list, with the verified pair counts and the gaps file as the burndown record.
 
