@@ -134,10 +134,15 @@ flight.
 1. **Write every PR, issue, and comment in English.** This includes the PR
    title, body, review replies, and commit messages. Code comments and docs are
    English too.
-2. Run the full DoD for what the PR touches (`DoD-standard`, `DoD-web`, or
-   both) **before** opening it. Open the PR with `Closes #<issue>` for every
-   issue it closes; group sibling issues into thematic PRs (one coherent theme
-   per PR, merged sequentially).
+2. Run the full DoD for what the PR touches **before** opening it:
+   - **DoD-standard:** `go build ./...`, `go vet ./...`, `gofmt -l .` with no
+     files listed, and `go test -race ./...`.
+   - **DoD-web:** not applicable to this repository, which has no web or UI
+     application. If one is added, define its project-specific checks before
+     opening web changes.
+   Run both when a PR touches both areas. Open the PR with `Closes #<issue>` for
+   every issue it closes; group sibling issues into thematic PRs (one coherent
+   theme per PR, merged sequentially).
 3. **Trigger CodeRabbit on every PR** by commenting `@coderabbitai review`.
    - If it reviews, read **all** findings (the review body and every inline
      comment) before merging, fix the valid ones, push, and re-check.
@@ -164,6 +169,9 @@ a subject shared by two commits in the same PR.
   `fix(scope):` prefix (for example, `Federated search, glossary, palette and
   MCP`). The merge commit then carries no changelog entry of its own; the PR's
   commits are what the changelog lists.
+- **Exception:** leave release-please generated release PR titles such as
+  `chore(main): release X.Y.Z` unchanged so release-please can create the tag
+  and release.
 - **No two commits in a PR share a subject, and none repeats the PR title.**
   Fold a fixup into the commit it fixes with `git commit --fixup=<sha>`, then
   `git rebase -i --autosquash origin/main`, before merging. Rewriting your own

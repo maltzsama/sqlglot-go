@@ -16,8 +16,15 @@ jobs:
       - name: Reject Conventional Commit prefixes
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
-          if [[ "$PR_TITLE" =~ ^(feat|fix|perf|docs|refactor|test|build|ci|chore|revert)(\([^)]*\))?(!)?: ]]; then
+          if [[ "$PR_HEAD_REF" == release-please--branches--main--components--* ]]; then
+            echo "Allowing the generated release-please title."
+            exit 0
+          fi
+
+          title_pattern='^(feat|fix|perf|docs|refactor|test|build|ci|chore|revert)(\([^)]*\))?(!)?:'
+          if [[ "$PR_TITLE" =~ $title_pattern ]]; then
             echo "::error::Use a plain sentence for the PR title; keep Conventional Commit prefixes in commit subjects."
             exit 1
           fi
