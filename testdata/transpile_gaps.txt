@@ -1800,7 +1800,6 @@
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"STRIP_NULL_VALUE(x)"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SYSDATE()"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"UNICODE(foo)"}
-{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"ZEROIFNULL(foo)"}
 {"read":"snowflake","write":"duckdb","category":"parse: Expecting )","sql":"SELECT * FROM t1 AT (TIMESTAMP => '2024-01-01'::TIMESTAMP) AS a"}
 {"read":"snowflake","write":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM FIRST IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"read":"snowflake","write":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM LAST RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
@@ -1812,7 +1811,6 @@
 {"read":"snowflake","write":"hive","category":"gen: transpile mismatch","sql":"REGEXP_SUBSTR(subject, pattern, 1, 1, 'c', 1)"}
 {"read":"snowflake","write":"hive","category":"gen: transpile mismatch","sql":"REGEXP_SUBSTR(subject, pattern, pos, occ, params, group)"}
 {"read":"snowflake","write":"hive","category":"gen: transpile mismatch","sql":"SELECT i, p, o FROM qt QUALIFY ROW_NUMBER() OVER (PARTITION BY p ORDER BY o) = 1"}
-{"read":"snowflake","write":"hive","category":"gen: transpile mismatch","sql":"ZEROIFNULL(foo)"}
 {"read":"snowflake","write":"mysql","category":"gen: cast/type","sql":"DATE_TRUNC(DAY, TIMESTAMP '2001-02-16 20:38:40')"}
 {"read":"snowflake","write":"mysql","category":"gen: cast/type","sql":"DATE_TRUNC(MONTH, TIMESTAMP '2001-02-16 20:38:40')"}
 {"read":"snowflake","write":"mysql","category":"gen: cast/type","sql":"DATE_TRUNC(SECOND, TIMESTAMP '2001-02-16 20:38:40')"}
@@ -1845,7 +1843,6 @@
 {"read":"snowflake","write":"presto","category":"gen: transpile mismatch","sql":"REGEXP_SUBSTR(subject, pattern, pos, occ, params, group)"}
 {"read":"snowflake","write":"presto","category":"gen: transpile mismatch","sql":"SELECT ARRAY_AGG(DISTINCT a)"}
 {"read":"snowflake","write":"presto","category":"gen: transpile mismatch","sql":"SELECT i, p, o FROM qt QUALIFY ROW_NUMBER() OVER (PARTITION BY p ORDER BY o) = 1"}
-{"read":"snowflake","write":"presto","category":"gen: transpile mismatch","sql":"ZEROIFNULL(foo)"}
 {"read":"snowflake","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT CURRENT_VERSION()"}
 {"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"\n            SELECT\n              uc.user_id,\n              uc.start_ts AS ts,\n              CASE\n                WHEN uc.start_ts::DATE >= '2023-01-01' AND uc.country_code IN ('US') AND uc.user_id NOT IN (\n                  SELECT DISTINCT\n                    _id\n                  FROM\n                    users,\n                    LATERAL FLATTEN(INPUT => PARSE_JSON(flags)) datasource\n                  WHERE datasource.value:name = 'something'\n                )\n                  THEN 'Sample1'\n                  ELSE 'Sample2'\n              END AS entity\n            FROM user_countries AS uc\n            LEFT JOIN (\n              SELECT user_id, MAX(IFF(service_entity IS NULL,1,0)) AS le_null\n              FROM accepted_user_agreements\n              GROUP BY 1\n            ) AS aua\n              ON uc.user_id = aua.user_id\n            "}
 {"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06 11:45:00' AS TIMESTAMP_NTZ))"}
@@ -1876,7 +1873,6 @@
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28 20:57 +07:00', 'YYYY-MM-DD HH24:MI tzh:tzm')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28T20:57', 'YYYY-MM-DD\"T\"HH24:MI:SS')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28T20:57:01.888', 'yyyy-mm-DDThh24:mi:ss.ff')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"ZEROIFNULL(foo)"}
 {"read":"snowflake","write":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1 MINUS SELECT 1"}
 {"read":"snowflake","write":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM FIRST IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"read":"snowflake","write":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM LAST RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
@@ -1899,11 +1895,9 @@
 {"read":"snowflake","write":"spark","category":"gen: transpile mismatch","sql":"SELECT piv.Q1 FROM produce PIVOT(SUM(sales) FOR quarter IN ('Q1', 'Q2')) piv"}
 {"read":"snowflake","write":"spark","category":"gen: transpile mismatch","sql":"SELECT { 'Manitoba': 'Winnipeg', 'foo': 'bar' } AS province_capital"}
 {"read":"snowflake","write":"spark","category":"gen: transpile mismatch","sql":"TO_ARRAY(x)"}
-{"read":"snowflake","write":"spark","category":"gen: transpile mismatch","sql":"ZEROIFNULL(foo)"}
 {"read":"snowflake","write":"spark2","category":"gen: cast/type","sql":"UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')"}
 {"read":"snowflake","write":"spark2","category":"gen: transpile mismatch","sql":"REGEXP_SUBSTR(subject, pattern, 1, 1, 'c', 1)"}
 {"read":"snowflake","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT i, p, o FROM qt QUALIFY ROW_NUMBER() OVER (PARTITION BY p ORDER BY o) = 1"}
-{"read":"snowflake","write":"sqlite","category":"gen: transpile mismatch","sql":"ZEROIFNULL(foo)"}
 {"read":"snowflake","write":"trino","category":"gen: cast/type","sql":"UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')"}
 {"read":"snowflake","write":"trino","category":"gen: transpile mismatch","sql":"SELECT CURRENT_VERSION()"}
 {"read":"snowflake","write":"trino","category":"gen: transpile mismatch","sql":"SELECT SKEW(a)"}

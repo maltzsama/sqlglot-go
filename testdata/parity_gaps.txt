@@ -62,11 +62,8 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW TERSE UNIQUE KEYS IN \"TEST\".\"PUBLIC\".\"foo\""}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW UNIQUE KEYS IN \"TEST\".\"PUBLIC\".\"foo\""}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SHOW VIEWS IN foo"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"STRTOK_TO_ARRAY('a b c')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SYSTIMESTAMP()"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TIMESTAMPADD(NANOSECOND, 123456789, '2023-01-01 10:00:00.000000000')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TIMESTAMPDIFF(NANOSECOND, '2023-01-01 10:00:00.000000000', '2023-01-01 10:00:00.123456789')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_DATE('12345')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_DECIMAL(expr)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_DECIMAL(expr, fmt)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_DECIMAL(expr, fmt, precision, scale)"}
@@ -89,8 +86,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45', '999.99')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45', '999.99', 10, 2)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"WEEKOFYEAR(tstamp)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"ZEROIFNULL(foo)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse objects in db1.schema1 starts with 'a' limit 10 from 'b'"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse objects in schema db1.schema1 starts with 'a' limit 10 from 'b'"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse schemas in database db1 starts with 'a' limit 10 from 'b'"}

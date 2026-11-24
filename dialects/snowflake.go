@@ -214,12 +214,29 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return exp.FromArgList(exp.KindDate, args)
 	}
 	out["DATE"] = dateBuilder
-	out["TO_DATE"] = dateBuilder
+	out["TO_DATE"] = func(args []exp.Expression) exp.Expression {
+		value := seqGet(args, 0)
+		if len(args) == 1 && value != nil && value.IsString() {
+			if _, err := strconv.ParseInt(value.Name(), 10, 64); err == nil {
+				return exp.Anonymous(exp.Args{"this": "TO_DATE", "expressions": args})
+			}
+		}
+		return dateBuilder(args)
+	}
 	timeToStr := postgresBuildFormattedTimeClass(d, exp.KindTimeToStr)
 	out["TO_CHAR"] = timeToStr
 	out["TO_VARCHAR"] = timeToStr
 	out["GETDATE"] = func([]exp.Expression) exp.Expression {
 		return exp.CurrentTimestamp(exp.Args{})
+	}
+	out["SYSTIMESTAMP"] = exp.FromArgListFunc(exp.KindCurrentTimestamp)
+	out["ZEROIFNULL"] = func(args []exp.Expression) exp.Expression {
+		value := seqGet(args, 0)
+		return exp.If(exp.Args{
+			"this":  exp.Is(exp.Args{"this": value, "expression": exp.Null()}),
+			"true":  exp.LiteralNumber("0"),
+			"false": value,
+		})
 	}
 	out["BITSHIFTLEFT"] = exp.FromArgListFunc(exp.KindBitwiseLeftShift)
 	out["BITSHIFTRIGHT"] = exp.FromArgListFunc(exp.KindBitwiseRightShift)
@@ -482,7 +499,7 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	out["DAYOFWEEKISO"] = exp.FromArgListFunc(exp.KindDayOfWeekIso)
 	out["DAYOFYEAR"] = exp.FromArgListFunc(exp.KindDayOfYear)
 	out["WEEKISO"] = exp.FromArgListFunc(exp.KindWeekOfYear)
-	out["WEEKOFYEAR"] = exp.FromArgListFunc(exp.KindWeekOfYear)
+	out["WEEKOFYEAR"] = exp.FromArgListFunc(exp.KindWeek)
 	out["YEAROFWEEK"] = exp.FromArgListFunc(exp.KindYearOfWeek)
 	out["OBJECT_KEYS"] = exp.FromArgListFunc(exp.KindJSONKeys)
 	out["TO_JSON"] = exp.FromArgListFunc(exp.KindJSONFormat)
@@ -494,7 +511,13 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	out["UUID_STRING"] = exp.FromArgListFunc(exp.KindUuid)
 	out["HEX_DECODE_BINARY"] = exp.FromArgListFunc(exp.KindUnhex)
 	out["HEX_ENCODE"] = exp.FromArgListFunc(exp.KindHex)
-	out["STRTOK_TO_ARRAY"] = exp.FromArgListFunc(exp.KindStrtokToArray)
+	out["STRTOK_TO_ARRAY"] = func(args []exp.Expression) exp.Expression {
+		delimiter := seqGet(args, 1)
+		if delimiter == nil {
+			delimiter = exp.LiteralString(" ")
+		}
+		return exp.StrtokToArray(exp.Args{"this": seqGet(args, 0), "expression": delimiter})
+	}
 	out["SPLIT"] = exp.FromArgListFunc(exp.KindSplit)
 	timestampFromParts := func(args []exp.Expression) exp.Expression {
 		if len(args) == 2 {
