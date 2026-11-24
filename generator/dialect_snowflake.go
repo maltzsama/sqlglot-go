@@ -73,6 +73,7 @@ func init() {
 		expressions.KindUnixToTime:       snowflakeUnixToTimeSQL,
 		expressions.KindTimeToStr:        snowflakeTimeToStrSQL,
 		expressions.KindStrToTime:        snowflakeStrToTimeSQL,
+		expressions.KindToNumber:         snowflakeToNumberSQL,
 		expressions.KindRegexpExtract:    snowflakeRegexpExtractSQL,
 		expressions.KindRegexpExtractAll: snowflakeRegexpExtractSQL,
 		expressions.KindRegexpSubstr:     snowflakeRegexpExtractSQL,
@@ -186,6 +187,21 @@ func snowflakeStrToTimeSQL(g *Generator, e expressions.Expression) string {
 		args = append(args, format)
 	}
 	return g.funcCall(name, args, "(", ")", true)
+}
+
+func snowflakeToNumberSQL(g *Generator, e expressions.Expression) string {
+	name := "TO_NUMBER"
+	if boolValue(e.Arg("safe")) {
+		name = "TRY_TO_NUMBER"
+	}
+	precision := asExpression(e.Arg("precision"))
+	scale := asExpression(e.Arg("scale"))
+	if precision != nil && precision.Name() == "38" && scale != nil && scale.Name() == "0" {
+		precision, scale = nil, nil
+	} else if scale != nil && scale.Name() == "0" {
+		scale = nil
+	}
+	return g.funcCall(name, []any{e.Arg("this"), e.Arg("format"), precision, scale}, "(", ")", true)
 }
 
 func snowflakeTimeToStrSQL(g *Generator, e expressions.Expression) string {

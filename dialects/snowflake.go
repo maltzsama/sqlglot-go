@@ -238,6 +238,36 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 			"false": value,
 		})
 	}
+	toNumber := func(args []exp.Expression, safe bool) exp.Expression {
+		second := seqGet(args, 1)
+		number := exp.ToNumber(exp.Args{
+			"this": seqGet(args, 0), "safe": safe,
+		})
+		if second != nil && second.IsNumber() {
+			number.Set("precision", second)
+			number.Set("scale", seqGet(args, 2))
+			if number.Arg("scale") == nil {
+				number.Set("scale", exp.LiteralNumber("0"))
+			}
+		} else {
+			number.Set("format", second)
+			number.Set("precision", seqGet(args, 2))
+			if number.Arg("precision") == nil {
+				number.Set("precision", exp.LiteralNumber("38"))
+			}
+			number.Set("scale", seqGet(args, 3))
+			if number.Arg("scale") == nil {
+				number.Set("scale", exp.LiteralNumber("0"))
+			}
+		}
+		return number
+	}
+	for _, name := range []string{"TO_DECIMAL", "TO_NUMBER", "TO_NUMERIC"} {
+		out[name] = func(args []exp.Expression) exp.Expression { return toNumber(args, false) }
+	}
+	for _, name := range []string{"TRY_TO_DECIMAL", "TRY_TO_NUMBER", "TRY_TO_NUMERIC"} {
+		out[name] = func(args []exp.Expression) exp.Expression { return toNumber(args, true) }
+	}
 	out["BITSHIFTLEFT"] = exp.FromArgListFunc(exp.KindBitwiseLeftShift)
 	out["BITSHIFTRIGHT"] = exp.FromArgListFunc(exp.KindBitwiseRightShift)
 	out["LOCALTIMESTAMP"] = func(args []exp.Expression) exp.Expression {
