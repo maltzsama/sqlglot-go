@@ -369,6 +369,15 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		})
 	}
 	out["STDDEV_SAMP"] = exp.FromArgListFunc(exp.KindStddev)
+	out["APPROX_TOP_K"] = func(args []exp.Expression) exp.Expression {
+		expression := seqGet(args, 1)
+		if expression == nil {
+			expression = exp.LiteralNumber("1")
+		}
+		return exp.ApproxTopK(exp.Args{
+			"this": seqGet(args, 0), "expression": expression, "counters": seqGet(args, 2),
+		})
+	}
 	out["STRTOK"] = func(args []exp.Expression) exp.Expression {
 		delimiter := seqGet(args, 1)
 		if delimiter == nil {
