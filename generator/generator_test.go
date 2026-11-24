@@ -142,6 +142,35 @@ func TestArrayExtremaFunctionTranspilation(t *testing.T) {
 	}
 }
 
+func TestLevenshteinFunctionTranspilation(t *testing.T) {
+	cases := []struct {
+		name, dialect, sql, want string
+	}{
+		{"bigquery", "bigquery", "LEVENSHTEIN(a, b)", "EDIT_DISTANCE(a, b)"},
+		{"clickhouse", "clickhouse", "LEVENSHTEIN(a, b)", "editDistance(a, b)"},
+		{"presto", "presto", "LEVENSHTEIN(a, b)", "LEVENSHTEIN_DISTANCE(a, b)"},
+		{"snowflake", "snowflake", "LEVENSHTEIN(a, b)", "EDITDISTANCE(a, b)"},
+		{"sqlite", "sqlite", "LEVENSHTEIN(a, b)", "EDITDIST3(a, b)"},
+		{"trino", "trino", "LEVENSHTEIN(a, b)", "LEVENSHTEIN_DISTANCE(a, b)"},
+		{"postgres maximum distance", "postgres", "LEVENSHTEIN(a, b, 1, 2, 3, 4)", "LEVENSHTEIN_LESS_EQUAL(a, b, 1, 2, 3, 4)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			expression, err := sqlglot.ParseOne(tc.sql, "")
+			if err != nil {
+				t.Fatalf("ParseOne(%q): %v", tc.sql, err)
+			}
+			got, err := sqlglot.Generate(expression, tc.dialect, generator.Options{})
+			if err != nil {
+				t.Fatalf("Generate(%q, %q): %v", tc.sql, tc.dialect, err)
+			}
+			if got != tc.want {
+				t.Fatalf("transpile(%q -> %q) = %q, want %q", tc.sql, tc.dialect, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestUnnestWithOrdinality guards that folding a `WITH OFFSET AS <col>` into the alias
 // column list still emits WITH ORDINALITY: upstream unnest_sql clears only the offset ARG,
 // keeping the local offset truthy (generator.py:3444-3447 vs 3456-3457). A prior bug also

@@ -118,6 +118,8 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"MAX":   genericFunction(KindMax),
 	"ROUND": genericFunction(KindRound),
 	"LOG":   genericFunction(KindLog),
+	// Levenshtein is a Func subclass with this SQL name (string.py:74).
+	"LEVENSHTEIN": genericFunction(KindLevenshtein),
 	// parser.py:434-435 canonicalizes LOG2/LOG10 to exp.Log with a literal base.
 	"LOG2": func(args []Expression) Expression {
 		return newNode(KindLog, Args{"this": LiteralNumber(2), "expression": seqGetExpr(args, 0)})

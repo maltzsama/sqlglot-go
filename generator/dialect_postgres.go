@@ -40,6 +40,8 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindColumnDef: postgresColumnDef,
 		// generators/postgres.py:338 exp.Getbit: getbit_sql (dialects/dialect.py:2626-2644).
 		exp.KindGetbit: getbitSQL,
+		// generators/postgres.py:416 exp.Levenshtein: _levenshtein_sql.
+		exp.KindLevenshtein: postgresLevenshteinSQL,
 		// generators/postgres.py:369 exp.Rand: rename_func("RANDOM") — flatten the node's
 		// args in declaration order (this, lower, upper), skipping absent ones the way
 		// Generator.func skips a None arg, so e.g. a bounds-only Rand renders
@@ -48,6 +50,14 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 			return g.funcCall("RANDOM", g.fallbackArgs(e), "(", ")", true)
 		},
 	}
+}
+
+func postgresLevenshteinSQL(g *Generator, e exp.Expression) string {
+	name := "LEVENSHTEIN"
+	if truthy(e.Arg("max_dist")) {
+		name = "LEVENSHTEIN_LESS_EQUAL"
+	}
+	return g.funcCall(name, g.fallbackArgs(e), "(", ")", true)
 }
 
 // postgresColumnDef ports the exp.ColumnDef transform registered at
