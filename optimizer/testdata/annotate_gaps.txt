@@ -564,7 +564,6 @@ annotate_functions.sql|snowflake|1262
 annotate_functions.sql|snowflake|1263
 annotate_functions.sql|snowflake|1264
 annotate_functions.sql|snowflake|1265
-annotate_functions.sql|snowflake|1269
 annotate_functions.sql|snowflake|1270
 annotate_functions.sql|snowflake|1271
 annotate_functions.sql|snowflake|1272
