@@ -2,6 +2,7 @@ package dialects
 
 import (
 	"maps"
+	"strconv"
 	"strings"
 
 	exp "github.com/maltzsama/sqlglot-go/expressions"
@@ -214,6 +215,13 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		out[name] = func(args []exp.Expression) exp.Expression {
 			value := seqGet(args, 0)
 			if len(args) == 1 && value != nil && value.IsString() {
+				_, integerString := strconv.ParseInt(value.Name(), 10, 64)
+				if target == exp.DTypeTimestamp && !safe && integerString == nil {
+					return exp.UnixToTime(exp.Args{
+						"this":        value,
+						"target_type": exp.DataType(exp.Args{"this": target}),
+					})
+				}
 				kind := exp.KindCast
 				if safe {
 					kind = exp.KindTryCast

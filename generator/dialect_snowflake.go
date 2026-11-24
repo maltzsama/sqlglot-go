@@ -69,6 +69,7 @@ func init() {
 		expressions.KindJSONKeys:           clickhouseRename("OBJECT_KEYS"),
 		expressions.KindJSONFormat:         clickhouseRename("TO_JSON"),
 		expressions.KindJSONExtract:        snowflakeJSONExtractSQL,
+		expressions.KindUnixToTime:         snowflakeUnixToTimeSQL,
 		expressions.KindSHA:                clickhouseRename("SHA1"),
 		expressions.KindSHA1Digest:         clickhouseRename("SHA1_BINARY"),
 		expressions.KindMD5Digest:          clickhouseRename("MD5_BINARY"),
@@ -144,6 +145,14 @@ func init() {
 		expressions.KindDescribe: snowflakeDescribeSQL,
 	}
 	registerDialectDispatch("snowflake", handlers)
+}
+
+func snowflakeUnixToTimeSQL(g *Generator, e expressions.Expression) string {
+	args := []any{e.Arg("this")}
+	if scale := e.Arg("scale"); scale != nil {
+		args = append(args, scale)
+	}
+	return g.funcCall("TO_TIMESTAMP", args, "(", ")", true)
 }
 
 func snowflakeStarSQL(g *Generator, e expressions.Expression) string {

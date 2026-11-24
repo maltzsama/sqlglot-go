@@ -452,10 +452,6 @@ annotate_functions.sql|snowflake|1063
 annotate_functions.sql|snowflake|1064
 annotate_functions.sql|snowflake|1065
 annotate_functions.sql|snowflake|1066
-annotate_functions.sql|snowflake|1067
-annotate_functions.sql|snowflake|1068
-annotate_functions.sql|snowflake|1069
-annotate_functions.sql|snowflake|1070
 annotate_functions.sql|snowflake|1074
 annotate_functions.sql|snowflake|1075
 annotate_functions.sql|snowflake|1076
@@ -595,13 +591,10 @@ annotate_functions.sql|snowflake|1291
 annotate_functions.sql|snowflake|1292
 annotate_functions.sql|snowflake|1293
 annotate_functions.sql|snowflake|1294
-annotate_functions.sql|snowflake|1295
 annotate_functions.sql|snowflake|1296
-annotate_functions.sql|snowflake|1297
 annotate_functions.sql|snowflake|1298
 annotate_functions.sql|snowflake|1299
 annotate_functions.sql|snowflake|1300
-annotate_functions.sql|snowflake|1301
 annotate_functions.sql|snowflake|1302
 annotate_functions.sql|snowflake|1303
 annotate_functions.sql|snowflake|1304
@@ -609,7 +602,6 @@ annotate_functions.sql|snowflake|1305
 annotate_functions.sql|snowflake|1306
 annotate_functions.sql|snowflake|1307
 annotate_functions.sql|snowflake|1308
-annotate_functions.sql|snowflake|1309
 annotate_functions.sql|snowflake|1310
 annotate_functions.sql|snowflake|1311
 annotate_functions.sql|snowflake|1312
@@ -685,7 +677,6 @@ annotate_functions.sql|snowflake|1430
 annotate_functions.sql|snowflake|1433
 annotate_functions.sql|snowflake|1434
 annotate_functions.sql|snowflake|1435
-annotate_functions.sql|snowflake|1437
 annotate_functions.sql|snowflake|1438
 annotate_functions.sql|snowflake|1439
 annotate_functions.sql|snowflake|1440
@@ -870,13 +861,10 @@ annotate_functions.sql|snowflake|784
 annotate_functions.sql|snowflake|797
 annotate_functions.sql|snowflake|798
 annotate_functions.sql|snowflake|802
-annotate_functions.sql|snowflake|803
 annotate_functions.sql|snowflake|805
 annotate_functions.sql|snowflake|808
 annotate_functions.sql|snowflake|809
 annotate_functions.sql|snowflake|810
-annotate_functions.sql|snowflake|813
-annotate_functions.sql|snowflake|814
 annotate_functions.sql|snowflake|815
 annotate_functions.sql|snowflake|816
 annotate_functions.sql|snowflake|817
