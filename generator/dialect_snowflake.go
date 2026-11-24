@@ -3,6 +3,7 @@ package generator
 import (
 	"strings"
 
+	"github.com/maltzsama/sqlglot-go/dialects"
 	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
@@ -123,11 +124,12 @@ func init() {
 		expressions.KindBoolnot: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("BOOLNOT", []any{e.This()}, "(", ")", true)
 		},
-		expressions.KindJSONObject:  snowflakeJSONObjectSQL,
-		expressions.KindTableSample: snowflakeTableSampleSQL,
-		expressions.KindPivot:       snowflakePivot,
-		expressions.KindExtract:     snowflakeExtractSQL,
-		expressions.KindDate:        snowflakeDateSQL,
+		expressions.KindJSONObject:   snowflakeJSONObjectSQL,
+		expressions.KindTableSample:  snowflakeTableSampleSQL,
+		expressions.KindPivot:        snowflakePivot,
+		expressions.KindExtract:      snowflakeExtractSQL,
+		expressions.KindDate:         snowflakeDateSQL,
+		expressions.KindTsOrDsToDate: snowflakeTsOrDsToDateSQL,
 		// generators/snowflake.py:754-760: spatial casts use constructor functions instead
 		// of CAST syntax.
 		expressions.KindCast: snowflakeCastSQL,
@@ -313,6 +315,21 @@ func snowflakeExtractSQL(g *Generator, e expressions.Expression) string {
 // snowflakeDateSQL renders DATE(<args>) as TO_DATE.
 func snowflakeDateSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("TO_DATE", g.fallbackArgs(e), "(", ")", true)
+}
+
+// snowflakeTsOrDsToDateSQL ports the formatted DATE branch of _build_datetime and
+// SnowflakeGenerator's time-format conversion (parsers/snowflake.py:82-128).
+func snowflakeTsOrDsToDateSQL(g *Generator, e expressions.Expression) string {
+	args := []any{e.Arg("this")}
+	if format := asExpression(e.Arg("format")); format != nil {
+		if format.IsString() {
+			if converted, ok := dialects.FormatTime(format.Name(), g.dialect.InverseTimeMapping); ok {
+				format = expressions.LiteralString(converted)
+			}
+		}
+		args = append(args, format)
+	}
+	return g.funcCall("TO_DATE", args, "(", ")", true)
 }
 
 // snowflakeCastSQL ports SnowflakeGenerator.cast_sql (generators/snowflake.py:754-760).

@@ -78,7 +78,15 @@ func Snowflake() *Dialect {
 	}
 	d.InitcapDefaultDelimiterChars = " \\t\\n\\r\\f\\v!?@\\\"^#$&~_,.:;+\\\\-*%/|\\\\[\\\\](){}<>"
 
-	d.InverseTimeMapping = map[string]string{"T": "T"}
+	// Snowflake's ordered TIME_MAPPING inverse (dialects/dialect.py:261-271) prefers
+	// lowercase month/year tokens and uppercase day tokens, matching format_time's
+	// canonicalized output (e.g. `%m-%d-%Y` -> `mm-DD-yyyy`).
+	d.InverseTimeMapping = map[string]string{
+		"T": "T", "%Y": "yyyy", "%y": "yy", "%B": "mmmm", "%b": "mon",
+		"%m": "mm", "%d": "DD", "%-d": "dd", "%a": "DY", "%w": "dy",
+		"%H": "hh24", "%I": "hh12", "%M": "mi", "%S": "ss", "%f": "ff6",
+		"%z": "TZHTZM", "%:z": "TZH:TZM", "%-z": "TZH", "%p": "AM",
+	}
 	d.TimeMapping = snowflakeTimeMapping
 	d.DatePartMapping = maps.Clone(d.DatePartMapping)
 	if d.DatePartMapping == nil {
@@ -179,6 +187,17 @@ func snowflakeDateUnit(unit exp.Expression) exp.Expression {
 // (parsers/snowflake.py:396-733) for the identity-relevant entries.
 func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expression {
 	out := map[string]func([]exp.Expression) exp.Expression{}
+
+	// parsers/snowflake.py:502 `_build_datetime("DATE", DType.DATE)` handles
+	// explicit format strings as TsOrDsToDate and converts the format via TIME_MAPPING.
+	dateWithFormat := postgresBuildFormattedTimeClass(d, exp.KindTsOrDsToDate)
+	out["DATE"] = func(args []exp.Expression) exp.Expression {
+		if len(args) > 1 && args[1] != nil &&
+			(args[1].Kind() != exp.KindLiteral || args[1].IsString()) {
+			return dateWithFormat(args)
+		}
+		return exp.FromArgList(exp.KindDate, args)
+	}
 
 	// parsers/snowflake.py:524: FLATTEN parses as exp.Explode; the lateral parse site then
 	// defaults its alias columns to FLATTEN_COLUMNS.
