@@ -234,6 +234,24 @@ func TestSnowflakeNamedRoundArguments(t *testing.T) {
 	}
 }
 
+func TestSnowflakeDynamicFunction(t *testing.T) {
+	for _, sql := range []string{"SELECT IDENTIFIER('my_func')(1, 2)", "SELECT IDENTIFIER($my_function_name)()"} {
+		t.Run(sql, func(t *testing.T) {
+			node, err := sqlglot.ParseOne(sql, "snowflake")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if node.Expressions()[0].Kind() != exp.KindDynamicIdentifier {
+				t.Fatal("expected dynamic identifier")
+			}
+			got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+			if err != nil || got != sql {
+				t.Fatalf("got %q, %v; want %q", got, err, sql)
+			}
+		})
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

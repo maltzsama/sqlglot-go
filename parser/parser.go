@@ -3651,6 +3651,14 @@ func (p *Parser) parseFunction(functions map[string]func([]exp.Expression) exp.E
 		fnSyntax = true
 	}
 	fn := p.parseFunctionCall(functions, anonymous, optionalParens, anyToken)
+	if p.dialectIs("snowflake") && fn != nil && fn.Kind() == exp.KindDynamicIdentifier && p.match(tokens.L_PAREN) {
+		args := p.parseFunctionArgs(true)
+		if args == nil {
+			args = []exp.Expression{}
+		}
+		fn.Set("expressions", args)
+		p.matchRParen(fn)
+	}
 	if fnSyntax {
 		p.match(tokens.R_BRACE)
 	}
