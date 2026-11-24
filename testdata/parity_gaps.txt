@@ -45,13 +45,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25) AS value"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25, , ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT SEARCH(line, 'king', SEARCH_MODE => 'AND', ANALYZER => 'PATTERN_ANALYZER')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT SPACE(3.7)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT SPACE(5)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT SPACE(NULL)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT STDDEV_SAMP(x)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT STDDEV_SAMP(x) OVER (PARTITION BY 1)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT STRTOK('a$b/cg', '$/.')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT STRTOK('ab')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TIMESTAMPFROMPARTS(d, t)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TIMESTAMPNTZFROMPARTS(2013, 4, 5, 12, 00, 00)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(2013, 4, 5, 12, 00, 00, 987654321)"}

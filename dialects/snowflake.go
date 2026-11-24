@@ -336,6 +336,21 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 			"parameters": seqGet(args, 4), "group": seqGet(args, 5),
 		})
 	}
+	out["STDDEV_SAMP"] = exp.FromArgListFunc(exp.KindStddev)
+	out["STRTOK"] = func(args []exp.Expression) exp.Expression {
+		delimiter := seqGet(args, 1)
+		if delimiter == nil {
+			delimiter = exp.LiteralString(" ")
+		}
+		partIndex := seqGet(args, 2)
+		if partIndex == nil {
+			partIndex = exp.LiteralNumber("1")
+		}
+		return exp.SplitPart(exp.Args{
+			"this": seqGet(args, 0), "delimiter": delimiter, "part_index": partIndex,
+			"part_index_zero_as_one": true, "empty_delimiter_returns_whole": true,
+		})
+	}
 	out["NULLIFZERO"] = func(args []exp.Expression) exp.Expression {
 		value := seqGet(args, 0)
 		return exp.If(exp.Args{
