@@ -76,3 +76,24 @@ func TestDuckDBPreservesArraySizeDimension(t *testing.T) {
 		})
 	}
 }
+
+func TestDuckDBMapLiteralKeysRemainExpressions(t *testing.T) {
+	for _, sql := range []string{
+		"MAP {1: 'a', 2: 'b'}",
+		"MAP {[1, 2]: 'a', [3, 4]: 'b'}",
+	} {
+		t.Run(sql, func(t *testing.T) {
+			expression, err := sqlglot.ParseOne(sql, "duckdb")
+			if err != nil {
+				t.Fatalf("ParseOne(%q, duckdb): %v", sql, err)
+			}
+			got, err := sqlglot.Generate(expression, "duckdb", generator.Options{})
+			if err != nil {
+				t.Fatalf("Generate(%q, duckdb): %v", sql, err)
+			}
+			if got != sql {
+				t.Errorf("Generate(%q, duckdb) = %q, want %q", sql, got, sql)
+			}
+		})
+	}
+}

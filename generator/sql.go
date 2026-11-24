@@ -1432,14 +1432,23 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 	}
 	expressionSQL := g.sqlKey(e, "expression")
 	if expressionSQL != "" {
+		if g.isDialect("duckdb") && properties != nil {
+			for _, property := range properties.Expressions() {
+				if property.Kind() == expressions.KindReturnsProperty && boolValue(property.Arg("is_table")) {
+					expressionSQL = "TABLE " + expressionSQL
+					break
+				}
+			}
+		}
 		expressionSQL = begin + g.sep() + expressionSQL
 		// PG rejects `AS BEGIN ATOMIC`: the SQL-standard body replaces the AS clause.
-		// generator.py:1359-1363 additionally suppresses the AS when CREATE_FUNCTION_RETURN_AS
-		// is False and the body is an exp.Return; this port's parser never builds a Return body,
-		// so only the flag half of that condition is expressible here.
+		// generator.py:1362 additionally skips the AS when the body is a MacroOverloads
+		// list: DuckDB's CREATE MACRO renders every signature, params and all, inside the
+		// overload list itself (macrooverload_sql), so a leading AS would double it.
 		body := asExpression(e.Arg("expression"))
+		overloads := body != nil && body.Kind() == expressions.KindMacroOverloads
 		returnAS := g.dialect.CreateFunctionReturnAs || body == nil || body.Kind() != expressions.KindReturn
-		if !atomicBody && returnAS {
+		if !atomicBody && !overloads && returnAS {
 			postAliasSQL := g.renderProperties(
 				g.propertiesExpression(propertyLocations[propertyLocationPostAlias], e),
 				"", ", ", "", false,
@@ -2764,7 +2773,18 @@ func (g *Generator) tableSQLSep(e expressions.Expression, sep string) string {
 	}
 	when := g.sqlKey(e, "when")
 	if when != "" {
-		table = table + " " + when
+		if g.isDialect("duckdb") {
+			if historical := asExpression(e.Arg("when")); historical != nil &&
+				historical.Kind() == expressions.KindPropertyEQ {
+				when = "AT (" + g.sqlKey(historical, "this") + " => " +
+					g.sqlKey(historical, "expression") + ")"
+				postAlias += " " + when
+			} else {
+				table = table + " " + when
+			}
+		} else {
+			table = table + " " + when
+		}
 	}
 	changes := g.sqlKey(e, "changes")
 	if changes != "" {

@@ -2,6 +2,8 @@ package dialects
 
 import (
 	"maps"
+	"strconv"
+	"strings"
 
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/tokens"
@@ -78,7 +80,17 @@ func Snowflake() *Dialect {
 	}
 	d.InitcapDefaultDelimiterChars = " \\t\\n\\r\\f\\v!?@\\\"^#$&~_,.:;+\\\\-*%/|\\\\[\\\\](){}<>"
 
-	d.InverseTimeMapping = map[string]string{"T": "T"}
+	// Snowflake's ordered TIME_MAPPING inverse (dialects/dialect.py:261-271) prefers
+	// lowercase month/year tokens and uppercase day tokens, matching format_time's
+	// canonicalized output (e.g. `%m-%d-%Y` -> `mm-DD-yyyy`).
+	d.InverseTimeMapping = map[string]string{
+		"T": "T", "%Y": "yyyy", "%y": "yy", "%B": "mmmm", "%b": "mon",
+		"%m": "mm", "%d": "DD", "%-d": "dd", "%a": "DY", "%w": "dy",
+		"%H": "hh24", "%I": "hh12", "%M": "mi", "%S": "ss", "%f": "ff6",
+		"%f_zero": "ff0", "%f_one": "ff1", "%f_two": "ff2", "%f_three": "ff3",
+		"%f_four": "ff4", "%f_five": "ff5", "%f_seven": "ff7", "%f_eight": "ff8",
+		"%f_nine": "ff9", "%z": "tzhtzm", "%:z": "tzh:tzm", "%-z": "tzh", "%p": "pm",
+	}
 	d.TimeMapping = snowflakeTimeMapping
 	d.DatePartMapping = maps.Clone(d.DatePartMapping)
 	if d.DatePartMapping == nil {
@@ -158,6 +170,10 @@ func Snowflake() *Dialect {
 	// parsers/snowflake.py flags that the shared parser reads from the Dialect.
 	d.ColonIsVariantExtract = true
 	d.Pseudocolumns["LEVEL"] = true
+	d.InsertOverwrite = " OVERWRITE INTO"
+	d.HexStart, d.HexEnd = "x'", "'"
+	d.StringEscape = "\\"
+	d.SingleStringInterval = true
 
 	// parsers/snowflake.py:735-744 FUNCTION_PARSERS / FUNCTIONS removals.
 	d.RemovedFunctions = map[string]bool{"PREDICT": true}
@@ -179,6 +195,170 @@ func snowflakeDateUnit(unit exp.Expression) exp.Expression {
 // (parsers/snowflake.py:396-733) for the identity-relevant entries.
 func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expression {
 	out := map[string]func([]exp.Expression) exp.Expression{}
+
+	// parsers/snowflake.py:502 `_build_datetime("DATE", DType.DATE)` handles
+	// explicit format strings as TsOrDsToDate and converts the format via TIME_MAPPING.
+	dateWithFormat := postgresBuildFormattedTimeClass(d, exp.KindTsOrDsToDate)
+	dateBuilder := func(args []exp.Expression) exp.Expression {
+		value := seqGet(args, 0)
+		if len(args) == 1 && value != nil && value.IsString() {
+			if _, err := strconv.ParseInt(value.Name(), 10, 64); err == nil {
+				return exp.Anonymous(exp.Args{"this": "DATE", "expressions": args})
+			}
+			return exp.Cast(exp.Args{
+				"this": value,
+				"to":   exp.DataType(exp.Args{"this": exp.DTypeDate}),
+			})
+		}
+		if len(args) > 1 && args[1] != nil &&
+			(args[1].Kind() != exp.KindLiteral || args[1].IsString()) {
+			return dateWithFormat(args)
+		}
+		return exp.FromArgList(exp.KindDate, args)
+	}
+	out["DATE"] = dateBuilder
+	out["TO_DATE"] = func(args []exp.Expression) exp.Expression {
+		value := seqGet(args, 0)
+		if len(args) == 1 && value != nil && value.IsString() {
+			if _, err := strconv.ParseInt(value.Name(), 10, 64); err == nil {
+				return exp.Anonymous(exp.Args{"this": "TO_DATE", "expressions": args})
+			}
+		}
+		return dateBuilder(args)
+	}
+	timeToStr := postgresBuildFormattedTimeClass(d, exp.KindTimeToStr)
+	toChar := func(args []exp.Expression) exp.Expression {
+		if len(args) == 2 && snowflakeStaticTemporal(seqGet(args, 0)) {
+			return timeToStr(args)
+		}
+		return exp.FromArgList(exp.KindToChar, args)
+	}
+	out["TO_CHAR"] = toChar
+	out["TO_VARCHAR"] = toChar
+	out["GETDATE"] = func([]exp.Expression) exp.Expression {
+		return exp.CurrentTimestamp(exp.Args{})
+	}
+	out["SYSTIMESTAMP"] = exp.FromArgListFunc(exp.KindCurrentTimestamp)
+	out["ZEROIFNULL"] = func(args []exp.Expression) exp.Expression {
+		value := seqGet(args, 0)
+		return exp.If(exp.Args{
+			"this":  exp.Is(exp.Args{"this": value, "expression": exp.Null()}),
+			"true":  exp.LiteralNumber("0"),
+			"false": value,
+		})
+	}
+	toNumber := func(args []exp.Expression, safe bool) exp.Expression {
+		second := seqGet(args, 1)
+		number := exp.ToNumber(exp.Args{
+			"this": seqGet(args, 0), "safe": safe,
+		})
+		if second != nil && second.IsNumber() {
+			number.Set("precision", second)
+			number.Set("scale", seqGet(args, 2))
+			if number.Arg("scale") == nil {
+				number.Set("scale", exp.LiteralNumber("0"))
+			}
+		} else {
+			number.Set("format", second)
+			number.Set("precision", seqGet(args, 2))
+			if number.Arg("precision") == nil {
+				number.Set("precision", exp.LiteralNumber("38"))
+			}
+			number.Set("scale", seqGet(args, 3))
+			if number.Arg("scale") == nil {
+				number.Set("scale", exp.LiteralNumber("0"))
+			}
+		}
+		return number
+	}
+	for _, name := range []string{"TO_DECIMAL", "TO_NUMBER", "TO_NUMERIC"} {
+		out[name] = func(args []exp.Expression) exp.Expression { return toNumber(args, false) }
+	}
+	for _, name := range []string{"TRY_TO_DECIMAL", "TRY_TO_NUMBER", "TRY_TO_NUMERIC"} {
+		out[name] = func(args []exp.Expression) exp.Expression { return toNumber(args, true) }
+	}
+	out["BITSHIFTLEFT"] = exp.FromArgListFunc(exp.KindBitwiseLeftShift)
+	out["BITSHIFTRIGHT"] = exp.FromArgListFunc(exp.KindBitwiseRightShift)
+	out["LOCALTIMESTAMP"] = func(args []exp.Expression) exp.Expression {
+		return exp.CurrentTimestamp(exp.Args{"this": seqGet(args, 0)})
+	}
+	for name, target := range map[string]exp.DType{
+		"TO_TIME": exp.DTypeTime, "TO_TIMESTAMP": exp.DTypeTimestamp,
+		"TRY_TO_DATE": exp.DTypeDate, "TRY_TO_TIME": exp.DTypeTime,
+		"TRY_TO_TIMESTAMP": exp.DTypeTimestamp,
+	} {
+		safe := strings.HasPrefix(name, "TRY_")
+		out[name] = func(args []exp.Expression) exp.Expression {
+			value := seqGet(args, 0)
+			if target == exp.DTypeTimestamp && safe && len(args) == 1 &&
+				value != nil && value.IsString() {
+				if _, err := strconv.ParseInt(value.Name(), 10, 64); err == nil {
+					return exp.Anonymous(exp.Args{"this": name, "expressions": args})
+				}
+			}
+			if target == exp.DTypeTimestamp && !safe {
+				scale := seqGet(args, 1)
+				valueIsInteger := false
+				if value != nil {
+					_, err := strconv.ParseInt(value.Name(), 10, 64)
+					valueIsInteger = err == nil
+				}
+				scaleIsInteger := false
+				if scale != nil && scale.IsNumber() {
+					_, err := strconv.ParseInt(scale.Name(), 10, 64)
+					scaleIsInteger = err == nil
+				}
+				if value != nil && ((len(args) == 1 && valueIsInteger) ||
+					(scale != nil && scaleIsInteger)) {
+					return exp.UnixToTime(exp.Args{
+						"this": value, "scale": scale,
+						"target_type": exp.DataType(exp.Args{"this": target}),
+					})
+				}
+				if scale != nil && !scale.IsNumber() {
+					parsed := postgresBuildFormattedTimeClass(d, exp.KindStrToTime)(args)
+					parsed.Set("safe", false)
+					parsed.Set("target_type", exp.DataType(exp.Args{"this": target}))
+					return parsed
+				}
+			}
+			if len(args) == 1 && value != nil && value.IsString() {
+				_, integerString := strconv.ParseInt(value.Name(), 10, 64)
+				if target == exp.DTypeTimestamp && !safe && integerString == nil {
+					return exp.UnixToTime(exp.Args{
+						"this":        value,
+						"target_type": exp.DataType(exp.Args{"this": target}),
+					})
+				}
+				kind := exp.KindCast
+				if safe {
+					kind = exp.KindTryCast
+				}
+				cast := exp.New(kind, exp.Args{
+					"this": value,
+					"to":   exp.DataType(exp.Args{"this": target}),
+				})
+				if safe {
+					cast.Set("requires_string", true)
+					if target == exp.DTypeDate {
+						cast.Set("probe_date_format", true)
+					}
+				}
+				return cast
+			}
+			if target == exp.DTypeTime && len(args) > 1 {
+				parsed := postgresBuildFormattedTimeClass(d, exp.KindTsOrDsToTime)(args)
+				parsed.Set("safe", safe)
+				return parsed
+			}
+			if target == exp.DTypeDate && len(args) > 1 {
+				parsed := dateWithFormat(args)
+				parsed.Set("safe", safe)
+				return parsed
+			}
+			return exp.Anonymous(exp.Args{"this": name, "expressions": args})
+		}
+	}
 
 	// parsers/snowflake.py:524: FLATTEN parses as exp.Explode; the lateral parse site then
 	// defaults its alias columns to FLATTEN_COLUMNS.
@@ -222,6 +402,77 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 			"this":  cond,
 			"true":  exp.LiteralNumber("0"),
 			"false": exp.Div(exp.Args{"this": lhs, "expression": rhs}),
+		})
+	}
+	out["DIV0NULL"] = func(args []exp.Expression) exp.Expression {
+		lhs := snowflakeWrapBinary(seqGet(args, 0))
+		rhs := snowflakeWrapBinary(seqGet(args, 1))
+		cond := exp.Or(exp.Args{
+			"this":       exp.EQ(exp.Args{"this": rhs, "expression": exp.LiteralNumber("0")}),
+			"expression": exp.Is(exp.Args{"this": rhs, "expression": exp.Null()}),
+		})
+		return exp.If(exp.Args{
+			"this": cond, "true": exp.LiteralNumber("0"),
+			"false": exp.Div(exp.Args{"this": lhs, "expression": rhs}),
+		})
+	}
+	out["MD5_HEX"] = exp.FromArgListFunc(exp.KindMD5)
+	out["REPLACE"] = func(args []exp.Expression) exp.Expression {
+		if len(args) == 2 {
+			args = append(args, exp.LiteralString(""))
+		}
+		return exp.FromArgList(exp.KindReplace, args)
+	}
+	out["REGEXP_REPLACE"] = func(args []exp.Expression) exp.Expression {
+		if len(args) == 2 {
+			args = append(args, exp.LiteralString(""))
+		}
+		return exp.FromArgList(exp.KindRegexpReplace, args)
+	}
+	out["REGEXP_SUBSTR_ALL"] = func(args []exp.Expression) exp.Expression {
+		return exp.RegexpExtractAll(exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1),
+			"position": seqGet(args, 2), "occurrence": seqGet(args, 3),
+			"parameters": seqGet(args, 4), "group": seqGet(args, 5),
+		})
+	}
+	out["STDDEV_SAMP"] = exp.FromArgListFunc(exp.KindStddev)
+	out["APPROX_TOP_K"] = func(args []exp.Expression) exp.Expression {
+		expression := seqGet(args, 1)
+		if expression == nil {
+			expression = exp.LiteralNumber("1")
+		}
+		return exp.ApproxTopK(exp.Args{
+			"this": seqGet(args, 0), "expression": expression, "counters": seqGet(args, 2),
+		})
+	}
+	out["APPROXIMATE_JACCARD_INDEX"] = exp.FromArgListFunc(exp.KindApproximateSimilarity)
+	out["APPROXIMATE_SIMILARITY"] = exp.FromArgListFunc(exp.KindApproximateSimilarity)
+	out["STRTOK"] = func(args []exp.Expression) exp.Expression {
+		delimiter := seqGet(args, 1)
+		if delimiter == nil {
+			delimiter = exp.LiteralString(" ")
+		}
+		partIndex := seqGet(args, 2)
+		if partIndex == nil {
+			partIndex = exp.LiteralNumber("1")
+		}
+		return exp.Strtok(exp.Args{
+			"this": seqGet(args, 0), "delimiter": delimiter, "part_index": partIndex,
+		})
+	}
+	out["NULLIFZERO"] = func(args []exp.Expression) exp.Expression {
+		value := seqGet(args, 0)
+		return exp.If(exp.Args{
+			"this": exp.EQ(exp.Args{"this": value, "expression": exp.LiteralNumber("0")}),
+			"true": exp.Null(), "false": value,
+		})
+	}
+	out["GET_PATH"] = func(args []exp.Expression) exp.Expression {
+		return exp.JSONExtract(exp.Args{
+			"this":          seqGet(args, 0),
+			"expression":    d.ToJSONPath(seqGet(args, 1)),
+			"requires_json": true,
 		})
 	}
 	out["IFF"] = exp.FromArgListFunc(exp.KindIf)
@@ -291,7 +542,7 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	out["DAYOFWEEKISO"] = exp.FromArgListFunc(exp.KindDayOfWeekIso)
 	out["DAYOFYEAR"] = exp.FromArgListFunc(exp.KindDayOfYear)
 	out["WEEKISO"] = exp.FromArgListFunc(exp.KindWeekOfYear)
-	out["WEEKOFYEAR"] = exp.FromArgListFunc(exp.KindWeekOfYear)
+	out["WEEKOFYEAR"] = exp.FromArgListFunc(exp.KindWeek)
 	out["YEAROFWEEK"] = exp.FromArgListFunc(exp.KindYearOfWeek)
 	out["OBJECT_KEYS"] = exp.FromArgListFunc(exp.KindJSONKeys)
 	out["TO_JSON"] = exp.FromArgListFunc(exp.KindJSONFormat)
@@ -303,10 +554,59 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	out["UUID_STRING"] = exp.FromArgListFunc(exp.KindUuid)
 	out["HEX_DECODE_BINARY"] = exp.FromArgListFunc(exp.KindUnhex)
 	out["HEX_ENCODE"] = exp.FromArgListFunc(exp.KindHex)
-	out["STRTOK_TO_ARRAY"] = exp.FromArgListFunc(exp.KindStrtokToArray)
+	out["STRTOK_TO_ARRAY"] = func(args []exp.Expression) exp.Expression {
+		delimiter := seqGet(args, 1)
+		if delimiter == nil {
+			delimiter = exp.LiteralString(" ")
+		}
+		return exp.StrtokToArray(exp.Args{"this": seqGet(args, 0), "expression": delimiter})
+	}
 	out["SPLIT"] = exp.FromArgListFunc(exp.KindSplit)
+	for name, kind := range map[string]exp.Kind{"LIKE": exp.KindLike, "ILIKE": exp.KindILike} {
+		out[name] = func(args []exp.Expression) exp.Expression {
+			like := exp.New(kind, exp.Args{
+				"this": seqGet(args, 0), "expression": seqGet(args, 1),
+			})
+			if escape := seqGet(args, 2); escape != nil {
+				return exp.Escape(exp.Args{"this": like, "expression": escape})
+			}
+			return like
+		}
+	}
+	timestampFromParts := func(args []exp.Expression) exp.Expression {
+		if len(args) == 2 {
+			return exp.New(exp.KindTimestampFromParts, exp.Args{
+				"this": args[0], "expression": args[1],
+			})
+		}
+		return exp.FromArgList(exp.KindTimestampFromParts, args)
+	}
+	for _, name := range []string{
+		"TIMESTAMPFROMPARTS", "TIMESTAMPNTZFROMPARTS",
+		"TIMESTAMP_NTZ_FROM_PARTS",
+	} {
+		out[name] = timestampFromParts
+	}
 
 	return out
+}
+
+func snowflakeStaticTemporal(e exp.Expression) bool {
+	if e == nil || e.Kind() != exp.KindCast {
+		return false
+	}
+	to, _ := e.Arg("to").(exp.Expression)
+	if to == nil {
+		return false
+	}
+	dtype, _ := to.Arg("this").(exp.DType)
+	switch dtype {
+	case exp.DTypeDate, exp.DTypeDatetime, exp.DTypeTimestamp, exp.DTypeTimestampNtz,
+		exp.DTypeTimestampTz, exp.DTypeTimestampLtz, exp.DTypeTime, exp.DTypeTimeTz:
+		return true
+	default:
+		return false
+	}
 }
 
 // snowflakeBitwiseBuilder ports _build_bitwise (parsers/snowflake.py:133-152).

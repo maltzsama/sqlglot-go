@@ -359,7 +359,7 @@ Cross-cutting rules for the SET/SHOW family:
 - Known approximation: the port has no PG reserved-word table (upstream leaves it empty), so a few
   keyword-shaped names over/under-accept — all fail-safe (documented per-site in the parsers).
 
-### 1.27 JSONPath tokenizer: function paths ported, `->`/`->>` construction deferred
+### 1.27 JSONPath tokenizer and extraction paths
 
 `sqlglot/jsonpath.py` and `Dialect.to_json_path` are ported (`jsonpath/`, `Dialect.ToJSONPath`),
 including the per-dialect tokenizer deltas — bigquery's DASH/NUMBER var tokens, its
@@ -370,14 +370,18 @@ therefore rewritten exactly as upstream does: `JSON_EXTRACT(doc, '$. a b c .d')`
 `JSON_EXTRACT(doc, '$[\' a b c \'].d')`, `JSON_QUERY(...)` → `JSON_QUERY(doc, '$." a b c ".d')`
 (double-quote escaping), `GET_JSON_OBJECT(c, '$.x-y')` → `GET_JSON_OBJECT(c, '$["x-y"]')`.
 
-**Still deferred:** `build_json_extract_path` (dialect.py:2202-2248) for the JSON `->`/`->>`
-operators. The port keeps the raw literal right-hand side instead of building a JSONPath, so
-same-dialect arrow output is unchanged (`x -> 'a'`) but cross-dialect rendering can differ
-(upstream turns it into `GET_PATH(PARSE_JSON(x), 'a')` for snowflake, or `x -> '$.a'` for
-duckdb). The affected rows stay in the gap lists (three DuckDB identity rows tagged
-`gen: canonicalization`, plus the arrow transpile pairs). Guarding tests:
-`jsonpath/jsonpath_test.go` (the full upstream `tests/test_jsonpath.py`),
-`TestBigQueryJSONFunctions`, `TestDatabricksJSON`, `TestHiveJSONFunctions`.
+`build_json_extract_path` is ported for Postgres-family arrow operators and
+`JSON_EXTRACT_PATH[_TEXT]` function builders (`dialects/dialect.py:2205-2247`,
+`parsers/postgres.py:115-116`). Literal path segments become `JSONPathRoot` plus key/subscript
+nodes; any non-literal function path falls back to the original positional arguments, matching
+upstream. Postgres-family generation ports `_json_extract_sql` and `json_extract_segments`
+(`generators/postgres.py:183-197`, `dialects/dialect.py:2250-2284`); Redshift uses its
+always-function transform (`generators/redshift.py:87-88`). DuckDB's JSONPath operator
+construction and same-parent wrapping are also covered. Guarding tests include
+`jsonpath/jsonpath_test.go`, `TestJSONQueryRenderingIsTrinoFamilyOnly`,
+`TestBigQueryJSONFunctions`, `TestDatabricksJSON`, `TestHiveJSONFunctions`, and the parity
+corpora. The remaining Snowflake JSON extraction transforms and other cross-dialect gaps remain
+tracked in `testdata/transpile_gaps.txt`; they are not implied complete by this entry.
 
 ### 1.28 SQLite `0x..` literals are integers, not BLOBs
 

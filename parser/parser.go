@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -1146,7 +1147,11 @@ func (p *Parser) parseConnectWithPrior() exp.Expression {
 }
 
 func (p *Parser) parseQueryModifiers(this exp.Expression) exp.Expression {
-	if this != nil && (this.Is(exp.TraitQuery) || this.Kind() == exp.KindTable) {
+	// MODIFIABLES (parser.py:1834) is (Query, Table, TableFromRows, Values); Values is not
+	// a Query subclass upstream, but it carries order/limit/offset, so `(VALUES (1) LIMIT 1)`
+	// must reach the modifier loop below. TableFromRows has no Kind in this port.
+	if this != nil && (this.Is(exp.TraitQuery) || this.Kind() == exp.KindTable ||
+		this.Kind() == exp.KindValues) {
 		for {
 			join := p.parseJoin(false, false, nil)
 			if join == nil {
@@ -1458,6 +1463,13 @@ func (p *Parser) parseTable(schema bool, joins bool, aliasTokens map[tokens.Toke
 	if prefixAlias != nil && this != nil {
 		if tableAlias := prefixAlias; tableAlias != nil && tableAlias.Kind() == exp.KindTableAlias {
 			prefixComments = append(prefixComments, this.PopComments()...)
+			// The tokenizer/parser attaches a trailing table-name comment to its
+			// Identifier child, whereas upstream's _parse_table receives it on the Table.
+			// DuckDB relocates that comment to the prefix alias along with comments adjacent
+			// to the colon (parsers/duckdb.py:314-326).
+			if name := asExpr(this.Arg("this")); name != nil {
+				prefixComments = append(prefixComments, name.PopComments()...)
+			}
 			tableAlias.AddComments(append(tableAlias.PopComments(), prefixComments...), false)
 			this.Set("alias", tableAlias)
 			if p.dialect.Name != "clickhouse" {
@@ -1600,6 +1612,7 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 			this.Set("version", v)
 		}
 	}
+	p.parseDuckDBHistorical(this)
 	if p.dialect.AliasPostTablesample {
 		if s := p.parseTableSample(false); s != nil {
 			this.Set("sample", s)
@@ -1611,6 +1624,7 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 			this.Set("alias", alias)
 		}
 	}
+	p.parseDuckDBHistorical(this)
 	// parser.py:5089-5092: sqlite `INDEXED BY <table-parts>` / `NOT INDEXED` after the alias.
 	if p.match(tokens.INDEXED_BY) {
 		this.Set("indexed", p.parseTableParts(false, false, false, false))
@@ -1618,7 +1632,8 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 		this.Set("indexed", false)
 	}
 	// parser.py:5094-5097: `FROM t.arr AS a AT i` indexes the navigated array (Redshift SUPER).
-	if this.Kind() == exp.KindTable && p.matchTextSeq("AT") {
+	if this.Kind() == exp.KindTable && stringsUpper(p.curr.Text) == "AT" &&
+		p.next.TokenType != tokens.L_PAREN && p.matchTextSeq("AT") {
 		return p.expression(exp.AtIndex(exp.Args{"this": tableToColumn(this), "expression": p.parseIdVar(true, nil)}), nil, nil)
 	}
 	if hints := p.parseTableHints(); len(hints) > 0 {
@@ -1661,6 +1676,28 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 		}
 	}
 	return this
+}
+
+// parseDuckDBHistorical ports DuckDB's `AT (VERSION|TIMESTAMP => value)` table
+// modifier. It is called on both sides of alias parsing because DuckDB accepts
+// the modifier before or after a table alias.
+func (p *Parser) parseDuckDBHistorical(table exp.Expression) {
+	if table == nil || table.Kind() != exp.KindTable || p.dialect.Name != "duckdb" ||
+		p.curr.TokenType != tokens.VAR || stringsUpper(p.curr.Text) != "AT" ||
+		p.next.TokenType != tokens.L_PAREN {
+		return
+	}
+	p.advance(2)
+	kind := p.parseVar(true, nil, true)
+	if !p.match(tokens.FARROW) {
+		p.raiseError("Expected => in DuckDB historical table reference")
+		return
+	}
+	value := p.parseDisjunction()
+	p.matchRParen(value)
+	table.Set("when", p.expression(exp.PropertyEQ(exp.Args{
+		"this": kind, "expression": value,
+	}), nil, nil))
 }
 
 func (p *Parser) parseTableParts(schema bool, isDBReference bool, wildcard bool, fast bool) exp.Expression {
@@ -1803,6 +1840,9 @@ func (p *Parser) parseVersion() exp.Expression {
 }
 
 func (p *Parser) parseTableAlias(aliasTokensArg map[tokens.TokenType]bool) exp.Expression {
+	if p.match(tokens.MATCH_CONDITION, false) {
+		return nil
+	}
 	if p.canParseLimitOrOffset() {
 		return nil
 	}
@@ -1972,6 +2012,9 @@ func (p *Parser) parseJoinBase(skipJoinToken bool, parseBracket bool, aliasToken
 	}
 	if directed {
 		kwargs["directed"] = true
+	}
+	if p.match(tokens.MATCH_CONDITION) {
+		kwargs["match_condition"] = p.parseWrapped(p.parseComparison, false)
 	}
 	joinThis := asExpr(kwargs["this"])
 	// ksqlDB `joinedSource: joinType JOIN aliasedRelation joinWindow? joinCriteria`
@@ -2444,20 +2487,33 @@ func (p *Parser) parseColumnReference() exp.Expression {
 
 type columnOpFunc func(p *Parser, this, field exp.Expression) exp.Expression
 
-// arrowJSONExtractArgs builds the args for a JSON `->`/`->>` operator node (exp.JSONExtract/
-// JSONExtractScalar). build_json_extract_path (dialect.py:2092-2124) is not ported: this port
-// keeps the raw literal RHS instead of converting it to a JSONPath (see ROADMAP - JSONPath
-// deferral). The only signal that decision needs from that upstream builder is its
-// arrow_req_json_type branch, which sets only_json_types when the dialect requires it (postgres
-// only, JSONArrowsRequireJSONType) and the RHS is a bare Literal (so e.g. `x -> -1`'s Neg RHS
-// does NOT set only_json_types - only a bare literal does). The generator reads only_json_types
-// to choose operator-form (`->`/`->>`) over function-form (JSON_EXTRACT_PATH[_TEXT]) rendering.
+// arrowJSONExtractArgs builds args for JSON `->`/`->>` nodes. Base dialects parse literal paths
+// through Dialect.to_json_path; Postgres builds a path from literal operands while preserving
+// non-literal operands as-is (dialect.py:2205-2244).
 func arrowJSONExtractArgs(p *Parser, this, path exp.Expression) exp.Args {
 	args := exp.Args{"this": this, "expression": path}
-	if p.dialect.JSONArrowsRequireJSONType && path != nil && path.Kind() == exp.KindLiteral {
-		args["only_json_types"] = true
+	if p.dialect.JSONArrowsRequireJSONType {
+		if path != nil && path.Kind() == exp.KindLiteral {
+			args["expression"] = postgresArrowJSONPath(path)
+			args["only_json_types"] = true
+		}
+	} else if p.dialect.Name != "sqlite" {
+		args["expression"] = p.dialect.ToJSONPath(path)
 	}
 	return args
+}
+
+// postgresArrowJSONPath ports build_json_extract_path's literal segment handling. A quoted
+// numeric operand is a key; an unquoted integer operand is a zero-based array subscript.
+func postgresArrowJSONPath(path exp.Expression) exp.Expression {
+	text := path.Name()
+	part := exp.Expression(exp.JSONPathKey(exp.Args{"this": text}))
+	if path.IsInt() && !path.IsString() {
+		if index, err := strconv.ParseInt(text, 10, 64); err == nil {
+			part = exp.JSONPathSubscript(exp.Args{"this": index})
+		}
+	}
+	return exp.JSONPath(exp.Args{"expressions": []exp.Expression{exp.JSONPathRoot(exp.Args{}), part}})
 }
 
 var columnOperators = map[tokens.TokenType]columnOpFunc{
@@ -2478,8 +2534,7 @@ var columnOperators = map[tokens.TokenType]columnOpFunc{
 	tokens.DOTCARET: func(p *Parser, this, field exp.Expression) exp.Expression {
 		return p.expression(exp.NestedJSONSelect(exp.Args{"this": this, "expression": field}), nil, nil)
 	},
-	// ARROW/DARROW keep the raw literal RHS and gate only_json_types via arrowJSONExtractArgs
-	// (see its doc for the JSONPath-deferral rationale).
+	// ARROW/DARROW use dialect-aware JSONPath construction via arrowJSONExtractArgs.
 	tokens.ARROW: func(p *Parser, this, path exp.Expression) exp.Expression {
 		return p.expression(exp.JSONExtract(arrowJSONExtractArgs(p, this, path)), nil, nil)
 	},
@@ -2636,7 +2691,10 @@ func (p *Parser) parseParen() exp.Expression {
 		this = p.expression(exp.Tuple(nil), nil, nil)
 	} else if isUnwrappedQuery(this) {
 		this = p.parseSubquery(this, false)
-	} else if this != nil && this.Kind() == exp.KindSubquery {
+	} else if this != nil && (this.Kind() == exp.KindSubquery || this.Kind() == exp.KindValues) {
+		// parser.py:7084-7088: Subquery and Values take the query-modifier and
+		// set-operation tail before wrapping, so `(VALUES (1) LIMIT 1)` attaches its LIMIT
+		// to the Values and `(VALUES ...) INTERSECT (...)` builds the Intersect outside.
 		this = p.parseSubquery(p.parseQueryModifiers(p.parseSetOperations(this)), false)
 	} else if len(expressions) > 1 || p.prev.TokenType == tokens.COMMA {
 		this = p.expression(exp.Tuple(exp.Args{"expressions": expressions}), nil, nil)
@@ -3027,6 +3085,17 @@ func (p *Parser) parseStar() exp.Expression {
 }
 
 func (p *Parser) parseStarOps(starToken tokens.Token) exp.Expression {
+	// DuckDB expands matching columns through the special `*COLUMNS(pattern)` form.
+	// The prefix star belongs to the Columns node as `unpack`, not to a separate Star.
+	if p.dialect.Name == "duckdb" && p.matchTextSeq("COLUMNS") {
+		if !p.match(tokens.L_PAREN) {
+			p.raiseError("Expected ( after COLUMNS")
+			return nil
+		}
+		value := p.parseExpression()
+		p.matchRParen(value)
+		return p.expression(exp.Columns(exp.Args{"this": value, "unpack": true}), &starToken, nil)
+	}
 	// v30.17.0 (parser.py:9972-9977): only a string pattern makes ILIKE a star filter;
 	// `* ILIKE (foo)` retreats and leaves ILIKE to the expression grammar.
 	var ilike exp.Expression
@@ -3114,6 +3183,9 @@ func (p *Parser) parsePlaceholder() exp.Expression {
 	}
 	if p.match(tokens.COLON) {
 		if p.matchSet(idVarTokens) {
+			return p.spanned(p.expression(exp.Placeholder(exp.Args{"this": p.prev.Text}), &p.prev, nil), start, p.prev)
+		}
+		if p.dialect.Name == "snowflake" && p.match(tokens.NUMBER) {
 			return p.spanned(p.expression(exp.Placeholder(exp.Args{"this": p.prev.Text}), &p.prev, nil), start, p.prev)
 		}
 		p.retreat(p.index - 1)
@@ -3336,6 +3408,10 @@ func (p *Parser) parseCTEBase() exp.Expression {
 	if alias == nil || alias.This() == nil {
 		p.raiseError("Expected CTE to have alias")
 	}
+	var keyExpressions []exp.Expression
+	if p.dialect.Name == "duckdb" && p.matchTextSeq("USING", "KEY") {
+		keyExpressions = p.parseWrappedIdVars()
+	}
 	// parser.py:4218: OPTIONAL_ALIAS_TOKEN_CTE=false (ClickHouse) requires the AS keyword.
 	if !p.match(tokens.ALIAS) && !p.dialect.OptionalAliasTokenCTE {
 		p.raiseError("Expected AS in CTE")
@@ -3348,9 +3424,10 @@ func (p *Parser) parseCTEBase() exp.Expression {
 		materialized = true
 	}
 	cte := p.expression(exp.CTE(exp.Args{
-		"this":         p.parseWrapped(func() exp.Expression { return p.parseStatement() }, false),
-		"alias":        alias,
-		"materialized": materialized,
+		"this":            p.parseWrapped(func() exp.Expression { return p.parseStatement() }, false),
+		"alias":           alias,
+		"materialized":    materialized,
+		"key_expressions": keyExpressions,
 	}), nil, comments)
 	// CTE canonicalization (parser.py:4241-4243, v30.17.0): a bare VALUES body becomes
 	// SELECT * FROM (VALUES ...) AS _values.
@@ -3481,6 +3558,10 @@ func (p *Parser) parseWrappedSelect(table bool) exp.Expression {
 		isUnpivot := p.curr.TokenType == tokens.UNPIVOT
 		p.advance()
 		this = p.parseSimplifiedPivot(isUnpivot)
+	} else if p.dialect.Name == "duckdb" && p.curr.TokenType == tokens.DESCRIBE {
+		// DuckDB accepts a DESCRIBE statement as a parenthesized table source. Parse it as a
+		// statement rather than treating DESCRIBE as a table name and `t` as its alias.
+		this = p.parseStatement()
 	} else if table {
 		this = p.parseTable(false, false, nil, false, false, false, true)
 	} else {
@@ -3652,7 +3733,7 @@ func (p *Parser) parseFunctionCall(functions map[string]func([]exp.Expression) e
 			if p.dialect.Functions[upper] == nil {
 				validateArgs = exprArgs(args)
 			}
-			result = p.normalizeJSONPathArg(p.validateExpression(function(args), validateArgs))
+			result = p.normalizeJSONPathArg(p.validateExpression(function(args), validateArgs), upper)
 		} else {
 			var name any = this
 			if tokenType == tokens.IDENTIFIER {
@@ -4163,6 +4244,14 @@ func (p *Parser) parseWindow(this exp.Expression, alias bool) exp.Expression {
 	}
 	// FIRST_VALUE(t.c IGNORE|RESPECT NULLS) OVER ... is hoisted to FIRST_VALUE(t.c) IGNORE|RESPECT
 	// NULLS OVER ... (parser.py:8636-8641); the trailing form is parsed just below.
+	if p.dialectIs("snowflake") && this != nil && this.Kind() == exp.KindNthValue &&
+		p.matchTextSeq("FROM") {
+		fromFirst := p.matchTextSeq("FIRST")
+		fromLast := !fromFirst && p.matchTextSeq("LAST")
+		if fromFirst || fromLast {
+			this.Set("from_first", fromFirst)
+		}
+	}
 	if this != nil && this.Is(exp.TraitAggFunc) {
 		if ignoreRespect := findIgnoreRespectInScope(this); ignoreRespect != nil && ignoreRespect != this {
 			ignoreRespect.Replace(ignoreRespect.This())

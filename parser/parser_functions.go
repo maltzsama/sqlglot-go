@@ -545,9 +545,16 @@ func (p *Parser) parseGapFill() exp.Expression {
 // normalizeJSONPathArg ports the dialect.to_json_path call inside the JSON function builders
 // (parser.py:104-118, 425-431): the path argument of JSON_EXTRACT, JSON_EXTRACT_SCALAR,
 // JSON_EXTRACT_PATH_TEXT and JSON_KEYS becomes a JSONPath AST when the dialect's JSONPath
-// tokenizer accepts it. Other functions pass through untouched.
-func (p *Parser) normalizeJSONPathArg(e exp.Expression) exp.Expression {
+// tokenizer accepts it. Other functions pass through untouched. Entries listed in the
+// dialect's JSONExtractPathBuilders are skipped (dialect.py:2205-2247): that builder
+// constructs its own segments and its non-literal fallback must keep the raw Literal
+// expression (dialect.py:2214-2220), so re-converting it here would fork the AST from
+// upstream's.
+func (p *Parser) normalizeJSONPathArg(e exp.Expression, name string) exp.Expression {
 	if e == nil {
+		return e
+	}
+	if p.dialect.JSONExtractPathBuilders[name] {
 		return e
 	}
 	switch e.Kind() {

@@ -83,7 +83,7 @@ func (p *Parser) buildJSONExtract(this exp.Expression, pathParts []exp.Expressio
 			"this":            this,
 			"expression":      exp.JSONPath(exp.Args{"expressions": pathParts}),
 			"variant_extract": true,
-			"requires_json":   false,
+			"requires_json":   p.dialect.JSONExtractRequiresJSONExpression,
 		}), nil, nil)
 		pathParts = []exp.Expression{exp.JSONPathRoot(nil)}
 	}

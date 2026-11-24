@@ -45,6 +45,12 @@ func Postgres() *Dialect {
 	d.CopyHasIntoKeyword = false
 	// parsers/postgres.py:191 JSON_ARROWS_REQUIRE_JSON_TYPE = True.
 	d.JSONArrowsRequireJSONType = true
+	// parsers/postgres.py:115-116: JSON_EXTRACT_PATH[_TEXT] are built by
+	// BuildJSONExtractPath, so their operands must not be re-normalized after the build.
+	d.JSONExtractPathBuilders = map[string]bool{
+		"JSON_EXTRACT_PATH":      true,
+		"JSON_EXTRACT_PATH_TEXT": true,
+	}
 	// parsers/postgres.py:192-219 (v30.17.0): JSON operators are binary-tier, not accessors.
 	d.JSONOperatorsAreBinary = true
 	// dialects/postgres.py:16 NORMALIZE_NOT_NULL = False: NOTNULL keeps Is(negate=True).
@@ -101,6 +107,16 @@ func Postgres() *Dialect {
 		// indexes the most significant bit 0), which the postgres getbit_sql generator
 		// renders back as GET_BIT(...). Redshift drops this entry (parsers/redshift.py:35).
 		"GET_BIT": postgresBuildGetBit,
+		// parsers/postgres.py:115-116 "JSON_EXTRACT_PATH"/"JSON_EXTRACT_PATH_TEXT":
+		// build_json_extract_path(exp.JSONExtract/JSONExtractScalar). Literal path arguments
+		// become JSONPath segments, which the postgres family generator renders back through
+		// json_extract_segments (generator/json_arrow.go); a non-literal argument anywhere in
+		// the path keeps the raw positional form so calls like
+		// JSON_EXTRACT_PATH_TEXT(x, k1, k2, k3) round-trip verbatim. Redshift, Materialize and
+		// RisingWave inherit these entries through the PostgresParser chain
+		// (parsers/redshift.py:34-36 drops only GET_BIT).
+		"JSON_EXTRACT_PATH":      BuildJSONExtractPath(exp.KindJSONExtract),
+		"JSON_EXTRACT_PATH_TEXT": BuildJSONExtractPath(exp.KindJSONExtractScalar),
 	}
 
 	cfg := tokens.BaseConfig()

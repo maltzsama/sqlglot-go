@@ -3,6 +3,7 @@ package dialects
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -364,6 +365,16 @@ type Dialect struct {
 	// 523): whether copyparameterSQL always renders `option = value` (True) or `option value`
 	// (False) when a param has a scalar value.
 	CopyParamsEqRequired bool
+	// JSONExtractPathBuilders names the FUNCTIONS entries whose builder is
+	// BuildJSONExtractPath (parsers/postgres.py:115-116, registered in postgres.go). The
+	// parser's normalizeJSONPathArg must leave those nodes' `expression` argument alone:
+	// the builder already turned every literal operand into JSONPath segments, and its
+	// non-literal fallback has to keep the raw operand (dialect.py:2214-2220), so converting
+	// it again would fork the AST from upstream's. Dialects that register the same *names*
+	// under a different builder (duckdb's JSON_EXTRACT_PATH, parsers/duckdb.py:152) do not
+	// list them here and still get the to_json_path normalization.
+	JSONExtractPathBuilders map[string]bool
+
 	// JSONArrowsRequireJSONType ports the parser flag JSON_ARROWS_REQUIRE_JSON_TYPE
 	// (parsers/postgres.py:191); base/mysql leave it False. When set, a JSON `->`/`->>` RHS
 	// that is a literal marks the built JSONExtract/JSONExtractScalar node's only_json_types
@@ -1760,6 +1771,97 @@ func (d *Dialect) ToJSONPath(path exp.Expression) exp.Expression {
 		log.Printf("Invalid JSON path syntax. %s", err)
 	}
 	return path
+}
+
+// BuildJSONExtractPath ports build_json_extract_path (dialects/dialect.py:2205-2247): every
+// literal argument after `this` becomes one segment under a JSONPathRoot - an integer text
+// becomes a 0-based JSONPathSubscript, anything else a JSONPathKey. The first non-Literal
+// argument aborts the conversion and keeps the raw positional form (this, expression, the
+// expressions tail) instead, because such a path cannot be transpiled safely
+// (dialect.py:2214-2220) - which is what preserves e.g. JSON_EXTRACT_PATH_TEXT(x, k1, k2)
+// round-tripping as the plain function call it was written as.
+// The upstream helper's other parameters (zero_based_indexing, arrow_req_json_type,
+// json_type) are only passed by the postgres JSON_OPERATORS - ported parse-side in
+// parser.go's arrowJSONExtractArgs with arrow_req_json_type semantics - and by the
+// clickhouse/singlestore entries (ROADMAP 5b), so this entry starts from their defaults
+// (true / false / unset). Upstream also writes only_json_types explicitly to False here;
+// that arg is omitted under this port's false-valued-args convention.
+// Callers: postgres parsers/postgres.py:115-116 JSON_EXTRACT_PATH[_TEXT] (redshift,
+// materialize and risingwave inherit it through the PostgresParser chain).
+func BuildJSONExtractPath(kind exp.Kind) func([]exp.Expression) exp.Expression {
+	return func(args []exp.Expression) exp.Expression {
+		segments := []exp.Expression{exp.JSONPathRoot(exp.Args{})}
+		for i := 1; i < len(args); i++ {
+			arg := args[i]
+			if arg == nil || arg.Kind() != exp.KindLiteral {
+				// dialect.py:2214-2220: keep this/expression/expressions unconverted.
+				// Note expression is always args[1], even when a later argument is the
+				// non-literal one that triggered the fallback.
+				m := exp.Args{
+					"this":       seqGet(args, 0),
+					"expression": seqGet(args, 1),
+				}
+				if len(args) > 2 {
+					m["expressions"] = args[2:]
+				}
+				return exp.New(kind, m)
+			}
+
+			text := arg.Name()
+			if index, ok := pythonInt(text); ok {
+				segments = append(segments, exp.JSONPathSubscript(exp.Args{"this": index}))
+			} else {
+				segments = append(segments, exp.JSONPathKey(exp.Args{"this": text}))
+			}
+		}
+
+		m := exp.Args{"expression": exp.JSONPath(exp.Args{"expressions": segments})}
+		if len(args) > 0 {
+			m["this"] = args[0]
+		}
+		return exp.New(kind, m)
+	}
+}
+
+// pythonInt ports is_int + int() (helper.py:244-257): Python's int() accepts surrounding
+// whitespace, a leading sign and single underscores between digits (int("3_0") == 30), so a
+// path segment spelled "3_0" becomes the subscript 30 exactly as upstream builds it. Only
+// ASCII digits are recognized - Python's int() also accepts other Unicode decimal digits,
+// which this zero-dependency port leaves as keys; a value that overflows int64 likewise stays
+// a key, which renders the same digits either way in the function form.
+func pythonInt(text string) (int64, bool) {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return 0, false
+	}
+	sign := ""
+	body := trimmed
+	if c := trimmed[0]; c == '+' || c == '-' {
+		sign, body = string(c), trimmed[1:]
+	}
+	digits := make([]byte, 0, len(body))
+	for i := 0; i < len(body); i++ {
+		c := body[i]
+		switch {
+		case c == '_':
+			// int() allows underscores only between digits.
+			if len(digits) == 0 || i+1 == len(body) || body[i+1] < '0' || body[i+1] > '9' {
+				return 0, false
+			}
+		case c >= '0' && c <= '9':
+			digits = append(digits, c)
+		default:
+			return 0, false
+		}
+	}
+	if len(digits) == 0 {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(sign+string(digits), 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return n, true
 }
 
 // JSONPathConfig assembles the dialect's jsonpath.Config from the JSONPath flags

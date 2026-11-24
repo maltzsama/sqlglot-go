@@ -32,6 +32,13 @@ func FromArgList(kind Kind, args []Expression) Expression {
 			}
 		}
 	}
+	switch kind {
+	case KindDateAdd, KindDateSub, KindDatetimeAdd, KindDatetimeSub, KindTimestampTrunc:
+		// These expression classes embed TimeUnit (expressions/core.py:2037-2066).
+		if unit, ok := m["unit"].(Expression); ok {
+			m["unit"] = TimeUnitVar(unit)
+		}
+	}
 	return newNode(kind, m)
 }
 
@@ -178,6 +185,8 @@ var FunctionByName = map[string]func([]Expression) Expression{
 		return ArrayConstructCompact(Args{"expressions": args})
 	},
 	"ARRAY_HAS":      genericFunction(KindArrayContains),
+	"STARTS_WITH":    genericFunction(KindStartsWith),
+	"STARTSWITH":     genericFunction(KindStartsWith),
 	"INITCAP":        genericFunction(KindInitcap),
 	"SPLIT":          genericFunction(KindSplit),
 	"REGEXP_LIKE":    genericFunction(KindRegexpLike),
@@ -201,6 +210,14 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"ADD_MONTHS":      genericFunction(KindAddMonths),
 	"DATE_ADD":        genericFunction(KindDateAdd),
 	"DATEADD":         genericFunction(KindDateAdd),
+	"DATE_TRUNC": func(args []Expression) Expression {
+		dateTruncArgs := Args{"unit": seqGetExpr(args, 0), "this": seqGetExpr(args, 1)}
+		if len(args) > 2 {
+			dateTruncArgs["zone"] = args[2]
+		}
+		return DateTrunc(dateTruncArgs)
+	},
+	"TIMESTAMP_TRUNC": genericFunction(KindTimestampTrunc),
 	// DATE_SUB is a base FUNCTIONS entry (Parser.FUNCTIONS["DATE_SUB"] =
 	// DateSub.from_arg_list, verified against the pinned source); base renders it via the
 	// function fallback like upstream, which has no datesub_sql.
@@ -209,6 +226,12 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"DATE_DIFF":           genericFunction(KindDateDiff),
 	"JSON_EXTRACT":        jsonExtractFunction(KindJSONExtract),
 	"JSON_EXTRACT_SCALAR": jsonExtractFunction(KindJSONExtractScalar),
+	// parser.py:428: base maps JSON_EXTRACT_PATH_TEXT to
+	// build_extract_json_with_path(exp.JSONExtractScalar), so the name is only an input
+	// spelling - base renders it back as JSON_EXTRACT_SCALAR, DuckDB as `->>`, and the
+	// postgres parser family replaces this builder with build_json_extract_path
+	// (parsers/postgres.py:115-116), which keeps the 3+-arg tail.
+	"JSON_EXTRACT_PATH_TEXT": jsonExtractFunction(KindJSONExtractScalar),
 	// REPLACE(this, expression[, replacement]) (string.py:113); base has no replace_sql, so
 	// it renders via functionFallbackSQL like any other unadorned Func (see KindInitcap).
 	"REPLACE": genericFunction(KindReplace),
@@ -424,6 +447,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"TO_MAP":                   genericFunction(KindToMap),
 	"TRANSLATE":                genericFunction(KindTranslate),
 	"TS_OR_DI_TO_DI":           genericFunction(KindTsOrDiToDi),
+	"TS_OR_DS_TO_DATE":         genericFunction(KindTsOrDsToDate),
 	"TS_OR_DS_TO_DATE_STR":     genericFunction(KindTsOrDsToDateStr),
 	"UNIX_DATE":                genericFunction(KindUnixDate),
 	"UNIX_MICROS":              genericFunction(KindUnixMicros),
@@ -456,6 +480,8 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"NEGATIVE":                 genericFunction(KindNegative),
 	"NEXT_DAY":                 genericFunction(KindNextDay),
 	"PAD":                      genericFunction(KindPad),
+	"RAND":                     genericFunction(KindRand),
+	"RANDOM":                   genericFunction(KindRand),
 	"RANDN":                    genericFunction(KindRandn),
 	"RANDSTR":                  genericFunction(KindRandstr),
 	"REGEXP_COUNT":             genericFunction(KindRegexpCount),

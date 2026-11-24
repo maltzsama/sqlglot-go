@@ -3,8 +3,30 @@ package parser_test
 import (
 	"testing"
 
+	sqlglot "github.com/maltzsama/sqlglot-go"
 	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"github.com/maltzsama/sqlglot-go/generator"
 )
+
+func TestDuckDBDescribeSubquery(t *testing.T) {
+	const sql = "SELECT * FROM (DESCRIBE t)"
+	expression, err := sqlglot.ParseOne(sql, "duckdb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	from := expression.Arg("from_").(exp.Expression)
+	subquery := from.This()
+	if subquery == nil || subquery.Kind() != exp.KindSubquery || subquery.This().Kind() != exp.KindDescribe {
+		t.Fatalf("expected a Describe inside the FROM subquery:\n%s", expression.ToS())
+	}
+	got, err := sqlglot.Generate(expression, "duckdb", generator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != sql {
+		t.Fatalf("Generate() = %q, want %q", got, sql)
+	}
+}
 
 // TestParseUse ports the USE cases from parser.py:3735-3741 (_parse_use):
 // a bare table/db name, and each USABLES kind keyword ahead of it.

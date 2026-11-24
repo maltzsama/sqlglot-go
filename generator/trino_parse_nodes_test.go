@@ -53,6 +53,24 @@ func TestJSONExtractExistingDialectRendering(t *testing.T) {
 	}
 }
 
+func TestClickHouseJSONNegativeSubscript(t *testing.T) {
+	path := expressions.JSONPath(expressions.Args{"expressions": []expressions.Expression{
+		expressions.JSONPathRoot(expressions.Args{}),
+		expressions.JSONPathSubscript(expressions.Args{"this": expressions.LiteralNumber("-1")}),
+	}})
+	expression := expressions.JSONExtract(expressions.Args{
+		"this":       expressions.Column(expressions.Args{"this": expressions.Identifier(expressions.Args{"this": "j"})}),
+		"expression": path,
+	})
+	got, err := sqlglot.Generate(expression, "clickhouse", generator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "JSONExtractString(j, -1)" {
+		t.Fatalf("got %q", got)
+	}
+}
+
 func TestJSONQueryRenderingIsTrinoFamilyOnly(t *testing.T) {
 	expression, err := sqlglot.ParseOne("JSON_QUERY(content, 'lax $.HY.*')", "trino")
 	if err != nil {
@@ -65,7 +83,9 @@ func TestJSONQueryRenderingIsTrinoFamilyOnly(t *testing.T) {
 	}{
 		{"", "JSON_EXTRACT(content, 'lax $.HY.*')"},
 		{"mysql", "JSON_EXTRACT(content, 'lax $.HY.*')"},
-		{"postgres", "JSON_EXTRACT_PATH(content, 'lax $.HY.*')"},
+		// Upstream: a JSONExtract whose path is a plain Literal (not a JSONPath) with no
+		// variadic tail renders infix through _json_extract_sql (generators/postgres.py:186).
+		{"postgres", "content -> 'lax $.HY.*'"},
 		{"trino", "JSON_QUERY(content, 'lax $.HY.*')"},
 		{"athena", "JSON_QUERY(content, 'lax $.HY.*')"},
 	}

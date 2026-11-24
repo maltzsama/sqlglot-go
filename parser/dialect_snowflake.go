@@ -30,7 +30,39 @@ func init() {
 			tokens.POOL: true, tokens.ROLE: true, tokens.RULE: true, tokens.SEMI: true,
 			tokens.VOLUME: true, tokens.WINDOW: true,
 		},
+		TablePart: snowflakeTablePart,
 	})
+}
+
+func snowflakeTablePart(p *Parser, _ bool, this exp.Expression) exp.Expression {
+	if this == nil {
+		return nil
+	}
+	if this.Kind() == exp.KindParameter && p.index >= 2 && p.tokens[p.index-2].Text == "@" {
+		name := this.This().Name()
+		if identifier := this.This(); identifier != nil {
+			quoted, _ := identifier.Arg("quoted").(bool)
+			if quoted {
+				name = `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+			}
+		}
+		for p.isConnected() {
+			switch p.curr.TokenType {
+			case tokens.SLASH, tokens.DOT, tokens.MOD, tokens.VAR, tokens.FILE, tokens.JSON,
+				tokens.NUMBER, tokens.DASH:
+				name += p.curr.Text
+				p.advance()
+			default:
+				goto stagePathDone
+			}
+		}
+	stagePathDone:
+		return p.expression(exp.Var(exp.Args{"this": "@" + name}), nil, nil)
+	}
+	if p.prev.TokenType == tokens.STRING && this.Kind() == exp.KindIdentifier {
+		return p.expression(exp.LiteralString(this.Name()), nil, nil)
+	}
+	return this
 }
 
 // parseSnowflakeUndrop ports _parse_undrop (parsers/snowflake.py:1252-1262).

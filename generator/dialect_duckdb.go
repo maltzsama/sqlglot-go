@@ -39,6 +39,7 @@ func init() {
 		expressions.KindBlockCompressionProperty: propertyLocationUnsupported,
 		expressions.KindChecksumProperty:         propertyLocationUnsupported,
 		expressions.KindDataBlocksizeProperty:    propertyLocationUnsupported,
+		expressions.KindFileFormatProperty:       propertyLocationUnsupported,
 		expressions.KindFallbackProperty:         propertyLocationUnsupported,
 		expressions.KindFreespaceProperty:        propertyLocationUnsupported,
 		expressions.KindGlobalProperty:           propertyLocationUnsupported,
@@ -46,13 +47,17 @@ func init() {
 		expressions.KindJournalProperty:          propertyLocationUnsupported,
 		expressions.KindLogProperty:              propertyLocationUnsupported,
 		expressions.KindMergeBlockRatioProperty:  propertyLocationUnsupported,
+		expressions.KindPartitionedByProperty:    propertyLocationUnsupported,
 		expressions.KindSetProperty:              propertyLocationUnsupported,
 		expressions.KindVolatileProperty:         propertyLocationUnsupported,
 		expressions.KindWithJournalTableProperty: propertyLocationUnsupported,
 	})
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
-		expressions.KindAnyValue:          duckDBAnyValueSQL,
+		expressions.KindAnyValue: duckDBAnyValueSQL,
+		expressions.KindCommentColumnConstraint: func(g *Generator, _ expressions.Expression) string {
+			return ""
+		},
 		expressions.KindApproxDistinct:    clickhouseRename("APPROX_COUNT_DISTINCT"),
 		expressions.KindBitwiseCount:      clickhouseRename("BIT_COUNT"),
 		expressions.KindCosineDistance:    clickhouseRename("LIST_COSINE_DISTANCE"),
@@ -79,10 +84,12 @@ func init() {
 		expressions.KindDateBin:           clickhouseRename("TIME_BUCKET"),
 		expressions.KindArray:             duckDBArraySQL,
 		expressions.KindStruct:            duckDBStructSQL,
+		expressions.KindToMap:             duckDBToMapSQL,
 		// generators/duckdb.py:3145-3160: DuckDB rejects `JOIN UNNEST(...)` without an ON
 		// clause, so a synthetic UNNEST join gets a dummy ON TRUE and a plain comma join
 		// loses its synthetic side/kind.
 		expressions.KindJoin:              duckDBJoinSQL,
+		expressions.KindRand:              duckDBRandSQL,
 		expressions.KindJSONExtract:       duckDBArrowJSONExtract,
 		expressions.KindJSONExtractScalar: duckDBArrowJSONExtract,
 		expressions.KindJSONExtractArray:  duckDBArrowJSONExtractArray,
@@ -195,6 +202,32 @@ func init() {
 	registerDialectDispatch("duckdb", handlers)
 }
 
+// duckDBToMapSQL renders MAP literals from their key/value pairs directly.
+// A ToMap wraps a Struct in the AST, but DuckDB map keys are expressions (and may
+// be arrays); routing them through duckDBStructSQL incorrectly turns keys into
+// struct field names.
+func duckDBToMapSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.Arg("this"))
+	if this == nil {
+		return "MAP {}"
+	}
+	if this.Kind() != expressions.KindStruct {
+		return g.functionFallbackSQL(e)
+	}
+	pairs := this.Expressions()
+	items := make([]string, 0, len(pairs))
+	for _, pair := range pairs {
+		if pair.Kind() != expressions.KindPropertyEQ {
+			items = append(items, g.gen(pair))
+			continue
+		}
+		key := asExpression(pair.This())
+		value := asExpression(pair.Arg("expression"))
+		items = append(items, g.gen(key)+": "+g.gen(value))
+	}
+	return "MAP {" + strings.Join(items, ", ") + "}"
+}
+
 // duckDBAnyValueSQL ports _anyvalue_sql (generators/duckdb.py:1123-1130).
 func duckDBAnyValueSQL(g *Generator, e expressions.Expression) string {
 	if having := asExpression(e.This()); having != nil && having.Kind() == expressions.KindHavingMax {
@@ -296,8 +329,10 @@ func duckDBArrowJSONExtract(g *Generator, e expressions.Expression) string {
 		op = "->"
 	}
 	out := g.arrowJSONExtractBinary(e, op)
-	// generators/duckdb.py:878-886: wrap the arrow form under a binary, bracket, IN or NOT.
-	if parent := e.Parent(); parent != nil {
+	// generators/duckdb.py:878-886: wrap the arrow form under a binary, bracket, IN or NOT,
+	// but only when the parent is a different class (Expression.same_parent, core.py:1178) -
+	// a nested `a -> b -> c` keeps its left side unwrapped.
+	if parent := e.Parent(); parent != nil && parent.Kind() != e.Kind() {
 		switch {
 		case parent.Is(expressions.TraitBinary), parent.Kind() == expressions.KindBracket,
 			parent.Kind() == expressions.KindIn, parent.Kind() == expressions.KindNot:
@@ -305,6 +340,33 @@ func duckDBArrowJSONExtract(g *Generator, e expressions.Expression) string {
 		}
 	}
 	return out
+}
+
+// duckDBRandSQL ports DuckDBGenerator.rand_sql (generators/duckdb.py:3731-3751).
+func duckDBRandSQL(g *Generator, e expressions.Expression) string {
+	if e.Arg("this") != nil {
+		g.unsupported("RANDOM with seed is not supported in DuckDB")
+	}
+	lower := asExpression(e.Arg("lower"))
+	upper := asExpression(e.Arg("upper"))
+	if lower != nil && upper != nil {
+		lowerOperand := lower
+		if lower.Kind() == expressions.KindAdd || lower.Kind() == expressions.KindSub {
+			lowerOperand = expressions.Paren(expressions.Args{"this": lower})
+		}
+		rangeSize := expressions.Paren(expressions.Args{
+			"this": expressions.Sub(expressions.Args{"this": upper, "expression": lowerOperand}),
+		})
+		scaled := expressions.Add(expressions.Args{
+			"this":       lower,
+			"expression": expressions.Mul(expressions.Args{"this": expressions.Rand(expressions.Args{}), "expression": rangeSize}),
+		})
+		return g.gen(expressions.Cast(expressions.Args{
+			"this": scaled,
+			"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeBigInt}),
+		}))
+	}
+	return "RANDOM()"
 }
 
 // arrowJSONExtractBinary renders `this -> path`, wrapping the path when needed.

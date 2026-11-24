@@ -46,8 +46,6 @@ func TestSnowflakeCore(t *testing.T) {
 		"SELECT YEAROFWEEK(x)",
 		"SELECT DATEADD(DAY, 1, x)",
 		"SELECT DATEDIFF(DAY, a, b)",
-		"SELECT TIMESTAMPADD(HOUR, 1, x)",
-		"SELECT TIMESTAMPDIFF(HOUR, a, b)",
 		"SELECT DATE_PART('year', x)",
 		"SELECT DATE_PART(YEAR, x)",
 		"SELECT TO_DATE(x)",
@@ -66,6 +64,8 @@ func TestSnowflakeCanonicalizations(t *testing.T) {
 	cases := map[string]string{
 		"SELECT ARRAY_CONSTRUCT(1, 2)":        "SELECT [1, 2]",
 		"SELECT DATE(x)":                      "SELECT TO_DATE(x)",
+		"SELECT TIMESTAMPADD(HOUR, 1, x)":     "SELECT DATEADD(HOUR, 1, x)",
+		"SELECT TIMESTAMPDIFF(HOUR, a, b)":    "SELECT DATEDIFF(HOUR, a, b)",
 		"SELECT EXTRACT(YEAR FROM x)":         "SELECT DATE_PART(YEAR, x)",
 		"SELECT SQUARE(x)":                    "SELECT POWER(x, 2)",
 		"SELECT LEN(x)":                       "SELECT LENGTH(x)",

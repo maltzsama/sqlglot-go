@@ -78,8 +78,34 @@ func clickhouseAnyToHas(prefix string, fallback func(*Generator, exp.Expression)
 }
 
 // clickhouseJSONExtract ports json_extract_segments("JSONExtractString", quoted_index=False)
-// (dialects/dialect.py:2250-2277) for the no-JSONPath case this port produces.
+// (dialects/dialect.py:2250-2277).
 func clickhouseJSONExtract(g *Generator, e exp.Expression) string {
+	path := asExpression(e.Arg("expression"))
+	if path != nil && path.Kind() == exp.KindJSONPath {
+		args := []any{e.Arg("this")}
+		for _, segment := range path.Expressions() {
+			switch segment.Kind() {
+			case exp.KindJSONPathRoot:
+				continue
+			case exp.KindJSONPathKey:
+				args = append(args, exp.LiteralString(segment.Name()))
+			case exp.KindJSONPathSubscript:
+				if index, err := strconv.Atoi(g.sqlKey(segment, "this")); err == nil && index < 0 {
+					args = append(args, exp.LiteralNumber(strconv.Itoa(index)))
+					continue
+				}
+				indexSQL := g.gen(segment)
+				if index, err := strconv.Atoi(indexSQL); err == nil {
+					args = append(args, exp.LiteralNumber(strconv.Itoa(index)))
+					continue
+				}
+				args = append(args, segment.Arg("this"))
+			default:
+				args = append(args, exp.LiteralString(g.gen(segment)))
+			}
+		}
+		return g.funcCall("JSONExtractString", args, "(", ")", true)
+	}
 	return g.funcCall("JSONExtractString", g.fallbackArgs(e), "(", ")", true)
 }
 

@@ -647,7 +647,10 @@ func (g *Generator) functionFallbackSQL(e expressions.Expression) string {
 // argument list functionFallbackSQL produces. Shared by the dialect rename handlers
 // (generator/rename.go varianceSQL/variancePopSQL, generator/aggregate.go logicalOrSQL) that
 // re-emit a Func under a different name, mirroring upstream rename_func's
-// flatten(expression.args.values()).
+// flatten(expression.args.values()). Bool values are dropped because every path funnels
+// through Generator.func -> format_args, whose filter skips them
+// (generator.py:4699-4702) - e.g. an arrow-built JSONExtractScalar's only_json_types=true
+// never reaches rename_func's output.
 func (g *Generator) fallbackArgs(e expressions.Expression) []any {
 	args := []any{}
 	for _, key := range expressions.ArgKeys(e.Kind()) {
@@ -659,6 +662,8 @@ func (g *Generator) fallbackArgs(e expressions.Expression) []any {
 			}
 		case []any:
 			args = append(args, v...)
+		case bool:
+			// format_args' `not isinstance(arg, bool)` filter (generator.py:4701).
 		default:
 			if argValue != nil {
 				args = append(args, argValue)

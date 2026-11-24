@@ -165,6 +165,12 @@ func init() {
 }
 
 func (g *Generator) propertyLocation(property expressions.Expression) (propertyLocation, bool) {
+	if property.Kind() == expressions.KindReturnsProperty && g.isDialect("duckdb") {
+		if boolValue(property.Arg("is_table")) {
+			return propertyLocationUnsupported, true
+		}
+		return propertyLocationPostAlias, true
+	}
 	if location, ok := g.lookupPropertyLocation(property.Kind()); ok {
 		return location, true
 	}
@@ -203,6 +209,10 @@ func (g *Generator) locateProperties(properties expressions.Expression) map[prop
 		return locations
 	}
 	for _, property := range properties.Expressions() {
+		if g.isDialect("duckdb") && property.Kind() == expressions.KindReturnsProperty &&
+			boolValue(property.Arg("is_table")) {
+			continue
+		}
 		location, ok := g.propertyLocation(property)
 		if !ok || location == propertyLocationUnsupported {
 			g.unsupported("Unsupported property " + strings.ToLower(expressions.ClassName(property.Kind())))
@@ -251,6 +261,9 @@ func (g *Generator) renderProperties(properties expressions.Expression, prefix, 
 // withPropertiesSQL ports with_properties (generator.py:2064-2065). Base, MySQL, and
 // Postgres all use the base WITH_PROPERTIES_PREFIX of "WITH".
 func (g *Generator) withPropertiesSQL(properties expressions.Expression) string {
+	if g.isDialect("snowflake") {
+		return g.renderProperties(properties, "", " ", "", false)
+	}
 	return g.renderProperties(properties, g.seg(g.dialect.WithPropertiesPrefix, ""), ", ", "", true)
 }
 
