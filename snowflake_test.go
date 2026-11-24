@@ -90,6 +90,11 @@ func TestSnowflakeSemanticView(t *testing.T) {
 	if err != nil || got != want {
 		t.Fatalf("got %q, %v; want %q", got, err, want)
 	}
+	pretty, err := sqlglot.Generate(node, "snowflake", generator.Options{Pretty: true})
+	prettyWant := "SELECT\n  *\nFROM SEMANTIC_VIEW(\n  tbl\n  METRICS a.c\n  DIMENSIONS a.b\n  WHERE a.c > 5\n)"
+	if err != nil || pretty != prettyWant {
+		t.Fatalf("pretty got %q, %v; want %q", pretty, err, prettyWant)
+	}
 }
 
 func TestSnowflakeStageSources(t *testing.T) {
