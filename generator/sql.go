@@ -2361,7 +2361,7 @@ func (g *Generator) logSQL(e expressions.Expression) string {
 		if baseExpression != nil {
 			base = baseExpression.Name()
 		}
-		if base == "2" || base == "10" {
+		if baseExpression != nil && baseExpression.Kind() == expressions.KindLiteral && baseExpression.IsNumber() && (base == "2" || base == "10") {
 			return g.funcCall("LOG"+base, []any{expr}, "(", ")", true)
 		}
 		g.unsupported("Unsupported logarithm with base " + g.gen(baseExpression))

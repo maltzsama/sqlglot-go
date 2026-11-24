@@ -95,6 +95,7 @@ func TestLogFunctionTranspilation(t *testing.T) {
 		{"tsql base order", "tsql", "", "LOG(n, b)", "LOG(b, n)"},
 		{"clickhouse log base ten", "", "clickhouse", "LOG(10, a)", "LOG10(a)"},
 		{"clickhouse log base two", "", "clickhouse", "LOG(2, a)", "LOG2(a)"},
+		{"clickhouse quoted numeric column base", "", "clickhouse", `LOG("2", a)`, `LOG("2", a)`},
 		{"presto log base ten", "", "presto", "LOG(10, a)", "LOG10(a)"},
 		{"presto log base two", "", "presto", "LOG(2, a)", "LOG2(a)"},
 		{"tsql generated argument order", "", "tsql", "LOG(10, a)", "LOG(a, 10)"},
