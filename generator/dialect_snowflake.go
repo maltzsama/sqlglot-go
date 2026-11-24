@@ -482,7 +482,7 @@ var _ = strings.ToUpper
 // DATE_PART(<unit>, <this>).
 func snowflakeExtractSQL(g *Generator, e expressions.Expression) string {
 	unit := asExpression(e.Arg("this"))
-	return g.funcCall("DATE_PART", []any{unit, e.Arg("expression")}, "(", ")", true)
+	return g.funcCall("DATE_PART", []any{snowflakeUnit(g, unit), e.Arg("expression")}, "(", ")", true)
 }
 
 // snowflakeDateSQL renders DATE(<args>) as TO_DATE.
@@ -531,12 +531,17 @@ func snowflakeUnit(g *Generator, unit expressions.Expression) any {
 	if unit == nil {
 		return nil
 	}
+	if unit.Kind() == expressions.KindLiteral && unit.IsString() {
+		return unit
+	}
 	if unit.Kind() == expressions.KindVar || unit.Kind() == expressions.KindLiteral {
 		name := strings.ToUpper(unit.Name())
 		if mapped := g.dialect.DatePartMapping[name]; mapped != "" {
-			name = mapped
+			if mapped != name {
+				return expressions.Var(expressions.Args{"this": mapped})
+			}
 		}
-		return expressions.Var(expressions.Args{"this": name})
+		return unit
 	}
 	return unit
 }

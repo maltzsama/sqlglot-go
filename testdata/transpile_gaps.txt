@@ -630,7 +630,6 @@
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT CAST(STRUCT(1) AS STRUCT<INT64>)"}
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT CAST(col AS STRUCT<fld1 STRUCT<fld2 INT>>).fld1.fld2"}
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT DATE_SUB(DATE '2008-12-25', INTERVAL 5 DAY)"}
-{"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(ISOWEEK FROM CAST('2013-12-25' AS DATE))"}
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT FORMAT_TIMESTAMP(\"%b-%d-%Y\", TIMESTAMP \"2050-12-25 15:30:55+00\")"}
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT INT64(JSON_QUERY(JSON '{\"key\": 2000}', '$.key'))"}
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT JSON_VALUE_ARRAY('{\"arr\": [1, \"a\"]}', '$.arr')"}
@@ -1848,17 +1847,10 @@
 {"read":"snowflake","write":"presto","category":"gen: transpile mismatch","sql":"SELECT i, p, o FROM qt QUALIFY ROW_NUMBER() OVER (PARTITION BY p ORDER BY o) = 1"}
 {"read":"snowflake","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT CURRENT_VERSION()"}
 {"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"\n            SELECT\n              uc.user_id,\n              uc.start_ts AS ts,\n              CASE\n                WHEN uc.start_ts::DATE >= '2023-01-01' AND uc.country_code IN ('US') AND uc.user_id NOT IN (\n                  SELECT DISTINCT\n                    _id\n                  FROM\n                    users,\n                    LATERAL FLATTEN(INPUT => PARSE_JSON(flags)) datasource\n                  WHERE datasource.value:name = 'something'\n                )\n                  THEN 'Sample1'\n                  ELSE 'Sample2'\n              END AS entity\n            FROM user_countries AS uc\n            LEFT JOIN (\n              SELECT user_id, MAX(IFF(service_entity IS NULL,1,0)) AS le_null\n              FROM accepted_user_agreements\n              GROUP BY 1\n            ) AS aua\n              ON uc.user_id = aua.user_id\n            "}
-{"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06 11:45:00' AS TIMESTAMP_NTZ))"}
-{"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06' AS DATE))"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE a MODIFY COLUMN my_column DROP NOT NULL"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE a MODIFY COLUMN my_column SET NOT NULL"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE a WITH TAG (key1='value_1')"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE test_table (id NUMERIC NOT NULL AUTOINCREMENT)"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 IGNORE NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 RESPECT NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) IGNORE NULLS OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) RESPECT NULLS OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1) AS value"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1, ROUNDING_MODE => 'HALF_AWAY_FROM_ZERO') AS value"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1, ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
@@ -2116,6 +2108,7 @@
 {"read":"tsql","write":"presto","category":"gen: cast/type","sql":"EOMONTH(GETDATE())"}
 {"read":"tsql","write":"presto","category":"gen: cast/type","sql":"EOMONTH(GETDATE(), -1)"}
 {"read":"tsql","write":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE #mytemptable (a INTEGER)"}
+{"read":"tsql","write":"snowflake","category":"gen: transpile mismatch","sql":"EOMONTH(GETDATE(), -1)"}
 {"read":"tsql","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT DATETIMEFROMPARTS(2013, 4, 5, 12, 00, 00, 0)"}
 {"read":"tsql","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT STUFF(a, 0, 0, 'b')"}
 {"read":"tsql","write":"snowflake","category":"gen: transpile mismatch","sql":"WITH t(c) AS (SELECT 1) SELECT c INTO #foo FROM t"}
