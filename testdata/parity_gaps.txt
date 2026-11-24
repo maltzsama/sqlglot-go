@@ -65,7 +65,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TIMESTAMPNTZFROMPARTS(2013, 4, 5, 12, 00, 00)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(2013, 4, 5, 12, 00, 00, 987654321)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIME('093000', 'HH24MISS')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIMESTAMP('1659981729')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIMESTAMP(col, 'DD-MM-YYYY HH12:MI:SS') FROM t"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TRY_TO_TIME('093000', 'HH24MISS')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT x'ABCD'"}
@@ -257,9 +256,6 @@
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT model!PREDICT(1)"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT model!mladmin"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT parse_json($1):a.b FROM @mystage2/data1.json.gz"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"USE SECONDARY ROLES ALL"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"USE SECONDARY ROLES NONE"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"USE SECONDARY ROLES a, b, c"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"x.y.z!PREDICT(foo, bar, baz, bla)"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    CREDENTIALS = ()\n    FILE_FORMAT = (TYPE = CSV COMPRESSION = NONE NULL_IF = ('') FIELD_OPTIONALLY_ENCLOSED_BY = '\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    STORAGE_INTEGRATION = S3_INTEGRATION\n    FILE_FORMAT = (TYPE=CSV COMPRESSION=NONE NULL_IF=('') FIELD_OPTIONALLY_ENCLOSED_BY='\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}

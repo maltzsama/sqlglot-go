@@ -19,6 +19,20 @@ var killTargets = map[string]bool{"CONNECTION": true, "QUERY": true}
 
 // parseUse ports _parse_use (parser.py:3735-3741).
 func (p *Parser) parseUse() exp.Expression {
+	if p.dialect.Name == "snowflake" && p.matchTextSeq("SECONDARY", "ROLES") {
+		kind := exp.Var(exp.Args{"this": "SECONDARY ROLES"})
+		if p.matchTexts(map[string]bool{"ALL": true, "NONE": true}) {
+			return p.expression(exp.Use(exp.Args{
+				"kind": kind, "this": exp.Var(exp.Args{"this": stringsUpper(p.prev.Text)}),
+			}), nil, nil)
+		}
+		expressions := p.parseCsv(func() exp.Expression {
+			return p.parseTableParts(false, false, false, false)
+		})
+		return p.expression(exp.Use(exp.Args{
+			"kind": kind, "this": false, "expressions": expressions,
+		}), nil, nil)
+	}
 	kind := p.parseVarFromOptions(usables, false)
 	this := p.parseTable(false, false, nil, false, false, false, false)
 	return p.expression(exp.Use(exp.Args{"kind": kind, "this": this}), nil, nil)
