@@ -1736,6 +1736,8 @@
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT LEAST_IGNORE_NULLS(1, 2)"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT MAX_BY(a, b) FROM t"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT MIN_BY(a, b) FROM t"}
+{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM FIRST IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM LAST RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NTH_VALUE(is_deleted, 2) OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT OBJECT_INSERT(OBJECT_INSERT(OBJECT_INSERT(OBJECT_CONSTRUCT('key5', 'value5'), 'key1', 5), 'key2', 2.2), 'key3', 'value3')"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT OBJECT_INSERT(OBJECT_INSERT(OBJECT_INSERT(OBJECT_CONSTRUCT(), 'key1', 5), 'key2', 2.2), 'key3', 'value3')"}
@@ -1801,8 +1803,6 @@
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SYSDATE()"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"UNICODE(foo)"}
 {"read":"snowflake","write":"duckdb","category":"parse: Expecting )","sql":"SELECT * FROM t1 AT (TIMESTAMP => '2024-01-01'::TIMESTAMP) AS a"}
-{"read":"snowflake","write":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM FIRST IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
-{"read":"snowflake","write":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM LAST RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"read":"snowflake","write":"hive","category":"gen: cast/type","sql":"SELECT DATE_PART('year', TIMESTAMP '2020-01-01')"}
 {"read":"snowflake","write":"hive","category":"gen: cast/type","sql":"UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')"}
 {"read":"snowflake","write":"hive","category":"gen: transpile mismatch","sql":"ARRAY_UNIQUE_AGG(x)"}
@@ -1873,8 +1873,6 @@
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28T20:57', 'YYYY-MM-DD\"T\"HH24:MI:SS')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28T20:57:01.888', 'yyyy-mm-DDThh24:mi:ss.ff')"}
 {"read":"snowflake","write":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1 MINUS SELECT 1"}
-{"read":"snowflake","write":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM FIRST IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
-{"read":"snowflake","write":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM LAST RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"read":"snowflake","write":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    CREDENTIALS = ()\n    FILE_FORMAT = (TYPE = CSV COMPRESSION = NONE NULL_IF = ('') FIELD_OPTIONALLY_ENCLOSED_BY = '\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
 {"read":"snowflake","write":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    STORAGE_INTEGRATION = S3_INTEGRATION\n    FILE_FORMAT = (TYPE=CSV COMPRESSION=NONE NULL_IF=('') FIELD_OPTIONALLY_ENCLOSED_BY='\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
 {"read":"snowflake","write":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER('my_func')(1, 2)"}
