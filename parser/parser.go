@@ -3380,6 +3380,10 @@ func (p *Parser) parseCTEBase() exp.Expression {
 	if alias == nil || alias.This() == nil {
 		p.raiseError("Expected CTE to have alias")
 	}
+	var keyExpressions []exp.Expression
+	if p.dialect.Name == "duckdb" && p.matchTextSeq("USING", "KEY") {
+		keyExpressions = p.parseWrappedIdVars()
+	}
 	// parser.py:4218: OPTIONAL_ALIAS_TOKEN_CTE=false (ClickHouse) requires the AS keyword.
 	if !p.match(tokens.ALIAS) && !p.dialect.OptionalAliasTokenCTE {
 		p.raiseError("Expected AS in CTE")
@@ -3392,9 +3396,10 @@ func (p *Parser) parseCTEBase() exp.Expression {
 		materialized = true
 	}
 	cte := p.expression(exp.CTE(exp.Args{
-		"this":         p.parseWrapped(func() exp.Expression { return p.parseStatement() }, false),
-		"alias":        alias,
-		"materialized": materialized,
+		"this":            p.parseWrapped(func() exp.Expression { return p.parseStatement() }, false),
+		"alias":           alias,
+		"materialized":    materialized,
+		"key_expressions": keyExpressions,
 	}), nil, comments)
 	// CTE canonicalization (parser.py:4241-4243, v30.17.0): a bare VALUES body becomes
 	// SELECT * FROM (VALUES ...) AS _values.

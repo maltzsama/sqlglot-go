@@ -1,8 +1,6 @@
 {"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a INT, b FLOAT) AS TABLE SELECT a"}
 {"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE IF NOT EXISTS t (cola INT COMMENT 'cola', colb STRING) USING ICEBERG PARTITIONED BY (colb)"}
 {"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE IF NOT EXISTS t (cola INT, colb STRING) USING ICEBERG PARTITIONED BY (colb)"}
-{"dialect":"duckdb","category":"parse: Expecting","sql":"WITH RECURSIVE tbl(a, b) USING KEY (a) AS (SELECT a, b FROM (VALUES (1, 3), (2, 4)) AS t(a, b) UNION SELECT a + 1, b FROM tbl WHERE a < 3) SELECT * FROM tbl"}
-{"dialect":"duckdb","category":"parse: Expecting","sql":"WITH RECURSIVE tbl(a, b) USING KEY (a, b) AS (SELECT a, b FROM (VALUES (1, 3), (2, 4)) AS t(a, b) UNION SELECT a + 1, b FROM tbl WHERE a < 3) SELECT * FROM tbl"}
 {"dialect":"duckdb","category":"parse: Expecting )","sql":"SELECT * FROM my_ducklake.demo AT (VERSION => 2)"}
 {"dialect":"duckdb","category":"parse: Required keyword","sql":"SELECT * FROM t1 AS a AT (VERSION => 3) JOIN t2 AS b AT (TIMESTAMP => NOW() - INTERVAL '1' WEEK) ON a.id = b.id"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"\n            SELECT col:\"customer's department\"\n            "}
