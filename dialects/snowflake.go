@@ -549,6 +549,17 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return exp.StrtokToArray(exp.Args{"this": seqGet(args, 0), "expression": delimiter})
 	}
 	out["SPLIT"] = exp.FromArgListFunc(exp.KindSplit)
+	for name, kind := range map[string]exp.Kind{"LIKE": exp.KindLike, "ILIKE": exp.KindILike} {
+		out[name] = func(args []exp.Expression) exp.Expression {
+			like := exp.New(kind, exp.Args{
+				"this": seqGet(args, 0), "expression": seqGet(args, 1),
+			})
+			if escape := seqGet(args, 2); escape != nil {
+				return exp.Escape(exp.Args{"this": like, "expression": escape})
+			}
+			return like
+		}
+	}
 	timestampFromParts := func(args []exp.Expression) exp.Expression {
 		if len(args) == 2 {
 			return exp.New(exp.KindTimestampFromParts, exp.Args{

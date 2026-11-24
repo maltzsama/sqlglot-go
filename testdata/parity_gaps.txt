@@ -9,12 +9,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) IGNORE NULLS OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) RESPECT NULLS OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ILIKE(col, 'pattern')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ILIKE(col, 'pattern', '!')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ILIKE(col, 'pattern', '\\\\')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LIKE(col, 'pattern')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LIKE(col, 'pattern', '!')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LIKE(col, 'pattern', '\\\\')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1) AS value"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1, ROUNDING_MODE => 'HALF_AWAY_FROM_ZERO') AS value"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1, ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
