@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/tokens"
 )
@@ -109,7 +111,21 @@ func (p *Parser) parseDescribe() exp.Expression {
 // (signaling the caller to degrade to Command) for any leftover trailing tokens.
 func (p *Parser) parseDescribeStructured() exp.Expression {
 	var kind any
-	if p.matchSet(creatables) {
+	if p.dialectIs("snowflake") {
+		for _, describeKind := range []string{
+			"API INTEGRATION", "APPLICATION PACKAGE", "CATALOG INTEGRATION", "COMPUTE POOL",
+			"DATABASE ROLE", "DYNAMIC TABLE", "EXTERNAL VOLUME", "HYBRID TABLE",
+			"ICEBERG TABLE", "MASKING POLICY", "MATERIALIZED VIEW", "NETWORK RULE",
+			"ROW ACCESS POLICY", "SECURITY INTEGRATION",
+		} {
+			parts := strings.Fields(describeKind)
+			if p.matchTextSeq(parts...) {
+				kind = describeKind
+				break
+			}
+		}
+	}
+	if kind == nil && p.matchSet(creatables) {
 		// parser.py:2399 upper()s the creatable kind; the source spelling must not leak into
 		// the kind discriminator (`explain table t` and `EXPLAIN TABLE t` are the same form).
 		kind = stringsUpper(p.prev.Text)

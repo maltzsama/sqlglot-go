@@ -401,6 +401,11 @@ func snowflakeDescribeSQL(g *Generator, e expressions.Expression) string {
 		kind += " "
 	}
 	target := g.sqlKey(e, "this")
+	if kind == "" {
+		if table := asExpression(e.Arg("this")); table != nil && table.Kind() == expressions.KindTable {
+			kind = "TABLE "
+		}
+	}
 	trailing := g.expressions(exprsOptions{expression: e, flat: true})
 	if trailing != "" {
 		trailing = " " + trailing

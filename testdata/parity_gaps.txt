@@ -1,19 +1,4 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"COPY INTO mytable (col1, col2) FROM 's3://mybucket/data/files' STORAGE_INTEGRATION = \"storage\" ENCRYPTION = (TYPE='NONE' MASTER_KEY='key') FILES = ('file1', 'file2') PATTERN = 'pattern' FILE_FORMAT = (FORMAT_NAME=my_csv_format NULL_IF=('')) PARSE_HEADER = TRUE"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC API INTEGRATION int1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC APPLICATION PACKAGE pkg1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC CATALOG INTEGRATION int1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC COMPUTE POOL pool1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC DATABASE ROLE role1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC DYNAMIC TABLE db.schema.t1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC EXTERNAL VOLUME vol1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC HYBRID TABLE t1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC ICEBERG TABLE db.schema.t1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC MASKING POLICY db.schema.pol1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC MATERIALIZED VIEW my_view"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC NETWORK RULE rule1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC ROW ACCESS POLICY pol1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC SECURITY INTEGRATION int1"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DESCRIBE db.table"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM s WHERE c NOT IN (SELECT * FROM t)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM t, UNNEST(x) WITH ORDINALITY"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT 1 FROM TABLE(GENERATOR(10))"}
