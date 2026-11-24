@@ -73,6 +73,8 @@ func parseMySQLVersion(value string) (int, error) {
 func MySQL() *Dialect {
 	d := Base()
 	d.Name = "mysql"
+	// parsers/mysql.py:298 LOG_DEFAULTS_TO_LN.
+	d.LogDefaultsToLn = true
 	// dialects/mysql.py:31 SAFE_TO_ELIMINATE_DOUBLE_NEGATION = False.
 	d.SafeToEliminateDoubleNegation = false
 	d.PromoteToInferredDatetimeType = true

@@ -36,8 +36,6 @@
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"JSON_EXTRACT_SCALAR(x, '$.y')"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"JSON_EXTRACT_SCALAR(x, '$.y[0].z')"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"LEVENSHTEIN(col1, col2)"}
-{"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"LOG(10, a)"}
-{"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"LOG(2, a)"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"LTRIM('Hello World', 'H')"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"MEDIAN(x)"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"MEDIAN(x) OVER ()"}
@@ -294,8 +292,6 @@
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"ARRAY_SLICE(x, 1, 3)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"LEVENSHTEIN(coalesce(col1, col2), coalesce(col2, col1))"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"LEVENSHTEIN(col1, col2)"}
-{"read":"","write":"presto","category":"gen: transpile mismatch","sql":"LOG(10, a)"}
-{"read":"","write":"presto","category":"gen: transpile mismatch","sql":"LOG(2, a)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
@@ -438,8 +434,6 @@
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$[\"a b\"]')"}
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"LEFT(CAST(x AS STRING), 1)"}
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"LENGTH(x)"}
-{"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"LOG(10, a)"}
-{"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"LOG(2, a)"}
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"RIGHT(CAST(x AS STRING), 1)"}
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT \"user id\", some_id, 1 as other_id, 2 as \"2 nd id\" FROM t QUALIFY COUNT(*) OVER () > 1"}
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM (SELECT * FROM (WITH t AS (SELECT 1 AS c) SELECT c FROM t) AS subq1) AS subq2"}
@@ -810,7 +804,6 @@
 {"read":"bigquery","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT DATE_DIFF(d1, d2, WEEK(SUNDAY))"}
 {"read":"clickhouse","write":"","category":"gen: transpile mismatch","sql":"JSONExtractString(x, 'y')"}
 {"read":"clickhouse","write":"","category":"gen: transpile mismatch","sql":"JSONExtractString(x, 'y', 1, 'z')"}
-{"read":"clickhouse","write":"","category":"gen: transpile mismatch","sql":"LOG(x)"}
 {"read":"clickhouse","write":"","category":"gen: transpile mismatch","sql":"SELECT LEFTPAD('bar', 5)"}
 {"read":"clickhouse","write":"","category":"gen: transpile mismatch","sql":"SELECT LEFTPAD('bar', 5, ' ')"}
 {"read":"clickhouse","write":"","category":"gen: transpile mismatch","sql":"SELECT RIGHTPAD('bar', 5)"}
@@ -876,7 +869,6 @@
 {"read":"doris","write":"postgres","category":"gen: cast/type","sql":"SELECT JSON_EXTRACT(CAST('{\"key\": 1}' AS JSONB), '$.key')"}
 {"read":"doris","write":"postgres","category":"gen: transpile mismatch","sql":"SPLIT_BY_STRING('xx~^~yy~^~zz', '~^~', 'yy')"}
 {"read":"doris","write":"presto","category":"gen: transpile mismatch","sql":"ANY_VALUE(x)"}
-{"read":"dremio","write":"","category":"gen: transpile mismatch","sql":"LOG(x)"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"DATE_TRUNC('day', x)"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
@@ -1133,7 +1125,6 @@
 {"read":"mysql","write":"","category":"gen: cast/type","sql":"YEAR(x)"}
 {"read":"mysql","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
 {"read":"mysql","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
-{"read":"mysql","write":"","category":"gen: transpile mismatch","sql":"LOG(x)"}
 {"read":"mysql","write":"","category":"gen: transpile mismatch","sql":"SELECT ISNULL(x)"}
 {"read":"mysql","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS NOT UNKNOWN"}
 {"read":"mysql","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
@@ -2386,8 +2377,6 @@
 {"read":"tsql","write":"","category":"gen: cast/type","sql":"DAY(x)"}
 {"read":"tsql","write":"","category":"gen: cast/type","sql":"MONTH(x)"}
 {"read":"tsql","write":"","category":"gen: cast/type","sql":"YEAR(x)"}
-{"read":"tsql","write":"","category":"gen: transpile mismatch","sql":"LOG(n, b)"}
-{"read":"tsql","write":"","category":"gen: transpile mismatch","sql":"LOG(x)"}
 {"read":"tsql","write":"bigquery","category":"gen: cast/type","sql":"EOMONTH(GETDATE())"}
 {"read":"tsql","write":"bigquery","category":"gen: cast/type","sql":"EOMONTH(GETDATE(), -1)"}
 {"read":"tsql","write":"bigquery","category":"gen: transpile mismatch","sql":"DATEADD(year, 50, '2006-07-31')"}

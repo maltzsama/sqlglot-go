@@ -84,6 +84,38 @@ func TestDateFromUnixDateNativeGeneratorOverrides(t *testing.T) {
 	}
 }
 
+func TestLogFunctionTranspilation(t *testing.T) {
+	cases := []struct {
+		name, read, write, sql, want string
+	}{
+		{"mysql natural log", "mysql", "", "LOG(x)", "LN(x)"},
+		{"clickhouse natural log", "clickhouse", "", "LOG(x)", "LN(x)"},
+		{"dremio natural log", "dremio", "", "LOG(x)", "LN(x)"},
+		{"tsql natural log", "tsql", "", "LOG(x)", "LN(x)"},
+		{"tsql base order", "tsql", "", "LOG(n, b)", "LOG(b, n)"},
+		{"clickhouse log base ten", "", "clickhouse", "LOG(10, a)", "LOG10(a)"},
+		{"clickhouse log base two", "", "clickhouse", "LOG(2, a)", "LOG2(a)"},
+		{"presto log base ten", "", "presto", "LOG(10, a)", "LOG10(a)"},
+		{"presto log base two", "", "presto", "LOG(2, a)", "LOG2(a)"},
+		{"tsql generated argument order", "", "tsql", "LOG(10, a)", "LOG(a, 10)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			expression, err := sqlglot.ParseOne(tc.sql, tc.read)
+			if err != nil {
+				t.Fatalf("ParseOne(%q, %q): %v", tc.sql, tc.read, err)
+			}
+			got, err := sqlglot.Generate(expression, tc.write, generator.Options{})
+			if err != nil {
+				t.Fatalf("Generate(%q, %q): %v", tc.sql, tc.write, err)
+			}
+			if got != tc.want {
+				t.Fatalf("transpile(%q, %q -> %q) = %q, want %q", tc.sql, tc.read, tc.write, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestUnnestWithOrdinality guards that folding a `WITH OFFSET AS <col>` into the alias
 // column list still emits WITH ORDINALITY: upstream unnest_sql clears only the offset ARG,
 // keeping the local offset truthy (generator.py:3444-3447 vs 3456-3457). A prior bug also

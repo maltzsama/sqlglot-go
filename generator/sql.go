@@ -2355,6 +2355,17 @@ func (g *Generator) logSQL(e expressions.Expression) string {
 	// so the canonical this/expression pair is swapped.
 	this := e.Arg("this")
 	expr := asExpression(e.Arg("expression"))
+	if expr != nil && (g.overrideKey() == "clickhouse" || g.overrideKey() == "presto") {
+		baseExpression := asExpression(this)
+		base := ""
+		if baseExpression != nil {
+			base = baseExpression.Name()
+		}
+		if base == "2" || base == "10" {
+			return g.funcCall("LOG"+base, []any{expr}, "(", ")", true)
+		}
+		g.unsupported("Unsupported logarithm with base " + g.gen(baseExpression))
+	}
 	if !g.dialect.LogBaseFirst {
 		this, expr = expr, asExpression(this)
 	}

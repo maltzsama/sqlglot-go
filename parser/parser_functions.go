@@ -48,6 +48,23 @@ func dialectFunction(d *dialects.Dialect, name string) func([]exp.Expression) ex
 	if d.RemovedFunctions[name] {
 		return nil
 	}
+	if name == "LOG" {
+		return func(args []exp.Expression) exp.Expression {
+			this := seqGet(args, 0)
+			expression := seqGet(args, 1)
+			if expression != nil {
+				if !d.LogBaseFirst {
+					this, expression = expression, this
+				}
+				return exp.New(exp.KindLog, exp.Args{"this": this, "expression": expression})
+			}
+			kind := exp.KindLog
+			if d.LogDefaultsToLn {
+				kind = exp.KindLn
+			}
+			return exp.New(kind, exp.Args{"this": this})
+		}
+	}
 	return exp.FunctionByName[name]
 }
 

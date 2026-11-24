@@ -22,6 +22,8 @@ func TSQL() *Dialect {
 	// dialects/tsql.py:19-21 TYPED_DIVISION / CONCAT_COALESCE / CONCAT_WS_COALESCE.
 	d.TypedDivision = true
 	d.ConcatCoalesce = true
+	// dialects/tsql.py:18 LOG_BASE_FIRST = False.
+	d.LogBaseFirst = false
 	// parsers/tsql.py:323 LOG_DEFAULTS_TO_LN = True.
 	d.LogDefaultsToLn = true
 	// generators/tsql.py:141 SUPPORTS_SELECT_INTO = True.
