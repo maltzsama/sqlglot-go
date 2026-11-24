@@ -20,6 +20,27 @@ func TestSnowflakeNthValueFromClause(t *testing.T) {
 	}
 }
 
+func TestSnowflakeShow(t *testing.T) {
+	for _, tc := range []struct{ sql, want string }{
+		{"SHOW VIEWS IN foo", "SHOW VIEWS IN SCHEMA foo"},
+		{"SHOW TERSE PRIMARY KEYS IN db.schema.tbl", "SHOW PRIMARY KEYS IN TABLE db.schema.tbl"},
+		{"SHOW ICEBERG TABLES IN db.schema", "SHOW ICEBERG TABLES IN SCHEMA db.schema"},
+		{"show terse tables in db.schema starts with 'a' limit 10 from 'b'", "SHOW TERSE TABLES IN SCHEMA db.schema STARTS WITH 'a' LIMIT 10 FROM 'b'"},
+		{"SHOW COLUMNS IN VIEW", "SHOW COLUMNS IN VIEW"},
+	} {
+		t.Run(tc.sql, func(t *testing.T) {
+			node, err := sqlglot.ParseOne(tc.sql, "snowflake")
+			if err != nil || node.Kind() != exp.KindShow {
+				t.Fatalf("expected Show, got %v, %v", node, err)
+			}
+			got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+			if err != nil || got != tc.want {
+				t.Fatalf("got %q, %v; want %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

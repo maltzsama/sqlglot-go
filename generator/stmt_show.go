@@ -8,6 +8,9 @@ import "github.com/maltzsama/sqlglot-go/expressions"
 // parser/stmt_show.go's parseShow), so the base branch below only matters for an exp.Show built
 // programmatically rather than parsed.
 func (g *Generator) showSQL(e expressions.Expression) string {
+	if g.isDialect("snowflake") {
+		return g.snowflakeShowSQL(e)
+	}
 	if g.isDialect("hive") {
 		return g.hiveShowSQL(e)
 	}
