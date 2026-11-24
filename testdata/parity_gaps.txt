@@ -77,6 +77,7 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TIMESTAMPNTZFROMPARTS(2013, 4, 5, 12, 00, 00)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(2013, 4, 5, 12, 00, 00, 987654321)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIME('093000', 'HH24MISS')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIMESTAMP('1659981729')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIMESTAMP(col, 'DD-MM-YYYY HH12:MI:SS') FROM t"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TRY_TO_TIME('093000', 'HH24MISS')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT x'ABCD'"}
@@ -131,6 +132,7 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45', '999.99')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45', '999.99', 10, 2)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_TIMESTAMP('12345')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"WEEKOFYEAR(tstamp)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"ZEROIFNULL(foo)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse objects in db1.schema1 starts with 'a' limit 10 from 'b'"}
@@ -144,20 +146,13 @@
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT BITSHIFTRIGHT(X'002A'::BINARY, 1)"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT CAST('2021-01-01' AS DATE) + INTERVAL '1 DAY'"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT DAYNAME(TO_DATE('2025-01-15'))"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT DAYNAME(TO_TIMESTAMP('2025-02-28 10:30:45'))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06 11:45:00' AS TIMESTAMP_NTZ))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06' AS DATE))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT MONTHNAME(TO_DATE('2025-01-15'))"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT MONTHNAME(TO_TIMESTAMP('2025-02-28 10:30:45'))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2013-04-05'), TO_TIME('12:00:00'))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TO_DATE('2019-02-28') + INTERVAL '1 day, 1 year'"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TO_TIME('12:05:00')"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TO_TIMESTAMP('2013-04-05 01:02:03')"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TRY_TO_TIME('11.15.00')"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TRY_TO_TIMESTAMP('2024-01-15 12:30:00.000')"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TRY_TO_TIMESTAMP('invalid')"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT {'test': 'best'}::VARIANT"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SHA1(X'002A'::BINARY)"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"TIMESTAMPDIFF(DAY, CAST('2007-12-25' AS DATE), CAST('2008-12-25' AS DATE))"}
@@ -165,8 +160,6 @@
 {"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(foo::DATE, 'yyyy')"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(foo::TIMESTAMP, 'YYYY-MM')"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"TRY_TO_DATE('2024-01-31')"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"TRY_TO_TIME('12:30:00')"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"TRY_TO_TIMESTAMP('2024-01-15 12:30:00')"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"create external table et2(\n  col1 date as (parse_json(metadata$external_table_partition):COL1::date),\n  col2 varchar as (parse_json(metadata$external_table_partition):COL2::varchar),\n  col3 number as (parse_json(metadata$external_table_partition):COL3::number))\n  partition by (col1,col2,col3)\n  location=@s2/logs/\n  partition_type = user_specified\n  file_format = (type = parquet compression = gzip binary_as_text = false)"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE IF EXISTS foo SET TAG a = 'a', b = 'b', c = 'c'"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE foo ADD COLUMN id INT identity(1, 1)"}

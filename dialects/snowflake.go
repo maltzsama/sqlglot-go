@@ -2,6 +2,7 @@ package dialects
 
 import (
 	"maps"
+	"strings"
 
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/tokens"
@@ -197,6 +198,30 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 			return dateWithFormat(args)
 		}
 		return exp.FromArgList(exp.KindDate, args)
+	}
+	for name, target := range map[string]exp.DType{
+		"TO_TIME": exp.DTypeTime, "TO_TIMESTAMP": exp.DTypeTimestamp,
+		"TRY_TO_TIME": exp.DTypeTime, "TRY_TO_TIMESTAMP": exp.DTypeTimestamp,
+	} {
+		safe := strings.HasPrefix(name, "TRY_")
+		out[name] = func(args []exp.Expression) exp.Expression {
+			value := seqGet(args, 0)
+			if len(args) == 1 && value != nil && value.IsString() {
+				kind := exp.KindCast
+				if safe {
+					kind = exp.KindTryCast
+				}
+				cast := exp.New(kind, exp.Args{
+					"this": value,
+					"to":   exp.DataType(exp.Args{"this": target}),
+				})
+				if safe {
+					cast.Set("requires_string", true)
+				}
+				return cast
+			}
+			return exp.Anonymous(exp.Args{"this": name, "expressions": args})
+		}
 	}
 
 	// parsers/snowflake.py:524: FLATTEN parses as exp.Explode; the lateral parse site then
