@@ -81,7 +81,17 @@ func redshiftDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		// generators/redshift.py:56-70: Redshift drops Postgres' exp.Getbit transform, so
 		// the node falls through to the base functionFallbackSQL (GETBIT(...)) instead of
 		// Postgres' getbit_sql (GET_BIT(...)).
-		exp.KindGetbit:        (*Generator).functionFallbackSQL,
+		exp.KindGetbit: (*Generator).functionFallbackSQL,
+		// generators/redshift.py:87-88: both extraction kinds render through
+		// json_extract_segments("JSON_EXTRACT_PATH_TEXT"). Unlike postgres's
+		// _json_extract_sql there is no infix-operator branch at all, so even a
+		// parser-built `x ->> 'y'` comes back as JSON_EXTRACT_PATH_TEXT(x, 'y').
+		exp.KindJSONExtract: func(g *Generator, e exp.Expression) string {
+			return g.jsonExtractSegments(e, "JSON_EXTRACT_PATH_TEXT", true, "")
+		},
+		exp.KindJSONExtractScalar: func(g *Generator, e exp.Expression) string {
+			return g.jsonExtractSegments(e, "JSON_EXTRACT_PATH_TEXT", true, "")
+		},
 		exp.KindStringToArray: clickhouseRename("SPLIT_TO_ARRAY"),
 		exp.KindTableSample: func(g *Generator, e exp.Expression) string {
 			// no_tablesample_sql (dialects/dialect.py:1291-1293).

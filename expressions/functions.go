@@ -222,6 +222,12 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"DATE_DIFF":           genericFunction(KindDateDiff),
 	"JSON_EXTRACT":        jsonExtractFunction(KindJSONExtract),
 	"JSON_EXTRACT_SCALAR": jsonExtractFunction(KindJSONExtractScalar),
+	// parser.py:428: base maps JSON_EXTRACT_PATH_TEXT to
+	// build_extract_json_with_path(exp.JSONExtractScalar), so the name is only an input
+	// spelling - base renders it back as JSON_EXTRACT_SCALAR, DuckDB as `->>`, and the
+	// postgres parser family replaces this builder with build_json_extract_path
+	// (parsers/postgres.py:115-116), which keeps the 3+-arg tail.
+	"JSON_EXTRACT_PATH_TEXT": jsonExtractFunction(KindJSONExtractScalar),
 	// REPLACE(this, expression[, replacement]) (string.py:113); base has no replace_sql, so
 	// it renders via functionFallbackSQL like any other unadorned Func (see KindInitcap).
 	"REPLACE": genericFunction(KindReplace),

@@ -49,6 +49,16 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindRand: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("RANDOM", g.fallbackArgs(e), "(", ")", true)
 		},
+		// generators/postgres.py:354-356: JSONPath parts render name-only and the root
+		// renders empty, so json_extract_segments' walk (generator/json_arrow.go) skips the
+		// root and joins raw key names. Redshift, Materialize and RisingWave inherit these
+		// entries through dialectParents, exactly like their TRANSFORMS chain. Note that
+		// postgres.py:287-291 SUPPORTED_JSON_PATH_PARTS prunes every other JSONPathPart
+		// kind from this dialect (dialect.py:296-305), which is why pgJSONPathSubscript
+		// renders an unsupported part empty instead of dispatching it.
+		exp.KindJSONPathRoot:      func(*Generator, exp.Expression) string { return "" },
+		exp.KindJSONPathKey:       pgJSONPathKeyOnlyName,
+		exp.KindJSONPathSubscript: pgJSONPathSubscript,
 	}
 }
 
@@ -58,6 +68,36 @@ func postgresLevenshteinSQL(g *Generator, e exp.Expression) string {
 		name = "LEVENSHTEIN_LESS_EQUAL"
 	}
 	return g.funcCall(name, g.fallbackArgs(e), "(", ")", true)
+}
+
+// pgJSONPathKeyOnlyName ports json_path_key_only_name (dialects/dialect.py:2280-2284): the
+// raw key name, with a wildcard key reported unsupported (it still renders empty, since a
+// JSONPathWildcard node has no name).
+func pgJSONPathKeyOnlyName(g *Generator, e exp.Expression) string {
+	if this := asExpression(e.Arg("this")); this != nil && this.Kind() == exp.KindJSONPathWildcard {
+		g.unsupported("Unsupported wildcard in JSONPathKey expression")
+	}
+	return e.Name()
+}
+
+// pgJSONPathSubscript ports generators/postgres.py:356
+// (`lambda self, e: self.json_path_part(e.this)`): an integer or string index renders through
+// json_path_part (generator/jsonpath.go jsonPathPartValue), a nested supported part
+// re-dispatches, and any other part class - pruned from this dialect by
+// SUPPORTED_JSON_PATH_PARTS (postgres.py:287-291, dialect.py:296-305) - is reported
+// unsupported and renders empty, which makes json_extract_segments skip it.
+func pgJSONPathSubscript(g *Generator, e exp.Expression) string {
+	this := e.Arg("this")
+	if node := asExpression(this); node != nil {
+		switch node.Kind() {
+		case exp.KindJSONPathRoot, exp.KindJSONPathKey, exp.KindJSONPathSubscript:
+			return g.gen(node)
+		default:
+			g.unsupported("Unsupported JSONPathPart type " + exp.ClassName(node.Kind()))
+			return ""
+		}
+	}
+	return g.jsonPathPartValue(this)
 }
 
 // postgresColumnDef ports the exp.ColumnDef transform registered at

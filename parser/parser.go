@@ -3678,7 +3678,7 @@ func (p *Parser) parseFunctionCall(functions map[string]func([]exp.Expression) e
 			if p.dialect.Functions[upper] == nil {
 				validateArgs = exprArgs(args)
 			}
-			result = p.normalizeJSONPathArg(p.validateExpression(function(args), validateArgs))
+			result = p.normalizeJSONPathArg(p.validateExpression(function(args), validateArgs), upper)
 		} else {
 			var name any = this
 			if tokenType == tokens.IDENTIFIER {

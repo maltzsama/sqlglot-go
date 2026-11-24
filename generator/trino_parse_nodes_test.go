@@ -65,7 +65,9 @@ func TestJSONQueryRenderingIsTrinoFamilyOnly(t *testing.T) {
 	}{
 		{"", "JSON_EXTRACT(content, 'lax $.HY.*')"},
 		{"mysql", "JSON_EXTRACT(content, 'lax $.HY.*')"},
-		{"postgres", "JSON_EXTRACT_PATH(content, 'lax $.HY.*')"},
+		// Upstream: a JSONExtract whose path is a plain Literal (not a JSONPath) with no
+		// variadic tail renders infix through _json_extract_sql (generators/postgres.py:186).
+		{"postgres", "content -> 'lax $.HY.*'"},
 		{"trino", "JSON_QUERY(content, 'lax $.HY.*')"},
 		{"athena", "JSON_QUERY(content, 'lax $.HY.*')"},
 	}
