@@ -197,13 +197,22 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	// parsers/snowflake.py:502 `_build_datetime("DATE", DType.DATE)` handles
 	// explicit format strings as TsOrDsToDate and converts the format via TIME_MAPPING.
 	dateWithFormat := postgresBuildFormattedTimeClass(d, exp.KindTsOrDsToDate)
-	out["DATE"] = func(args []exp.Expression) exp.Expression {
+	dateBuilder := func(args []exp.Expression) exp.Expression {
+		value := seqGet(args, 0)
+		if len(args) == 1 && value != nil && value.IsString() {
+			return exp.Cast(exp.Args{
+				"this": value,
+				"to":   exp.DataType(exp.Args{"this": exp.DTypeDate}),
+			})
+		}
 		if len(args) > 1 && args[1] != nil &&
 			(args[1].Kind() != exp.KindLiteral || args[1].IsString()) {
 			return dateWithFormat(args)
 		}
 		return exp.FromArgList(exp.KindDate, args)
 	}
+	out["DATE"] = dateBuilder
+	out["TO_DATE"] = dateBuilder
 	timeToStr := postgresBuildFormattedTimeClass(d, exp.KindTimeToStr)
 	out["TO_CHAR"] = timeToStr
 	out["TO_VARCHAR"] = timeToStr
