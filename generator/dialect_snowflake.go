@@ -129,6 +129,7 @@ func init() {
 		expressions.KindTimestampFromParts: clickhouseRename("TIMESTAMP_FROM_PARTS"),
 		expressions.KindNthValue:           snowflakeNthValueSQL,
 		expressions.KindWindow:             snowflakeWindowSQL,
+		expressions.KindNot:                snowflakeNotSQL,
 		expressions.KindGroupConcat:        snowflakeGroupConcatSQL,
 		expressions.KindStrPosition:        snowflakeStrPositionSQL,
 		expressions.KindLocaltime: func(g *Generator, e expressions.Expression) string {
@@ -236,6 +237,14 @@ func snowflakeWindowSQL(g *Generator, e expressions.Expression) string {
 		return g.windowSQL(copy)
 	}
 	return g.windowSQL(e)
+}
+
+func snowflakeNotSQL(g *Generator, e expressions.Expression) string {
+	in := asExpression(e.This())
+	if in != nil && in.Kind() == expressions.KindIn && in.Arg("query") != nil {
+		return g.sqlKey(in, "this") + " <> ALL " + g.sqlKey(in, "query")
+	}
+	return g.notSQL(e)
 }
 
 func snowflakeTimeToStrSQL(g *Generator, e expressions.Expression) string {
