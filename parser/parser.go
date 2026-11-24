@@ -3507,6 +3507,10 @@ func (p *Parser) parseWrappedSelect(table bool) exp.Expression {
 		isUnpivot := p.curr.TokenType == tokens.UNPIVOT
 		p.advance()
 		this = p.parseSimplifiedPivot(isUnpivot)
+	} else if p.dialect.Name == "duckdb" && p.curr.TokenType == tokens.DESCRIBE {
+		// DuckDB accepts a DESCRIBE statement as a parenthesized table source. Parse it as a
+		// statement rather than treating DESCRIBE as a table name and `t` as its alias.
+		this = p.parseStatement()
 	} else if table {
 		this = p.parseTable(false, false, nil, false, false, false, true)
 	} else {

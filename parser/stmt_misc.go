@@ -198,7 +198,9 @@ func (p *Parser) parseDescribeStructured() exp.Expression {
 		asJSON = p.matchTextSeq("AS", "JSON")
 	}
 
-	if p.curr.IsValid() {
+	// Nested wrapped statements stop at their enclosing right parenthesis; the caller consumes
+	// that delimiter after parseStatement returns. At the top level it remains trailing input.
+	if p.curr.IsValid() && !(p.statementDepth > 1 && p.curr.TokenType == tokens.R_PAREN) {
 		return nil
 	}
 
