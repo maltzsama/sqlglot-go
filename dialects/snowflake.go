@@ -205,6 +205,8 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	out["GETDATE"] = func([]exp.Expression) exp.Expression {
 		return exp.CurrentTimestamp(exp.Args{})
 	}
+	out["BITSHIFTLEFT"] = exp.FromArgListFunc(exp.KindBitwiseLeftShift)
+	out["BITSHIFTRIGHT"] = exp.FromArgListFunc(exp.KindBitwiseRightShift)
 	out["LOCALTIMESTAMP"] = func(args []exp.Expression) exp.Expression {
 		return exp.CurrentTimestamp(exp.Args{"this": seqGet(args, 0)})
 	}
