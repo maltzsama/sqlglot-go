@@ -128,6 +128,7 @@ func init() {
 		expressions.KindTimeFromParts:      clickhouseRename("TIME_FROM_PARTS"),
 		expressions.KindTimestampFromParts: clickhouseRename("TIMESTAMP_FROM_PARTS"),
 		expressions.KindNthValue:           snowflakeNthValueSQL,
+		expressions.KindWindow:             snowflakeWindowSQL,
 		expressions.KindGroupConcat:        snowflakeGroupConcatSQL,
 		expressions.KindStrPosition:        snowflakeStrPositionSQL,
 		expressions.KindLocaltime: func(g *Generator, e expressions.Expression) string {
@@ -214,6 +215,27 @@ func snowflakeNthValueSQL(g *Generator, e expressions.Expression) string {
 		return result + " FROM LAST"
 	}
 	return result
+}
+
+func snowflakeWindowSQL(g *Generator, e expressions.Expression) string {
+	spec := asExpression(e.Arg("spec"))
+	function := asExpression(e.Arg("this"))
+	if function != nil && (function.Kind() == expressions.KindIgnoreNulls ||
+		function.Kind() == expressions.KindRespectNulls) {
+		function = asExpression(function.This())
+	}
+	ranking := function != nil && (function.Kind() == expressions.KindFirstValue ||
+		function.Kind() == expressions.KindLastValue || function.Kind() == expressions.KindNthValue)
+	if ranking && spec != nil && strings.EqualFold(spec.Text("kind"), "ROWS") &&
+		strings.EqualFold(spec.Text("start"), "UNBOUNDED") &&
+		strings.EqualFold(spec.Text("start_side"), "PRECEDING") &&
+		strings.EqualFold(spec.Text("end"), "UNBOUNDED") &&
+		strings.EqualFold(spec.Text("end_side"), "FOLLOWING") {
+		copy := e.Copy()
+		copy.Set("spec", nil)
+		return g.windowSQL(copy)
+	}
+	return g.windowSQL(e)
 }
 
 func snowflakeTimeToStrSQL(g *Generator, e expressions.Expression) string {
