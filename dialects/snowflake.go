@@ -170,6 +170,7 @@ func Snowflake() *Dialect {
 	d.Pseudocolumns["LEVEL"] = true
 	d.InsertOverwrite = " OVERWRITE INTO"
 	d.HexStart, d.HexEnd = "x'", "'"
+	d.StringEscape = "\\"
 
 	// parsers/snowflake.py:735-744 FUNCTION_PARSERS / FUNCTIONS removals.
 	d.RemovedFunctions = map[string]bool{"PREDICT": true}
