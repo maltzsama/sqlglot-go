@@ -1147,7 +1147,11 @@ func (p *Parser) parseConnectWithPrior() exp.Expression {
 }
 
 func (p *Parser) parseQueryModifiers(this exp.Expression) exp.Expression {
-	if this != nil && (this.Is(exp.TraitQuery) || this.Kind() == exp.KindTable) {
+	// MODIFIABLES (parser.py:1834) is (Query, Table, TableFromRows, Values); Values is not
+	// a Query subclass upstream, but it carries order/limit/offset, so `(VALUES (1) LIMIT 1)`
+	// must reach the modifier loop below. TableFromRows has no Kind in this port.
+	if this != nil && (this.Is(exp.TraitQuery) || this.Kind() == exp.KindTable ||
+		this.Kind() == exp.KindValues) {
 		for {
 			join := p.parseJoin(false, false, nil)
 			if join == nil {
@@ -2655,7 +2659,10 @@ func (p *Parser) parseParen() exp.Expression {
 		this = p.expression(exp.Tuple(nil), nil, nil)
 	} else if isUnwrappedQuery(this) {
 		this = p.parseSubquery(this, false)
-	} else if this != nil && this.Kind() == exp.KindSubquery {
+	} else if this != nil && (this.Kind() == exp.KindSubquery || this.Kind() == exp.KindValues) {
+		// parser.py:7084-7088: Subquery and Values take the query-modifier and
+		// set-operation tail before wrapping, so `(VALUES (1) LIMIT 1)` attaches its LIMIT
+		// to the Values and `(VALUES ...) INTERSECT (...)` builds the Intersect outside.
 		this = p.parseSubquery(p.parseQueryModifiers(p.parseSetOperations(this)), false)
 	} else if len(expressions) > 1 || p.prev.TokenType == tokens.COMMA {
 		this = p.expression(exp.Tuple(exp.Args{"expressions": expressions}), nil, nil)
