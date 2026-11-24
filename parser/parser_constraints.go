@@ -42,6 +42,8 @@ var (
 	risingwaveConstraintParsers        map[string]func(*Parser) exp.Expression
 	risingwaveConstraintParserKeySet   map[string]bool
 	risingwaveSchemaUnnamedConstraints map[string]bool
+	snowflakeConstraintParsers         map[string]func(*Parser) exp.Expression
+	snowflakeConstraintParserKeySet    map[string]bool
 
 	// schemaUnnamedConstraints/mysqlSchemaUnnamedConstraints port the base subset of
 	// SCHEMA_UNNAMED_CONSTRAINTS (parser.py:1528-1536) that this port has parsers for
@@ -254,6 +256,14 @@ func init() {
 		risingwaveSchemaUnnamedConstraints[k] = v
 	}
 	risingwaveSchemaUnnamedConstraints["WATERMARK"] = true
+	snowflakeConstraintParsers = make(map[string]func(*Parser) exp.Expression, len(constraintParsers)+4)
+	for k, v := range constraintParsers {
+		snowflakeConstraintParsers[k] = v
+	}
+	for _, key := range []string{"WITH", "MASKING", "PROJECTION", "TAG"} {
+		snowflakeConstraintParsers[key] = (*Parser).parseSnowflakePolicyConstraint
+	}
+	snowflakeConstraintParserKeySet = funcMapKeys(snowflakeConstraintParsers)
 }
 
 // funcMapKeys materializes a map[string]func(*Parser) exp.Expression's keys as a bool set,
@@ -268,6 +278,8 @@ func funcMapKeys(m map[string]func(*Parser) exp.Expression) map[string]bool {
 
 func (p *Parser) constraintParsers() map[string]func(*Parser) exp.Expression {
 	switch {
+	case p.dialectIs("snowflake"):
+		return snowflakeConstraintParsers
 	case p.dialectIs("mysql"):
 		return mysqlConstraintParsers
 	case p.dialectIs("tsql"):
@@ -282,6 +294,8 @@ func (p *Parser) constraintParsers() map[string]func(*Parser) exp.Expression {
 
 func (p *Parser) constraintParserKeys() map[string]bool {
 	switch {
+	case p.dialectIs("snowflake"):
+		return snowflakeConstraintParserKeySet
 	case p.dialectIs("mysql"):
 		return mysqlConstraintParserKeySet
 	case p.dialectIs("tsql"):

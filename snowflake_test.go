@@ -327,6 +327,36 @@ func TestSnowflakeSearchNamedArguments(t *testing.T) {
 	}
 }
 
+func TestSnowflakePolicies(t *testing.T) {
+	for _, tc := range []struct {
+		sql, want string
+		kind      exp.Kind
+	}{
+		{"CREATE TABLE t (id INT WITH MASKING POLICY p USING (c1, c2))", "CREATE TABLE t (id INT MASKING POLICY p USING (c1, c2))", exp.KindMaskingPolicyColumnConstraint},
+		{"CREATE TABLE t (id INT WITH PROJECTION POLICY p.q.r)", "CREATE TABLE t (id INT PROJECTION POLICY p.q.r)", exp.KindProjectionPolicyColumnConstraint},
+		{"CREATE TABLE t (id INT WITH TAG (k='v'))", "CREATE TABLE t (id INT TAG (k='v'))", exp.KindTags},
+		{"CREATE TABLE t (c INT) ROW ACCESS POLICY p ON (c)", "CREATE TABLE t (c INT) WITH ROW ACCESS POLICY p ON (c)", exp.KindRowAccessProperty},
+	} {
+		t.Run(tc.sql, func(t *testing.T) {
+			node, err := sqlglot.ParseOne(tc.sql, "snowflake")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var found bool
+			for _, n := range node.Walk() {
+				found = found || n.Kind() == tc.kind
+			}
+			if !found {
+				t.Fatal("expected structured policy")
+			}
+			got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+			if err != nil || got != tc.want {
+				t.Fatalf("got %q, %v; want %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

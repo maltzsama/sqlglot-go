@@ -348,6 +348,9 @@ func (p *Parser) parseWrappedProperties() []exp.Expression {
 // subset, followed by the generic key=value fallback. Unsupported registry entries are not
 // registered, so they consume nothing and the enclosing CREATE degrades to Command.
 func (p *Parser) parseProperty() exp.Expression {
+	if p.dialectIs("snowflake") && (p.matchTextSeq("WITH", "ROW", "ACCESS", "POLICY") || p.matchTextSeq("ROW", "ACCESS", "POLICY")) {
+		return p.parseSnowflakeRowAccess()
+	}
 	if p.dialectIs("snowflake") && p.matchTextSeq("FILE_FORMAT") {
 		p.match(tokens.EQ)
 		var options []exp.Expression

@@ -22,8 +22,9 @@ func init() {
 	})
 	// generators/snowflake.py:670-671 exp.SetProperty / exp.VolatileProperty: UNSUPPORTED.
 	registerDialectPropertyLocations("snowflake", map[expressions.Kind]propertyLocation{
-		expressions.KindSetProperty:      propertyLocationUnsupported,
-		expressions.KindVolatileProperty: propertyLocationUnsupported,
+		expressions.KindSetProperty:       propertyLocationUnsupported,
+		expressions.KindVolatileProperty:  propertyLocationUnsupported,
+		expressions.KindRowAccessProperty: propertyLocationPostSchema,
 	})
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
