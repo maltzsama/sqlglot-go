@@ -2,7 +2,10 @@ package expressions
 
 // Builders for the Snowflake node kinds.
 
-func ArrayPosition(args Args) Expression     { return newNode(KindArrayPosition, args) }
+func ArrayPosition(args Args) Expression { return newNode(KindArrayPosition, args) }
+func ApproximateSimilarity(args Args) Expression {
+	return newNode(KindApproximateSimilarity, args)
+}
 func DotProduct(args Args) Expression        { return newNode(KindDotProduct, args) }
 func LogicalAnd(args Args) Expression        { return newNode(KindLogicalAnd, args) }
 func ManhattanDistance(args Args) Expression { return newNode(KindManhattanDistance, args) }

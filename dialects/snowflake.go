@@ -378,6 +378,8 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 			"this": seqGet(args, 0), "expression": expression, "counters": seqGet(args, 2),
 		})
 	}
+	out["APPROXIMATE_JACCARD_INDEX"] = exp.FromArgListFunc(exp.KindApproximateSimilarity)
+	out["APPROXIMATE_SIMILARITY"] = exp.FromArgListFunc(exp.KindApproximateSimilarity)
 	out["STRTOK"] = func(args []exp.Expression) exp.Expression {
 		delimiter := seqGet(args, 1)
 		if delimiter == nil {
