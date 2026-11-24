@@ -1463,6 +1463,13 @@ func (p *Parser) parseTable(schema bool, joins bool, aliasTokens map[tokens.Toke
 	if prefixAlias != nil && this != nil {
 		if tableAlias := prefixAlias; tableAlias != nil && tableAlias.Kind() == exp.KindTableAlias {
 			prefixComments = append(prefixComments, this.PopComments()...)
+			// The tokenizer/parser attaches a trailing table-name comment to its
+			// Identifier child, whereas upstream's _parse_table receives it on the Table.
+			// DuckDB relocates that comment to the prefix alias along with comments adjacent
+			// to the colon (parsers/duckdb.py:314-326).
+			if name := asExpr(this.Arg("this")); name != nil {
+				prefixComments = append(prefixComments, name.PopComments()...)
+			}
 			tableAlias.AddComments(append(tableAlias.PopComments(), prefixComments...), false)
 			this.Set("alias", tableAlias)
 			if p.dialect.Name != "clickhouse" {
