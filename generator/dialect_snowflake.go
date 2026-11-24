@@ -27,6 +27,9 @@ func init() {
 	})
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindFileFormatProperty: func(g *Generator, e expressions.Expression) string {
+			return "FILE_FORMAT=(" + g.expressions(exprsOptions{expression: e, flat: true, sep: " "}) + ")"
+		},
 		expressions.KindApproxDistinct:        clickhouseRename("APPROX_COUNT_DISTINCT"),
 		expressions.KindApproximateSimilarity: clickhouseRename("APPROXIMATE_SIMILARITY"),
 		expressions.KindArgMax:                clickhouseRename("MAX_BY"),
