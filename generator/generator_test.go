@@ -84,6 +84,94 @@ func TestDateFromUnixDateNativeGeneratorOverrides(t *testing.T) {
 	}
 }
 
+func TestLogFunctionTranspilation(t *testing.T) {
+	cases := []struct {
+		name, read, write, sql, want string
+	}{
+		{"mysql natural log", "mysql", "", "LOG(x)", "LN(x)"},
+		{"clickhouse natural log", "clickhouse", "", "LOG(x)", "LN(x)"},
+		{"dremio natural log", "dremio", "", "LOG(x)", "LN(x)"},
+		{"tsql natural log", "tsql", "", "LOG(x)", "LN(x)"},
+		{"tsql base order", "tsql", "", "LOG(n, b)", "LOG(b, n)"},
+		{"clickhouse log base ten", "", "clickhouse", "LOG(10, a)", "LOG10(a)"},
+		{"clickhouse log base two", "", "clickhouse", "LOG(2, a)", "LOG2(a)"},
+		{"clickhouse quoted numeric column base", "", "clickhouse", `LOG("2", a)`, `LOG("2", a)`},
+		{"presto log base ten", "", "presto", "LOG(10, a)", "LOG10(a)"},
+		{"presto log base two", "", "presto", "LOG(2, a)", "LOG2(a)"},
+		{"tsql generated argument order", "", "tsql", "LOG(10, a)", "LOG(a, 10)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			expression, err := sqlglot.ParseOne(tc.sql, tc.read)
+			if err != nil {
+				t.Fatalf("ParseOne(%q, %q): %v", tc.sql, tc.read, err)
+			}
+			got, err := sqlglot.Generate(expression, tc.write, generator.Options{})
+			if err != nil {
+				t.Fatalf("Generate(%q, %q): %v", tc.sql, tc.write, err)
+			}
+			if got != tc.want {
+				t.Fatalf("transpile(%q, %q -> %q) = %q, want %q", tc.sql, tc.read, tc.write, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestArrayExtremaFunctionTranspilation(t *testing.T) {
+	cases := []struct {
+		dialect, sql, want string
+	}{
+		{"clickhouse", "ARRAY_MAX(x)", "arrayMax(x)"},
+		{"clickhouse", "ARRAY_MIN(x)", "arrayMin(x)"},
+		{"duckdb", "ARRAY_MAX(x)", "LIST_MAX(x)"},
+		{"duckdb", "ARRAY_MIN(x)", "LIST_MIN(x)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.dialect+"/"+tc.sql, func(t *testing.T) {
+			expression, err := sqlglot.ParseOne(tc.sql, "")
+			if err != nil {
+				t.Fatalf("ParseOne(%q): %v", tc.sql, err)
+			}
+			got, err := sqlglot.Generate(expression, tc.dialect, generator.Options{})
+			if err != nil {
+				t.Fatalf("Generate(%q, %q): %v", tc.sql, tc.dialect, err)
+			}
+			if got != tc.want {
+				t.Fatalf("transpile(%q -> %q) = %q, want %q", tc.sql, tc.dialect, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLevenshteinFunctionTranspilation(t *testing.T) {
+	cases := []struct {
+		name, dialect, sql, want string
+	}{
+		{"bigquery", "bigquery", "LEVENSHTEIN(a, b)", "EDIT_DISTANCE(a, b)"},
+		{"clickhouse", "clickhouse", "LEVENSHTEIN(a, b)", "editDistance(a, b)"},
+		{"presto", "presto", "LEVENSHTEIN(a, b)", "LEVENSHTEIN_DISTANCE(a, b)"},
+		{"snowflake", "snowflake", "LEVENSHTEIN(a, b)", "EDITDISTANCE(a, b)"},
+		{"sqlite", "sqlite", "LEVENSHTEIN(a, b)", "EDITDIST3(a, b)"},
+		{"trino", "trino", "LEVENSHTEIN(a, b)", "LEVENSHTEIN_DISTANCE(a, b)"},
+		{"postgres maximum distance", "postgres", "LEVENSHTEIN(a, b, 1, 2, 3, 4)", "LEVENSHTEIN_LESS_EQUAL(a, b, 1, 2, 3, 4)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			expression, err := sqlglot.ParseOne(tc.sql, "")
+			if err != nil {
+				t.Fatalf("ParseOne(%q): %v", tc.sql, err)
+			}
+			got, err := sqlglot.Generate(expression, tc.dialect, generator.Options{})
+			if err != nil {
+				t.Fatalf("Generate(%q, %q): %v", tc.sql, tc.dialect, err)
+			}
+			if got != tc.want {
+				t.Fatalf("transpile(%q -> %q) = %q, want %q", tc.sql, tc.dialect, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestUnnestWithOrdinality guards that folding a `WITH OFFSET AS <col>` into the alias
 // column list still emits WITH ORDINALITY: upstream unnest_sql clears only the offset ARG,
 // keeping the local offset truthy (generator.py:3444-3447 vs 3456-3457). A prior bug also
