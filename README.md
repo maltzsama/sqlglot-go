@@ -160,7 +160,7 @@ pair.
 | Trino | `trino` | 115/115 |
 | T-SQL | `tsql` | 613/613 |
 
-The transpile corpus passes **6,654 of 8,881** pairs, with **2,227** remaining gaps. Of the
+The transpile corpus passes **6,677 of 8,881** pairs, with **2,204** remaining gaps. Of the
 recorded pairs, 6,760 cross dialects.
 See [identity gaps](./testdata/parity_gaps.txt) and [transpile gaps](./testdata/transpile_gaps.txt)
 for the outstanding cases. The default optimizer pipeline passes its full `optimizer.sql`,
