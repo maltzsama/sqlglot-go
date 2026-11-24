@@ -233,9 +233,6 @@
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @namespace.%table_name/path/to/file.json.gz"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @namespace.mystage/path/to/file.json.gz"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @test.public.thing/location/somefile.csv( FILE_FORMAT => 'fmt' )"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT :1"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT :1 + :2"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT :1, :2"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM FIRST IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM LAST RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT m!PREDICT(INPUT_DATA => {*}) AS p FROM tbl"}

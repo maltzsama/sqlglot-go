@@ -3184,6 +3184,9 @@ func (p *Parser) parsePlaceholder() exp.Expression {
 		if p.matchSet(idVarTokens) {
 			return p.spanned(p.expression(exp.Placeholder(exp.Args{"this": p.prev.Text}), &p.prev, nil), start, p.prev)
 		}
+		if p.dialect.Name == "snowflake" && p.match(tokens.NUMBER) {
+			return p.spanned(p.expression(exp.Placeholder(exp.Args{"this": p.prev.Text}), &p.prev, nil), start, p.prev)
+		}
 		p.retreat(p.index - 1)
 	}
 	return nil
