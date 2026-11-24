@@ -10,6 +10,13 @@ import (
 func init() {
 	registerDialectParserOverrides("duckdb", dialectParserOverrideSet{
 		TypeParser: parseDuckDBTypes,
+		PropertyParsers: map[string]propertyParserFunc{
+			"USING": func(p *Parser, _ bool) exp.Expression {
+				return p.parsePropertyAssignment(func(this exp.Expression) exp.Expression {
+					return p.expression(exp.FileFormatProperty(exp.Args{"this": this}), nil, nil)
+				})
+			},
+		},
 		StatementParsers: map[tokens.TokenType]parserOverrideFunc{
 			// parsers/duckdb.py:263-270 STATEMENT_PARSERS.
 			tokens.ATTACH:    func(p *Parser) exp.Expression { return p.parseDuckDBAttachDetach(true) },

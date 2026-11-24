@@ -397,6 +397,17 @@ func (p *Parser) parseCreateFunction(ctt tokens.TokenType) (this, expression exp
 	}
 
 	this = p.parseUserDefinedFunction()
+	if ctt == tokens.FUNCTION && p.dialect.Name == "duckdb" && p.match(tokens.ALIAS) {
+		if p.match(tokens.TABLE) {
+			properties = append(properties, p.expression(exp.ReturnsProperty(exp.Args{
+				"this":     exp.Var(exp.Args{"this": "TABLE"}),
+				"is_table": true,
+			}), nil, nil))
+			expression = p.parseStatement()
+			return this, expression, properties, begin
+		}
+		p.retreat(p.index - 1)
+	}
 	// exp.Properties.Location.POST_SCHEMA (parser.py:2417): properties parsed before AS.
 	extendProperties(p.parseProperties())
 

@@ -1432,6 +1432,14 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 	}
 	expressionSQL := g.sqlKey(e, "expression")
 	if expressionSQL != "" {
+		if g.isDialect("duckdb") && properties != nil {
+			for _, property := range properties.Expressions() {
+				if property.Kind() == expressions.KindReturnsProperty && boolValue(property.Arg("is_table")) {
+					expressionSQL = "TABLE " + expressionSQL
+					break
+				}
+			}
+		}
 		expressionSQL = begin + g.sep() + expressionSQL
 		// PG rejects `AS BEGIN ATOMIC`: the SQL-standard body replaces the AS clause.
 		// generator.py:1362 additionally skips the AS when the body is a MacroOverloads

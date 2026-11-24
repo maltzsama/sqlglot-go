@@ -39,6 +39,7 @@ func init() {
 		expressions.KindBlockCompressionProperty: propertyLocationUnsupported,
 		expressions.KindChecksumProperty:         propertyLocationUnsupported,
 		expressions.KindDataBlocksizeProperty:    propertyLocationUnsupported,
+		expressions.KindFileFormatProperty:       propertyLocationUnsupported,
 		expressions.KindFallbackProperty:         propertyLocationUnsupported,
 		expressions.KindFreespaceProperty:        propertyLocationUnsupported,
 		expressions.KindGlobalProperty:           propertyLocationUnsupported,
@@ -46,13 +47,18 @@ func init() {
 		expressions.KindJournalProperty:          propertyLocationUnsupported,
 		expressions.KindLogProperty:              propertyLocationUnsupported,
 		expressions.KindMergeBlockRatioProperty:  propertyLocationUnsupported,
+		expressions.KindPartitionedByProperty:    propertyLocationUnsupported,
+		expressions.KindReturnsProperty:          propertyLocationUnsupported,
 		expressions.KindSetProperty:              propertyLocationUnsupported,
 		expressions.KindVolatileProperty:         propertyLocationUnsupported,
 		expressions.KindWithJournalTableProperty: propertyLocationUnsupported,
 	})
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
-		expressions.KindAnyValue:          duckDBAnyValueSQL,
+		expressions.KindAnyValue: duckDBAnyValueSQL,
+		expressions.KindCommentColumnConstraint: func(g *Generator, _ expressions.Expression) string {
+			return ""
+		},
 		expressions.KindApproxDistinct:    clickhouseRename("APPROX_COUNT_DISTINCT"),
 		expressions.KindBitwiseCount:      clickhouseRename("BIT_COUNT"),
 		expressions.KindCosineDistance:    clickhouseRename("LIST_COSINE_DISTANCE"),
