@@ -67,6 +67,7 @@ func init() {
 		expressions.KindStarMap:            clickhouseRename("OBJECT_CONSTRUCT"),
 		expressions.KindJSONKeys:           clickhouseRename("OBJECT_KEYS"),
 		expressions.KindJSONFormat:         clickhouseRename("TO_JSON"),
+		expressions.KindJSONExtract:        snowflakeJSONExtractSQL,
 		expressions.KindSHA:                clickhouseRename("SHA1"),
 		expressions.KindSHA1Digest:         clickhouseRename("SHA1_BINARY"),
 		expressions.KindMD5Digest:          clickhouseRename("MD5_BINARY"),
@@ -142,6 +143,25 @@ func init() {
 		expressions.KindDescribe: snowflakeDescribeSQL,
 	}
 	registerDialectDispatch("snowflake", handlers)
+}
+
+func snowflakeJSONExtractSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.Arg("this"))
+	if this != nil && this.Kind() != expressions.KindParseJSON &&
+		this.Kind() != expressions.KindJSONExtract && !truthy(e.Arg("requires_json")) {
+		this = expressions.ParseJSON(expressions.Args{"this": this})
+	}
+	path := asExpression(e.Arg("expression"))
+	if path != nil && path.Kind() == expressions.KindJSONPath {
+		parts := path.Expressions()
+		if len(parts) > 0 && parts[0].Kind() == expressions.KindJSONPathRoot {
+			parts = parts[1:]
+		}
+		path = expressions.JSONPath(expressions.Args{"expressions": parts})
+	}
+	pathSQL := g.gen(path)
+	pathSQL = strings.ReplaceAll(pathSQL, "''", "\\'")
+	return g.funcCall("GET_PATH", []any{this, pathSQL}, "(", ")", true)
 }
 
 // snowflakePivot applies _unqualify_pivot_columns (generators/snowflake.py:74-96) before the
