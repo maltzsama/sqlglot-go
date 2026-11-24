@@ -3,7 +3,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT 1 FROM TABLE(GENERATOR(10))"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT 1 FROM TABLE(GENERATOR(10, 5))"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FILE_URL FROM DIRECTORY(@mystage) WHERE SIZE > 100000"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT NTH_VALUE(a, 2) FROM t"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1) AS value"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1, ROUNDING_MODE => 'HALF_AWAY_FROM_ZERO') AS value"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1, ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
@@ -143,5 +142,3 @@
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER($my_function_name)()"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER('my_func')(1, 2)"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER('speed_of_light')()"}
-{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT TO_CHAR(CAST('12:05:05' AS TIME))"}
-{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT TRIM(COALESCE(TO_CHAR(CAST(c AS TIME)), '')) FROM t"}

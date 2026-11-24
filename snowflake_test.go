@@ -8,6 +8,18 @@ import (
 	"github.com/maltzsama/sqlglot-go/generator"
 )
 
+func TestSnowflakeNthValueFromClause(t *testing.T) {
+	for _, sql := range []string{
+		"SELECT NTH_VALUE(a, 2) FROM t",
+		"SELECT NTH_VALUE(a, 2) FROM FIRST OVER () FROM t",
+		"SELECT NTH_VALUE(a, 2) FROM LAST OVER () FROM t",
+	} {
+		t.Run(sql, func(t *testing.T) {
+			assertRoundTrip(t, "snowflake", sql, sql)
+		})
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {
