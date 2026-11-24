@@ -26,7 +26,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT 1 FROM TABLE(GENERATOR(10, 5))"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT APPROXIMATE_JACCARD_INDEX(minhash_col)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT APPROX_TOP_K(col) FROM t"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT CURRENT_TIME"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FILE_URL FROM DIRECTORY(@mystage) WHERE SIZE > 100000"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 IGNORE NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 RESPECT NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}

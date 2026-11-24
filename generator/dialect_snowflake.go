@@ -117,8 +117,13 @@ func init() {
 		expressions.KindTimestampFromParts: clickhouseRename("TIMESTAMP_FROM_PARTS"),
 		expressions.KindGroupConcat:        snowflakeGroupConcatSQL,
 		expressions.KindStrPosition:        snowflakeStrPositionSQL,
-		expressions.KindLocaltime:          func(*Generator, expressions.Expression) string { return "LOCALTIME" },
-		expressions.KindLocaltimestamp:     func(*Generator, expressions.Expression) string { return "CURRENT_TIMESTAMP" },
+		expressions.KindLocaltime: func(g *Generator, e expressions.Expression) string {
+			if e.Arg("this") != nil {
+				return g.funcCall("CURRENT_TIME", []any{e.Arg("this")}, "(", ")", true)
+			}
+			return "CURRENT_TIME"
+		},
+		expressions.KindLocaltimestamp: func(*Generator, expressions.Expression) string { return "CURRENT_TIMESTAMP" },
 		expressions.KindCurrentTimestamp: func(g *Generator, e expressions.Expression) string {
 			if e.Arg("this") != nil {
 				return g.funcCall("CURRENT_TIMESTAMP", []any{e.Arg("this")}, "(", ")", true)
