@@ -89,7 +89,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45', '999.99')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_NUMERIC('123.45', '999.99', 10, 2)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_TIMESTAMP('12345')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"WEEKOFYEAR(tstamp)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"ZEROIFNULL(foo)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse objects in db1.schema1 starts with 'a' limit 10 from 'b'"}

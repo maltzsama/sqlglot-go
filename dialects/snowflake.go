@@ -234,6 +234,12 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		safe := strings.HasPrefix(name, "TRY_")
 		out[name] = func(args []exp.Expression) exp.Expression {
 			value := seqGet(args, 0)
+			if target == exp.DTypeTimestamp && safe && len(args) == 1 &&
+				value != nil && value.IsString() {
+				if _, err := strconv.ParseInt(value.Name(), 10, 64); err == nil {
+					return exp.Anonymous(exp.Args{"this": name, "expressions": args})
+				}
+			}
 			if target == exp.DTypeTimestamp && !safe {
 				scale := seqGet(args, 1)
 				valueIsInteger := false
