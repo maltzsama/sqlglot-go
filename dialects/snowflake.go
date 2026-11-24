@@ -243,6 +243,19 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 			"false": exp.Div(exp.Args{"this": lhs, "expression": rhs}),
 		})
 	}
+	out["DIV0NULL"] = func(args []exp.Expression) exp.Expression {
+		lhs := snowflakeWrapBinary(seqGet(args, 0))
+		rhs := snowflakeWrapBinary(seqGet(args, 1))
+		cond := exp.Or(exp.Args{
+			"this":       exp.EQ(exp.Args{"this": rhs, "expression": exp.LiteralNumber("0")}),
+			"expression": exp.Is(exp.Args{"this": rhs, "expression": exp.Null()}),
+		})
+		return exp.If(exp.Args{
+			"this": cond, "true": exp.LiteralNumber("0"),
+			"false": exp.Div(exp.Args{"this": lhs, "expression": rhs}),
+		})
+	}
+	out["MD5_HEX"] = exp.FromArgListFunc(exp.KindMD5)
 	out["IFF"] = exp.FromArgListFunc(exp.KindIf)
 	out["LEN"] = func(args []exp.Expression) exp.Expression {
 		return exp.Length(exp.Args{"this": seqGet(args, 0)})

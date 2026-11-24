@@ -16,8 +16,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC ROW ACCESS POLICY pol1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC SECURITY INTEGRATION int1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESCRIBE db.table"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DIV0NULL(a - b, c - d)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"DIV0NULL(foo, bar)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"GETDATE()"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"GET_PATH(json_data, '$id')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"INSERT INTO test VALUES (x'48FAF43B0AFCEF9B63EE3A93EE2AC2')"}
@@ -25,7 +23,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"LOCALTIMESTAMP"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"LOCALTIMESTAMP()"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"LOCALTIMESTAMP(3)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"MD5_HEX(col)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"NULLIFZERO(foo)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_REPLACE(subject, pattern)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_SUBSTR(subject, pattern, 1, 1, 'e', 0)"}
