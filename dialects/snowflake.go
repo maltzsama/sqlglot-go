@@ -346,9 +346,8 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		if partIndex == nil {
 			partIndex = exp.LiteralNumber("1")
 		}
-		return exp.SplitPart(exp.Args{
+		return exp.Strtok(exp.Args{
 			"this": seqGet(args, 0), "delimiter": delimiter, "part_index": partIndex,
-			"part_index_zero_as_one": true, "empty_delimiter_returns_whole": true,
 		})
 	}
 	out["NULLIFZERO"] = func(args []exp.Expression) exp.Expression {

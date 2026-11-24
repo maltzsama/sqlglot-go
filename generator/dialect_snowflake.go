@@ -88,7 +88,7 @@ func init() {
 				"this": expressions.LiteralString(" "), "times": e.This(),
 			}))
 		},
-		expressions.KindSplitPart: func(g *Generator, e expressions.Expression) string {
+		expressions.KindStrtok: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("STRTOK", []any{e.This(), e.Arg("delimiter"), e.Arg("part_index")}, "(", ")", true)
 		},
 		expressions.KindStddevSamp:         clickhouseRename("STDDEV"),

@@ -179,6 +179,7 @@ const (
 	KindMD5NumberLower64
 	KindMD5NumberUpper64
 	KindSkewness
+	KindStrtok
 	KindStrtokToArray
 	KindStuff
 	KindToArray
@@ -1457,6 +1458,7 @@ var argTypes = map[Kind][]argSpec{
 	KindMD5NumberLower64:      defaultArgTypes,
 	KindMD5NumberUpper64:      defaultArgTypes,
 	KindSkewness:              defaultArgTypes,
+	KindStrtok:                {{"this", true}, {"delimiter", false}, {"part_index", false}},
 	KindStrtokToArray:         {{"this", true}, {"expression", false}},
 	KindStuff:                 {{"this", true}, {"start", true}, {"length", true}, {"expression", true}},
 	KindToArray:               defaultArgTypes,
@@ -2315,6 +2317,7 @@ var traitsOf = map[Kind]Trait{
 	KindMD5NumberLower64:      TraitCondition | TraitFunc,
 	KindMD5NumberUpper64:      TraitCondition | TraitFunc,
 	KindSkewness:              TraitCondition | TraitFunc,
+	KindStrtok:                TraitCondition | TraitFunc,
 	KindStrtokToArray:         TraitCondition | TraitFunc,
 	KindStuff:                 TraitCondition | TraitFunc,
 	KindToArray:               TraitCondition | TraitFunc,
@@ -2970,6 +2973,7 @@ var className = map[Kind]string{
 	KindMD5NumberLower64:                    "MD5NumberLower64",
 	KindMD5NumberUpper64:                    "MD5NumberUpper64",
 	KindSkewness:                            "Skewness",
+	KindStrtok:                              "Strtok",
 	KindStrtokToArray:                       "StrtokToArray",
 	KindStuff:                               "Stuff",
 	KindToArray:                             "ToArray",

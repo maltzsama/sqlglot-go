@@ -7,6 +7,7 @@ func DotProduct(args Args) Expression        { return newNode(KindDotProduct, ar
 func LogicalAnd(args Args) Expression        { return newNode(KindLogicalAnd, args) }
 func ManhattanDistance(args Args) Expression { return newNode(KindManhattanDistance, args) }
 func Skewness(args Args) Expression          { return newNode(KindSkewness, args) }
+func Strtok(args Args) Expression            { return newNode(KindStrtok, args) }
 func StrtokToArray(args Args) Expression     { return newNode(KindStrtokToArray, args) }
 func Stuff(args Args) Expression             { return newNode(KindStuff, args) }
 func ToArray(args Args) Expression           { return newNode(KindToArray, args) }
