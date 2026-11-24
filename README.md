@@ -139,7 +139,7 @@ committed test corpora. Coverage varies by construct and dialect pair.
 | Databricks | `databricks` | 176/176 |
 | Doris | `doris` | 56/56 |
 | Dremio | `dremio` | 46/46 |
-| DuckDB | `duckdb` | 531/565 |
+| DuckDB | `duckdb` | 532/565 |
 | Hive | `hive` | 141/141 |
 | ksqlDB | `ksqldb` (alias `ksql`) | 57/57 (project fixtures) |
 | MariaDB | `mariadb` | Dedicated tests, no upstream identity corpus |
