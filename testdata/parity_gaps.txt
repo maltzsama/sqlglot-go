@@ -1,6 +1,5 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"COPY INTO mytable (col1, col2) FROM 's3://mybucket/data/files' STORAGE_INTEGRATION = \"storage\" ENCRYPTION = (TYPE='NONE' MASTER_KEY='key') FILES = ('file1', 'file2') PATTERN = 'pattern' FILE_FORMAT = (FORMAT_NAME=my_csv_format NULL_IF=('')) PARSE_HEADER = TRUE"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"COPY INTO test (c1) FROM (SELECT $1.c1 FROM @mystage)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"CURRENT_TIMESTAMP - INTERVAL '1 w' AND (1 = 1)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC API INTEGRATION int1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC APPLICATION PACKAGE pkg1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC CATALOG INTEGRATION int1"}
@@ -121,7 +120,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse tables in schema db1.schema1 starts with 'a' limit 10 from 'b'"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"\n            SELECT\n              uc.user_id,\n              uc.start_ts AS ts,\n              CASE\n                WHEN uc.start_ts::DATE >= '2023-01-01' AND uc.country_code IN ('US') AND uc.user_id NOT IN (\n                  SELECT DISTINCT\n                    _id\n                  FROM\n                    users,\n                    LATERAL FLATTEN(INPUT => PARSE_JSON(flags)) datasource\n                  WHERE datasource.value:name = 'something'\n                )\n                  THEN 'Sample1'\n                  ELSE 'Sample2'\n              END AS entity\n            FROM user_countries AS uc\n            LEFT JOIN (\n              SELECT user_id, MAX(IFF(service_entity IS NULL,1,0)) AS le_null\n              FROM accepted_user_agreements\n              GROUP BY 1\n            ) AS aua\n              ON uc.user_id = aua.user_id\n            "}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"CREATE STORAGE INTEGRATION s3_int\nTYPE=EXTERNAL_STAGE\nSTORAGE_PROVIDER='S3'\nSTORAGE_AWS_ROLE_ARN='arn:aws:iam::001234567890:role/myrole'\nENABLED=TRUE\nSTORAGE_ALLOWED_LOCATIONS=('s3://mybucket1/path1/', 's3://mybucket2/path2/')"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT CAST('2021-01-01' AS DATE) + INTERVAL '1 DAY'"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT DAYNAME(TO_DATE('2025-01-15'))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06 11:45:00' AS TIMESTAMP_NTZ))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06' AS DATE))"}

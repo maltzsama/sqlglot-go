@@ -171,6 +171,7 @@ func Snowflake() *Dialect {
 	d.InsertOverwrite = " OVERWRITE INTO"
 	d.HexStart, d.HexEnd = "x'", "'"
 	d.StringEscape = "\\"
+	d.SingleStringInterval = true
 
 	// parsers/snowflake.py:735-744 FUNCTION_PARSERS / FUNCTIONS removals.
 	d.RemovedFunctions = map[string]bool{"PREDICT": true}

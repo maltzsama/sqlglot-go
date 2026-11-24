@@ -251,7 +251,7 @@ const (
 	minPassSpark       = 227
 	minPassDatabricks  = 176
 	minPassDuckDB      = 565
-	minPassSnowflake   = 1287
+	minPassSnowflake   = 1289
 	minPassSQLite      = 136
 	minPassDremio      = 46
 	minPassTeradata    = 84
