@@ -202,6 +202,9 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	out["GETDATE"] = func([]exp.Expression) exp.Expression {
 		return exp.CurrentTimestamp(exp.Args{})
 	}
+	out["LOCALTIMESTAMP"] = func(args []exp.Expression) exp.Expression {
+		return exp.CurrentTimestamp(exp.Args{"this": seqGet(args, 0)})
+	}
 	for name, target := range map[string]exp.DType{
 		"TO_TIME": exp.DTypeTime, "TO_TIMESTAMP": exp.DTypeTimestamp,
 		"TRY_TO_TIME": exp.DTypeTime, "TRY_TO_TIMESTAMP": exp.DTypeTimestamp,
