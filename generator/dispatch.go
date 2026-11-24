@@ -118,6 +118,7 @@ func init() {
 	dispatch[expressions.KindNullSafeNEQ] = (*Generator).nullSafeNEQSQL
 	dispatch[expressions.KindAnonymous] = (*Generator).anonymousSQL
 	dispatch[expressions.KindLog] = (*Generator).logSQL
+	dispatch[expressions.KindDateFromUnixDate] = (*Generator).dateFromUnixDateSQL
 	dispatch[expressions.KindInsert] = (*Generator).insertSQL
 	dispatch[expressions.KindUpdate] = (*Generator).updateSQL
 	dispatch[expressions.KindDelete] = (*Generator).deleteSQL

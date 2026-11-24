@@ -105,16 +105,23 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"LIST": func(args []Expression) Expression {
 		return newNode(KindList, Args{"expressions": args})
 	},
-	"ABS":    genericFunction(KindAbs),
-	"AVG":    genericFunction(KindAvg),
-	"SUM":    genericFunction(KindSum),
-	"SQRT":   genericFunction(KindSqrt),
-	"LN":     genericFunction(KindLn),
-	"EXP":    genericFunction(KindExp),
-	"MIN":    genericFunction(KindMin),
-	"MAX":    genericFunction(KindMax),
-	"ROUND":  genericFunction(KindRound),
-	"LOG":    genericFunction(KindLog),
+	"ABS":   genericFunction(KindAbs),
+	"AVG":   genericFunction(KindAvg),
+	"SUM":   genericFunction(KindSum),
+	"SQRT":  genericFunction(KindSqrt),
+	"LN":    genericFunction(KindLn),
+	"EXP":   genericFunction(KindExp),
+	"MIN":   genericFunction(KindMin),
+	"MAX":   genericFunction(KindMax),
+	"ROUND": genericFunction(KindRound),
+	"LOG":   genericFunction(KindLog),
+	// parser.py:434-435 canonicalizes LOG2/LOG10 to exp.Log with a literal base.
+	"LOG2": func(args []Expression) Expression {
+		return newNode(KindLog, Args{"this": LiteralNumber(2), "expression": seqGetExpr(args, 0)})
+	},
+	"LOG10": func(args []Expression) Expression {
+		return newNode(KindLog, Args{"this": LiteralNumber(10), "expression": seqGetExpr(args, 0)})
+	},
 	"POW":    genericFunction(KindPow),
 	"POWER":  genericFunction(KindPow),
 	"SUBSTR": genericFunction(KindSubstring),
