@@ -8,8 +8,8 @@ records deliberate differences.
 
 ## Current status
 
-- **Identity corpus.** 7,242 of 7,609 cases pass, including all 1,876 base, MySQL, and
-  PostgreSQL cases. The remaining rows are DuckDB (35) and Snowflake (332). The
+- **Identity corpus.** 7,243 of 7,609 cases pass, including all 1,876 base, MySQL, and
+  PostgreSQL cases. The remaining rows are DuckDB (34) and Snowflake (332). The
   [README dialect table](./README.md#dialects-and-verified-coverage) shows the per-dialect results.
 - **Transpile corpus.** 6,330 of 8,881 upstream `validate_all` read/write pairs pass, with 2,551
   remaining gaps. These include same-dialect pairs. The initial harness shipped in
