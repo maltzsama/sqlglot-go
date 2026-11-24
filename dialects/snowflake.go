@@ -302,6 +302,19 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		}
 		return exp.FromArgList(exp.KindReplace, args)
 	}
+	out["REGEXP_REPLACE"] = func(args []exp.Expression) exp.Expression {
+		if len(args) == 2 {
+			args = append(args, exp.LiteralString(""))
+		}
+		return exp.FromArgList(exp.KindRegexpReplace, args)
+	}
+	out["REGEXP_SUBSTR_ALL"] = func(args []exp.Expression) exp.Expression {
+		return exp.RegexpExtractAll(exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1),
+			"position": seqGet(args, 2), "occurrence": seqGet(args, 3),
+			"parameters": seqGet(args, 4), "group": seqGet(args, 5),
+		})
+	}
 	out["NULLIFZERO"] = func(args []exp.Expression) exp.Expression {
 		value := seqGet(args, 0)
 		return exp.If(exp.Args{

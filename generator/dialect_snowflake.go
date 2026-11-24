@@ -70,6 +70,9 @@ func init() {
 		expressions.KindJSONFormat:         clickhouseRename("TO_JSON"),
 		expressions.KindJSONExtract:        snowflakeJSONExtractSQL,
 		expressions.KindUnixToTime:         snowflakeUnixToTimeSQL,
+		expressions.KindRegexpExtract:      snowflakeRegexpExtractSQL,
+		expressions.KindRegexpExtractAll:   snowflakeRegexpExtractSQL,
+		expressions.KindRegexpSubstr:       snowflakeRegexpExtractSQL,
 		expressions.KindSHA:                clickhouseRename("SHA1"),
 		expressions.KindSHA1Digest:         clickhouseRename("SHA1_BINARY"),
 		expressions.KindMD5Digest:          clickhouseRename("MD5_BINARY"),
@@ -145,6 +148,18 @@ func init() {
 		expressions.KindDescribe: snowflakeDescribeSQL,
 	}
 	registerDialectDispatch("snowflake", handlers)
+}
+
+func snowflakeRegexpExtractSQL(g *Generator, e expressions.Expression) string {
+	name := "REGEXP_SUBSTR"
+	if e.Kind() == expressions.KindRegexpExtractAll {
+		name = "REGEXP_SUBSTR_ALL"
+	}
+	args := []any{e.Arg("this"), e.Arg("expression"), e.Arg("position"), e.Arg("occurrence"), e.Arg("parameters")}
+	if group := asExpression(e.Arg("group")); group != nil && !(group.IsNumber() && group.Name() == "0") {
+		args = append(args, group)
+	}
+	return g.funcCall(name, args, "(", ")", true)
 }
 
 func snowflakeUnixToTimeSQL(g *Generator, e expressions.Expression) string {
