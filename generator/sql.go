@@ -2361,6 +2361,17 @@ func (g *Generator) logSQL(e expressions.Expression) string {
 	return g.funcCall("LOG", []any{this, expr}, "(", ")", true)
 }
 
+// dateFromUnixDateSQL ports generator.py:6201-6208: base SQLGlot renders the
+// number of days since the Unix epoch as a date addition. BigQuery and Spark
+// override this with their native DATE_FROM_UNIX_DATE function.
+func (g *Generator) dateFromUnixDateSQL(e expressions.Expression) string {
+	return g.gen(expressions.DateAdd(expressions.Args{
+		"this":       expressions.Cast(expressions.Args{"this": expressions.LiteralString("1970-01-01"), "to": expressions.DTypeDate.IntoExpr(nil)}),
+		"expression": e.Arg("this"),
+		"unit":       expressions.Var(expressions.Args{"this": "DAY"}),
+	}))
+}
+
 func (g *Generator) pivotSQL(e expressions.Expression) string {
 	expressionsSQL := g.expressions(exprsOptions{expression: e, flat: true})
 	direction := "PIVOT"

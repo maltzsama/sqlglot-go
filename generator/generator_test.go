@@ -57,6 +57,33 @@ func TestIdentify(t *testing.T) {
 	}
 }
 
+func TestBaseScalarFunctionTranspilation(t *testing.T) {
+	cases := []struct {
+		name, sql, want string
+	}{
+		{"log base 10", "LOG10(a)", "LOG(10, a)"},
+		{"log base 2", "LOG2(a)", "LOG(2, a)"},
+		{"date from unix date", "DATE_FROM_UNIX_DATE(1)", "DATE_ADD(CAST('1970-01-01' AS DATE), 1, 'DAY')"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := roundTrip(t, "", tc.sql); got != tc.want {
+				t.Fatalf("roundTrip(%q) = %q, want %q", tc.sql, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestDateFromUnixDateNativeGeneratorOverrides(t *testing.T) {
+	for _, dialect := range []string{"bigquery", "spark"} {
+		t.Run(dialect, func(t *testing.T) {
+			if got := roundTrip(t, dialect, "DATE_FROM_UNIX_DATE(1)"); got != "DATE_FROM_UNIX_DATE(1)" {
+				t.Fatalf("roundTrip(DATE_FROM_UNIX_DATE(1), %q) = %q", dialect, got)
+			}
+		})
+	}
+}
+
 // TestUnnestWithOrdinality guards that folding a `WITH OFFSET AS <col>` into the alias
 // column list still emits WITH ORDINALITY: upstream unnest_sql clears only the offset ARG,
 // keeping the local offset truthy (generator.py:3444-3447 vs 3456-3457). A prior bug also
