@@ -1556,7 +1556,6 @@
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT SPACE(NULL)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT TIMESTAMP_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT TIMESTAMP_LTZ_FROM_PARTS(2023, 6, 15, 14, 30, 45)"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT TIME_FROM_PARTS(0, 100, 0)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT TIME_FROM_PARTS(12, 34, 56, 987654321)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT TIME_SLICE(DATE '2024-03-15', 1, 'DAY')"}
@@ -1817,6 +1816,7 @@
 {"read":"snowflake","write":"duckdb","category":"parse: Expecting )","sql":"SELECT * FROM t1 AT (TIMESTAMP => '2024-01-01'::TIMESTAMP) AS a"}
 {"read":"snowflake","write":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM FIRST IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"read":"snowflake","write":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM LAST RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"read":"snowflake","write":"duckdb","category":"parse: Required keyword","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
 {"read":"snowflake","write":"hive","category":"gen: cast/type","sql":"SELECT DATE_PART('year', TIMESTAMP '2020-01-01')"}
 {"read":"snowflake","write":"hive","category":"gen: cast/type","sql":"UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')"}
 {"read":"snowflake","write":"hive","category":"gen: transpile mismatch","sql":"ARRAY_UNIQUE_AGG(x)"}
@@ -1867,7 +1867,6 @@
 {"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"\n            SELECT\n              uc.user_id,\n              uc.start_ts AS ts,\n              CASE\n                WHEN uc.start_ts::DATE >= '2023-01-01' AND uc.country_code IN ('US') AND uc.user_id NOT IN (\n                  SELECT DISTINCT\n                    _id\n                  FROM\n                    users,\n                    LATERAL FLATTEN(INPUT => PARSE_JSON(flags)) datasource\n                  WHERE datasource.value:name = 'something'\n                )\n                  THEN 'Sample1'\n                  ELSE 'Sample2'\n              END AS entity\n            FROM user_countries AS uc\n            LEFT JOIN (\n              SELECT user_id, MAX(IFF(service_entity IS NULL,1,0)) AS le_null\n              FROM accepted_user_agreements\n              GROUP BY 1\n            ) AS aua\n              ON uc.user_id = aua.user_id\n            "}
 {"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06 11:45:00' AS TIMESTAMP_NTZ))"}
 {"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06' AS DATE))"}
-{"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
 {"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"TIMESTAMPADD(DAY, 5, CAST('2008-12-25' AS DATE))"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE a MODIFY COLUMN my_column DROP NOT NULL"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE a MODIFY COLUMN my_column SET NOT NULL"}
@@ -1885,7 +1884,6 @@
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(ROUNDING_MODE => 'HALF_TO_EVEN', EXPR => 2.25, SCALE => 1) AS value"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25) AS value"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25, , ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(2013, 4, 5, 12, 00, 00)"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TO_TIME('093000', 'HH24MISS')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TO_TIMESTAMP(col, 'DD-MM-YYYY HH12:MI:SS') FROM t"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TRY_TO_TIME('093000', 'HH24MISS')"}
@@ -1909,6 +1907,7 @@
 {"read":"snowflake","write":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    CREDENTIALS = ()\n    FILE_FORMAT = (TYPE = CSV COMPRESSION = NONE NULL_IF = ('') FIELD_OPTIONALLY_ENCLOSED_BY = '\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
 {"read":"snowflake","write":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    STORAGE_INTEGRATION = S3_INTEGRATION\n    FILE_FORMAT = (TYPE=CSV COMPRESSION=NONE NULL_IF=('') FIELD_OPTIONALLY_ENCLOSED_BY='\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
 {"read":"snowflake","write":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER('my_func')(1, 2)"}
+{"read":"snowflake","write":"snowflake","category":"parse: Required keyword","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
 {"read":"snowflake","write":"spark","category":"gen: cast/type","sql":"SELECT DATE_PART('year', TIMESTAMP '2020-01-01')"}
 {"read":"snowflake","write":"spark","category":"gen: cast/type","sql":"SELECT TO_TIMESTAMP(1659981729)"}
 {"read":"snowflake","write":"spark","category":"gen: cast/type","sql":"TRUNC(3.14159, 2)"}
