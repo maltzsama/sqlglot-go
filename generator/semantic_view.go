@@ -4,6 +4,11 @@ import "github.com/maltzsama/sqlglot-go/expressions"
 
 func init() {
 	dispatch[expressions.KindSemanticView] = (*Generator).semanticViewSQL
+	dispatch[expressions.KindDirectoryStage] = (*Generator).directoryStageSQL
+}
+
+func (g *Generator) directoryStageSQL(e expressions.Expression) string {
+	return "DIRECTORY(" + g.sqlKey(e, "this") + ")"
 }
 
 func (g *Generator) semanticViewSQL(e expressions.Expression) string {

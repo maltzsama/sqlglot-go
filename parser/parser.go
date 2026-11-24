@@ -1776,6 +1776,18 @@ func (p *Parser) parseTablePartBase(schema bool) exp.Expression {
 	// or `FROM JSON_TABLE(...)`: outside schema position, a function call takes priority over
 	// a plain identifier so the parsed Func node becomes exp.Table's "this" arg.
 	if !schema {
+		if p.dialectIs("snowflake") && stringsUpper(p.curr.Text) == "DIRECTORY" && p.next.TokenType == tokens.L_PAREN {
+			p.advance(2)
+			table := p.parseTableParts(false, false, false, false)
+			var stage exp.Expression
+			if table != nil && table.Kind() == exp.KindTable {
+				stage = table.This()
+			} else {
+				stage = table
+			}
+			p.matchRParen(stage)
+			return p.expression(exp.New(exp.KindDirectoryStage, exp.Args{"this": stage}), nil, nil)
+		}
 		if p.dialectIs("snowflake") && stringsUpper(p.curr.Text) == "SEMANTIC_VIEW" && p.next.TokenType == tokens.L_PAREN {
 			p.advance(2)
 			result := p.parseSemanticView()

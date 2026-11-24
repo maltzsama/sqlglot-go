@@ -1188,6 +1188,7 @@ const (
 	KindHistoricalData
 	KindChanges
 	KindSemanticView
+	KindDirectoryStage
 )
 
 type Trait uint32
@@ -1821,6 +1822,7 @@ var argTypes = map[Kind][]argSpec{
 	KindHistoricalData:        {{"this", true}, {"kind", true}, {"expression", true}},
 	KindChanges:               {{"information", true}, {"at_before", false}, {"end", false}},
 	KindSemanticView:          {{"this", true}, {"metrics", false}, {"dimensions", false}, {"facts", false}, {"where", false}},
+	KindDirectoryStage:        {{"this", true}},
 	KindDayOfWeekIso:          defaultArgTypes,                                                                                                             // temporal.py:217 (pass)
 	KindDecode:                {{"this", true}, {"charset", true}, {"replace", false}},                                                                     // string.py:285
 	KindEncode:                {{"this", true}, {"charset", true}},                                                                                         // string.py:289
@@ -3342,6 +3344,7 @@ var className = map[Kind]string{
 	KindHistoricalData:        "HistoricalData",
 	KindChanges:               "Changes",
 	KindSemanticView:          "SemanticView",
+	KindDirectoryStage:        "DirectoryStage",
 	KindDayOfWeekIso:          "DayOfWeekIso",
 	KindDecode:                "Decode",
 	KindEncode:                "Encode",
