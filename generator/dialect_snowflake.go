@@ -128,6 +128,9 @@ func init() {
 		expressions.KindPivot:       snowflakePivot,
 		expressions.KindExtract:     snowflakeExtractSQL,
 		expressions.KindDate:        snowflakeDateSQL,
+		// generators/snowflake.py:754-760: spatial casts use constructor functions instead
+		// of CAST syntax.
+		expressions.KindCast: snowflakeCastSQL,
 		// generators/snowflake.py:567 exp.Rand: lambda e: func("RANDOM", e.this) — only the
 		// seed is rendered; the parser-injected lower/upper bounds are dropped.
 		expressions.KindRand: func(g *Generator, e expressions.Expression) string {
@@ -310,6 +313,22 @@ func snowflakeExtractSQL(g *Generator, e expressions.Expression) string {
 // snowflakeDateSQL renders DATE(<args>) as TO_DATE.
 func snowflakeDateSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("TO_DATE", g.fallbackArgs(e), "(", ")", true)
+}
+
+// snowflakeCastSQL ports SnowflakeGenerator.cast_sql (generators/snowflake.py:754-760).
+func snowflakeCastSQL(g *Generator, e expressions.Expression) string {
+	to := asExpression(e.Arg("to"))
+	if to != nil {
+		if dtype, ok := to.Arg("this").(expressions.DType); ok {
+			switch dtype {
+			case expressions.DTypeGeography:
+				return g.funcCall("TO_GEOGRAPHY", []any{e.Arg("this")}, "(", ")", true)
+			case expressions.DTypeGeometry:
+				return g.funcCall("TO_GEOMETRY", []any{e.Arg("this")}, "(", ")", true)
+			}
+		}
+	}
+	return g.castSQL(e)
 }
 
 // snowflakeUnit maps a date part through the dialect's DATE_PART_MAPPING and renders it as a

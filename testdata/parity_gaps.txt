@@ -13,8 +13,6 @@
 {"dialect":"duckdb","category":"parse: Required keyword","sql":"SELECT * FROM t1 AS a AT (VERSION => 3) JOIN t2 AS b AT (TIMESTAMP => NOW() - INTERVAL '1' WEEK) ON a.id = b.id"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"\n            SELECT col:\"customer's department\"\n            "}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"\n            SELECT id as \"ID\",\n              f.value AS \"Contact\",\n              f1.value:type AS \"Type\",\n              f1.value:content AS \"Details\"\n            FROM persons p,\n              lateral flatten(input => p.c, path => 'contact') f,\n              lateral flatten(input => f.value:business) f1\n            "}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"CAST(x AS GEOGRAPHY)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"CAST(x AS GEOMETRY)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"COPY INTO mytable (col1, col2) FROM 's3://mybucket/data/files' STORAGE_INTEGRATION = \"storage\" ENCRYPTION = (TYPE='NONE' MASTER_KEY='key') FILES = ('file1', 'file2') PATTERN = 'pattern' FILE_FORMAT = (FORMAT_NAME=my_csv_format NULL_IF=('')) PARSE_HEADER = TRUE"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"COPY INTO test (c1) FROM (SELECT $1.c1 FROM @mystage)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"CURRENT_TIMESTAMP - INTERVAL '1 w' AND (1 = 1)"}
