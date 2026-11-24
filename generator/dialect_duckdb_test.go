@@ -51,3 +51,28 @@ func TestDuckDBParserDropsTextTypeParameters(t *testing.T) {
 		t.Errorf("Generate(CAST(x AS VARCHAR(5)), duckdb) = %q, want %q", got, want)
 	}
 }
+
+func TestDuckDBPreservesArraySizeDimension(t *testing.T) {
+	for _, tc := range []struct {
+		read      string
+		dimension string
+	}{
+		{read: "", dimension: "1"},
+		{read: "duckdb", dimension: "2"},
+	} {
+		t.Run("read="+tc.read+"/dimension="+tc.dimension, func(t *testing.T) {
+			sql := "SELECT ARRAY_LENGTH([0], " + tc.dimension + ") AS x"
+			expression, err := sqlglot.ParseOne(sql, tc.read)
+			if err != nil {
+				t.Fatalf("ParseOne(%q, %q): %v", sql, tc.read, err)
+			}
+			got, err := sqlglot.Generate(expression, "duckdb", generator.Options{})
+			if err != nil {
+				t.Fatalf("Generate(%q, duckdb): %v", sql, err)
+			}
+			if got != sql {
+				t.Errorf("Generate(%q, duckdb) = %q, want %q", sql, got, sql)
+			}
+		})
+	}
+}

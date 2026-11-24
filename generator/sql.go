@@ -2174,18 +2174,16 @@ func (g *Generator) arrayAggSQL(e expressions.Expression) string {
 	return sql
 }
 
-// arraySizeSQL ports arraysize_sql (generator.py:5798-5811). ARRAY_SIZE_DIM_REQUIRED
-// (generator.py:588, generators/postgres.py:254) is nil/false for base (drop a `1`
-// dimension arg, warn on anything else), true for postgres (keep it, defaulting to `1`
-// when omitted) - modeled here as a dialect-name check, matching the existing
-// g.dialect.Name-gated overrides elsewhere in this package (e.g. varianceSQL).
+// arraySizeSQL ports arraysize_sql (generator.py:5886-5897). Base's nil setting drops a `1`
+// dimension arg and warns on other values; DuckDB's false setting preserves supplied dimensions;
+// Postgres's true setting preserves them and defaults an omitted dimension to `1`.
 func (g *Generator) arraySizeSQL(e expressions.Expression) string {
 	dim := asExpression(e.Arg("expression"))
 	if g.isDialect("postgres") {
 		if dim == nil {
 			dim = expressions.LiteralNumber(1)
 		}
-	} else if dim != nil {
+	} else if !g.isDialect("duckdb") && dim != nil {
 		if !dim.IsInt() || dim.Name() != "1" {
 			g.unsupported("Cannot transpile dimension argument for ARRAY_LENGTH")
 		}

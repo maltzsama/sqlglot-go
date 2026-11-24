@@ -5,7 +5,6 @@
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT * FROM (DESCRIBE t)"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT * FROM foo /* bla */: /* baz */ bar /* boo */"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT * FROM foo /* bla */: bar /* baz */"}
-{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT ARRAY_LENGTH([0], 1) AS x"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT JSON('{\"fruit\": {\"foo\": \"banana\"}}') -> 'fruit' -> 'foo'"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT JSON('{\"fruit\":\"banana\"}') -> 'fruit'"}
 {"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a INT, b FLOAT) AS TABLE SELECT a"}
