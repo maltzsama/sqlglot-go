@@ -1804,6 +1804,9 @@ func (p *Parser) parseVersion() exp.Expression {
 }
 
 func (p *Parser) parseTableAlias(aliasTokensArg map[tokens.TokenType]bool) exp.Expression {
+	if p.match(tokens.MATCH_CONDITION, false) {
+		return nil
+	}
 	if p.canParseLimitOrOffset() {
 		return nil
 	}
@@ -1973,6 +1976,9 @@ func (p *Parser) parseJoinBase(skipJoinToken bool, parseBracket bool, aliasToken
 	}
 	if directed {
 		kwargs["directed"] = true
+	}
+	if p.match(tokens.MATCH_CONDITION) {
+		kwargs["match_condition"] = p.parseWrapped(p.parseComparison, false)
 	}
 	joinThis := asExpr(kwargs["this"])
 	// ksqlDB `joinedSource: joinType JOIN aliasedRelation joinWindow? joinCriteria`

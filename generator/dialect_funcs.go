@@ -259,6 +259,34 @@ func (g *Generator) currentDateSQL(e expressions.Expression) string {
 	return "CURRENT_DATE"
 }
 
+// tsOrDsToDateSQL ports tsordstodate_sql (generator.py:5202-5216).
+func (g *Generator) tsOrDsToDateSQL(e expressions.Expression) string {
+	this := asExpression(e.Arg("this"))
+	if format := asExpression(e.Arg("format")); format != nil {
+		parsed := expressions.StrToTime(expressions.Args{
+			"this":   this,
+			"format": format,
+			"safe":   e.Arg("safe"),
+		})
+		return g.gen(expressions.Cast(expressions.Args{
+			"this": parsed,
+			"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeDate}),
+		}))
+	}
+	if this != nil && (this.Kind() == expressions.KindTsOrDsToDate ||
+		expressions.DataTypeIsType(this, false, expressions.DTypeDate)) {
+		return g.gen(this)
+	}
+	castKind := expressions.KindCast
+	if truthy(e.Arg("safe")) {
+		castKind = expressions.KindTryCast
+	}
+	return g.gen(expressions.New(castKind, expressions.Args{
+		"this": this,
+		"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeDate}),
+	}))
+}
+
 func init() {
 	dispatch[expressions.KindDay] = (*Generator).dayMonthYearSQL
 	dispatch[expressions.KindMonth] = (*Generator).dayMonthYearSQL
@@ -273,6 +301,7 @@ func init() {
 	dispatch[expressions.KindOverlay] = (*Generator).overlaySQL
 	dispatch[expressions.KindVariadic] = (*Generator).variadicSQL
 	dispatch[expressions.KindCurrentDate] = (*Generator).currentDateSQL
+	dispatch[expressions.KindTsOrDsToDate] = (*Generator).tsOrDsToDateSQL
 	dispatch[expressions.KindCurrentTimestamp] = (*Generator).currentTimestampSQL
 	dispatch[expressions.KindCurrentUser] = (*Generator).currentUserSQL
 	dispatch[expressions.KindCurrentCatalog] = (*Generator).currentCatalogSQL

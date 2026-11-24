@@ -161,7 +161,6 @@ annotate_functions.sql|bigquery|529
 annotate_functions.sql|bigquery|530
 annotate_functions.sql|bigquery|536
 annotate_functions.sql|bigquery|537
-annotate_functions.sql|bigquery|538
 annotate_functions.sql|bigquery|545
 annotate_functions.sql|bigquery|547
 annotate_functions.sql|bigquery|548
@@ -295,7 +294,6 @@ annotate_functions.sql|duckdb|1793
 annotate_functions.sql|duckdb|1794
 annotate_functions.sql|duckdb|1795
 annotate_functions.sql|duckdb|1809
-annotate_functions.sql|duckdb|1810
 annotate_functions.sql|duckdb|1811
 annotate_functions.sql|duckdb|1812
 annotate_functions.sql|duckdb|1813
@@ -1067,7 +1065,6 @@ annotate_functions.sql||25
 annotate_functions.sql||26
 annotate_functions.sql||263
 annotate_functions.sql||34
-annotate_functions.sql||36
 annotate_functions.sql||37
 annotate_functions.sql||39
 annotate_functions.sql||42
@@ -1079,7 +1076,6 @@ annotate_functions.sql||57
 annotate_functions.sql||58
 annotate_functions.sql||59
 annotate_functions.sql||60
-annotate_functions.sql||61
 annotate_functions.sql||66
 annotate_functions.sql||7
 annotate_functions.sql||8

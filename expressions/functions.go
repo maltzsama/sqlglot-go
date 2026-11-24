@@ -32,6 +32,13 @@ func FromArgList(kind Kind, args []Expression) Expression {
 			}
 		}
 	}
+	switch kind {
+	case KindDateAdd, KindDateSub, KindDatetimeAdd, KindDatetimeSub, KindTimestampTrunc:
+		// These expression classes embed TimeUnit (expressions/core.py:2037-2066).
+		if unit, ok := m["unit"].(Expression); ok {
+			m["unit"] = TimeUnitVar(unit)
+		}
+	}
 	return newNode(kind, m)
 }
 
@@ -206,6 +213,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"DATE_TRUNC": func(args []Expression) Expression {
 		return DateTrunc(Args{"unit": seqGetExpr(args, 0), "this": seqGetExpr(args, 1)})
 	},
+	"TIMESTAMP_TRUNC": genericFunction(KindTimestampTrunc),
 	// DATE_SUB is a base FUNCTIONS entry (Parser.FUNCTIONS["DATE_SUB"] =
 	// DateSub.from_arg_list, verified against the pinned source); base renders it via the
 	// function fallback like upstream, which has no datesub_sql.
@@ -429,6 +437,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"TO_MAP":                   genericFunction(KindToMap),
 	"TRANSLATE":                genericFunction(KindTranslate),
 	"TS_OR_DI_TO_DI":           genericFunction(KindTsOrDiToDi),
+	"TS_OR_DS_TO_DATE":         genericFunction(KindTsOrDsToDate),
 	"TS_OR_DS_TO_DATE_STR":     genericFunction(KindTsOrDsToDateStr),
 	"UNIX_DATE":                genericFunction(KindUnixDate),
 	"UNIX_MICROS":              genericFunction(KindUnixMicros),
@@ -461,6 +470,8 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"NEGATIVE":                 genericFunction(KindNegative),
 	"NEXT_DAY":                 genericFunction(KindNextDay),
 	"PAD":                      genericFunction(KindPad),
+	"RAND":                     genericFunction(KindRand),
+	"RANDOM":                   genericFunction(KindRand),
 	"RANDN":                    genericFunction(KindRandn),
 	"RANDSTR":                  genericFunction(KindRandstr),
 	"REGEXP_COUNT":             genericFunction(KindRegexpCount),

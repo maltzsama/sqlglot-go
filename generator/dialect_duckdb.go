@@ -83,6 +83,7 @@ func init() {
 		// clause, so a synthetic UNNEST join gets a dummy ON TRUE and a plain comma join
 		// loses its synthetic side/kind.
 		expressions.KindJoin:              duckDBJoinSQL,
+		expressions.KindRand:              duckDBRandSQL,
 		expressions.KindJSONExtract:       duckDBArrowJSONExtract,
 		expressions.KindJSONExtractScalar: duckDBArrowJSONExtract,
 		expressions.KindJSONExtractArray:  duckDBArrowJSONExtractArray,
@@ -305,6 +306,30 @@ func duckDBArrowJSONExtract(g *Generator, e expressions.Expression) string {
 		}
 	}
 	return out
+}
+
+// duckDBRandSQL ports DuckDBGenerator.rand_sql (generators/duckdb.py:3731-3751).
+func duckDBRandSQL(g *Generator, e expressions.Expression) string {
+	if e.Arg("this") != nil {
+		g.unsupported("RANDOM with seed is not supported in DuckDB")
+		return ""
+	}
+	lower := asExpression(e.Arg("lower"))
+	upper := asExpression(e.Arg("upper"))
+	if lower != nil && upper != nil {
+		rangeSize := expressions.Paren(expressions.Args{
+			"this": expressions.Sub(expressions.Args{"this": upper, "expression": lower}),
+		})
+		scaled := expressions.Add(expressions.Args{
+			"this":       lower,
+			"expression": expressions.Mul(expressions.Args{"this": expressions.Rand(expressions.Args{}), "expression": rangeSize}),
+		})
+		return g.gen(expressions.Cast(expressions.Args{
+			"this": scaled,
+			"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeBigInt}),
+		}))
+	}
+	return "RANDOM()"
 }
 
 // arrowJSONExtractBinary renders `this -> path`, wrapping the path when needed.
