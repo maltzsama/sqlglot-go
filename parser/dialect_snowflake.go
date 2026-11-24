@@ -46,6 +46,16 @@ func snowflakeTablePart(p *Parser, _ bool, this exp.Expression) exp.Expression {
 				name = `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 			}
 		}
+		for p.isConnected() {
+			switch p.curr.TokenType {
+			case tokens.SLASH, tokens.DOT, tokens.MOD, tokens.VAR, tokens.FILE, tokens.JSON:
+				name += p.curr.Text
+				p.advance()
+			default:
+				goto stagePathDone
+			}
+		}
+	stagePathDone:
 		return p.expression(exp.Var(exp.Args{"this": "@" + name}), nil, nil)
 	}
 	if p.prev.TokenType == tokens.STRING && this.Kind() == exp.KindIdentifier {

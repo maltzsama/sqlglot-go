@@ -97,6 +97,9 @@
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT $1, $2, metadata$filename FROM @mystage (PATTERN => '.*data-100.*')"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM '@external/location' (FILE_FORMAT => 'path.to.csv')"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM (SELECT * FROM '@external/location' (FILE_FORMAT => 'path.to.csv'))"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM @foo/bar (FILE_FORMAT => ds_sandbox.test.my_csv_format, PATTERN => 'test') AS bla"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM @foo/bar (PATTERN => 'test', FILE_FORMAT => ds_sandbox.test.my_csv_format) AS bla"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM @test.public.thing/location/somefile.csv( FILE_FORMAT => 'fmt' )"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(foo METRICS a.b, a.c DIMENSIONS a.b, a.c WHERE a.b > '1995-01-01')"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl DIMENSIONS DATE_PART('year', a.b))"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM SEMANTIC_VIEW(tbl DIMENSIONS DATE_PART('year', a.b)) ORDER BY foo"}
@@ -140,23 +143,15 @@
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"PUT file:///dir/tmp.csv @s1/test PARALLEL=1 AUTO_COMPRESS=FALSE source_compression=gzip OVERWRITE=TRUE"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @\"my_DB\".\"schEMA1\".mystage/file.gz"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @\"myschema\".\"mystage\"/file.gz"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @foo/bar (FILE_FORMAT => ds_sandbox.test.my_csv_format, PATTERN => 'test') AS bla"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @foo/bar (PATTERN => 'test', FILE_FORMAT => ds_sandbox.test.my_csv_format) AS bla"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @namespace.%table_name/path/to/file.json.gz"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @namespace.mystage/path/to/file.json.gz"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @test.public.thing/location/somefile.csv( FILE_FORMAT => 'fmt' )"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM FIRST IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM LAST RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT m!PREDICT(INPUT_DATA => {*}) AS p FROM tbl"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT m!PREDICT(INPUT_DATA => {tbl.*}) AS p FROM tbl"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT metadata$filename FROM @s1/"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT model!PREDICT(1)"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT model!mladmin"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT parse_json($1):a.b FROM @mystage2/data1.json.gz"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"x.y.z!PREDICT(foo, bar, baz, bla)"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    CREDENTIALS = ()\n    FILE_FORMAT = (TYPE = CSV COMPRESSION = NONE NULL_IF = ('') FIELD_OPTIONALLY_ENCLOSED_BY = '\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    STORAGE_INTEGRATION = S3_INTEGRATION\n    FILE_FORMAT = (TYPE=CSV COMPRESSION=NONE NULL_IF=('') FIELD_OPTIONALLY_ENCLOSED_BY='\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
-{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO @my_stage/result/data FROM (SELECT * FROM orderstiny) FILE_FORMAT = (TYPE='csv')"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO MY_DATABASE.MY_SCHEMA.MY_TABLE FROM @MY_DATABASE.MY_SCHEMA.MY_STAGE/my_path FILE_FORMAT = (FORMAT_NAME=MY_DATABASE.MY_SCHEMA.MY_FILE_FORMAT)"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO load1 FROM @%load1/data1/ CREDENTIALS = (AWS_KEY_ID='id' AWS_SECRET_KEY='key' AWS_TOKEN='token') FILES = ('test1.csv', 'test2.csv') FORCE = TRUE"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO temp FROM @random_stage/path/ FILE_FORMAT = (TYPE=CSV FIELD_DELIMITER='|' NULL_IF=('str1', 'str2') FIELD_OPTIONALLY_ENCLOSED_BY='\"' TIMESTAMP_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' DATE_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' BINARY_FORMAT=BASE64) VALIDATION_MODE = 'RETURN_3_ROWS'"}
