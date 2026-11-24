@@ -204,6 +204,9 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		}
 		return exp.FromArgList(exp.KindDate, args)
 	}
+	timeToStr := postgresBuildFormattedTimeClass(d, exp.KindTimeToStr)
+	out["TO_CHAR"] = timeToStr
+	out["TO_VARCHAR"] = timeToStr
 	out["GETDATE"] = func([]exp.Expression) exp.Expression {
 		return exp.CurrentTimestamp(exp.Args{})
 	}

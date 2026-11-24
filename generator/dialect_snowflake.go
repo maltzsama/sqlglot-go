@@ -70,6 +70,7 @@ func init() {
 		expressions.KindJSONFormat:         clickhouseRename("TO_JSON"),
 		expressions.KindJSONExtract:        snowflakeJSONExtractSQL,
 		expressions.KindUnixToTime:         snowflakeUnixToTimeSQL,
+		expressions.KindTimeToStr:          snowflakeTimeToStrSQL,
 		expressions.KindRegexpExtract:      snowflakeRegexpExtractSQL,
 		expressions.KindRegexpExtractAll:   snowflakeRegexpExtractSQL,
 		expressions.KindRegexpSubstr:       snowflakeRegexpExtractSQL,
@@ -148,6 +149,19 @@ func init() {
 		expressions.KindDescribe: snowflakeDescribeSQL,
 	}
 	registerDialectDispatch("snowflake", handlers)
+}
+
+func snowflakeTimeToStrSQL(g *Generator, e expressions.Expression) string {
+	args := []any{e.Arg("this")}
+	if format := asExpression(e.Arg("format")); format != nil {
+		if format.IsString() {
+			if converted, ok := dialects.FormatTime(format.Name(), g.dialect.InverseTimeMapping); ok {
+				format = expressions.LiteralString(converted)
+			}
+		}
+		args = append(args, format)
+	}
+	return g.funcCall("TO_CHAR", args, "(", ")", true)
 }
 
 func snowflakeRegexpExtractSQL(g *Generator, e expressions.Expression) string {
