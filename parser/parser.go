@@ -4243,6 +4243,14 @@ func (p *Parser) parseWindow(this exp.Expression, alias bool) exp.Expression {
 	}
 	// FIRST_VALUE(t.c IGNORE|RESPECT NULLS) OVER ... is hoisted to FIRST_VALUE(t.c) IGNORE|RESPECT
 	// NULLS OVER ... (parser.py:8636-8641); the trailing form is parsed just below.
+	if p.dialectIs("snowflake") && this != nil && this.Kind() == exp.KindNthValue &&
+		p.matchTextSeq("FROM") {
+		fromFirst := p.matchTextSeq("FIRST")
+		fromLast := !fromFirst && p.matchTextSeq("LAST")
+		if fromFirst || fromLast {
+			this.Set("from_first", fromFirst)
+		}
+	}
 	if this != nil && this.Is(exp.TraitAggFunc) {
 		if ignoreRespect := findIgnoreRespectInScope(this); ignoreRespect != nil && ignoreRespect != this {
 			ignoreRespect.Replace(ignoreRespect.This())

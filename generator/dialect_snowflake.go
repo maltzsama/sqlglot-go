@@ -127,6 +127,7 @@ func init() {
 		expressions.KindDateFromParts:      clickhouseRename("DATE_FROM_PARTS"),
 		expressions.KindTimeFromParts:      clickhouseRename("TIME_FROM_PARTS"),
 		expressions.KindTimestampFromParts: clickhouseRename("TIMESTAMP_FROM_PARTS"),
+		expressions.KindNthValue:           snowflakeNthValueSQL,
 		expressions.KindGroupConcat:        snowflakeGroupConcatSQL,
 		expressions.KindStrPosition:        snowflakeStrPositionSQL,
 		expressions.KindLocaltime: func(g *Generator, e expressions.Expression) string {
@@ -202,6 +203,17 @@ func snowflakeToNumberSQL(g *Generator, e expressions.Expression) string {
 		scale = nil
 	}
 	return g.funcCall(name, []any{e.Arg("this"), e.Arg("format"), precision, scale}, "(", ")", true)
+}
+
+func snowflakeNthValueSQL(g *Generator, e expressions.Expression) string {
+	result := g.funcCall("NTH_VALUE", []any{e.This(), e.Arg("offset")}, "(", ")", true)
+	if fromFirst, ok := e.Arg("from_first").(bool); ok {
+		if fromFirst {
+			return result + " FROM FIRST"
+		}
+		return result + " FROM LAST"
+	}
+	return result
 }
 
 func snowflakeTimeToStrSQL(g *Generator, e expressions.Expression) string {
