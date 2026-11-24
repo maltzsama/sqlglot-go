@@ -333,9 +333,6 @@
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @namespace.%table_name/path/to/file.json.gz"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @namespace.mystage/path/to/file.json.gz"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @test.public.thing/location/somefile.csv( FILE_FORMAT => 'fmt' )"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM DATA AS DATA_L ASOF JOIN DATA AS DATA_R MATCH_CONDITION (DATA_L.VAL > DATA_R.VAL) ON DATA_L.ID = DATA_R.ID"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM x ASOF JOIN y LIMIT MATCH_CONDITION (x.a > y.a)"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM x ASOF JOIN y OFFSET MATCH_CONDITION (x.a > y.a)"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT :1"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT :1 + :2"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT :1, :2"}
