@@ -204,6 +204,27 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		}
 		return exp.New(exp.KindSearch, values)
 	}
+	out["GENERATOR"] = func(args []exp.Expression) exp.Expression {
+		names := []string{"ROWCOUNT", "TIMELIMIT"}
+		mapped := make([]exp.Expression, 0, len(args))
+		for i, arg := range args {
+			if arg == nil {
+				continue
+			}
+			if arg.Kind() == exp.KindKwarg {
+				mapped = append(mapped, arg)
+				continue
+			}
+			if i < len(names) {
+				mapped = append(mapped, exp.Kwarg(exp.Args{
+					"this": exp.ToIdentifier(names[i]), "expression": arg,
+				}))
+			} else {
+				mapped = append(mapped, arg)
+			}
+		}
+		return exp.Anonymous(exp.Args{"this": "GENERATOR", "expressions": mapped})
+	}
 	out["IDENTIFIER"] = func(args []exp.Expression) exp.Expression {
 		return exp.New(exp.KindDynamicIdentifier, exp.Args{"this": seqGet(args, 0)})
 	}
