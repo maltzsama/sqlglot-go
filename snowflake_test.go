@@ -140,6 +140,16 @@ func TestSnowflakeDirectoryStage(t *testing.T) {
 	}
 }
 
+func TestSnowflakeAutoincrement(t *testing.T) {
+	for _, tc := range []struct{ sql, want string }{
+		{"CREATE TABLE x (y INT AUTOINCREMENT START 10)", "CREATE TABLE x (y INT AUTOINCREMENT START 10)"},
+		{"CREATE TABLE x (y INT AUTOINCREMENT(0, 1) NOORDER)", "CREATE TABLE x (y INT AUTOINCREMENT START 0 INCREMENT 1 NOORDER)"},
+		{"CREATE TABLE x (y INT AUTOINCREMENT)", "CREATE TABLE x (y INT AUTOINCREMENT)"},
+	} {
+		t.Run(tc.sql, func(t *testing.T) { assertRoundTrip(t, "snowflake", tc.sql, tc.want) })
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {
