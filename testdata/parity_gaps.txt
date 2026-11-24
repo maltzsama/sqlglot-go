@@ -1,6 +1,4 @@
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"JSON_EXTRACT_PATH_TEXT(x, '$.family')"}
-{"dialect":"duckdb","category":"gen: canonicalization","sql":"MAP {1: 'a', 2: 'b'}"}
-{"dialect":"duckdb","category":"gen: canonicalization","sql":"MAP {[1, 2]: 'a', [3, 4]: 'b'}"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT '{\"foo\": [1, 2, 3]}' -> 'foo' -> 0"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT * FROM (DESCRIBE t)"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT * FROM foo /* bla */: /* baz */ bar /* boo */"}

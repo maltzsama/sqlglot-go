@@ -79,6 +79,7 @@ func init() {
 		expressions.KindDateBin:           clickhouseRename("TIME_BUCKET"),
 		expressions.KindArray:             duckDBArraySQL,
 		expressions.KindStruct:            duckDBStructSQL,
+		expressions.KindToMap:             duckDBToMapSQL,
 		// generators/duckdb.py:3145-3160: DuckDB rejects `JOIN UNNEST(...)` without an ON
 		// clause, so a synthetic UNNEST join gets a dummy ON TRUE and a plain comma join
 		// loses its synthetic side/kind.
@@ -194,6 +195,29 @@ func init() {
 		},
 	}
 	registerDialectDispatch("duckdb", handlers)
+}
+
+// duckDBToMapSQL renders MAP literals from their key/value pairs directly.
+// A ToMap wraps a Struct in the AST, but DuckDB map keys are expressions (and may
+// be arrays); routing them through duckDBStructSQL incorrectly turns keys into
+// struct field names.
+func duckDBToMapSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.Arg("this"))
+	if this == nil {
+		return "MAP {}"
+	}
+	pairs := this.Expressions()
+	items := make([]string, 0, len(pairs))
+	for _, pair := range pairs {
+		if pair.Kind() != expressions.KindPropertyEQ {
+			items = append(items, g.gen(pair))
+			continue
+		}
+		key := asExpression(pair.This())
+		value := asExpression(pair.Arg("expression"))
+		items = append(items, g.gen(key)+": "+g.gen(value))
+	}
+	return "MAP {" + strings.Join(items, ", ") + "}"
 }
 
 // duckDBAnyValueSQL ports _anyvalue_sql (generators/duckdb.py:1123-1130).

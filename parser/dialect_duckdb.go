@@ -108,8 +108,20 @@ func (p *Parser) parseDuckDBInstall(force bool) exp.Expression {
 
 // parseDuckDBMap ports _parse_map (parsers/duckdb.py:301-307).
 func (p *Parser) parseDuckDBMap() exp.Expression {
-	if p.match(tokens.L_BRACE, false) {
-		return p.expression(exp.ToMap(exp.Args{"this": p.parseBracket(nil)}), nil, nil)
+	if p.match(tokens.L_BRACE) {
+		pairs := p.parseCsv(p.parseBracketKeyValue)
+		if !p.match(tokens.R_BRACE) {
+			p.raiseError("Expected }")
+		}
+		fields := make([]exp.Expression, 0, len(pairs))
+		for _, pair := range pairs {
+			if pair.Kind() == exp.KindEQ || pair.Kind() == exp.KindSlice {
+				pair = p.expression(exp.PropertyEQ(exp.Args{"this": pair.This(), "expression": pair.Arg("expression")}), nil, nil)
+			}
+			fields = append(fields, pair)
+		}
+		structNode := p.expression(exp.New(exp.KindStruct, exp.Args{"expressions": fields}), nil, nil)
+		return p.expression(exp.ToMap(exp.Args{"this": structNode}), nil, nil)
 	}
 	args := p.parseWrappedCsv(func() exp.Expression { return p.parseAssignment() })
 	return p.expression(exp.Map(exp.Args{
