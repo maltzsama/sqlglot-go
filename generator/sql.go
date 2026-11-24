@@ -1434,12 +1434,13 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 	if expressionSQL != "" {
 		expressionSQL = begin + g.sep() + expressionSQL
 		// PG rejects `AS BEGIN ATOMIC`: the SQL-standard body replaces the AS clause.
-		// generator.py:1359-1363 additionally suppresses the AS when CREATE_FUNCTION_RETURN_AS
-		// is False and the body is an exp.Return; this port's parser never builds a Return body,
-		// so only the flag half of that condition is expressible here.
+		// generator.py:1362 additionally skips the AS when the body is a MacroOverloads
+		// list: DuckDB's CREATE MACRO renders every signature, params and all, inside the
+		// overload list itself (macrooverload_sql), so a leading AS would double it.
 		body := asExpression(e.Arg("expression"))
+		overloads := body != nil && body.Kind() == expressions.KindMacroOverloads
 		returnAS := g.dialect.CreateFunctionReturnAs || body == nil || body.Kind() != expressions.KindReturn
-		if !atomicBody && returnAS {
+		if !atomicBody && !overloads && returnAS {
 			postAliasSQL := g.renderProperties(
 				g.propertiesExpression(propertyLocations[propertyLocationPostAlias], e),
 				"", ", ", "", false,

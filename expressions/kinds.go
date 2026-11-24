@@ -580,6 +580,11 @@ const (
 	// list container, and the UDF signature node (`name(args...)`).
 	KindProperties
 	KindUserDefinedFunction
+	// KindMacroOverloads/KindMacroOverload (ddl.py:229-234): the overload list DuckDB's
+	// `CREATE MACRO f(a) AS expr, (a, b) AS expr` builds, and one `(params) AS [TABLE]
+	// body` entry of it. Plain Expression subclasses upstream, so no traitsOf row.
+	KindMacroOverloads
+	KindMacroOverload
 	// KindReturnsProperty/KindLanguageProperty/KindSqlSecurityProperty/
 	// KindCalledOnNullInputProperty/KindStrictProperty/KindStabilityProperty/
 	// KindSetConfigProperty/KindCharacterSetProperty/KindRowFormatProperty (properties.py:
@@ -1663,6 +1668,8 @@ var argTypes = map[Kind][]argSpec{
 	KindIndexTableHint:             {{"this", true}, {"expressions", false}, {"target", false}},
 	// ddl cluster (see the Kind block comment above for the upstream class/line references).
 	KindProperties:                {{"expressions", true}},
+	KindMacroOverloads:            {{"expressions", true}},
+	KindMacroOverload:             {{"this", true}, {"expressions", false}, {"is_table", false}},
 	KindUserDefinedFunction:       {{"this", true}, {"expressions", false}, {"wrapped", false}},
 	KindReturnsProperty:           {{"this", false}, {"is_table", false}, {"table", false}, {"null", false}, {"setof", false}},
 	KindLanguageProperty:          {{"this", true}},
@@ -3182,6 +3189,8 @@ var className = map[Kind]string{
 	KindIndexTableHint:                      "IndexTableHint",
 	KindProperties:                          "Properties",
 	KindUserDefinedFunction:                 "UserDefinedFunction",
+	KindMacroOverloads:                      "MacroOverloads",
+	KindMacroOverload:                       "MacroOverload",
 	KindReturnsProperty:                     "ReturnsProperty",
 	KindLanguageProperty:                    "LanguageProperty",
 	KindSqlSecurityProperty:                 "SqlSecurityProperty",

@@ -16,6 +16,8 @@ func init() {
 	dispatch[expressions.KindAttach] = (*Generator).attachSQL
 	dispatch[expressions.KindDetach] = (*Generator).detachSQL
 	dispatch[expressions.KindUserDefinedFunction] = (*Generator).userDefinedFunctionSQL
+	dispatch[expressions.KindMacroOverloads] = (*Generator).macroOverloadsSQL
+	dispatch[expressions.KindMacroOverload] = (*Generator).macroOverloadSQL
 	dispatch[expressions.KindReturnsProperty] = (*Generator).returnsPropertySQL
 	dispatch[expressions.KindLanguageProperty] = (*Generator).languagePropertySQL
 	dispatch[expressions.KindSqlSecurityProperty] = (*Generator).sqlSecurityPropertySQL
@@ -77,6 +79,24 @@ func (g *Generator) userDefinedFunctionSQL(e expressions.Expression) string {
 		return this + exprs
 	}
 	return this
+}
+
+// macrooverloads_sql (generator.py:4807-4808): the overload list rendered flat, one
+// `(params) AS [TABLE] body` per line-item, comma-separated.
+func (g *Generator) macroOverloadsSQL(e expressions.Expression) string {
+	return g.expressions(exprsOptions{expression: e, flat: true})
+}
+
+// macrooverload_sql (generator.py:4810-4816): a single signature. no_identify is not
+// ported (see userDefinedFunctionSQL above).
+func (g *Generator) macroOverloadSQL(e expressions.Expression) string {
+	params := g.expressions(exprsOptions{expression: e, flat: true})
+	body := g.sqlKey(e, "this")
+	prefix := ""
+	if boolValue(e.Arg("is_table")) {
+		prefix = "TABLE "
+	}
+	return "(" + params + ") AS " + prefix + body
 }
 
 // naked_property (generator.py:4703-4707), inlined per property: "<NAME> <this>". Only the

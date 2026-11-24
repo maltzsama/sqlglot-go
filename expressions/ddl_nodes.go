@@ -12,6 +12,11 @@ func Properties(args Args) Expression { return newNode(KindProperties, args) }
 // (ddl.py:225-226).
 func UserDefinedFunction(args Args) Expression { return newNode(KindUserDefinedFunction, args) }
 
+// MacroOverloads/MacroOverload back DuckDB's multi-signature CREATE MACRO and one of its
+// `(params) AS [TABLE] body` entries (ddl.py:229-234).
+func MacroOverloads(args Args) Expression { return newNode(KindMacroOverloads, args) }
+func MacroOverload(args Args) Expression  { return newNode(KindMacroOverload, args) }
+
 // ReturnsProperty/LanguageProperty/SqlSecurityProperty/CalledOnNullInputProperty/
 // StrictProperty/StabilityProperty/SetConfigProperty/CharacterSetProperty/RowFormatProperty
 // back the CREATE FUNCTION/TABLE tail properties this slice supports (properties.py:74,222,

@@ -248,6 +248,38 @@ func (p *Parser) parseUserDefinedFunction() exp.Expression {
 	return p.expression(exp.UserDefinedFunction(exp.Args{"this": this, "expressions": expressions, "wrapped": true}), nil, nil)
 }
 
+// parseMacroOverloads ports _parse_macro_overloads (parser.py:7375-7408): turn the
+// already-parsed first body plus every trailing `, (params) AS [TABLE] body` into a
+// MacroOverloads list, and strip the signature's params/wrap off the UserDefinedFunction so
+// the generator doesn't print them twice (they move into the first MacroOverload).
+func (p *Parser) parseMacroOverloads(this, firstBody exp.Expression, firstIsTable bool) exp.Expression {
+	params, _ := this.Arg("expressions").([]exp.Expression)
+	this.Set("expressions", nil)
+	this.Set("wrapped", false)
+	overload := exp.Args{"this": firstBody, "is_table": firstIsTable}
+	if len(params) > 0 { // `this.expressions or None` (parser.py:7384)
+		overload["expressions"] = params
+	}
+	overloads := []exp.Expression{p.expression(exp.MacroOverload(overload), nil, nil)}
+
+	for p.match(tokens.COMMA) {
+		if !p.match(tokens.L_PAREN) {
+			break
+		}
+		overloadParams := p.parseCsv(p.parseFunctionParameter)
+		p.matchRParen(nil)
+		if !p.match(tokens.ALIAS) {
+			break
+		}
+		isTable := p.match(tokens.TABLE)
+		body := p.parseExpression()
+		overloads = append(overloads, p.expression(exp.MacroOverload(exp.Args{
+			"this": body, "expressions": overloadParams, "is_table": isTable,
+		}), nil, nil))
+	}
+	return p.expression(exp.MacroOverloads(exp.Args{"expressions": overloads}), nil, nil)
+}
+
 var postgresArgModeTokens = map[tokens.TokenType]bool{
 	tokens.IN: true, tokens.OUT: true, tokens.INOUT: true, tokens.VARIADIC: true,
 }
@@ -382,18 +414,38 @@ func (p *Parser) parseCreateFunction(ctt tokens.TokenType) (this, expression exp
 		expression = p.expression(exp.Heredoc(args), nil, nil)
 	}
 
-	// upstream's table-overload/MacroOverloads detection (parser.py:2422-2436) is a
-	// BigQuery/Snowflake-only feature (`CREATE FUNCTION f(...) AS (expr), (params) AS TABLE
-	// body`) that always retreats to a no-op for base/mysql/postgres inputs: it only commits
-	// when the parsed body is immediately followed by `, (`, which never occurs in this
-	// port's corpus. Omitted (documented divergence; see parser_ddl_tail_test.go).
+	// table-overload attempt (parser.py:2510-2536): after `AS`, greedily take one expression
+	// and keep it only when a `, (` follows, which is what DuckDB's multi-signature
+	// `CREATE MACRO f(a) AS expr, (a, b) AS expr` needs. Otherwise retreat so the body
+	// parses through the usual chain below.
+	overloadMode := false
+	isTable := false
+	if expression == nil && ctt == tokens.FUNCTION &&
+		this != nil && this.Kind() == exp.KindUserDefinedFunction && argBool(this.Arg("wrapped")) {
+		preTableIndex := p.index
+		isTable = p.match(tokens.TABLE)
+		expression = p.parseExpression()
+		if expression != nil && p.curr.TokenType == tokens.COMMA && p.next.TokenType == tokens.L_PAREN {
+			overloadMode = true
+		}
+		if !overloadMode {
+			p.retreat(preTableIndex)
+			isTable = false
+			expression = nil
+		}
+	}
 
 	// exp.Properties.Location.POST_SCHEMA (parser.py:2445): function properties parsed after
 	// AS/the overload attempt, without the generic key=value fallback.
 	properties = append(properties, p.parseTailProperties()...)
 
-	if expression != nil {
+	if expression != nil && !overloadMode {
 		return this, expression, properties, begin
+	}
+	if overloadMode {
+		// parser.py:2557-2560: an overload-mode body never reaches the signature-only
+		// chain below (COMMAND/BEGIN/RETURN/Block); it becomes the first MacroOverload.
+		return this, p.parseMacroOverloads(this, expression, isTable), properties, begin
 	}
 	if p.match(tokens.COMMAND) {
 		expression = p.parseAsCommand(p.prev)
