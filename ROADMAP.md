@@ -11,8 +11,8 @@ records deliberate differences.
 - **Identity corpus.** 7,242 of 7,609 cases pass, including all 1,876 base, MySQL, and
   PostgreSQL cases. The remaining rows are DuckDB (35) and Snowflake (332). The
   [README dialect table](./README.md#dialects-and-verified-coverage) shows the per-dialect results.
-- **Transpile corpus.** 6,326 of 8,881 upstream `validate_all` read/write pairs pass. These
-  include same-dialect pairs. The initial harness shipped in
+- **Transpile corpus.** 6,330 of 8,881 upstream `validate_all` read/write pairs pass, with 2,551
+  remaining gaps. These include same-dialect pairs. The initial harness shipped in
   [#33](https://github.com/maltzsama/sqlglot-go/issues/33).
 - **Optimizer.** The default rule pipeline, including qualification and scope analysis, is
   ported. The full `optimizer.sql`, TPC-H, and TPC-DS suites pass. Standalone annotation and
