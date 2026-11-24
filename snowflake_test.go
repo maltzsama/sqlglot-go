@@ -172,6 +172,28 @@ func TestSnowflakeFileTransfer(t *testing.T) {
 	}
 }
 
+func TestSnowflakeModelAttribute(t *testing.T) {
+	for _, sql := range []string{"SELECT model!PREDICT(1)", "SELECT model!mladmin", "x.y.z!PREDICT(foo, bar)"} {
+		t.Run(sql, func(t *testing.T) {
+			node, err := sqlglot.ParseOne(sql, "snowflake")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var found bool
+			for _, n := range node.Walk() {
+				found = found || n.Kind() == exp.KindModelAttribute
+			}
+			if !found {
+				t.Fatal("expected model attribute")
+			}
+			got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+			if err != nil || got != sql {
+				t.Fatalf("got %q, %v; want %q", got, err, sql)
+			}
+		})
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

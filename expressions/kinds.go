@@ -1191,6 +1191,7 @@ const (
 	KindDirectoryStage
 	KindGet
 	KindPut
+	KindModelAttribute
 )
 
 type Trait uint32
@@ -1827,6 +1828,7 @@ var argTypes = map[Kind][]argSpec{
 	KindDirectoryStage:        {{"this", true}},
 	KindGet:                   {{"this", true}, {"target", true}, {"properties", false}},
 	KindPut:                   {{"this", true}, {"target", true}, {"properties", false}},
+	KindModelAttribute:        {{"this", true}, {"expression", true}},
 	KindDayOfWeekIso:          defaultArgTypes,                                                                                                             // temporal.py:217 (pass)
 	KindDecode:                {{"this", true}, {"charset", true}, {"replace", false}},                                                                     // string.py:285
 	KindEncode:                {{"this", true}, {"charset", true}},                                                                                         // string.py:289
@@ -3351,6 +3353,7 @@ var className = map[Kind]string{
 	KindDirectoryStage:        "DirectoryStage",
 	KindGet:                   "Get",
 	KindPut:                   "Put",
+	KindModelAttribute:        "ModelAttribute",
 	KindDayOfWeekIso:          "DayOfWeekIso",
 	KindDecode:                "Decode",
 	KindEncode:                "Encode",

@@ -2460,7 +2460,7 @@ func (p *Parser) parseColumnPartsFast() exp.Expression {
 		hasDot := p.match(tokens.DOT)
 		currTT := p.curr.TokenType
 		if !hasDot {
-			if columnFastBailTokens[currTT] {
+			if columnFastBailTokens[currTT] || (p.dialectIs("snowflake") && currTT == tokens.EXCLAMATION) {
 				p.retreat(index)
 				return nil
 			}
@@ -2620,6 +2620,12 @@ func (p *Parser) parseColumnOpsBase(this exp.Expression) exp.Expression {
 	for p.curr.IsValid() {
 		opToken := p.curr.TokenType
 		op, ok := columnOperators[opToken]
+		if p.dialectIs("snowflake") && opToken == tokens.EXCLAMATION {
+			ok = true
+			op = func(p *Parser, left, right exp.Expression) exp.Expression {
+				return p.expression(exp.New(exp.KindModelAttribute, exp.Args{"this": left, "expression": right}), nil, nil)
+			}
+		}
 		// parsers/clickhouse.py:412-413 removes PLACEHOLDER from COLUMN_OPERATORS, so `?`
 		// never binds as the postgres jsonb-contains operator there.
 		if !ok || (p.dialect.JSONOperatorsAreBinary && jsonOperatorTokens[opToken]) ||
