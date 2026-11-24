@@ -76,10 +76,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_NUMERIC('123.45')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_NUMERIC('123.45', '999.99')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_NUMERIC('123.45', '999.99', 10, 2)"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_TIMESTAMP('2024-01-15 3:00 AM', 'YYYY-MM-DD HH12:MI AM')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_TIMESTAMP('2024-01-15 3:00 AM', 'YYYY-MM-DD HH12:MI PM')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_TIMESTAMP('2024-01-15 3:00 PM', 'YYYY-MM-DD HH12:MI AM')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_TIMESTAMP('2024-01-15 3:00 PM', 'YYYY-MM-DD HH12:MI PM')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DATE('01-01-2000', 'MM-DD-YYYY')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DATE('2013-04-28 20:57 +07', 'YYYY-MM-DD HH24:MI tzh')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"TRY_TO_DATE('2013-04-28 20:57 +0700', 'YYYY-MM-DD HH24:MI tzhtzm')"}

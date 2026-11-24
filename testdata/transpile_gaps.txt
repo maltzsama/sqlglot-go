@@ -1870,10 +1870,6 @@
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT { 'Manitoba': 'Winnipeg', 'foo': 'bar' } AS province_capital"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TIMESTAMPADD(NANOSECOND, 123456789, '2023-01-01 10:00:00.000000000')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TIMESTAMPDIFF(NANOSECOND, '2023-01-01 10:00:00.000000000', '2023-01-01 10:00:00.123456789')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TO_TIMESTAMP('2024-01-15 3:00 AM', 'YYYY-MM-DD HH12:MI AM')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TO_TIMESTAMP('2024-01-15 3:00 AM', 'YYYY-MM-DD HH12:MI PM')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TO_TIMESTAMP('2024-01-15 3:00 PM', 'YYYY-MM-DD HH12:MI AM')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TO_TIMESTAMP('2024-01-15 3:00 PM', 'YYYY-MM-DD HH12:MI PM')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('01-01-2000', 'MM-DD-YYYY')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28 20:57 +07', 'YYYY-MM-DD HH24:MI tzh')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28 20:57 +0700', 'YYYY-MM-DD HH24:MI tzhtzm')"}
