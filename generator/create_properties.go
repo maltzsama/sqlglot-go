@@ -257,6 +257,9 @@ func (g *Generator) renderProperties(properties expressions.Expression, prefix, 
 // withPropertiesSQL ports with_properties (generator.py:2064-2065). Base, MySQL, and
 // Postgres all use the base WITH_PROPERTIES_PREFIX of "WITH".
 func (g *Generator) withPropertiesSQL(properties expressions.Expression) string {
+	if g.isDialect("snowflake") {
+		return g.renderProperties(properties, "", " ", "", false)
+	}
 	return g.renderProperties(properties, g.seg(g.dialect.WithPropertiesPrefix, ""), ", ", "", true)
 }
 
