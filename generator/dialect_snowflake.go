@@ -62,6 +62,7 @@ func init() {
 		// generators/snowflake.py:510 exp.Levenshtein, with unsupported cost args.
 		expressions.KindLevenshtein:        clickhouseRename("EDITDISTANCE"),
 		expressions.KindIf:                 snowflakeIfSQL,
+		expressions.KindStar:               snowflakeStarSQL,
 		expressions.KindMax:                snowflakeMaxOrGreatest,
 		expressions.KindMin:                snowflakeMinOrLeast,
 		expressions.KindStarMap:            clickhouseRename("OBJECT_CONSTRUCT"),
@@ -143,6 +144,26 @@ func init() {
 		expressions.KindDescribe: snowflakeDescribeSQL,
 	}
 	registerDialectDispatch("snowflake", handlers)
+}
+
+func snowflakeStarSQL(g *Generator, e expressions.Expression) string {
+	except := g.expressions(exprsOptions{expression: e, key: "except_", flat: true})
+	if except != "" {
+		except = g.seg("EXCLUDE") + " (" + except + ")"
+	}
+	replace := g.expressions(exprsOptions{expression: e, key: "replace", flat: true})
+	if replace != "" {
+		replace = g.seg("REPLACE") + " (" + replace + ")"
+	}
+	rename := g.expressions(exprsOptions{expression: e, key: "rename", flat: true})
+	if rename != "" {
+		rename = g.seg("RENAME") + " (" + rename + ")"
+	}
+	ilike := g.sqlKey(e, "ilike")
+	if ilike != "" {
+		ilike = g.seg("ILIKE") + " " + ilike
+	}
+	return "*" + ilike + except + replace + rename
 }
 
 func snowflakeJSONExtractSQL(g *Generator, e expressions.Expression) string {

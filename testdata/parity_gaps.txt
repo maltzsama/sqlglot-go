@@ -25,9 +25,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_SUBSTR_ALL(subject, pattern, 1, 1, 'e', 0)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"REPLACE(subject, pattern)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT $$a ' \\ \\t \\x21 z $ $$"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * EXCLUDE (a, b) REPLACE (c AS d, E AS F) FROM xxx"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * EXCLUDE a, b FROM xxx"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * EXCLUDE foo RENAME bar AS baz FROM tbl"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM '@mystage'"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM (SELECT a FROM @foo)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM @\"mystage\""}
