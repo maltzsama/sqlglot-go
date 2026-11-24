@@ -126,9 +126,10 @@ See [DEVIATIONS.md](./DEVIATIONS.md) for these extensions and engine-specific be
 
 ## Dialects and verified coverage
 
-The identity corpus checks parse and generation under the same dialect. The transpile corpus
-checks expected output from upstream `validate_all` read/write pairs. These figures describe the
-committed test corpora. Coverage varies by construct and dialect pair.
+The identity corpus checks parse and generation under the same dialect. It passes **7,363 of
+7,609** cases. The transpile corpus checks expected output from upstream `validate_all` read/write
+pairs. These figures describe the committed test corpora. Coverage varies by construct and dialect
+pair.
 
 | Dialect | Name | Identity cases passing |
 | --- | --- | ---: |
@@ -139,7 +140,7 @@ committed test corpora. Coverage varies by construct and dialect pair.
 | Databricks | `databricks` | 176/176 |
 | Doris | `doris` | 56/56 |
 | Dremio | `dremio` | 46/46 |
-| DuckDB | `duckdb` | 532/565 |
+| DuckDB | `duckdb` | 565/565 |
 | Hive | `hive` | 141/141 |
 | ksqlDB | `ksqldb` (alias `ksql`) | 57/57 (project fixtures) |
 | MariaDB | `mariadb` | Dedicated tests, no upstream identity corpus |
@@ -150,7 +151,7 @@ committed test corpora. Coverage varies by construct and dialect pair.
 | Presto | `presto` | 170/170 |
 | Redshift | `redshift` | 171/171 |
 | RisingWave | `risingwave` | 7/7 |
-| Snowflake | `snowflake` | 1,214/1,543 |
+| Snowflake | `snowflake` | 1,297/1,543 |
 | Spark | `spark` | 227/227 |
 | Spark 2 | `spark2` | Covered by read/write pairs |
 | SQLite | `sqlite` | 136/136 |
@@ -159,7 +160,7 @@ committed test corpora. Coverage varies by construct and dialect pair.
 | Trino | `trino` | 115/115 |
 | T-SQL | `tsql` | 613/613 |
 
-The transpile corpus passes **6,475 of 8,881** pairs, with **2,406** remaining gaps. Of the
+The transpile corpus passes **6,635 of 8,881** pairs, with **2,246** remaining gaps. Of the
 recorded pairs, 6,760 cross dialects.
 See [identity gaps](./testdata/parity_gaps.txt) and [transpile gaps](./testdata/transpile_gaps.txt)
 for the outstanding cases. The default optimizer pipeline passes its full `optimizer.sql`,

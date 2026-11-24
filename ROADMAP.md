@@ -8,10 +8,10 @@ records deliberate differences.
 
 ## Current status
 
-- **Identity corpus.** 7,247 of 7,609 cases pass, including all 1,876 base, MySQL, and
-  PostgreSQL cases. The remaining rows are DuckDB (33) and Snowflake (329). The
+- **Identity corpus.** 7,363 of 7,609 cases pass, including all 1,876 base, MySQL, and
+  PostgreSQL cases. DuckDB is complete (565/565); Snowflake has 246 gaps. The
   [README dialect table](./README.md#dialects-and-verified-coverage) shows the per-dialect results.
-- **Transpile corpus.** 6,475 of 8,881 upstream `validate_all` read/write pairs pass, with 2,406
+- **Transpile corpus.** 6,635 of 8,881 upstream `validate_all` read/write pairs pass, with 2,246
   remaining gaps. These include same-dialect pairs. The initial harness shipped in
   [#33](https://github.com/maltzsama/sqlglot-go/issues/33).
 - **Optimizer.** The default rule pipeline, including qualification and scope analysis, is
