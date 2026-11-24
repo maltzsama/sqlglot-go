@@ -87,7 +87,9 @@ func Snowflake() *Dialect {
 		"T": "T", "%Y": "yyyy", "%y": "yy", "%B": "mmmm", "%b": "mon",
 		"%m": "mm", "%d": "DD", "%-d": "dd", "%a": "DY", "%w": "dy",
 		"%H": "hh24", "%I": "hh12", "%M": "mi", "%S": "ss", "%f": "ff6",
-		"%z": "TZHTZM", "%:z": "TZH:TZM", "%-z": "TZH", "%p": "pm",
+		"%f_zero": "ff0", "%f_one": "ff1", "%f_two": "ff2", "%f_three": "ff3",
+		"%f_four": "ff4", "%f_five": "ff5", "%f_seven": "ff7", "%f_eight": "ff8",
+		"%f_nine": "ff9", "%z": "tzhtzm", "%:z": "tzh:tzm", "%-z": "tzh", "%p": "pm",
 	}
 	d.TimeMapping = snowflakeTimeMapping
 	d.DatePartMapping = maps.Clone(d.DatePartMapping)
