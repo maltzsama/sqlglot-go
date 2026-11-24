@@ -1185,6 +1185,8 @@ const (
 	KindKsqlWindow
 	// DuckDB/Python-style `[value FOR item[, position] IN array IF condition]`.
 	KindComprehension
+	KindHistoricalData
+	KindChanges
 )
 
 type Trait uint32
@@ -1814,7 +1816,9 @@ var argTypes = map[Kind][]argSpec{
 	KindAnyValue:              defaultArgTypes,                                                                                          // aggregate.py:17 (pass -> {"this": True})
 	KindApproxQuantile:        {{"this", true}, {"quantile", true}, {"accuracy", false}, {"weight", false}, {"error_tolerance", false}}, // aggregate.py:234
 	KindApproxQuantiles:       {{"this", true}, {"expression", false}},
-	KindArrayUniqueAgg:        defaultArgTypes,                                                                                                             // aggregate.py:83 (pass)
+	KindArrayUniqueAgg:        defaultArgTypes, // aggregate.py:83 (pass)
+	KindHistoricalData:        {{"this", true}, {"kind", true}, {"expression", true}},
+	KindChanges:               {{"information", true}, {"at_before", false}, {"end", false}},
 	KindDayOfWeekIso:          defaultArgTypes,                                                                                                             // temporal.py:217 (pass)
 	KindDecode:                {{"this", true}, {"charset", true}, {"replace", false}},                                                                     // string.py:285
 	KindEncode:                {{"this", true}, {"charset", true}},                                                                                         // string.py:289
@@ -3333,6 +3337,8 @@ var className = map[Kind]string{
 	KindApproxQuantile:        "ApproxQuantile",
 	KindApproxQuantiles:       "ApproxQuantiles",
 	KindArrayUniqueAgg:        "ArrayUniqueAgg",
+	KindHistoricalData:        "HistoricalData",
+	KindChanges:               "Changes",
 	KindDayOfWeekIso:          "DayOfWeekIso",
 	KindDecode:                "Decode",
 	KindEncode:                "Encode",

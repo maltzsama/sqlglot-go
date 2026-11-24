@@ -41,6 +41,32 @@ func TestSnowflakeShow(t *testing.T) {
 	}
 }
 
+func TestSnowflakeHistoricalData(t *testing.T) {
+	for _, sql := range []string{
+		"SELECT * FROM t AT (OFFSET => -60 * 5)",
+		"SELECT * FROM t BEFORE (STATEMENT => $query_id) AS x",
+		"SELECT * FROM t CHANGES (INFORMATION => APPEND_ONLY) AT (STREAM => 's') END (TIMESTAMP => $ts)",
+	} {
+		t.Run(sql, func(t *testing.T) {
+			node, err := sqlglot.ParseOne(sql, "snowflake")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var historical bool
+			for _, n := range node.Walk() {
+				historical = historical || n.Kind() == exp.KindHistoricalData
+			}
+			if !historical {
+				t.Fatal("expected structured historical data")
+			}
+			got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+			if err != nil || got != sql {
+				t.Fatalf("got %q, %v; want %q", got, err, sql)
+			}
+		})
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

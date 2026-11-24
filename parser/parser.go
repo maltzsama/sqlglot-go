@@ -1743,6 +1743,12 @@ func (p *Parser) parseTableParts(schema bool, isDBReference bool, wildcard bool,
 		p.raiseError(fmt.Sprintf("Expected database name but got %s", p.curr.String()))
 	}
 	result := p.expression(exp.Table(exp.Args{"this": table, "schema": schemaPart, "catalog": catalog}), nil, nil)
+	if changes := p.parseChanges(); changes != nil {
+		result.Set("changes", changes)
+	}
+	if historical := p.parseHistoricalData(); historical != nil {
+		result.Set("when", historical)
+	}
 	// parser.py:4973-4975: a PIVOT clause binds to the table parts, ahead of any alias, so a
 	// bare `pivot` that is not followed by `(` stays available as an alias.
 	if pivots := p.parsePivots(); pivots != nil {
