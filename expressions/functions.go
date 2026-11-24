@@ -178,6 +178,8 @@ var FunctionByName = map[string]func([]Expression) Expression{
 		return ArrayConstructCompact(Args{"expressions": args})
 	},
 	"ARRAY_HAS":      genericFunction(KindArrayContains),
+	"STARTS_WITH":    genericFunction(KindStartsWith),
+	"STARTSWITH":     genericFunction(KindStartsWith),
 	"INITCAP":        genericFunction(KindInitcap),
 	"SPLIT":          genericFunction(KindSplit),
 	"REGEXP_LIKE":    genericFunction(KindRegexpLike),
@@ -201,6 +203,9 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"ADD_MONTHS":      genericFunction(KindAddMonths),
 	"DATE_ADD":        genericFunction(KindDateAdd),
 	"DATEADD":         genericFunction(KindDateAdd),
+	"DATE_TRUNC": func(args []Expression) Expression {
+		return DateTrunc(Args{"unit": seqGetExpr(args, 0), "this": seqGetExpr(args, 1)})
+	},
 	// DATE_SUB is a base FUNCTIONS entry (Parser.FUNCTIONS["DATE_SUB"] =
 	// DateSub.from_arg_list, verified against the pinned source); base renders it via the
 	// function fallback like upstream, which has no datesub_sql.
