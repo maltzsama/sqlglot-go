@@ -126,7 +126,7 @@ See [DEVIATIONS.md](./DEVIATIONS.md) for these extensions and engine-specific be
 
 ## Dialects and verified coverage
 
-The identity corpus checks parse and generation under the same dialect. It passes **7,390 of
+The identity corpus checks parse and generation under the same dialect. It passes **7,391 of
 7,609** cases. The transpile corpus checks expected output from upstream `validate_all` read/write
 pairs. These figures describe the committed test corpora. Coverage varies by construct and dialect
 pair.
@@ -151,7 +151,7 @@ pair.
 | Presto | `presto` | 170/170 |
 | Redshift | `redshift` | 171/171 |
 | RisingWave | `risingwave` | 7/7 |
-| Snowflake | `snowflake` | 1,324/1,543 |
+| Snowflake | `snowflake` | 1,325/1,543 |
 | Spark | `spark` | 227/227 |
 | Spark 2 | `spark2` | Covered by read/write pairs |
 | SQLite | `sqlite` | 136/136 |
