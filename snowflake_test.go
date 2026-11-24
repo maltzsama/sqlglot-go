@@ -150,6 +150,28 @@ func TestSnowflakeAutoincrement(t *testing.T) {
 	}
 }
 
+func TestSnowflakeFileTransfer(t *testing.T) {
+	for _, tc := range []struct {
+		sql  string
+		kind exp.Kind
+	}{
+		{"GET @s1/test 'file:///dir/tmp.csv'", exp.KindGet},
+		{"PUT 'file:///dir/tmp.csv' @s1/test", exp.KindPut},
+		{"PUT file:///dir/tmp.csv @s1/test", exp.KindCommand},
+	} {
+		t.Run(tc.sql, func(t *testing.T) {
+			node, err := sqlglot.ParseOne(tc.sql, "snowflake")
+			if err != nil || node.Kind() != tc.kind {
+				t.Fatalf("unexpected node %v, %v", node, err)
+			}
+			got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+			if err != nil || got != tc.sql {
+				t.Fatalf("got %q, %v; want %q", got, err, tc.sql)
+			}
+		})
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

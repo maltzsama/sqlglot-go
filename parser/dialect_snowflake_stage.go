@@ -5,6 +5,12 @@ import (
 	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
+var snowflakeFileTransfer func(*Parser) exp.Expression
+
+func init() {
+	snowflakeFileTransfer = (*Parser).parseSnowflakeFileTransfer
+}
+
 func (p *Parser) parseSnowflakeLocation() exp.Expression {
 	start := p.curr
 	p.advance()
@@ -41,4 +47,29 @@ func (p *Parser) parseSnowflakeStageTable(isDBReference bool) exp.Expression {
 		}
 	}
 	return p.expression(exp.Table(exp.Args{"this": location, "format": format, "pattern": pattern}), nil, nil)
+}
+
+func (p *Parser) parseSnowflakeFileTransfer() exp.Expression {
+	start := p.curr
+	p.advance()
+	isPut := stringsUpper(start.Text) == "PUT"
+	var file, target exp.Expression
+	if isPut {
+		if p.curr.TokenType != tokens.STRING {
+			return p.parseAsCommand(start)
+		}
+		file = p.parseString()
+		target = p.parseSnowflakeLocation()
+	} else {
+		target = p.parseSnowflakeLocation()
+		if p.curr.TokenType != tokens.STRING {
+			return p.parseAsCommand(start)
+		}
+		file = p.parseString()
+	}
+	kind := exp.KindGet
+	if isPut {
+		kind = exp.KindPut
+	}
+	return p.expression(exp.New(kind, exp.Args{"this": file, "target": target, "properties": p.parseProperties()}), nil, nil)
 }

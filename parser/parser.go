@@ -773,6 +773,9 @@ func (p *Parser) parseStatement() exp.Expression {
 	if !p.curr.IsValid() {
 		return nil
 	}
+	if p.statementDepth == 1 && p.dialectIs("snowflake") && (stringsUpper(p.curr.Text) == "PUT" || stringsUpper(p.curr.Text) == "GET") && p.next.TokenType != tokens.L_PAREN {
+		return snowflakeFileTransfer(p)
+	}
 	if parse := p.statementParser(p.curr.TokenType); parse != nil {
 		p.advance()
 		comments := p.prevComments
