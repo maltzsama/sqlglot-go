@@ -446,6 +446,13 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	out["HEX_ENCODE"] = exp.FromArgListFunc(exp.KindHex)
 	out["STRTOK_TO_ARRAY"] = exp.FromArgListFunc(exp.KindStrtokToArray)
 	out["SPLIT"] = exp.FromArgListFunc(exp.KindSplit)
+	timestampFromParts := exp.FromArgListFunc(exp.KindTimestampFromParts)
+	for _, name := range []string{
+		"TIMESTAMPFROMPARTS", "TIMESTAMPNTZFROMPARTS",
+		"TIMESTAMP_NTZ_FROM_PARTS",
+	} {
+		out[name] = timestampFromParts
+	}
 
 	return out
 }
