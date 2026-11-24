@@ -181,7 +181,9 @@ func snowflakeJSONExtractSQL(g *Generator, e expressions.Expression) string {
 		path = expressions.JSONPath(expressions.Args{"expressions": parts})
 	}
 	pathSQL := g.gen(path)
-	pathSQL = strings.ReplaceAll(pathSQL, "''", "\\'")
+	if pathSQL != "''" {
+		pathSQL = strings.ReplaceAll(pathSQL, "''", "\\'")
+	}
 	return g.funcCall("GET_PATH", []any{this, pathSQL}, "(", ")", true)
 }
 

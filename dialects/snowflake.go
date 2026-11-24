@@ -287,6 +287,26 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		})
 	}
 	out["MD5_HEX"] = exp.FromArgListFunc(exp.KindMD5)
+	out["REPLACE"] = func(args []exp.Expression) exp.Expression {
+		if len(args) == 2 {
+			args = append(args, exp.LiteralString(""))
+		}
+		return exp.FromArgList(exp.KindReplace, args)
+	}
+	out["NULLIFZERO"] = func(args []exp.Expression) exp.Expression {
+		value := seqGet(args, 0)
+		return exp.If(exp.Args{
+			"this": exp.EQ(exp.Args{"this": value, "expression": exp.LiteralNumber("0")}),
+			"true": exp.Null(), "false": value,
+		})
+	}
+	out["GET_PATH"] = func(args []exp.Expression) exp.Expression {
+		return exp.JSONExtract(exp.Args{
+			"this":          seqGet(args, 0),
+			"expression":    d.ToJSONPath(seqGet(args, 1)),
+			"requires_json": true,
+		})
+	}
 	out["IFF"] = exp.FromArgListFunc(exp.KindIf)
 	out["LEN"] = func(args []exp.Expression) exp.Expression {
 		return exp.Length(exp.Args{"this": seqGet(args, 0)})
