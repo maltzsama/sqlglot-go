@@ -1852,7 +1852,6 @@
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE a MODIFY COLUMN my_column SET NOT NULL"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE a WITH TAG (key1='value_1')"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE test_table (id NUMERIC NOT NULL AUTOINCREMENT)"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"DESCRIBE db.table"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 IGNORE NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 RESPECT NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) IGNORE NULLS OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
