@@ -321,8 +321,10 @@ func duckDBArrowJSONExtract(g *Generator, e expressions.Expression) string {
 		op = "->"
 	}
 	out := g.arrowJSONExtractBinary(e, op)
-	// generators/duckdb.py:878-886: wrap the arrow form under a binary, bracket, IN or NOT.
-	if parent := e.Parent(); parent != nil {
+	// generators/duckdb.py:878-886: wrap the arrow form under a binary, bracket, IN or NOT,
+	// but only when the parent is a different class (Expression.same_parent, core.py:1178) -
+	// a nested `a -> b -> c` keeps its left side unwrapped.
+	if parent := e.Parent(); parent != nil && parent.Kind() != e.Kind() {
 		switch {
 		case parent.Is(expressions.TraitBinary), parent.Kind() == expressions.KindBracket,
 			parent.Kind() == expressions.KindIn, parent.Kind() == expressions.KindNot:
