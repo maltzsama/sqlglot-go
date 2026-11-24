@@ -194,6 +194,29 @@ func TestSnowflakeModelAttribute(t *testing.T) {
 	}
 }
 
+func TestSnowflakeObjectLiterals(t *testing.T) {
+	for _, tc := range []struct{ sql, want string }{
+		{"SELECT {'a': 'b'}", "SELECT OBJECT_CONSTRUCT('a', 'b')"},
+		{"SELECT {*} FROM t", "SELECT {*} FROM t"},
+		{"SELECT {* EXCLUDE (a)} FROM t", "SELECT {* EXCLUDE (a)} FROM t"},
+		{"SELECT {t.*} FROM t", "SELECT {t.*} FROM t"},
+	} {
+		t.Run(tc.sql, func(t *testing.T) {
+			node, err := sqlglot.ParseOne(tc.sql, "snowflake")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if node.Expressions()[0].Kind() != exp.KindStruct {
+				t.Fatal("expected structured object")
+			}
+			got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+			if err != nil || got != tc.want {
+				t.Fatalf("got %q, %v; want %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

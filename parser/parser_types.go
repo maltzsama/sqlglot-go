@@ -691,7 +691,11 @@ func (p *Parser) parseBracketBase(this exp.Expression) exp.Expression {
 		return this
 	}
 	bracketKind := p.prev.TokenType
-	expressions := p.parseCsv(p.parseBracketKeyValue)
+	parseElement := p.parseBracketKeyValue
+	if bracketKind == tokens.L_BRACE && p.dialectIs("snowflake") {
+		parseElement = p.parseSnowflakeObjectEntry
+	}
+	expressions := p.parseCsv(parseElement)
 	if bracketKind == tokens.L_BRACKET && !p.match(tokens.R_BRACKET) {
 		p.raiseError("Expected ]")
 	} else if bracketKind == tokens.L_BRACE && !p.match(tokens.R_BRACE) {

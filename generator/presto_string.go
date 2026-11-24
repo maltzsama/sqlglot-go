@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/maltzsama/sqlglot-go/expressions"
@@ -19,6 +20,25 @@ func (g *Generator) unicodeStringSQL(e expressions.Expression) string {
 
 // structSQL ports struct_sql (generator.py:5267-5278): PropertyEQ fields render as aliases.
 func (g *Generator) structSQL(e expressions.Expression) string {
+	if g.isDialect("snowflake") {
+		fields := e.Expressions()
+		if len(fields) == 1 && (fields[0].IsStar() || (fields[0].Kind() == expressions.KindILike && fields[0].This().IsStar())) {
+			return "{" + g.gen(fields[0]) + "}"
+		}
+		args := make([]any, 0, len(fields)*2)
+		for i, field := range fields {
+			if field.Kind() == expressions.KindPropertyEQ {
+				key := field.This()
+				if key.Kind() == expressions.KindIdentifier {
+					key = expressions.LiteralString(key.Name())
+				}
+				args = append(args, key, field.Expr())
+			} else {
+				args = append(args, expressions.LiteralString(fmt.Sprintf("_%d", i)), field)
+			}
+		}
+		return g.funcCall("OBJECT_CONSTRUCT", args, "(", ")", true)
+	}
 	args := []any{}
 	for _, field := range e.Expressions() {
 		if field.Kind() == expressions.KindPropertyEQ {
