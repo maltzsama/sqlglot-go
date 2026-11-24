@@ -343,6 +343,11 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 				parsed.Set("target_type", exp.DataType(exp.Args{"this": target}))
 				return parsed
 			}
+			if target == exp.DTypeDate && len(args) > 1 {
+				parsed := dateWithFormat(args)
+				parsed.Set("safe", safe)
+				return parsed
+			}
 			return exp.Anonymous(exp.Args{"this": name, "expressions": args})
 		}
 	}

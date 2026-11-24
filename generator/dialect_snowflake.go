@@ -116,9 +116,9 @@ func init() {
 		expressions.KindDatetimeDiff:       snowflakeDateDeltaSQL("TIMESTAMPDIFF"),
 		expressions.KindTimeAdd:            snowflakeDateDeltaSQL("TIMEADD"),
 		expressions.KindTimeSub:            snowflakeDateDeltaSQL("TIMEADD"),
-		expressions.KindTimestampAdd:       snowflakeDateDeltaSQL("TIMESTAMPADD"),
+		expressions.KindTimestampAdd:       snowflakeDateDeltaSQL("DATEADD"),
 		expressions.KindTimestampSub:       snowflakeDateDeltaSQL("TIMESTAMPADD"),
-		expressions.KindTimestampDiff:      snowflakeDateDeltaSQL("TIMESTAMPDIFF"),
+		expressions.KindTimestampDiff:      snowflakeDateDeltaSQL("DATEDIFF"),
 		expressions.KindTimeDiff:           snowflakeDateDeltaSQL("DATEDIFF"),
 		expressions.KindTsOrDsAdd:          snowflakeDateDeltaSQL("DATEADD"),
 		expressions.KindTsOrDsDiff:         snowflakeDateDeltaSQL("DATEDIFF"),
@@ -471,6 +471,10 @@ func snowflakeDateSQL(g *Generator, e expressions.Expression) string {
 // snowflakeTsOrDsToDateSQL ports the formatted DATE branch of _build_datetime and
 // SnowflakeGenerator's time-format conversion (parsers/snowflake.py:82-128).
 func snowflakeTsOrDsToDateSQL(g *Generator, e expressions.Expression) string {
+	name := "TO_DATE"
+	if boolValue(e.Arg("safe")) {
+		name = "TRY_TO_DATE"
+	}
 	args := []any{e.Arg("this")}
 	if format := asExpression(e.Arg("format")); format != nil {
 		if format.IsString() {
@@ -480,7 +484,7 @@ func snowflakeTsOrDsToDateSQL(g *Generator, e expressions.Expression) string {
 		}
 		args = append(args, format)
 	}
-	return g.funcCall("TO_DATE", args, "(", ")", true)
+	return g.funcCall(name, args, "(", ")", true)
 }
 
 // snowflakeCastSQL ports SnowflakeGenerator.cast_sql (generators/snowflake.py:754-760).

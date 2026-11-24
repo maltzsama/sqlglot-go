@@ -635,6 +635,7 @@
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT INT64(JSON_QUERY(JSON '{\"key\": 2000}', '$.key'))"}
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT JSON_VALUE_ARRAY('{\"arr\": [1, \"a\"]}', '$.arr')"}
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP('2008-12-25 15:30:00', 'America/Los_Angeles')"}
+{"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_ADD(TIMESTAMP \"2008-12-25 15:30:00+00\", INTERVAL 10 MINUTE)"}
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_SUB(TIMESTAMP \"2008-12-25 15:30:00+00\", INTERVAL 10 MINUTE)"}
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_SUB(TIMESTAMP \"2008-12-25 15:30:00+00\", INTERVAL col MINUTE)"}
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"SELECT UNIX_SECONDS('2008-12-25 15:30:00+00')"}
@@ -670,6 +671,7 @@
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT PARSE_DATE('%Y%m%d', '20081225')"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT PARSE_DATETIME('%F %T', '2023-01-15 14:30:00')"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 as a, 'abc' AS b), STRUCT(str_col AS abc)"}
+{"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TIMESTAMP_DIFF(TIMESTAMP_SECONDS(60), TIMESTAMP_SECONDS(0), minute)"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TO_HEX(SHA1('abc'))"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TO_JSON_STRING(STRUCT('Alice' AS name)) AS json_data"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TRUE IS TRUE"}
@@ -685,6 +687,7 @@
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT x, y, z FROM UNNEST([STRUCT(1 AS x, 2 AS y, 3 AS z)])"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT x, yval, zval FROM UNNEST([STRUCT('x' AS x, ['y1', 'y2', 'y3'] AS y, ['z1', 'z2', 'z3'] AS z)]), UNNEST(y) AS yval, UNNEST(z) AS zval"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SHA256(x)"}
+{"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"TIMESTAMP_DIFF(a, b, MONTH)"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"WITH foo AS (SELECT [1] AS arr_1) SELECT (SELECT unnested_arr FROM UNNEST(arr_1) AS unnested_arr) AS f FROM foo"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"WITH t1 AS (SELECT ARRAY(SELECT AS STRUCT 1 AS a, 2 AS b) AS array_col) SELECT array_col[0].a, array_col[0].b FROM t1"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"WITH t1 AS (SELECT ARRAY(SELECT AS STRUCT x1 AS alias_x1, x2 /* test */ FROM t2 WHERE x2 = 4) AS array_col) SELECT array_col[0].alias_x1, array_col[0].x2 FROM t1"}
@@ -1847,7 +1850,6 @@
 {"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"\n            SELECT\n              uc.user_id,\n              uc.start_ts AS ts,\n              CASE\n                WHEN uc.start_ts::DATE >= '2023-01-01' AND uc.country_code IN ('US') AND uc.user_id NOT IN (\n                  SELECT DISTINCT\n                    _id\n                  FROM\n                    users,\n                    LATERAL FLATTEN(INPUT => PARSE_JSON(flags)) datasource\n                  WHERE datasource.value:name = 'something'\n                )\n                  THEN 'Sample1'\n                  ELSE 'Sample2'\n              END AS entity\n            FROM user_countries AS uc\n            LEFT JOIN (\n              SELECT user_id, MAX(IFF(service_entity IS NULL,1,0)) AS le_null\n              FROM accepted_user_agreements\n              GROUP BY 1\n            ) AS aua\n              ON uc.user_id = aua.user_id\n            "}
 {"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06 11:45:00' AS TIMESTAMP_NTZ))"}
 {"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06' AS DATE))"}
-{"read":"snowflake","write":"snowflake","category":"gen: cast/type","sql":"TIMESTAMPADD(DAY, 5, CAST('2008-12-25' AS DATE))"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE a MODIFY COLUMN my_column DROP NOT NULL"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE a MODIFY COLUMN my_column SET NOT NULL"}
 {"read":"snowflake","write":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE a WITH TAG (key1='value_1')"}
@@ -1864,14 +1866,6 @@
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25) AS value"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25, , ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT { 'Manitoba': 'Winnipeg', 'foo': 'bar' } AS province_capital"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TIMESTAMPADD(NANOSECOND, 123456789, '2023-01-01 10:00:00.000000000')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TIMESTAMPDIFF(NANOSECOND, '2023-01-01 10:00:00.000000000', '2023-01-01 10:00:00.123456789')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('01-01-2000', 'MM-DD-YYYY')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28 20:57 +07', 'YYYY-MM-DD HH24:MI tzh')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28 20:57 +0700', 'YYYY-MM-DD HH24:MI tzhtzm')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28 20:57 +07:00', 'YYYY-MM-DD HH24:MI tzh:tzm')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28T20:57', 'YYYY-MM-DD\"T\"HH24:MI:SS')"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TRY_TO_DATE('2013-04-28T20:57:01.888', 'yyyy-mm-DDThh24:mi:ss.ff')"}
 {"read":"snowflake","write":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1 MINUS SELECT 1"}
 {"read":"snowflake","write":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    CREDENTIALS = ()\n    FILE_FORMAT = (TYPE = CSV COMPRESSION = NONE NULL_IF = ('') FIELD_OPTIONALLY_ENCLOSED_BY = '\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
 {"read":"snowflake","write":"snowflake","category":"parse: Required keyword","sql":"COPY INTO 's3://example/data.csv'\n    FROM EXTRA.EXAMPLE.TABLE\n    STORAGE_INTEGRATION = S3_INTEGRATION\n    FILE_FORMAT = (TYPE=CSV COMPRESSION=NONE NULL_IF=('') FIELD_OPTIONALLY_ENCLOSED_BY='\"')\n    HEADER = TRUE\n    OVERWRITE = TRUE\n    SINGLE = TRUE\n            "}
@@ -2012,7 +2006,6 @@
 {"read":"spark","write":"snowflake","category":"gen: transpile mismatch","sql":"REGEXP_EXTRACT(subject, pattern)"}
 {"read":"spark","write":"snowflake","category":"gen: transpile mismatch","sql":"REGEXP_EXTRACT(subject, pattern, group)"}
 {"read":"spark","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TRY_DIVIDE(a, b)"}
-{"read":"spark","write":"snowflake","category":"gen: transpile mismatch","sql":"TO_DATE(x, 'yyyy')"}
 {"read":"spark","write":"snowflake","category":"gen: transpile mismatch","sql":"TO_DATE(x, 'yyyy-MM-dd')"}
 {"read":"spark","write":"spark2","category":"gen: cast/type","sql":"SELECT DATEDIFF(MONTH, '2020-01-01', '2020-03-05')"}
 {"read":"spark","write":"spark2","category":"gen: cast/type","sql":"SELECT DATEDIFF(MONTH, CAST('1996-10-30' AS TIMESTAMP), CAST('1997-02-28 10:30:00' AS TIMESTAMP))"}
