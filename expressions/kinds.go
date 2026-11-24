@@ -1880,7 +1880,7 @@ var argTypes = map[Kind][]argSpec{
 	KindJSONArrayAgg:                  {{"this", true}, {"order", false}, {"null_handling", false}, {"return_type", false}, {"strict", false}},
 	KindConvert:                       {{"this", true}, {"expression", true}, {"style", false}, {"safe", false}},
 	KindTimeFromParts:                 {{"hour", true}, {"min", true}, {"sec", true}, {"nano", false}, {"fractions", false}, {"precision", false}, {"overflow", false}},
-	KindTimestampFromParts:            {{"year", true}, {"month", true}, {"day", true}, {"hour", true}, {"min", true}, {"sec", true}, {"zone", false}, {"milli", false}, {"this", false}, {"expression", false}},
+	KindTimestampFromParts:            {{"year", false}, {"month", false}, {"day", false}, {"hour", false}, {"min", false}, {"sec", false}, {"zone", false}, {"milli", false}, {"this", false}, {"expression", false}},
 	KindDateFromParts:                 {{"year", true}, {"month", false}, {"day", false}, {"allow_overflow", false}},
 	KindSplitPart:                     {{"this", true}, {"delimiter", false}, {"part_index", false}, {"part_index_zero_as_one", false}, {"empty_delimiter_returns_whole", false}},
 	KindStoredProcedure:               {{"this", true}, {"expressions", false}, {"wrapped", false}},

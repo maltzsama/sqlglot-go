@@ -224,8 +224,5 @@
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER($my_function_name)()"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER('my_func')(1, 2)"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER('speed_of_light')()"}
-{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT TIMESTAMPFROMPARTS(d, t)"}
-{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2013-04-05'), TO_TIME('12:00:00'))"}
-{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT TO_CHAR(CAST('12:05:05' AS TIME))"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT TRIM(COALESCE(TO_CHAR(CAST(c AS TIME)), '')) FROM t"}
