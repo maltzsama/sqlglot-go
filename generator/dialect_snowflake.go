@@ -71,6 +71,7 @@ func init() {
 		expressions.KindJSONExtract:      snowflakeJSONExtractSQL,
 		expressions.KindUnixToTime:       snowflakeUnixToTimeSQL,
 		expressions.KindTimeToStr:        snowflakeTimeToStrSQL,
+		expressions.KindStrToTime:        snowflakeStrToTimeSQL,
 		expressions.KindRegexpExtract:    snowflakeRegexpExtractSQL,
 		expressions.KindRegexpExtractAll: snowflakeRegexpExtractSQL,
 		expressions.KindRegexpSubstr:     snowflakeRegexpExtractSQL,
@@ -163,6 +164,27 @@ func init() {
 		expressions.KindDescribe: snowflakeDescribeSQL,
 	}
 	registerDialectDispatch("snowflake", handlers)
+}
+
+func snowflakeStrToTimeSQL(g *Generator, e expressions.Expression) string {
+	name := "TO_TIMESTAMP"
+	if target := asExpression(e.Arg("target_type")); target != nil &&
+		target.Arg("this") == expressions.DTypeTime {
+		name = "TO_TIME"
+	}
+	if boolValue(e.Arg("safe")) {
+		name = "TRY_" + name
+	}
+	args := []any{e.Arg("this")}
+	if format := asExpression(e.Arg("format")); format != nil {
+		if format.IsString() {
+			if converted, ok := dialects.FormatTime(format.Name(), g.dialect.InverseTimeMapping); ok {
+				format = expressions.LiteralString(converted)
+			}
+		}
+		args = append(args, format)
+	}
+	return g.funcCall(name, args, "(", ")", true)
 }
 
 func snowflakeTimeToStrSQL(g *Generator, e expressions.Expression) string {

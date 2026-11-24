@@ -256,6 +256,12 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 				}
 				return cast
 			}
+			if target == exp.DTypeTime && len(args) > 1 {
+				parsed := postgresBuildFormattedTimeClass(d, exp.KindStrToTime)(args)
+				parsed.Set("safe", safe)
+				parsed.Set("target_type", exp.DataType(exp.Args{"this": target}))
+				return parsed
+			}
 			return exp.Anonymous(exp.Args{"this": name, "expressions": args})
 		}
 	}

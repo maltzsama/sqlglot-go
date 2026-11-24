@@ -45,9 +45,7 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25) AS value"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25, , ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT SEARCH(line, 'king', SEARCH_MODE => 'AND', ANALYZER => 'PATTERN_ANALYZER')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIME('093000', 'HH24MISS')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIMESTAMP(col, 'DD-MM-YYYY HH12:MI:SS') FROM t"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TRY_TO_TIME('093000', 'HH24MISS')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT { 'Manitoba': 'Winnipeg', 'foo': 'bar' } AS province_capital"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT {* EXCLUDE (col1)} FROM my_table"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT {* EXCLUDE (col1, col2)} FROM my_table"}
