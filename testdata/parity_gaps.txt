@@ -21,8 +21,6 @@
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t CHANGE_TRACKING=TRUE DATA_RETENTION_TIME_IN_DAYS=1 (id INT)"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE VIEW my_view CHANGE_TRACKING=TRUE (id) AS SELECT * FROM my_table"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE VIEW v ROW ACCESS POLICY p ON (c) AS SELECT c FROM t"}
-{"dialect":"snowflake","category":"generate: error","sql":"ALTER TABLE table1 CLUSTER BY (name)"}
-{"dialect":"snowflake","category":"generate: error","sql":"CREATE TABLE table1 CLUSTER BY (name1, name2, name3)"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"ALTER TABLE tbl SET STAGE_COPY_OPTIONS = (ON_ERROR=SKIP_FILE SIZE_LIMIT=5 PURGE=TRUE MATCH_BY_COLUMN_NAME=CASE_SENSITIVE)"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"ALTER TABLE tbl SET STAGE_FILE_FORMAT = (TYPE=CSV FIELD_DELIMITER='|' NULL_IF=('') FIELD_OPTIONALLY_ENCLOSED_BY='\"' TIMESTAMP_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' DATE_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' BINARY_FORMAT=BASE64)"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"transform(x, a int -> a + a + 1)"}
