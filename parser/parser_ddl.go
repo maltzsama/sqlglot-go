@@ -397,16 +397,27 @@ func (p *Parser) parseCreateFunction(ctt tokens.TokenType) (this, expression exp
 	}
 
 	this = p.parseUserDefinedFunction()
+	overloadMode := false
+	isTable := false
+	duckDBTableBody := false
 	if ctt == tokens.FUNCTION && p.dialect.Name == "duckdb" && p.match(tokens.ALIAS) {
 		if p.match(tokens.TABLE) {
+			duckDBTableBody = true
 			properties = append(properties, p.expression(exp.ReturnsProperty(exp.Args{
 				"this":     exp.Var(exp.Args{"this": "TABLE"}),
 				"is_table": true,
 			}), nil, nil))
 			expression = p.parseStatement()
-			return this, expression, properties, begin
+			if p.curr.TokenType == tokens.COMMA && p.next.TokenType == tokens.L_PAREN {
+				overloadMode = true
+				isTable = true
+			} else {
+				return this, expression, properties, begin
+			}
 		}
-		p.retreat(p.index - 1)
+		if !duckDBTableBody {
+			p.retreat(p.index - 1)
+		}
 	}
 	// exp.Properties.Location.POST_SCHEMA (parser.py:2417): properties parsed before AS.
 	extendProperties(p.parseProperties())
@@ -429,8 +440,6 @@ func (p *Parser) parseCreateFunction(ctt tokens.TokenType) (this, expression exp
 	// and keep it only when a `, (` follows, which is what DuckDB's multi-signature
 	// `CREATE MACRO f(a) AS expr, (a, b) AS expr` needs. Otherwise retreat so the body
 	// parses through the usual chain below.
-	overloadMode := false
-	isTable := false
 	if expression == nil && ctt == tokens.FUNCTION &&
 		this != nil && this.Kind() == exp.KindUserDefinedFunction && argBool(this.Arg("wrapped")) {
 		preTableIndex := p.index

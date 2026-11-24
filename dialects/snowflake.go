@@ -202,6 +202,9 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	dateBuilder := func(args []exp.Expression) exp.Expression {
 		value := seqGet(args, 0)
 		if len(args) == 1 && value != nil && value.IsString() {
+			if _, err := strconv.ParseInt(value.Name(), 10, 64); err == nil {
+				return exp.Anonymous(exp.Args{"this": "DATE", "expressions": args})
+			}
 			return exp.Cast(exp.Args{
 				"this": value,
 				"to":   exp.DataType(exp.Args{"this": exp.DTypeDate}),
@@ -224,8 +227,14 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return dateBuilder(args)
 	}
 	timeToStr := postgresBuildFormattedTimeClass(d, exp.KindTimeToStr)
-	out["TO_CHAR"] = timeToStr
-	out["TO_VARCHAR"] = timeToStr
+	toChar := func(args []exp.Expression) exp.Expression {
+		if len(args) == 2 && snowflakeStaticTemporal(seqGet(args, 0)) {
+			return timeToStr(args)
+		}
+		return exp.FromArgList(exp.KindToChar, args)
+	}
+	out["TO_CHAR"] = toChar
+	out["TO_VARCHAR"] = toChar
 	out["GETDATE"] = func([]exp.Expression) exp.Expression {
 		return exp.CurrentTimestamp(exp.Args{})
 	}
@@ -338,9 +347,8 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 				return cast
 			}
 			if target == exp.DTypeTime && len(args) > 1 {
-				parsed := postgresBuildFormattedTimeClass(d, exp.KindStrToTime)(args)
+				parsed := postgresBuildFormattedTimeClass(d, exp.KindTsOrDsToTime)(args)
 				parsed.Set("safe", safe)
-				parsed.Set("target_type", exp.DataType(exp.Args{"this": target}))
 				return parsed
 			}
 			if target == exp.DTypeDate && len(args) > 1 {
@@ -581,6 +589,24 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	}
 
 	return out
+}
+
+func snowflakeStaticTemporal(e exp.Expression) bool {
+	if e == nil || e.Kind() != exp.KindCast {
+		return false
+	}
+	to, _ := e.Arg("to").(exp.Expression)
+	if to == nil {
+		return false
+	}
+	dtype, _ := to.Arg("this").(exp.DType)
+	switch dtype {
+	case exp.DTypeDate, exp.DTypeDatetime, exp.DTypeTimestamp, exp.DTypeTimestampNtz,
+		exp.DTypeTimestampTz, exp.DTypeTimestampLtz, exp.DTypeTime, exp.DTypeTimeTz:
+		return true
+	default:
+		return false
+	}
 }
 
 // snowflakeBitwiseBuilder ports _build_bitwise (parsers/snowflake.py:133-152).

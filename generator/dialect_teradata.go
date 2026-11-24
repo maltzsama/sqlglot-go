@@ -36,7 +36,15 @@ func teradataDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindStrPosition: opaqueStrPosition(instrStrPositionSQL),
 		exp.KindStrToDate:   teradataStrToDateSQL,
 		exp.KindTimeToStr: func(g *Generator, e exp.Expression) string {
-			args := []any{e.Arg("this"), e.Arg("format")}
+			args := []any{e.Arg("this")}
+			if format := asExpression(e.Arg("format")); format != nil {
+				if format.IsString() {
+					if converted, ok := dialects.FormatTime(format.Name(), g.dialect.InverseTimeMapping); ok {
+						format = exp.LiteralString(converted)
+					}
+				}
+				args = append(args, format)
+			}
 			return g.funcCall("TO_CHAR", args, "(", ")", true)
 		},
 		exp.KindToChar:           func(g *Generator, e exp.Expression) string { return g.functionFallbackSQL(e) },

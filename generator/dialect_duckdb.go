@@ -211,6 +211,9 @@ func duckDBToMapSQL(g *Generator, e expressions.Expression) string {
 	if this == nil {
 		return "MAP {}"
 	}
+	if this.Kind() != expressions.KindStruct {
+		return g.functionFallbackSQL(e)
+	}
 	pairs := this.Expressions()
 	items := make([]string, 0, len(pairs))
 	for _, pair := range pairs {
@@ -343,13 +346,16 @@ func duckDBArrowJSONExtract(g *Generator, e expressions.Expression) string {
 func duckDBRandSQL(g *Generator, e expressions.Expression) string {
 	if e.Arg("this") != nil {
 		g.unsupported("RANDOM with seed is not supported in DuckDB")
-		return ""
 	}
 	lower := asExpression(e.Arg("lower"))
 	upper := asExpression(e.Arg("upper"))
 	if lower != nil && upper != nil {
+		lowerOperand := lower
+		if lower.Kind() == expressions.KindAdd || lower.Kind() == expressions.KindSub {
+			lowerOperand = expressions.Paren(expressions.Args{"this": lower})
+		}
 		rangeSize := expressions.Paren(expressions.Args{
-			"this": expressions.Sub(expressions.Args{"this": upper, "expression": lower}),
+			"this": expressions.Sub(expressions.Args{"this": upper, "expression": lowerOperand}),
 		})
 		scaled := expressions.Add(expressions.Args{
 			"this":       lower,

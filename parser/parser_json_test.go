@@ -89,16 +89,26 @@ func TestJSONArrowPathConstruction(t *testing.T) {
 	cases := []struct {
 		name    string
 		dialect string
+		write   string
 		sql     string
 		want    string
 		kind    exp.Kind
 	}{
-		{"base literal key", "", "SELECT a -> 'b'", "SELECT JSON_EXTRACT(a, '$.b')", exp.KindJSONPath},
-		{"postgres literal key", "postgres", "SELECT a -> 'b'", "SELECT a -> 'b'", exp.KindJSONPath},
-		{"postgres numeric index", "postgres", "SELECT a -> 0", "SELECT a -> 0", exp.KindJSONPath},
-		{"postgres quoted numeric key", "postgres", "SELECT a -> '0'", "SELECT a -> '0'", exp.KindJSONPath},
-		{"postgres dynamic operand", "postgres", "SELECT a -> key", "SELECT a -> key", exp.KindColumn},
-		{"duckdb literal key", "duckdb", "SELECT a -> 'b'", "SELECT a -> '$.b'", exp.KindJSONPath},
+		{"base literal key", "", "", "SELECT a -> 'b'", "SELECT JSON_EXTRACT(a, '$.b')", exp.KindJSONPath},
+		{"postgres literal key", "postgres", "", "SELECT a -> 'b'", "SELECT a -> 'b'", exp.KindJSONPath},
+		{"postgres numeric index", "postgres", "", "SELECT a -> 0", "SELECT a -> 0", exp.KindJSONPath},
+		{"postgres quoted numeric key", "postgres", "", "SELECT a -> '0'", "SELECT a -> '0'", exp.KindJSONPath},
+		{"postgres negative index", "postgres", "", "SELECT a -> -1", "SELECT a -> -1", exp.KindNeg},
+		{"postgres key with dot", "postgres", "", "SELECT a -> 'a.b'", "SELECT a -> 'a.b'", exp.KindJSONPath},
+		{"postgres key with quote", "postgres", "", "SELECT a -> 'a''b'", "SELECT a -> 'a''b'", exp.KindJSONPath},
+		{"postgres empty key", "postgres", "", "SELECT a -> ''", "SELECT a -> ''", exp.KindJSONPath},
+		{"postgres chained arrows", "postgres", "", "SELECT a -> 'b' -> 'c'", "SELECT a -> 'b' -> 'c'", exp.KindJSONPath},
+		{"postgres dynamic operand", "postgres", "", "SELECT a -> key", "SELECT a -> key", exp.KindColumn},
+		{"redshift family rendering", "redshift", "", "SELECT a -> 'b'", "SELECT JSON_EXTRACT_PATH_TEXT(a, 'b')", exp.KindJSONPath},
+		{"duckdb literal key", "duckdb", "", "SELECT a -> 'b'", "SELECT a -> '$.b'", exp.KindJSONPath},
+		{"sqlite operator", "sqlite", "", "SELECT a -> 'b'", "SELECT a -> 'b'", exp.KindLiteral},
+		{"postgres to duckdb chain", "postgres", "duckdb", "SELECT a -> 'b' -> 'c'", "SELECT a -> '$.b' -> '$.c'", exp.KindJSONPath},
+		{"postgres to clickhouse index", "postgres", "clickhouse", "SELECT a -> 0", "SELECT JSONExtractString(a, 1)", exp.KindJSONPath},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -108,7 +118,11 @@ func TestJSONArrowPathConstruction(t *testing.T) {
 			if right.Kind() != tc.kind {
 				t.Fatalf("RHS kind = %v, want %v:\n%s", right.Kind(), tc.kind, projection.ToS())
 			}
-			got, err := generateSQL(t, parsed, tc.dialect)
+			write := tc.write
+			if write == "" {
+				write = tc.dialect
+			}
+			got, err := generateSQL(t, parsed, write)
 			if err != nil {
 				t.Fatalf("Generate error: %v", err)
 			}

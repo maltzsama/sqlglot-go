@@ -211,7 +211,11 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"DATE_ADD":        genericFunction(KindDateAdd),
 	"DATEADD":         genericFunction(KindDateAdd),
 	"DATE_TRUNC": func(args []Expression) Expression {
-		return DateTrunc(Args{"unit": seqGetExpr(args, 0), "this": seqGetExpr(args, 1)})
+		dateTruncArgs := Args{"unit": seqGetExpr(args, 0), "this": seqGetExpr(args, 1)}
+		if len(args) > 2 {
+			dateTruncArgs["zone"] = args[2]
+		}
+		return DateTrunc(dateTruncArgs)
 	},
 	"TIMESTAMP_TRUNC": genericFunction(KindTimestampTrunc),
 	// DATE_SUB is a base FUNCTIONS entry (Parser.FUNCTIONS["DATE_SUB"] =

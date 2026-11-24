@@ -3,6 +3,7 @@ package generator
 import (
 	"strings"
 
+	"github.com/maltzsama/sqlglot-go/dialects"
 	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
@@ -262,7 +263,18 @@ func (g *Generator) currentDateSQL(e expressions.Expression) string {
 // tsOrDsToDateSQL ports tsordstodate_sql (generator.py:5202-5216).
 func (g *Generator) tsOrDsToDateSQL(e expressions.Expression) string {
 	this := asExpression(e.Arg("this"))
-	if format := asExpression(e.Arg("format")); format != nil {
+	format := asExpression(e.Arg("format"))
+	if format != nil && format.IsString() {
+		formatName := format.Name()
+		defaultTimestamp := "%Y-%m-%d %H:%M:%S"
+		if mapped, ok := dialects.FormatTime(strings.Trim(g.dialect.TimeFormat, "'"), g.dialect.TimeMapping); ok {
+			defaultTimestamp = mapped
+		}
+		if formatName == "%Y-%m-%d" || formatName == defaultTimestamp {
+			format = nil
+		}
+	}
+	if format != nil {
 		parsed := expressions.StrToTime(expressions.Args{
 			"this":   this,
 			"format": format,
@@ -287,6 +299,27 @@ func (g *Generator) tsOrDsToDateSQL(e expressions.Expression) string {
 	}))
 }
 
+func (g *Generator) tsOrDsToTimeSQL(e expressions.Expression) string {
+	this := asExpression(e.Arg("this"))
+	if format := asExpression(e.Arg("format")); format != nil {
+		parsed := expressions.StrToTime(expressions.Args{
+			"this": this, "format": format, "safe": e.Arg("safe"),
+		})
+		return g.gen(expressions.Cast(expressions.Args{
+			"this": parsed,
+			"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeTime}),
+		}))
+	}
+	if this != nil && (this.Kind() == expressions.KindTsOrDsToTime ||
+		expressions.DataTypeIsType(this, false, expressions.DTypeTime)) {
+		return g.gen(this)
+	}
+	return g.gen(expressions.Cast(expressions.Args{
+		"this": this,
+		"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeTime}),
+	}))
+}
+
 func init() {
 	dispatch[expressions.KindDay] = (*Generator).dayMonthYearSQL
 	dispatch[expressions.KindMonth] = (*Generator).dayMonthYearSQL
@@ -302,6 +335,7 @@ func init() {
 	dispatch[expressions.KindVariadic] = (*Generator).variadicSQL
 	dispatch[expressions.KindCurrentDate] = (*Generator).currentDateSQL
 	dispatch[expressions.KindTsOrDsToDate] = (*Generator).tsOrDsToDateSQL
+	dispatch[expressions.KindTsOrDsToTime] = (*Generator).tsOrDsToTimeSQL
 	dispatch[expressions.KindCurrentTimestamp] = (*Generator).currentTimestampSQL
 	dispatch[expressions.KindCurrentUser] = (*Generator).currentUserSQL
 	dispatch[expressions.KindCurrentCatalog] = (*Generator).currentCatalogSQL

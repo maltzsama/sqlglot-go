@@ -48,7 +48,8 @@ func snowflakeTablePart(p *Parser, _ bool, this exp.Expression) exp.Expression {
 		}
 		for p.isConnected() {
 			switch p.curr.TokenType {
-			case tokens.SLASH, tokens.DOT, tokens.MOD, tokens.VAR, tokens.FILE, tokens.JSON:
+			case tokens.SLASH, tokens.DOT, tokens.MOD, tokens.VAR, tokens.FILE, tokens.JSON,
+				tokens.NUMBER, tokens.DASH:
 				name += p.curr.Text
 				p.advance()
 			default:

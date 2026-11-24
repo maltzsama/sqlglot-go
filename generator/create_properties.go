@@ -209,6 +209,10 @@ func (g *Generator) locateProperties(properties expressions.Expression) map[prop
 		return locations
 	}
 	for _, property := range properties.Expressions() {
+		if g.isDialect("duckdb") && property.Kind() == expressions.KindReturnsProperty &&
+			boolValue(property.Arg("is_table")) {
+			continue
+		}
 		location, ok := g.propertyLocation(property)
 		if !ok || location == propertyLocationUnsupported {
 			g.unsupported("Unsupported property " + strings.ToLower(expressions.ClassName(property.Kind())))

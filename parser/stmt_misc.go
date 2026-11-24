@@ -230,7 +230,7 @@ func (p *Parser) parseDescribeStructured() exp.Expression {
 
 	// Nested wrapped statements stop at their enclosing right parenthesis; the caller consumes
 	// that delimiter after parseStatement returns. At the top level it remains trailing input.
-	if p.curr.IsValid() && !(p.statementDepth > 1 && p.curr.TokenType == tokens.R_PAREN) {
+	if p.curr.IsValid() && (p.statementDepth <= 1 || p.curr.TokenType != tokens.R_PAREN) {
 		return nil
 	}
 

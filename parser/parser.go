@@ -1683,7 +1683,8 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 // the modifier before or after a table alias.
 func (p *Parser) parseDuckDBHistorical(table exp.Expression) {
 	if table == nil || table.Kind() != exp.KindTable || p.dialect.Name != "duckdb" ||
-		stringsUpper(p.curr.Text) != "AT" || p.next.TokenType != tokens.L_PAREN {
+		p.curr.TokenType != tokens.VAR || stringsUpper(p.curr.Text) != "AT" ||
+		p.next.TokenType != tokens.L_PAREN {
 		return
 	}
 	p.advance(2)

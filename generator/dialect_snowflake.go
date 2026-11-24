@@ -157,6 +157,8 @@ func init() {
 		expressions.KindExtract:      snowflakeExtractSQL,
 		expressions.KindDate:         snowflakeDateSQL,
 		expressions.KindTsOrDsToDate: snowflakeTsOrDsToDateSQL,
+		expressions.KindToChar:       snowflakeToCharSQL,
+		expressions.KindTsOrDsToTime: snowflakeTsOrDsToTimeSQL,
 		// generators/snowflake.py:754-760: spatial casts use constructor functions instead
 		// of CAST syntax.
 		expressions.KindCast: snowflakeCastSQL,
@@ -266,7 +268,16 @@ func snowflakeRegexpExtractSQL(g *Generator, e expressions.Expression) string {
 		name = "REGEXP_SUBSTR_ALL"
 	}
 	args := []any{e.Arg("this"), e.Arg("expression"), e.Arg("position"), e.Arg("occurrence"), e.Arg("parameters")}
-	if group := asExpression(e.Arg("group")); group != nil && !(group.IsNumber() && group.Name() == "0") {
+	if group := asExpression(e.Arg("group")); group != nil && (!group.IsNumber() || group.Name() != "0") {
+		if args[2] == nil {
+			args[2] = expressions.LiteralNumber("1")
+		}
+		if args[3] == nil {
+			args[3] = expressions.LiteralNumber("1")
+		}
+		if args[4] == nil {
+			args[4] = expressions.LiteralString("c")
+		}
 		args = append(args, group)
 	}
 	return g.funcCall(name, args, "(", ")", true)
@@ -315,7 +326,8 @@ func snowflakeJSONExtractSQL(g *Generator, e expressions.Expression) string {
 		path = expressions.JSONPath(expressions.Args{"expressions": parts})
 	}
 	pathSQL := g.gen(path)
-	if pathSQL != "''" {
+	if path != nil && (path.Kind() == expressions.KindJSONPath ||
+		(path.Kind() == expressions.KindLiteral && path.IsString())) && pathSQL != "''" {
 		pathSQL = strings.ReplaceAll(pathSQL, "''", "\\'")
 	}
 	return g.funcCall("GET_PATH", []any{this, pathSQL}, "(", ")", true)
@@ -505,6 +517,27 @@ func snowflakeTsOrDsToDateSQL(g *Generator, e expressions.Expression) string {
 	name := "TO_DATE"
 	if boolValue(e.Arg("safe")) {
 		name = "TRY_TO_DATE"
+	}
+	args := []any{e.Arg("this")}
+	if format := asExpression(e.Arg("format")); format != nil {
+		if format.IsString() {
+			if converted, ok := dialects.FormatTime(format.Name(), g.dialect.InverseTimeMapping); ok {
+				format = expressions.LiteralString(converted)
+			}
+		}
+		args = append(args, format)
+	}
+	return g.funcCall(name, args, "(", ")", true)
+}
+
+func snowflakeToCharSQL(g *Generator, e expressions.Expression) string {
+	return g.funcCall("TO_CHAR", g.fallbackArgs(e), "(", ")", true)
+}
+
+func snowflakeTsOrDsToTimeSQL(g *Generator, e expressions.Expression) string {
+	name := "TO_TIME"
+	if boolValue(e.Arg("safe")) {
+		name = "TRY_TO_TIME"
 	}
 	args := []any{e.Arg("this")}
 	if format := asExpression(e.Arg("format")); format != nil {

@@ -49,6 +49,9 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindRand: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("RANDOM", g.fallbackArgs(e), "(", ")", true)
 		},
+		exp.KindToChar: func(g *Generator, e exp.Expression) string {
+			return g.functionFallbackSQL(e)
+		},
 		// generators/postgres.py:354-356: JSONPath parts render name-only and the root
 		// renders empty, so json_extract_segments' walk (generator/json_arrow.go) skips the
 		// root and joins raw key names. Redshift, Materialize and RisingWave inherit these
@@ -59,6 +62,10 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindJSONPathRoot:      func(*Generator, exp.Expression) string { return "" },
 		exp.KindJSONPathKey:       pgJSONPathKeyOnlyName,
 		exp.KindJSONPathSubscript: pgJSONPathSubscript,
+		exp.KindJSONPathRecursive: func(g *Generator, e exp.Expression) string {
+			g.unsupported("Unsupported JSONPath part " + exp.ClassName(e.Kind()))
+			return ""
+		},
 	}
 }
 

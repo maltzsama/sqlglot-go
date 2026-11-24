@@ -17,22 +17,15 @@ func jsonExtractArgs(e expressions.Expression) []any {
 	return append([]any{e.Arg("this"), e.Arg("expression")}, listFromValue(e.Arg("expressions"))...)
 }
 
-// This file ports the JSON `->`/`->>`/`#>`/`#>>` rendering for exp.JSONExtract/
-// JSONExtractScalar/JSONBExtract/JSONBExtractScalar. Upstream drives these through the
-// per-dialect TRANSFORMS entries: json_extract_segments (dialects/dialect.py:2250-2277)
-// walks an exp.JSONPath's parts to build either the infix operator spelling or the dialect's
-// JSON_EXTRACT_PATH[_TEXT] function spelling, and the postgres family wraps that walk in
-// _json_extract_sql (generators/postgres.py:183-197), which decides when the infix form
-// applies. Both are ported below; the parser builds exp.JSONPath arguments for every literal
-// path (parser.go arrowJSONExtractArgs, expressions/functions.go jsonExtractFunction and the
-// dialects.BuildJSONExtractPath entries), so the segments walk is the common path.
+// This file ports JSON arrow rendering for exp.JSONExtract/JSONExtractScalar/JSONBExtract/
+// JSONBExtractScalar. The parser builds JSONPath nodes for literal operands, consumed by
+// pgJSONArrowSQL; dynamic operands remain expressions.
 
 // pgJSONExtractSQL ports _json_extract_sql (generators/postgres.py:183-197): a path that is
 // neither a JSONPath nor a Variadic, with no variadic tail, renders infix - spelling such a
-// single non-literal operand as JSON_EXTRACT_PATH[_TEXT] would be jsonb-unsafe. Everything
-// else renders through json_extract_segments: infix with unquoted indices while
-// only_json_types is set (the parser-built operator nodes), the JSON_EXTRACT_PATH[_TEXT]
-// function otherwise.
+// single dynamic operand as JSON_EXTRACT_PATH[_TEXT] would be jsonb-unsafe. Literal operator
+// operands are parser-built JSONPath nodes and render infix with unquoted indices when
+// only_json_types is set; other paths render through JSON_EXTRACT_PATH[_TEXT].
 func (g *Generator) pgJSONExtractSQL(e expressions.Expression, name string, op string) string {
 	path := asExpression(e.Arg("expression"))
 	pathLike := path != nil && (path.Kind() == expressions.KindJSONPath || path.Kind() == expressions.KindVariadic)
@@ -47,7 +40,8 @@ func (g *Generator) pgJSONExtractSQL(e expressions.Expression, name string, op s
 
 // jsonExtractSegments ports json_extract_segments (dialects/dialect.py:2250-2277). A JSONPath
 // path renders one quoted segment per path part - parts that render empty (postgres's
-// JSONPathRoot, an unsupported wildcard) are skipped - joined by the infix operator when one
+// JSONPathRoot and unsupported parts are skipped, while empty keys are retained - joined by
+// the infix operator when one
 // is given, or passed as the trailing arguments of name(...). A path that is not a JSONPath
 // falls back to rename_func (dialects/dialect.py:1214-1215): the flattened positional args
 // under name, which preserves e.g. VARIADIC array operands and non-literal path tails.
@@ -59,9 +53,8 @@ func (g *Generator) jsonExtractSegments(e expressions.Expression, name string, q
 
 	segments := make([]string, 0, len(path.Expressions()))
 	for _, segment := range path.Expressions() {
-		escape := boolValue(segment.Arg("quoted"))
 		part := g.gen(segment)
-		if part == "" {
+		if part == "" && segment.Kind() != expressions.KindJSONPathKey {
 			continue
 		}
 		// Upstream additionally requires isinstance(segment, exp.JSONPathPart) before quoting;
@@ -69,8 +62,8 @@ func (g *Generator) jsonExtractSegments(e expressions.Expression, name string, q
 		// parser.go postgresArrowJSONPath), so the condition reduces to the subscript exemption
 		// (quotedIndex=false, the operator form, leaves array indices unquoted).
 		if quotedIndex || segment.Kind() != expressions.KindJSONPathSubscript {
-			if escape {
-				part = g.escapeStr(part)
+			if segment.Kind() == expressions.KindJSONPathKey {
+				part = g.escapeStr(segment.Name())
 			}
 			part = g.quoteStart + part + g.quoteEnd
 		}

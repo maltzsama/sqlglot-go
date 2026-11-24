@@ -90,6 +90,15 @@ func clickhouseJSONExtract(g *Generator, e exp.Expression) string {
 			case exp.KindJSONPathKey:
 				args = append(args, exp.LiteralString(segment.Name()))
 			case exp.KindJSONPathSubscript:
+				if index, err := strconv.Atoi(g.sqlKey(segment, "this")); err == nil && index < 0 {
+					args = append(args, exp.LiteralNumber(strconv.Itoa(index)))
+					continue
+				}
+				indexSQL := g.gen(segment)
+				if index, err := strconv.Atoi(indexSQL); err == nil {
+					args = append(args, exp.LiteralNumber(strconv.Itoa(index)))
+					continue
+				}
 				args = append(args, segment.Arg("this"))
 			default:
 				args = append(args, exp.LiteralString(g.gen(segment)))
