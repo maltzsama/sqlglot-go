@@ -9,6 +9,7 @@ import (
 // dialects/duckdb.go; the grammar callbacks and helpers live here.
 func init() {
 	registerDialectParserOverrides("duckdb", dialectParserOverrideSet{
+		TypeParser: parseDuckDBTypes,
 		StatementParsers: map[tokens.TokenType]parserOverrideFunc{
 			// parsers/duckdb.py:263-270 STATEMENT_PARSERS.
 			tokens.ATTACH:    func(p *Parser) exp.Expression { return p.parseDuckDBAttachDetach(true) },
@@ -36,6 +37,16 @@ func init() {
 			},
 		},
 	})
+}
+
+// parseDuckDBTypes ports DuckDB's TEXT TYPE_CONVERTER
+// (parsers/duckdb.py:230-235), which discards modifiers such as VARCHAR(5)'s length.
+func parseDuckDBTypes(p *Parser, checkFunc, schema, allowIdentifiers, withCollation bool) exp.Expression {
+	dtype := p.parseTypesBase(checkFunc, schema, allowIdentifiers, withCollation)
+	if dtype != nil && dtype.Kind() == exp.KindDataType && dtype.Arg("this") == exp.DTypeText {
+		dtype.Set("expressions", nil)
+	}
+	return dtype
 }
 
 // parseDuckDBAttachDetach ports _parse_attach_detach (parsers/duckdb.py:343-368).

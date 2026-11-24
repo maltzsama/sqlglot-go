@@ -682,7 +682,7 @@ func duckDBInstallSQL(g *Generator, e expressions.Expression) string {
 }
 
 // duckDBDataTypeSQL ports _datatype_sql (generators/duckdb.py:654-663) with the DECIMAL
-// default and the TEXT precision strip from TYPE_CONVERTERS.
+// default. Text type parameters are preserved by the upstream base datatype_sql implementation.
 func duckDBDataTypeSQL(g *Generator, e expressions.Expression) string {
 	dtype, _ := e.Arg("this").(expressions.DType)
 	if dtype == expressions.DTypeArray {
@@ -702,15 +702,9 @@ func duckDBDataTypeSQL(g *Generator, e expressions.Expression) string {
 			return "TEXT"
 		}
 	}
-	if isTextDataType(dtype) {
-		copy := e.Copy()
-		copy.Set("expressions", nil)
-		return g.dataTypeSQL(copy)
-	}
 	return g.dataTypeSQL(e)
 }
 
-// isTextDataType reports whether dtype is one of the text-family types.
 func isTextDataType(dtype expressions.DType) bool {
 	switch dtype {
 	case expressions.DTypeText, expressions.DTypeVarchar, expressions.DTypeChar,

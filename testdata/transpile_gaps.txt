@@ -87,8 +87,6 @@
 {"read":"","write":"doris","category":"gen: transpile mismatch","sql":"UNIX_TO_TIME(x)"}
 {"read":"","write":"doris","category":"gen: transpile mismatch","sql":"YEAR(TS_OR_DS_TO_DATE(x))"}
 {"read":"","write":"doris","category":"gen: transpile mismatch","sql":"x ILIKE '%y'"}
-{"read":"","write":"duckdb","category":"gen: cast/type","sql":"CAST(a AS CHARACTER VARYING(3))"}
-{"read":"","write":"duckdb","category":"gen: cast/type","sql":"CAST(a AS VARCHAR(3))"}
 {"read":"","write":"duckdb","category":"gen: cast/type","sql":"DATE_FROM_UNIX_DATE(1)"}
 {"read":"","write":"duckdb","category":"gen: cast/type","sql":"DATE_STR_TO_DATE(x)"}
 {"read":"","write":"duckdb","category":"gen: cast/type","sql":"DATE_TO_DATE_STR(x)"}
@@ -108,7 +106,6 @@
 {"read":"","write":"duckdb","category":"gen: cast/type","sql":"TS_OR_DS_TO_DATE_STR(x)"}
 {"read":"","write":"duckdb","category":"gen: cast/type","sql":"UNIX_TO_TIME_STR(x)"}
 {"read":"","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE a LIKE b"}
-{"read":"","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE t (b1 BINARY, b2 BINARY(1024), c1 TEXT, c2 TEXT(1024))"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_APPEND(arr, x)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_INSERT([1, 2, 3], -1, 99)"}
@@ -961,7 +958,6 @@
 {"read":"duckdb","write":"postgres","category":"gen: cast/type","sql":"CAST(4 // 2 AS DECIMAL(5, 3))"}
 {"read":"duckdb","write":"postgres","category":"gen: cast/type","sql":"CAST(x AS DECIMAL)"}
 {"read":"duckdb","write":"postgres","category":"gen: cast/type","sql":"CAST(x AS NUMERIC)"}
-{"read":"duckdb","write":"postgres","category":"gen: cast/type","sql":"CAST(x AS VARCHAR(5))"}
 {"read":"duckdb","write":"postgres","category":"gen: cast/type","sql":"ROUND(x::DECIMAL, 4)"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"'{\"farm\": [\"a\", \"b\", \"c\"]}' ->> '$.farm[0]'"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"LIST_CONCAT([1, 2], [3, 4])"}

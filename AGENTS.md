@@ -58,7 +58,7 @@ and every registered dialect meets its floor in the per-dialect corpus
 (`testdata/dialect_identity.jsonl`, 6632 records); the open rows are 35 DuckDB cases and 332
 Snowflake cases (`testdata/parity_gaps.txt`). Cross-dialect transpilation is verified the same way
 against upstream's `validate_all` read/write pairs (`testdata/transpile_corpus.jsonl`,
-`TestTranspileCorpus`): 6326/8881 pairs pass, with the open pairs in `testdata/transpile_gaps.txt`.
+`TestTranspileCorpus`): 6330/8881 pairs pass (2551 open), tracked in `testdata/transpile_gaps.txt`.
 AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
 `exp.Command` where upstream builds a structured node (`fidelity_test.go` +
 `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
