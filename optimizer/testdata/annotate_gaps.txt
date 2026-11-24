@@ -1068,10 +1068,4 @@ annotate_types.sql|bigquery|47
 annotate_types.sql|bigquery|48
 annotate_types.sql|bigquery|49
 annotate_types.sql|databricks|17
-annotate_types.sql|snowflake|59
-annotate_types.sql|snowflake|60
-annotate_types.sql|snowflake|61
-annotate_types.sql|snowflake|62
-annotate_types.sql|snowflake|63
-annotate_types.sql|snowflake|64
 annotate_types.sql|spark|16
