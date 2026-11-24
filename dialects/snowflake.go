@@ -232,6 +232,32 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		safe := strings.HasPrefix(name, "TRY_")
 		out[name] = func(args []exp.Expression) exp.Expression {
 			value := seqGet(args, 0)
+			if target == exp.DTypeTimestamp && !safe {
+				scale := seqGet(args, 1)
+				valueIsInteger := false
+				if value != nil {
+					_, err := strconv.ParseInt(value.Name(), 10, 64)
+					valueIsInteger = err == nil
+				}
+				scaleIsInteger := false
+				if scale != nil && scale.IsNumber() {
+					_, err := strconv.ParseInt(scale.Name(), 10, 64)
+					scaleIsInteger = err == nil
+				}
+				if value != nil && ((len(args) == 1 && valueIsInteger) ||
+					(scale != nil && scaleIsInteger)) {
+					return exp.UnixToTime(exp.Args{
+						"this": value, "scale": scale,
+						"target_type": exp.DataType(exp.Args{"this": target}),
+					})
+				}
+				if scale != nil && !scale.IsNumber() {
+					parsed := postgresBuildFormattedTimeClass(d, exp.KindStrToTime)(args)
+					parsed.Set("safe", false)
+					parsed.Set("target_type", exp.DataType(exp.Args{"this": target}))
+					return parsed
+				}
+			}
 			if len(args) == 1 && value != nil && value.IsString() {
 				_, integerString := strconv.ParseInt(value.Name(), 10, 64)
 				if target == exp.DTypeTimestamp && !safe && integerString == nil {
