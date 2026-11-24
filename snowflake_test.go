@@ -92,6 +92,35 @@ func TestSnowflakeSemanticView(t *testing.T) {
 	}
 }
 
+func TestSnowflakeStageSources(t *testing.T) {
+	for _, sql := range []string{
+		"SELECT * FROM @foo/bar (FILE_FORMAT => ds.test.fmt, PATTERN => 'test') AS x",
+		"SELECT * FROM @~/some/path/file.csv",
+		"SELECT * FROM '@external/location' (FILE_FORMAT => 'path.to.csv')",
+	} {
+		t.Run(sql, func(t *testing.T) {
+			node, err := sqlglot.ParseOne(sql, "snowflake")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var stage exp.Expression
+			for _, n := range node.Walk() {
+				if n.Kind() == exp.KindTable {
+					stage = n
+					break
+				}
+			}
+			if stage == nil || stage.This() == nil || (stage.This().Kind() != exp.KindVar && stage.This().Kind() != exp.KindLiteral) {
+				t.Fatal("stage source is not structured as a table")
+			}
+			got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+			if err != nil || got != sql {
+				t.Fatalf("got %q, %v; want %q", got, err, sql)
+			}
+		})
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

@@ -61,14 +61,7 @@
 {"dialect":"snowflake","category":"generate: error","sql":"CREATE TABLE table1 CLUSTER BY (name1, name2, name3)"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"ALTER TABLE tbl SET STAGE_COPY_OPTIONS = (ON_ERROR=SKIP_FILE SIZE_LIMIT=5 PURGE=TRUE MATCH_BY_COLUMN_NAME=CASE_SENSITIVE)"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"ALTER TABLE tbl SET STAGE_FILE_FORMAT = (TYPE=CSV FIELD_DELIMITER='|' NULL_IF=('') FIELD_OPTIONALLY_ENCLOSED_BY='\"' TIMESTAMP_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' DATE_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' BINARY_FORMAT=BASE64)"}
-{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT $1, $2, metadata$filename FROM @mystage (PATTERN => '.*data-100.*')"}
-{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM '@external/location' (FILE_FORMAT => 'path.to.csv')"}
-{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM (SELECT * FROM '@external/location' (FILE_FORMAT => 'path.to.csv'))"}
-{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM @foo/bar (FILE_FORMAT => ds_sandbox.test.my_csv_format, PATTERN => 'test') AS bla"}
-{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM @foo/bar (PATTERN => 'test', FILE_FORMAT => ds_sandbox.test.my_csv_format) AS bla"}
-{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM @test.public.thing/location/somefile.csv( FILE_FORMAT => 'fmt' )"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM TABLE(model_trained_with_labeled_data!DETECT_ANOMALIES(INPUT_DATA => TABLE(view_with_data_to_analyze), TIMESTAMP_COLNAME => 'date', TARGET_COLNAME => 'sales', CONFIG_OBJECT => OBJECT_CONSTRUCT('prediction_interval', 0.99)))"}
-{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT t.$1, t.$2 FROM @mystage1 (FILE_FORMAT => 'myformat', PATTERN => '.*data.*[.]csv.gz') AS t"}
 {"dialect":"snowflake","category":"parse: Expecting )","sql":"transform(x, a int -> a + a + 1)"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"GET @\"my_DB\".\"schEMA1\".\"MYstage\" 'file:///dir/tmp.csv'"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"GET @s1/test 'file:///dir/tmp.csv'"}
@@ -77,8 +70,6 @@
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"PUT 'file:///dir/tmp.csv' @s1/test"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"PUT file:///dir/tmp.csv @%table"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"PUT file:///dir/tmp.csv @s1/test PARALLEL=1 AUTO_COMPRESS=FALSE source_compression=gzip OVERWRITE=TRUE"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @\"my_DB\".\"schEMA1\".mystage/file.gz"}
-{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM @\"myschema\".\"mystage\"/file.gz"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT m!PREDICT(INPUT_DATA => {*}) AS p FROM tbl"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT m!PREDICT(INPUT_DATA => {tbl.*}) AS p FROM tbl"}
 {"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT model!PREDICT(1)"}
@@ -90,8 +81,6 @@
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO load1 FROM @%load1/data1/ CREDENTIALS = (AWS_KEY_ID='id' AWS_SECRET_KEY='key' AWS_TOKEN='token') FILES = ('test1.csv', 'test2.csv') FORCE = TRUE"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO temp FROM @random_stage/path/ FILE_FORMAT = (TYPE=CSV FIELD_DELIMITER='|' NULL_IF=('str1', 'str2') FIELD_OPTIONALLY_ENCLOSED_BY='\"' TIMESTAMP_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' DATE_FORMAT='TZHTZM YYYY-MM-DD HH24:MI:SS.FF9' BINARY_FORMAT=BASE64) VALIDATION_MODE = 'RETURN_3_ROWS'"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"GET @%table file:///dir/tmp.csv"}
-{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT * FROM @~"}
-{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT * FROM @~/some/path/to/file.csv"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER($my_function_name)()"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER('my_func')(1, 2)"}
 {"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT IDENTIFIER('speed_of_light')()"}

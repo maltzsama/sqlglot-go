@@ -1701,6 +1701,9 @@ func (p *Parser) parseDuckDBHistorical(table exp.Expression) {
 }
 
 func (p *Parser) parseTableParts(schema bool, isDBReference bool, wildcard bool, fast bool) exp.Expression {
+	if p.dialectIs("snowflake") && (p.curr.TokenType == tokens.STRING || p.curr.Text == "@") {
+		return p.parseSnowflakeStageTable(isDBReference)
+	}
 	var catalog exp.Expression
 	// schemaPart holds the ANSI-schema-level qualifier (upstream's "db" arg — the port renames
 	// this arg to "schema"; the local can't be named "schema" here as that is already the
