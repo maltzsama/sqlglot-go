@@ -36,6 +36,25 @@ func pgJSONPathIsInfix(e expressions.Expression) bool {
 	return path.Kind() != expressions.KindLiteral || !path.IsString()
 }
 
+// pgJSONArrowSQL renders the final segment of a parser-built path as the operand of Postgres's
+// infix operator. Postgres arrow syntax accepts one key or index per operator.
+func (g *Generator) pgJSONArrowSQL(e expressions.Expression, op string) string {
+	path := asExpression(e.Arg("expression"))
+	if path != nil && path.Kind() == expressions.KindJSONPath {
+		parts := path.Expressions()
+		if len(parts) == 2 && parts[0].Kind() == expressions.KindJSONPathRoot {
+			switch parts[1].Kind() {
+			case expressions.KindJSONPathKey:
+				right := g.quoteStart + g.escapeStr(parts[1].Name()) + g.quoteEnd
+				return g.sqlKey(e, "this") + " " + op + " " + right
+			case expressions.KindJSONPathSubscript:
+				return g.sqlKey(e, "this") + " " + op + " " + g.gen(parts[1].Arg("this"))
+			}
+		}
+	}
+	return g.binary(e, op)
+}
+
 // jsonExtractSQL ports the base/mysql default (functionFallbackSQL - neither dialect overrides
 // exp.JSONExtract in TRANSFORMS), postgres's _json_extract_sql("JSON_EXTRACT_PATH", "->")
 // (generators/postgres.py:322), and Trino's JSON_QUERY-specific override
@@ -44,7 +63,7 @@ func pgJSONPathIsInfix(e expressions.Expression) bool {
 func (g *Generator) jsonExtractSQL(e expressions.Expression) string {
 	if g.isDialect("postgres") {
 		if boolValue(e.Arg("only_json_types")) || pgJSONPathIsInfix(e) {
-			return g.binary(e, "->")
+			return g.pgJSONArrowSQL(e, "->")
 		}
 		return g.funcCall("JSON_EXTRACT_PATH", jsonExtractArgs(e), "(", ")", true)
 	}
@@ -80,7 +99,7 @@ func (g *Generator) jsonExtractSQL(e expressions.Expression) string {
 func (g *Generator) jsonExtractScalarSQL(e expressions.Expression) string {
 	if g.isDialect("postgres") {
 		if boolValue(e.Arg("only_json_types")) || pgJSONPathIsInfix(e) {
-			return g.binary(e, "->>")
+			return g.pgJSONArrowSQL(e, "->>")
 		}
 		return g.funcCall("JSON_EXTRACT_PATH_TEXT", jsonExtractArgs(e), "(", ")", true)
 	}

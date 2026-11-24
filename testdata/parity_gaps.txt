@@ -6,7 +6,6 @@
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT * FROM foo /* bla */: /* baz */ bar /* boo */"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT * FROM foo /* bla */: bar /* baz */"}
 {"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT JSON('{\"fruit\": {\"foo\": \"banana\"}}') -> 'fruit' -> 'foo'"}
-{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT JSON('{\"fruit\":\"banana\"}') -> 'fruit'"}
 {"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a INT, b FLOAT) AS TABLE SELECT a"}
 {"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE IF NOT EXISTS t (cola INT COMMENT 'cola', colb STRING) USING ICEBERG PARTITIONED BY (colb)"}
 {"dialect":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE IF NOT EXISTS t (cola INT, colb STRING) USING ICEBERG PARTITIONED BY (colb)"}

@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -2444,20 +2445,33 @@ func (p *Parser) parseColumnReference() exp.Expression {
 
 type columnOpFunc func(p *Parser, this, field exp.Expression) exp.Expression
 
-// arrowJSONExtractArgs builds the args for a JSON `->`/`->>` operator node (exp.JSONExtract/
-// JSONExtractScalar). build_json_extract_path (dialect.py:2092-2124) is not ported: this port
-// keeps the raw literal RHS instead of converting it to a JSONPath (see ROADMAP - JSONPath
-// deferral). The only signal that decision needs from that upstream builder is its
-// arrow_req_json_type branch, which sets only_json_types when the dialect requires it (postgres
-// only, JSONArrowsRequireJSONType) and the RHS is a bare Literal (so e.g. `x -> -1`'s Neg RHS
-// does NOT set only_json_types - only a bare literal does). The generator reads only_json_types
-// to choose operator-form (`->`/`->>`) over function-form (JSON_EXTRACT_PATH[_TEXT]) rendering.
+// arrowJSONExtractArgs builds args for JSON `->`/`->>` nodes. Base dialects parse literal paths
+// through Dialect.to_json_path; Postgres builds a path from literal operands while preserving
+// non-literal operands as-is (dialect.py:2205-2244).
 func arrowJSONExtractArgs(p *Parser, this, path exp.Expression) exp.Args {
 	args := exp.Args{"this": this, "expression": path}
-	if p.dialect.JSONArrowsRequireJSONType && path != nil && path.Kind() == exp.KindLiteral {
-		args["only_json_types"] = true
+	if p.dialect.JSONArrowsRequireJSONType {
+		if path != nil && path.Kind() == exp.KindLiteral {
+			args["expression"] = postgresArrowJSONPath(path)
+			args["only_json_types"] = true
+		}
+	} else if p.dialect.Name != "sqlite" {
+		args["expression"] = p.dialect.ToJSONPath(path)
 	}
 	return args
+}
+
+// postgresArrowJSONPath ports build_json_extract_path's literal segment handling. A quoted
+// numeric operand is a key; an unquoted integer operand is a zero-based array subscript.
+func postgresArrowJSONPath(path exp.Expression) exp.Expression {
+	text := path.Name()
+	part := exp.Expression(exp.JSONPathKey(exp.Args{"this": text}))
+	if path.IsInt() && !path.IsString() {
+		if index, err := strconv.ParseInt(text, 10, 64); err == nil {
+			part = exp.JSONPathSubscript(exp.Args{"this": index})
+		}
+	}
+	return exp.JSONPath(exp.Args{"expressions": []exp.Expression{exp.JSONPathRoot(exp.Args{}), part}})
 }
 
 var columnOperators = map[tokens.TokenType]columnOpFunc{
@@ -2478,8 +2492,7 @@ var columnOperators = map[tokens.TokenType]columnOpFunc{
 	tokens.DOTCARET: func(p *Parser, this, field exp.Expression) exp.Expression {
 		return p.expression(exp.NestedJSONSelect(exp.Args{"this": this, "expression": field}), nil, nil)
 	},
-	// ARROW/DARROW keep the raw literal RHS and gate only_json_types via arrowJSONExtractArgs
-	// (see its doc for the JSONPath-deferral rationale).
+	// ARROW/DARROW use dialect-aware JSONPath construction via arrowJSONExtractArgs.
 	tokens.ARROW: func(p *Parser, this, path exp.Expression) exp.Expression {
 		return p.expression(exp.JSONExtract(arrowJSONExtractArgs(p, this, path)), nil, nil)
 	},

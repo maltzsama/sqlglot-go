@@ -250,7 +250,7 @@ const (
 	minPassRisingWave  = 7
 	minPassSpark       = 227
 	minPassDatabricks  = 176
-	minPassDuckDB      = 531
+	minPassDuckDB      = 532
 	minPassSnowflake   = 1211
 	minPassSQLite      = 136
 	minPassDremio      = 46
