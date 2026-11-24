@@ -195,6 +195,27 @@ func snowflakeDateUnit(unit exp.Expression) exp.Expression {
 // (parsers/snowflake.py:396-733) for the identity-relevant entries.
 func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expression {
 	out := map[string]func([]exp.Expression) exp.Expression{}
+	out["ROUND"] = func(args []exp.Expression) exp.Expression {
+		values := exp.Args{"casts_non_integer_decimals": true}
+		keys := []string{"this", "decimals", "truncate"}
+		pos := 0
+		for _, arg := range args {
+			if arg != nil && arg.Kind() == exp.KindKwarg {
+				switch strings.ToUpper(arg.This().Name()) {
+				case "EXPR":
+					values["this"] = arg.Expr()
+				case "SCALE":
+					values["decimals"] = arg.Expr()
+				case "ROUNDING_MODE":
+					values["truncate"] = arg.Expr()
+				}
+			} else if pos < len(keys) {
+				values[keys[pos]] = arg
+				pos++
+			}
+		}
+		return exp.Round(values)
+	}
 
 	// parsers/snowflake.py:502 `_build_datetime("DATE", DType.DATE)` handles
 	// explicit format strings as TsOrDsToDate and converts the format via TIME_MAPPING.

@@ -217,6 +217,23 @@ func TestSnowflakeObjectLiterals(t *testing.T) {
 	}
 }
 
+func TestSnowflakeNamedRoundArguments(t *testing.T) {
+	sql := "SELECT ROUND(ROUNDING_MODE => 'HALF_TO_EVEN', EXPR => 2.25, SCALE => 1)"
+	node, err := sqlglot.ParseOne(sql, "snowflake")
+	if err != nil {
+		t.Fatal(err)
+	}
+	round := node.Expressions()[0]
+	if round.Kind() != exp.KindRound || round.Arg("decimals") == nil || round.Arg("truncate") == nil {
+		t.Fatal("named arguments were not mapped to the Round AST")
+	}
+	got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+	want := "SELECT ROUND(2.25, 1, 'HALF_TO_EVEN')"
+	if err != nil || got != want {
+		t.Fatalf("got %q, %v; want %q", got, err, want)
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {
