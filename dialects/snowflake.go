@@ -167,6 +167,7 @@ func Snowflake() *Dialect {
 	// parsers/snowflake.py flags that the shared parser reads from the Dialect.
 	d.ColonIsVariantExtract = true
 	d.Pseudocolumns["LEVEL"] = true
+	d.InsertOverwrite = " OVERWRITE INTO"
 
 	// parsers/snowflake.py:735-744 FUNCTION_PARSERS / FUNCTIONS removals.
 	d.RemovedFunctions = map[string]bool{"PREDICT": true}
