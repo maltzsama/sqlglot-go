@@ -1181,6 +1181,8 @@ const (
 	// RETENTION and GRACE PERIOD clauses (SqlBase.g4 windowExpression). Appended at the end
 	// of the iota block so existing Kind values are not renumbered (values aren't serialized).
 	KindKsqlWindow
+	// DuckDB/Python-style `[value FOR item[, position] IN array IF condition]`.
+	KindComprehension
 )
 
 type Trait uint32
@@ -1556,6 +1558,7 @@ var argTypes = map[Kind][]argSpec{
 	KindDefaultColumnConstraint:      defaultArgTypes,
 	KindCollateColumnConstraint:      defaultArgTypes,
 	KindCommentColumnConstraint:      defaultArgTypes,
+	KindComprehension:                {{"this", true}, {"expression", true}, {"position", false}, {"iterator", true}, {"condition", false}},
 	KindCharacterSetColumnConstraint: defaultArgTypes,
 	// AutoIncrementColumnConstraint inherits {"this": True} upstream too, but _parse_auto_increment
 	// (parser.py:7347) returns a BARE exp.AutoIncrementColumnConstraint() via the raw constructor,
@@ -3526,6 +3529,7 @@ var className = map[Kind]string{
 	KindForceProperty:                   "ForceProperty",
 	KindMultitableInserts:               "MultitableInserts",
 	KindConditionalInsert:               "ConditionalInsert",
+	KindComprehension:                   "Comprehension",
 	KindConnectByRoot:                   "ConnectByRoot",
 	KindFromBase:                        "FromBase",
 	KindCurrentUserId:                   "CurrentUserId",

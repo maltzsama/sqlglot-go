@@ -760,7 +760,32 @@ func (p *Parser) toPropEQ(e exp.Expression, index int) exp.Expression {
 // parameter (used for MAP_KEYS_ARE_ARBITRARY_EXPRESSIONS dialects building key:value
 // props) is not modeled - no dialect in this port sets that flag, so it's inlined away.
 func (p *Parser) parseBracketKeyValue() exp.Expression {
-	return p.parseSlice(p.parseAlias(p.parseDisjunction(), true))
+	value := p.parseAlias(p.parseDisjunction(), true)
+	if p.dialect.Name == "duckdb" && p.match(tokens.FOR) {
+		expression := p.parseColumn()
+		var position exp.Expression
+		if p.match(tokens.COMMA) {
+			position = p.parseColumn()
+		}
+		if !p.match(tokens.IN) {
+			p.raiseError("Expected IN in list comprehension")
+			return value
+		}
+		iterator := p.parseColumn()
+		var condition exp.Expression
+		if p.matchTextSeq("IF") {
+			condition = p.parseDisjunction()
+		}
+		positionArg := any(false)
+		if position != nil {
+			positionArg = position
+		}
+		return p.expression(exp.Comprehension(exp.Args{
+			"this": value, "expression": expression, "position": positionArg,
+			"iterator": iterator, "condition": condition,
+		}), nil, nil)
+	}
+	return p.parseSlice(value)
 }
 
 // parseSlice ports _parse_slice (parser.py:7745-7754): the `start:end:step` triple inside

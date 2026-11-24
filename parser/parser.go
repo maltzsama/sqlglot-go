@@ -3060,6 +3060,17 @@ func (p *Parser) parseStar() exp.Expression {
 }
 
 func (p *Parser) parseStarOps(starToken tokens.Token) exp.Expression {
+	// DuckDB expands matching columns through the special `*COLUMNS(pattern)` form.
+	// The prefix star belongs to the Columns node as `unpack`, not to a separate Star.
+	if p.dialect.Name == "duckdb" && p.matchTextSeq("COLUMNS") {
+		if !p.match(tokens.L_PAREN) {
+			p.raiseError("Expected ( after COLUMNS")
+			return nil
+		}
+		value := p.parseExpression()
+		p.matchRParen(value)
+		return p.expression(exp.Columns(exp.Args{"this": value, "unpack": true}), &starToken, nil)
+	}
 	// v30.17.0 (parser.py:9972-9977): only a string pattern makes ILIKE a star filter;
 	// `* ILIKE (foo)` retreats and leaves ILIKE to the expression grammar.
 	var ilike exp.Expression
