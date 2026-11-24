@@ -669,7 +669,6 @@
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT JSON_VALUE('{\"name\": \"Jakob\", \"age\": \"6\"}', '$.age')"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT PARSE_DATE('%Y%m%d', '20081225')"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT PARSE_DATETIME('%F %T', '2023-01-15 14:30:00')"}
-{"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT PARSE_TIMESTAMP('%m/%d/%Y %H:%M:%S', '04/05/2013 01:02:03')"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 as a, 'abc' AS b), STRUCT(str_col AS abc)"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TO_HEX(SHA1('abc'))"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TO_JSON_STRING(STRUCT('Alice' AS name)) AS json_data"}
@@ -908,7 +907,6 @@
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT RANGE(1, 5)"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT RANGE(5, 1, -1)"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT REGEXP_EXTRACT(a, 'pattern', 2, 'i') FROM t"}
-{"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT STRPTIME('04/05/2013 01:02:03', '%m/%d/%Y %H:%M:%S')"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT UNNEST([1, 2, 3])"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT c, COUNT(*) FILTER (WHERE b > 0) OVER (PARTITION BY c) FROM t"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SET VARIABLE a = 1"}
@@ -1884,9 +1882,7 @@
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(ROUNDING_MODE => 'HALF_TO_EVEN', EXPR => 2.25, SCALE => 1) AS value"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25) AS value"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25, , ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TO_TIME('093000', 'HH24MISS')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TO_TIMESTAMP(col, 'DD-MM-YYYY HH12:MI:SS') FROM t"}
-{"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT TRY_TO_TIME('093000', 'HH24MISS')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT { 'Manitoba': 'Winnipeg', 'foo': 'bar' } AS province_capital"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TIMESTAMPADD(NANOSECOND, 123456789, '2023-01-01 10:00:00.000000000')"}
 {"read":"snowflake","write":"snowflake","category":"gen: transpile mismatch","sql":"TIMESTAMPDIFF(NANOSECOND, '2023-01-01 10:00:00.000000000', '2023-01-01 10:00:00.123456789')"}
