@@ -1934,7 +1934,6 @@
 {"read":"snowflake","write":"spark2","category":"gen: transpile mismatch","sql":"REGEXP_SUBSTR(subject, pattern, 1, 1, 'c', 1)"}
 {"read":"snowflake","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT i, p, o FROM qt QUALIFY ROW_NUMBER() OVER (PARTITION BY p ORDER BY o) = 1"}
 {"read":"snowflake","write":"sqlite","category":"gen: transpile mismatch","sql":"ZEROIFNULL(foo)"}
-{"read":"snowflake","write":"teradata","category":"gen: transpile mismatch","sql":"TO_CHAR(x, y)"}
 {"read":"snowflake","write":"trino","category":"gen: cast/type","sql":"UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')"}
 {"read":"snowflake","write":"trino","category":"gen: transpile mismatch","sql":"SELECT CURRENT_VERSION()"}
 {"read":"snowflake","write":"trino","category":"gen: transpile mismatch","sql":"SELECT SKEW(a)"}

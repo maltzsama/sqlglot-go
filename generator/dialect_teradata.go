@@ -26,15 +26,19 @@ func init() {
 
 func teradataDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 	return map[exp.Kind]func(*Generator, exp.Expression) string{
-		exp.KindArgMax:           clickhouseRename("MAX_BY"),
-		exp.KindArgMin:           clickhouseRename("MIN_BY"),
-		exp.KindMax:              teradataMaxOrGreatest,
-		exp.KindMin:              teradataMinOrLeast,
-		exp.KindPow:              func(g *Generator, e exp.Expression) string { return g.binary(e, "**") },
-		exp.KindRand:             teradataRandomSQL,
-		exp.KindSelect:           teradataSelect,
-		exp.KindStrPosition:      opaqueStrPosition(instrStrPositionSQL),
-		exp.KindStrToDate:        teradataStrToDateSQL,
+		exp.KindArgMax:      clickhouseRename("MAX_BY"),
+		exp.KindArgMin:      clickhouseRename("MIN_BY"),
+		exp.KindMax:         teradataMaxOrGreatest,
+		exp.KindMin:         teradataMinOrLeast,
+		exp.KindPow:         func(g *Generator, e exp.Expression) string { return g.binary(e, "**") },
+		exp.KindRand:        teradataRandomSQL,
+		exp.KindSelect:      teradataSelect,
+		exp.KindStrPosition: opaqueStrPosition(instrStrPositionSQL),
+		exp.KindStrToDate:   teradataStrToDateSQL,
+		exp.KindTimeToStr: func(g *Generator, e exp.Expression) string {
+			args := []any{e.Arg("this"), e.Arg("format")}
+			return g.funcCall("TO_CHAR", args, "(", ")", true)
+		},
 		exp.KindToChar:           func(g *Generator, e exp.Expression) string { return g.functionFallbackSQL(e) },
 		exp.KindToNumber:         teradataToNumberSQL,
 		exp.KindUse:              func(g *Generator, e exp.Expression) string { return "DATABASE " + g.sqlKey(e, "this") },
