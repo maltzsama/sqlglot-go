@@ -150,7 +150,7 @@ committed test corpora. Coverage varies by construct and dialect pair.
 | Presto | `presto` | 170/170 |
 | Redshift | `redshift` | 171/171 |
 | RisingWave | `risingwave` | 7/7 |
-| Snowflake | `snowflake` | 1,211/1,543 |
+| Snowflake | `snowflake` | 1,214/1,543 |
 | Spark | `spark` | 227/227 |
 | Spark 2 | `spark2` | Covered by read/write pairs |
 | SQLite | `sqlite` | 136/136 |
@@ -159,13 +159,13 @@ committed test corpora. Coverage varies by construct and dialect pair.
 | Trino | `trino` | 115/115 |
 | T-SQL | `tsql` | 613/613 |
 
-The transpile corpus passes **6,391 of 8,881** pairs, with **2,490** remaining gaps. Of the
+The transpile corpus passes **6,475 of 8,881** pairs, with **2,406** remaining gaps. Of the
 recorded pairs, 6,760 cross dialects.
 See [identity gaps](./testdata/parity_gaps.txt) and [transpile gaps](./testdata/transpile_gaps.txt)
 for the outstanding cases. The default optimizer pipeline passes its full `optimizer.sql`,
-TPC-H, and TPC-DS suites. The standalone type annotation and simplification suites have separate
-[annotation](./optimizer/testdata/annotate_gaps.txt) and [simplification](./optimizer/testdata/simplify_gaps.txt)
-gap ledgers.
+TPC-H, and TPC-DS suites. The standalone simplification fixtures now pass **521/521** cases;
+standalone type annotation gaps remain in
+[the annotation ledger](./optimizer/testdata/annotate_gaps.txt).
 
 ## Contributing
 

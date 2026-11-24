@@ -8,15 +8,15 @@ records deliberate differences.
 
 ## Current status
 
-- **Identity corpus.** 7,244 of 7,609 cases pass, including all 1,876 base, MySQL, and
-  PostgreSQL cases. The remaining rows are DuckDB (33) and Snowflake (332). The
+- **Identity corpus.** 7,247 of 7,609 cases pass, including all 1,876 base, MySQL, and
+  PostgreSQL cases. The remaining rows are DuckDB (33) and Snowflake (329). The
   [README dialect table](./README.md#dialects-and-verified-coverage) shows the per-dialect results.
-- **Transpile corpus.** 6,391 of 8,881 upstream `validate_all` read/write pairs pass, with 2,490
+- **Transpile corpus.** 6,475 of 8,881 upstream `validate_all` read/write pairs pass, with 2,406
   remaining gaps. These include same-dialect pairs. The initial harness shipped in
   [#33](https://github.com/maltzsama/sqlglot-go/issues/33).
 - **Optimizer.** The default rule pipeline, including qualification and scope analysis, is
   ported. The full `optimizer.sql`, TPC-H, and TPC-DS suites pass. Standalone annotation and
-  simplification fixtures have separate gap ledgers.
+  simplification fixtures are tracked independently; simplification now passes 521/521 cases.
 - **AST fidelity.** The [fidelity corpus](./testdata/fidelity_cases.txt) checks structured
   parsing against upstream. The [extension ledger](./testdata/upstream_extensions.jsonl)
   tracks additional grammar and its reconciliation with future upstream versions.
@@ -32,9 +32,7 @@ pass floors as fixes land.
 | Improve read/write parity between registered dialects | [#90](https://github.com/maltzsama/sqlglot-go/issues/90) | [Transpile gaps](./testdata/transpile_gaps.txt) |
 | Close DuckDB identity gaps | [#91](https://github.com/maltzsama/sqlglot-go/issues/91) | [Identity gaps](./testdata/parity_gaps.txt) |
 | Close Snowflake identity gaps, including historical table clauses | [#92](https://github.com/maltzsama/sqlglot-go/issues/92) | [Identity gaps](./testdata/parity_gaps.txt) |
-| Port dialect-aware JSONPath construction for `->` and `->>` | [#93](https://github.com/maltzsama/sqlglot-go/issues/93) | [Current arrow AST construction](./parser/parser.go) |
 | Close standalone type annotation fixture gaps | [#94](https://github.com/maltzsama/sqlglot-go/issues/94) | [Annotation gaps](./optimizer/testdata/annotate_gaps.txt) |
-| Close standalone simplification fixture gaps | [#95](https://github.com/maltzsama/sqlglot-go/issues/95) | [Simplification gaps](./optimizer/testdata/simplify_gaps.txt) |
 
 DAX [#96](https://github.com/maltzsama/sqlglot-go/issues/96) and
 Tableau [#97](https://github.com/maltzsama/sqlglot-go/issues/97) are queued dialect ports.
