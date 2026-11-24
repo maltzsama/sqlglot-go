@@ -16,7 +16,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC ROW ACCESS POLICY pol1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESC SECURITY INTEGRATION int1"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"DESCRIBE db.table"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"INSERT INTO test VALUES (x'48FAF43B0AFCEF9B63EE3A93EE2AC2')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT $$a ' \\ \\t \\x21 z $ $$"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM '@mystage'"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM (SELECT a FROM @foo)"}
@@ -30,7 +29,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT 1 FROM TABLE(GENERATOR(10, 5))"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT APPROXIMATE_JACCARD_INDEX(minhash_col)"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT APPROX_TOP_K(col) FROM t"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BIT_LENGTH(x'A1B2')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT CURRENT_TIME"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FILE_URL FROM DIRECTORY(@mystage) WHERE SIZE > 100000"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 IGNORE NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
@@ -64,7 +62,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIME('093000', 'HH24MISS')"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TO_TIMESTAMP(col, 'DD-MM-YYYY HH12:MI:SS') FROM t"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TRY_TO_TIME('093000', 'HH24MISS')"}
-{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT x'ABCD'"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT { 'Manitoba': 'Winnipeg', 'foo': 'bar' } AS province_capital"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT {* EXCLUDE (col1)} FROM my_table"}
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT {* EXCLUDE (col1, col2)} FROM my_table"}
@@ -126,8 +123,6 @@
 {"dialect":"snowflake","category":"gen: canonicalization","sql":"show terse tables in schema db1.schema1 starts with 'a' limit 10 from 'b'"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"\n            SELECT\n              uc.user_id,\n              uc.start_ts AS ts,\n              CASE\n                WHEN uc.start_ts::DATE >= '2023-01-01' AND uc.country_code IN ('US') AND uc.user_id NOT IN (\n                  SELECT DISTINCT\n                    _id\n                  FROM\n                    users,\n                    LATERAL FLATTEN(INPUT => PARSE_JSON(flags)) datasource\n                  WHERE datasource.value:name = 'something'\n                )\n                  THEN 'Sample1'\n                  ELSE 'Sample2'\n              END AS entity\n            FROM user_countries AS uc\n            LEFT JOIN (\n              SELECT user_id, MAX(IFF(service_entity IS NULL,1,0)) AS le_null\n              FROM accepted_user_agreements\n              GROUP BY 1\n            ) AS aua\n              ON uc.user_id = aua.user_id\n            "}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"CREATE STORAGE INTEGRATION s3_int\nTYPE=EXTERNAL_STAGE\nSTORAGE_PROVIDER='S3'\nSTORAGE_AWS_ROLE_ARN='arn:aws:iam::001234567890:role/myrole'\nENABLED=TRUE\nSTORAGE_ALLOWED_LOCATIONS=('s3://mybucket1/path1/', 's3://mybucket2/path2/')"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT BITSHIFTLEFT(X'002A'::BINARY, 1)"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT BITSHIFTRIGHT(X'002A'::BINARY, 1)"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT CAST('2021-01-01' AS DATE) + INTERVAL '1 DAY'"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT DAYNAME(TO_DATE('2025-01-15'))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT EXTRACT(DAYOFMONTH FROM CAST('2026-01-06 11:45:00' AS TIMESTAMP_NTZ))"}
@@ -138,7 +133,6 @@
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TIMESTAMP_NTZ_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT TO_DATE('2019-02-28') + INTERVAL '1 day, 1 year'"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"SELECT {'test': 'best'}::VARIANT"}
-{"dialect":"snowflake","category":"gen: cast/type","sql":"SHA1(X'002A'::BINARY)"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"TIMESTAMPDIFF(DAY, CAST('2007-12-25' AS DATE), CAST('2008-12-25' AS DATE))"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(foo::TIMESTAMP, 'YYYY-MM')"}
 {"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(foo::DATE, 'yyyy')"}
