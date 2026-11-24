@@ -4,11 +4,15 @@ package sqlglot_test
 // executes them); they exist so future optimizer/dialect work can diff ns/op and allocs/op.
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	sqlglot "github.com/maltzsama/sqlglot-go"
 	"github.com/maltzsama/sqlglot-go/generator"
 )
+
+var benchSQLSink string
 
 const benchBase = "SELECT a, b, COUNT(*) FROM t1 JOIN t2 ON t1.id = t2.id WHERE a > 1 AND b <> 'x' GROUP BY a, b ORDER BY 1 LIMIT 10"
 const benchCH = "SELECT a, uniq(x), countIf(y) FROM t FINAL PREWHERE a > 1 WHERE b = 'x' GROUP BY a ORDER BY a SETTINGS max_threads = 4"
@@ -44,9 +48,50 @@ func benchParse(b *testing.B, sql, dialect string) {
 
 func BenchmarkParseGenerateBase(b *testing.B) { benchParseGenerate(b, benchBase, "") }
 func BenchmarkParseBase(b *testing.B)         { benchParse(b, benchBase, "") }
-func BenchmarkParseGenerateCH(b *testing.B)   { benchParseGenerate(b, benchCH, "clickhouse") }
-func BenchmarkParseCreateSR(b *testing.B)     { benchParseGenerate(b, benchCreateSR, "starrocks") }
-func BenchmarkParseOracle(b *testing.B)       { benchParseGenerate(b, benchOracle, "oracle") }
+
+func BenchmarkGenerate(b *testing.B) {
+	for _, size := range []int{4, 32, 128} {
+		b.Run(fmt.Sprintf("width=%d", size), func(b *testing.B) {
+			columns := make([]string, size)
+			for i := range columns {
+				columns[i] = fmt.Sprintf("column_%d", i)
+			}
+			sql := "SELECT " + strings.Join(columns, ", ") + " FROM benchmark_table WHERE " + strings.Join(columns, " > 0 AND ") + " > 0"
+			expr, err := sqlglot.ParseOne(sql, "")
+			if err != nil {
+				b.Fatal(err)
+			}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				benchSQLSink, err = sqlglot.Generate(expr, "", generator.Options{})
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+	b.Run("width=32_metadata_comments", func(b *testing.B) {
+		expr, err := sqlglot.ParseOne(benchBase, "")
+		if err != nil {
+			b.Fatal(err)
+		}
+		expr.Meta()["benchmark"] = []string{"generation", "copy"}
+		expr.AddComments([]string{" representative benchmark query "}, false)
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			benchSQLSink, err = sqlglot.Generate(expr, "", generator.Options{})
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
+func BenchmarkParseGenerateCH(b *testing.B) { benchParseGenerate(b, benchCH, "clickhouse") }
+func BenchmarkParseCreateSR(b *testing.B)   { benchParseGenerate(b, benchCreateSR, "starrocks") }
+func BenchmarkParseOracle(b *testing.B)     { benchParseGenerate(b, benchOracle, "oracle") }
 func BenchmarkParseGenerateMySQL(b *testing.B) {
 	benchParseGenerate(b, benchMySQL, "mysql")
 }
