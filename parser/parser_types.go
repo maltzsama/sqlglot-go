@@ -425,6 +425,12 @@ func (p *Parser) parseTypesBase(checkFunc, schema, allowIdentifiers, withCollati
 			p.retreat(index)
 			return nil
 		}
+		if p.dialectIs("snowflake") && dtype == exp.DTypeDecimal && len(expressions) == 0 {
+			expressions = []exp.Expression{
+				exp.DataTypeParam(exp.Args{"this": exp.LiteralNumber("38")}),
+				exp.DataTypeParam(exp.Args{"this": exp.LiteralNumber("0")}),
+			}
+		}
 		// Upstream's scalar branch (parser.py:6429-6433) always sets nested=nested
 		// (True or False), unlike the TZ/interval/null branches which omit it. The
 		// shared dataTypeArgs helper drops a false nested, so build args inline here

@@ -252,6 +252,16 @@ func TestSnowflakeDynamicFunction(t *testing.T) {
 	}
 }
 
+func TestSnowflakeDefaultDecimalPrecision(t *testing.T) {
+	for _, tc := range []struct{ sql, want string }{
+		{"SELECT CAST(x AS NUMBER)", "SELECT CAST(x AS DECIMAL(38, 0))"},
+		{"SELECT CAST(x AS DECIMAL(10))", "SELECT CAST(x AS DECIMAL(10))"},
+		{"CREATE TABLE x (y NUMERIC)", "CREATE TABLE x (y DECIMAL(38, 0))"},
+	} {
+		t.Run(tc.sql, func(t *testing.T) { assertRoundTrip(t, "snowflake", tc.sql, tc.want) })
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

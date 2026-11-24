@@ -13,7 +13,6 @@
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE table1 SET TAG foo.bar = 'baz'"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE DYNAMIC TABLE dt TARGET_LAG='1 minute' WAREHOUSE=my_wh (id) AS SELECT * FROM bla"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION repro_fn() RETURNS INT LANGUAGE PYTHON HANDLER = 'fn' RUNTIME_VERSION='3.11' PACKAGES=() AS '\\ndef fn():\\n    return 1\\n'"}
-{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE OR REPLACE TEMPORARY TABLE x (y NUMBER IDENTITY(0, 1))"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE STAGE stage1 FILE_FORMAT='format1'"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE STAGE stage1 FILE_FORMAT=(FORMAT_NAME='stage1.format1')"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE STAGE stage1 FILE_FORMAT=(FORMAT_NAME=stage1.format1)"}
@@ -24,10 +23,7 @@
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t (id INT WITH PROJECTION POLICY p.q.r)"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t (id INT WITH TAG (key1='value_1', key2='value_2'))"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t CHANGE_TRACKING=TRUE DATA_RETENTION_TIME_IN_DAYS=1 (id INT)"}
-{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE test_table (id NUMERIC NOT NULL AUTOINCREMENT)"}
-{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE x (y NUMBER IDENTITY START 0 INCREMENT 1)"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TEMPORARY STAGE stage1 FILE_FORMAT=(TYPE=PARQUET)"}
-{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TEMPORARY TABLE x (y NUMBER AUTOINCREMENT(0, 1))"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE VIEW my_view CHANGE_TRACKING=TRUE (id) AS SELECT * FROM my_table"}
 {"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE VIEW v ROW ACCESS POLICY p ON (c) AS SELECT c FROM t"}
 {"dialect":"snowflake","category":"generate: error","sql":"ALTER TABLE table1 CLUSTER BY (name)"}
