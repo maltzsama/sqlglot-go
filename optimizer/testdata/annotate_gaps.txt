@@ -814,10 +814,6 @@ annotate_functions.sql|snowflake|715
 annotate_functions.sql|snowflake|716
 annotate_functions.sql|snowflake|717
 annotate_functions.sql|snowflake|718
-annotate_functions.sql|snowflake|729
-annotate_functions.sql|snowflake|730
-annotate_functions.sql|snowflake|731
-annotate_functions.sql|snowflake|732
 annotate_functions.sql|snowflake|735
 annotate_functions.sql|snowflake|736
 annotate_functions.sql|snowflake|737
