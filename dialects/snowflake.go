@@ -195,6 +195,15 @@ func snowflakeDateUnit(unit exp.Expression) exp.Expression {
 // (parsers/snowflake.py:396-733) for the identity-relevant entries.
 func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expression {
 	out := map[string]func([]exp.Expression) exp.Expression{}
+	out["SEARCH"] = func(args []exp.Expression) exp.Expression {
+		values := exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1)}
+		for _, arg := range args[min(2, len(args)):] {
+			if arg != nil && arg.Kind() == exp.KindKwarg && arg.This() != nil {
+				values[strings.ToLower(arg.This().Name())] = arg
+			}
+		}
+		return exp.New(exp.KindSearch, values)
+	}
 	out["IDENTIFIER"] = func(args []exp.Expression) exp.Expression {
 		return exp.New(exp.KindDynamicIdentifier, exp.Args{"this": seqGet(args, 0)})
 	}

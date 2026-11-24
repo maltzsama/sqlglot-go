@@ -310,6 +310,23 @@ func TestSnowflakeClusterProperty(t *testing.T) {
 	}
 }
 
+func TestSnowflakeSearchNamedArguments(t *testing.T) {
+	sql := "SELECT SEARCH(line, 'king', SEARCH_MODE => 'AND', ANALYZER => 'PATTERN_ANALYZER')"
+	want := "SELECT SEARCH(line, 'king', ANALYZER => 'PATTERN_ANALYZER', SEARCH_MODE => 'AND')"
+	node, err := sqlglot.ParseOne(sql, "snowflake")
+	if err != nil {
+		t.Fatal(err)
+	}
+	search := node.Expressions()[0]
+	if search.Kind() != exp.KindSearch || search.Arg("analyzer") == nil || search.Arg("search_mode") == nil {
+		t.Fatal("named SEARCH arguments were not mapped")
+	}
+	got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+	if err != nil || got != want {
+		t.Fatalf("got %q, %v; want %q", got, err, want)
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {
