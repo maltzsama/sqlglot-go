@@ -67,6 +67,31 @@ func TestSnowflakeHistoricalData(t *testing.T) {
 	}
 }
 
+func TestSnowflakeSemanticView(t *testing.T) {
+	sql := "SELECT * FROM SEMANTIC_VIEW(tbl DIMENSIONS a.b METRICS a.c WHERE a.c > 5)"
+	want := "SELECT * FROM SEMANTIC_VIEW(tbl METRICS a.c DIMENSIONS a.b WHERE a.c > 5)"
+	node, err := sqlglot.ParseOne(sql, "snowflake")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found bool
+	for _, n := range node.Walk() {
+		if n.Kind() == exp.KindSemanticView {
+			found = true
+			if n.Arg("metrics") == nil || n.Arg("dimensions") == nil || n.Arg("where") == nil {
+				t.Fatal("semantic view missing clauses")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected structured semantic view")
+	}
+	got, err := sqlglot.Generate(node, "snowflake", generator.Options{})
+	if err != nil || got != want {
+		t.Fatalf("got %q, %v; want %q", got, err, want)
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

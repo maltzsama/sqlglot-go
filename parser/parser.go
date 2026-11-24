@@ -1773,6 +1773,12 @@ func (p *Parser) parseTablePartBase(schema bool) exp.Expression {
 	// or `FROM JSON_TABLE(...)`: outside schema position, a function call takes priority over
 	// a plain identifier so the parsed Func node becomes exp.Table's "this" arg.
 	if !schema {
+		if p.dialectIs("snowflake") && stringsUpper(p.curr.Text) == "SEMANTIC_VIEW" && p.next.TokenType == tokens.L_PAREN {
+			p.advance(2)
+			result := p.parseSemanticView()
+			p.matchRParen(result)
+			return result
+		}
 		if expression := p.parseFunction(nil, false, false, false); expression != nil {
 			return expression
 		}

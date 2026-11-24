@@ -1187,6 +1187,7 @@ const (
 	KindComprehension
 	KindHistoricalData
 	KindChanges
+	KindSemanticView
 )
 
 type Trait uint32
@@ -1819,6 +1820,7 @@ var argTypes = map[Kind][]argSpec{
 	KindArrayUniqueAgg:        defaultArgTypes, // aggregate.py:83 (pass)
 	KindHistoricalData:        {{"this", true}, {"kind", true}, {"expression", true}},
 	KindChanges:               {{"information", true}, {"at_before", false}, {"end", false}},
+	KindSemanticView:          {{"this", true}, {"metrics", false}, {"dimensions", false}, {"facts", false}, {"where", false}},
 	KindDayOfWeekIso:          defaultArgTypes,                                                                                                             // temporal.py:217 (pass)
 	KindDecode:                {{"this", true}, {"charset", true}, {"replace", false}},                                                                     // string.py:285
 	KindEncode:                {{"this", true}, {"charset", true}},                                                                                         // string.py:289
@@ -3339,6 +3341,7 @@ var className = map[Kind]string{
 	KindArrayUniqueAgg:        "ArrayUniqueAgg",
 	KindHistoricalData:        "HistoricalData",
 	KindChanges:               "Changes",
+	KindSemanticView:          "SemanticView",
 	KindDayOfWeekIso:          "DayOfWeekIso",
 	KindDecode:                "Decode",
 	KindEncode:                "Encode",
