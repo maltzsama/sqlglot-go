@@ -357,6 +357,16 @@ func TestSnowflakePolicies(t *testing.T) {
 	}
 }
 
+func TestSnowflakeAlterSetOptions(t *testing.T) {
+	for _, sql := range []string{
+		"ALTER TABLE t SET TAG a = 'x', b = 'y'",
+		"ALTER TABLE t SET STAGE_FILE_FORMAT = (TYPE=CSV FIELD_DELIMITER='|')",
+		"ALTER TABLE t SET STAGE_COPY_OPTIONS = (ON_ERROR=SKIP_FILE PURGE=TRUE)",
+	} {
+		t.Run(sql, func(t *testing.T) { assertRoundTrip(t, "snowflake", sql, sql) })
+	}
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

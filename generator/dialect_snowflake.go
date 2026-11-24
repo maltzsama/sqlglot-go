@@ -28,6 +28,26 @@ func init() {
 	})
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindAlterSet: func(g *Generator, e expressions.Expression) string {
+			out := "SET"
+			if values := g.expressions(exprsOptions{expression: e, flat: true}); values != "" {
+				out += " " + values
+			}
+			for _, option := range []struct{ key, name, sep string }{
+				{"file_format", "STAGE_FILE_FORMAT", " "},
+				{"copy_options", "STAGE_COPY_OPTIONS", " "},
+				{"tag", "TAG", ", "},
+			} {
+				if values := g.expressions(exprsOptions{expression: e, key: option.key, flat: true, sep: option.sep}); values != "" {
+					if option.key == "tag" {
+						out += " TAG " + values
+					} else {
+						out += " " + option.name + " = (" + values + ")"
+					}
+				}
+			}
+			return out
+		},
 		expressions.KindFileFormatProperty: func(g *Generator, e expressions.Expression) string {
 			return "FILE_FORMAT=(" + g.expressions(exprsOptions{expression: e, flat: true, sep: " "}) + ")"
 		},
