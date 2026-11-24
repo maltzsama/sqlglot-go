@@ -564,8 +564,6 @@ annotate_functions.sql|snowflake|1262
 annotate_functions.sql|snowflake|1263
 annotate_functions.sql|snowflake|1264
 annotate_functions.sql|snowflake|1265
-annotate_functions.sql|snowflake|1266
-annotate_functions.sql|snowflake|1267
 annotate_functions.sql|snowflake|1269
 annotate_functions.sql|snowflake|1270
 annotate_functions.sql|snowflake|1271
@@ -888,7 +886,6 @@ annotate_functions.sql|snowflake|849
 annotate_functions.sql|snowflake|850
 annotate_functions.sql|snowflake|851
 annotate_functions.sql|snowflake|852
-annotate_functions.sql|snowflake|859
 annotate_functions.sql|snowflake|860
 annotate_functions.sql|snowflake|861
 annotate_functions.sql|snowflake|862
