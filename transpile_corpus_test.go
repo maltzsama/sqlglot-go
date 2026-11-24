@@ -210,11 +210,11 @@ const (
 	minPassTranspileBase        = 843
 	minPassTranspileAthena      = 8
 	minPassTranspileBigQuery    = 598
-	minPassTranspileClickhouse  = 187
+	minPassTranspileClickhouse  = 189
 	minPassTranspileDatabricks  = 216
 	minPassTranspileDoris       = 72
 	minPassTranspileDremio      = 31
-	minPassTranspileDuckDB      = 648
+	minPassTranspileDuckDB      = 652
 	minPassTranspileHive        = 393
 	minPassTranspileMaterialize = 26
 	minPassTranspileMySQL       = 227

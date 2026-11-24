@@ -116,6 +116,32 @@ func TestLogFunctionTranspilation(t *testing.T) {
 	}
 }
 
+func TestArrayExtremaFunctionTranspilation(t *testing.T) {
+	cases := []struct {
+		dialect, sql, want string
+	}{
+		{"clickhouse", "ARRAY_MAX(x)", "arrayMax(x)"},
+		{"clickhouse", "ARRAY_MIN(x)", "arrayMin(x)"},
+		{"duckdb", "ARRAY_MAX(x)", "LIST_MAX(x)"},
+		{"duckdb", "ARRAY_MIN(x)", "LIST_MIN(x)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.dialect+"/"+tc.sql, func(t *testing.T) {
+			expression, err := sqlglot.ParseOne(tc.sql, "")
+			if err != nil {
+				t.Fatalf("ParseOne(%q): %v", tc.sql, err)
+			}
+			got, err := sqlglot.Generate(expression, tc.dialect, generator.Options{})
+			if err != nil {
+				t.Fatalf("Generate(%q, %q): %v", tc.sql, tc.dialect, err)
+			}
+			if got != tc.want {
+				t.Fatalf("transpile(%q -> %q) = %q, want %q", tc.sql, tc.dialect, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestUnnestWithOrdinality guards that folding a `WITH OFFSET AS <col>` into the alias
 // column list still emits WITH ORDINALITY: upstream unnest_sql clears only the offset ARG,
 // keeping the local offset truthy (generator.py:3444-3447 vs 3456-3457). A prior bug also

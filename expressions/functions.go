@@ -87,7 +87,10 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"STRUCT": func(args []Expression) Expression {
 		return newNode(KindStruct, Args{"expressions": args})
 	},
-	"ARRAY_SUM":       genericFunction(KindArraySum),
+	"ARRAY_SUM": genericFunction(KindArraySum),
+	// ArrayMax/ArrayMin are Func subclasses with these SQL names (array.py:159-163).
+	"ARRAY_MAX":       genericFunction(KindArrayMax),
+	"ARRAY_MIN":       genericFunction(KindArrayMin),
 	"ARRAY_TO_STRING": genericFunction(KindArrayToString),
 	"DAYOFWEEK_ISO":   genericFunction(KindDayOfWeekIso),
 	"PARSE_JSON":      genericFunction(KindParseJSON),
