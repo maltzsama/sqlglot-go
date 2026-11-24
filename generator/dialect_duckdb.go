@@ -48,7 +48,6 @@ func init() {
 		expressions.KindLogProperty:              propertyLocationUnsupported,
 		expressions.KindMergeBlockRatioProperty:  propertyLocationUnsupported,
 		expressions.KindPartitionedByProperty:    propertyLocationUnsupported,
-		expressions.KindReturnsProperty:          propertyLocationUnsupported,
 		expressions.KindSetProperty:              propertyLocationUnsupported,
 		expressions.KindVolatileProperty:         propertyLocationUnsupported,
 		expressions.KindWithJournalTableProperty: propertyLocationUnsupported,

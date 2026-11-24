@@ -165,6 +165,12 @@ func init() {
 }
 
 func (g *Generator) propertyLocation(property expressions.Expression) (propertyLocation, bool) {
+	if property.Kind() == expressions.KindReturnsProperty && g.isDialect("duckdb") {
+		if boolValue(property.Arg("is_table")) {
+			return propertyLocationUnsupported, true
+		}
+		return propertyLocationPostAlias, true
+	}
 	if location, ok := g.lookupPropertyLocation(property.Kind()); ok {
 		return location, true
 	}
