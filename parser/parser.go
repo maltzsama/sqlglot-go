@@ -1612,6 +1612,7 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 			this.Set("version", v)
 		}
 	}
+	p.parseDuckDBHistorical(this)
 	if p.dialect.AliasPostTablesample {
 		if s := p.parseTableSample(false); s != nil {
 			this.Set("sample", s)
@@ -1623,6 +1624,7 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 			this.Set("alias", alias)
 		}
 	}
+	p.parseDuckDBHistorical(this)
 	// parser.py:5089-5092: sqlite `INDEXED BY <table-parts>` / `NOT INDEXED` after the alias.
 	if p.match(tokens.INDEXED_BY) {
 		this.Set("indexed", p.parseTableParts(false, false, false, false))
@@ -1630,7 +1632,8 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 		this.Set("indexed", false)
 	}
 	// parser.py:5094-5097: `FROM t.arr AS a AT i` indexes the navigated array (Redshift SUPER).
-	if this.Kind() == exp.KindTable && p.matchTextSeq("AT") {
+	if this.Kind() == exp.KindTable && stringsUpper(p.curr.Text) == "AT" &&
+		p.next.TokenType != tokens.L_PAREN && p.matchTextSeq("AT") {
 		return p.expression(exp.AtIndex(exp.Args{"this": tableToColumn(this), "expression": p.parseIdVar(true, nil)}), nil, nil)
 	}
 	if hints := p.parseTableHints(); len(hints) > 0 {
@@ -1673,6 +1676,27 @@ func (p *Parser) parseTableCore(schema bool, joins bool, aliasTokens map[tokens.
 		}
 	}
 	return this
+}
+
+// parseDuckDBHistorical ports DuckDB's `AT (VERSION|TIMESTAMP => value)` table
+// modifier. It is called on both sides of alias parsing because DuckDB accepts
+// the modifier before or after a table alias.
+func (p *Parser) parseDuckDBHistorical(table exp.Expression) {
+	if table == nil || table.Kind() != exp.KindTable || p.dialect.Name != "duckdb" ||
+		stringsUpper(p.curr.Text) != "AT" || p.next.TokenType != tokens.L_PAREN {
+		return
+	}
+	p.advance(2)
+	kind := p.parseVar(true, nil, true)
+	if !p.match(tokens.FARROW) {
+		p.raiseError("Expected => in DuckDB historical table reference")
+		return
+	}
+	value := p.parseDisjunction()
+	p.matchRParen(value)
+	table.Set("when", p.expression(exp.PropertyEQ(exp.Args{
+		"this": kind, "expression": value,
+	}), nil, nil))
 }
 
 func (p *Parser) parseTableParts(schema bool, isDBReference bool, wildcard bool, fast bool) exp.Expression {

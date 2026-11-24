@@ -2765,7 +2765,18 @@ func (g *Generator) tableSQLSep(e expressions.Expression, sep string) string {
 	}
 	when := g.sqlKey(e, "when")
 	if when != "" {
-		table = table + " " + when
+		if g.isDialect("duckdb") {
+			if historical := asExpression(e.Arg("when")); historical != nil &&
+				historical.Kind() == expressions.KindPropertyEQ {
+				when = "AT (" + g.sqlKey(historical, "this") + " => " +
+					g.sqlKey(historical, "expression") + ")"
+				postAlias += " " + when
+			} else {
+				table = table + " " + when
+			}
+		} else {
+			table = table + " " + when
+		}
 	}
 	changes := g.sqlKey(e, "changes")
 	if changes != "" {
