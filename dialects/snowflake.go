@@ -217,7 +217,8 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	}
 	for name, target := range map[string]exp.DType{
 		"TO_TIME": exp.DTypeTime, "TO_TIMESTAMP": exp.DTypeTimestamp,
-		"TRY_TO_TIME": exp.DTypeTime, "TRY_TO_TIMESTAMP": exp.DTypeTimestamp,
+		"TRY_TO_DATE": exp.DTypeDate, "TRY_TO_TIME": exp.DTypeTime,
+		"TRY_TO_TIMESTAMP": exp.DTypeTimestamp,
 	} {
 		safe := strings.HasPrefix(name, "TRY_")
 		out[name] = func(args []exp.Expression) exp.Expression {
@@ -240,6 +241,9 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 				})
 				if safe {
 					cast.Set("requires_string", true)
+					if target == exp.DTypeDate {
+						cast.Set("probe_date_format", true)
+					}
 				}
 				return cast
 			}
