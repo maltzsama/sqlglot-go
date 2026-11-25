@@ -391,6 +391,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"CUME_DIST":                genericFunction(KindCumeDist),
 	"CURRENT_DATETIME":         genericFunction(KindCurrentDatetime),
 	"DATE_TO_DATE_STR":         genericFunction(KindDateToDateStr),
+	"DATE_STR_TO_DATE":         genericFunction(KindDateStrToDate),
 	"DATE_TO_DI":               genericFunction(KindDateToDi),
 	"DATETIME":                 genericFunction(KindDatetime),
 	"DATETIME_ADD":             genericFunction(KindDatetimeAdd),

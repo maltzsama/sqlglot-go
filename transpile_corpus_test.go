@@ -214,7 +214,7 @@ const (
 	minPassTranspileDatabricks  = 226
 	minPassTranspileDoris       = 84
 	minPassTranspileDremio      = 31
-	minPassTranspileDuckDB      = 759
+	minPassTranspileDuckDB      = 765
 	minPassTranspileHive        = 418
 	minPassTranspileMaterialize = 31
 	minPassTranspileMySQL       = 252
@@ -226,11 +226,11 @@ const (
 	minPassTranspileSnowflake   = 837
 	minPassTranspileSpark       = 699
 	minPassTranspileSpark2      = 64
-	minPassTranspileSQLite      = 143
+	minPassTranspileSQLite      = 144
 	minPassTranspileStarrocks   = 88
 	minPassTranspileTeradata    = 74
 	minPassTranspileTrino       = 105
-	minPassTranspileTSQL        = 331
+	minPassTranspileTSQL        = 332
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.

@@ -1051,5 +1051,12 @@ func init() {
 		// generators/duckdb.py:2727 exp.StrPosition: strposition_sql (STRPOS).
 		expressions.KindStrPosition: strPositionTranspileSQL("STRPOS", false, false),
 		expressions.KindSHA:         renameFunc("SHA1"),
+		// generators/duckdb.py date-string <-> date <-> int family.
+		expressions.KindDateStrToDate:   duckDBCastSQL(expressions.DTypeDate),
+		expressions.KindTimeStrToDate:   duckDBCastSQL(expressions.DTypeDate),
+		expressions.KindDateToDateStr:   duckDBCastSQL(expressions.DTypeText),
+		expressions.KindTsOrDsToDateStr: duckDBTsOrDsToDateStr,
+		expressions.KindDiToDate:        duckDBDiToDate,
+		expressions.KindTsOrDiToDi:      duckDBTsOrDiToDi,
 	})
 }
