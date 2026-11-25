@@ -545,3 +545,118 @@ func TestSnowflakeTimeDiffRenderer(t *testing.T) {
 		t.Fatalf("TimeDiff = %q, want %q", got, want)
 	}
 }
+
+// TestSnowflakeClosedParityGaps pins the constructs whose Snowflake rows were the last
+// entries in testdata/parity_gaps.txt (issue #92): COPY parameter `=`, staged file
+// locations, typed lambda arguments, HANDLER =, DYNAMIC/CHANGE_TRACKING property placement,
+// the TO_TIMESTAMP_*_TZ cast builders, and external-table parsing.
+func TestSnowflakeClosedParityGaps(t *testing.T) {
+	for _, tc := range []struct{ sql, want string }{
+		// generators/snowflake.py:390 COPY_PARAMS_EQ_REQUIRED.
+		{
+			"COPY INTO mytable (col1) FROM 's3://bucket/data' FILES = ('f1', 'f2') PATTERN = 'p'",
+			"COPY INTO mytable (col1) FROM 's3://bucket/data' FILES = ('f1', 'f2') PATTERN = 'p'",
+		},
+		// parsers/snowflake.py:1306-1318 _parse_location_path.
+		{
+			"COPY INTO load1 FROM @%load1/data1/ CREDENTIALS = (AWS_KEY_ID='id' AWS_SECRET_KEY='key') FILES = ('t.csv')",
+			"COPY INTO load1 FROM @%load1/data1/ CREDENTIALS = (AWS_KEY_ID='id' AWS_SECRET_KEY='key') FILES = ('t.csv')",
+		},
+		{
+			"COPY INTO my_db.my_schema.my_table FROM @my_db.my_schema.my_stage/my_path FILE_FORMAT = (FORMAT_NAME=my_db.my_schema.my_format)",
+			"COPY INTO my_db.my_schema.my_table FROM @my_db.my_schema.my_stage/my_path FILE_FORMAT = (FORMAT_NAME=my_db.my_schema.my_format)",
+		},
+		// parsers/snowflake.py:1298-1304 _parse_file_location parsing table parts.
+		{
+			"COPY INTO 's3://example/data.csv' FROM EXTRA.EXAMPLE.TABLE FILE_FORMAT = (TYPE=CSV)",
+			"COPY INTO 's3://example/data.csv' FROM EXTRA.EXAMPLE.TABLE FILE_FORMAT = (TYPE=CSV)",
+		},
+		// parsers/snowflake.py:1320-1331 _parse_lambda_arg + TYPED_LAMBDA_ARGS.
+		{
+			"transform(x, a int -> a + a + 1)",
+			"TRANSFORM(x, a -> CAST(a AS INT) + CAST(a AS INT) + 1)",
+		},
+		// generators/snowflake.py:483 `HANDLER = <expr>`.
+		{
+			"CREATE OR REPLACE FUNCTION f() RETURNS INT LANGUAGE PYTHON HANDLER = 'fn' AS 'x'",
+			"CREATE OR REPLACE FUNCTION f() RETURNS INT LANGUAGE PYTHON HANDLER = 'fn' AS 'x'",
+		},
+		// Column list before POST_SCHEMA/POST_WITH properties (DYNAMIC, CHANGE_TRACKING).
+		{
+			"CREATE DYNAMIC TABLE dt TARGET_LAG='1 minute' WAREHOUSE=my_wh (id) AS SELECT * FROM bla",
+			"CREATE DYNAMIC TABLE dt (id) TARGET_LAG='1 minute' WAREHOUSE=my_wh AS SELECT * FROM bla",
+		},
+		{
+			"CREATE TABLE t CHANGE_TRACKING=TRUE DATA_RETENTION_TIME_IN_DAYS=1 (id INT)",
+			"CREATE TABLE t (id INT) CHANGE_TRACKING=TRUE DATA_RETENTION_TIME_IN_DAYS=1",
+		},
+		{
+			"CREATE VIEW my_view CHANGE_TRACKING=TRUE (id) AS SELECT * FROM my_table",
+			"CREATE VIEW my_view (id) CHANGE_TRACKING=TRUE AS SELECT * FROM my_table",
+		},
+		// parsers/snowflake.py:657-689 _build_datetime for the timestamp flavors.
+		{
+			"SELECT 1 FROM some_table AT (TIMESTAMP => TO_TIMESTAMP_TZ('2024-07-01 00:00:00+00:00'))",
+			"SELECT 1 FROM some_table AT (TIMESTAMP => CAST('2024-07-01 00:00:00+00:00' AS TIMESTAMPTZ))",
+		},
+		// EXTERNAL/LOCATION/PARTITION BY properties plus `expr:KEY` -> GET_PATH.
+		{
+			"CREATE EXTERNAL TABLE et2 (col1 DATE AS (parse_json(m):COL1::date)) PARTITION BY (col1) LOCATION=@s2/logs/ FILE_FORMAT = (TYPE=PARQUET)",
+			"CREATE EXTERNAL TABLE et2 (col1 DATE AS (CAST(GET_PATH(PARSE_JSON(m), 'COL1') AS DATE))) PARTITION BY (col1) LOCATION=@s2/logs/ FILE_FORMAT=(TYPE=PARQUET)",
+		},
+	} {
+		t.Run(tc.sql, func(t *testing.T) {
+			assertRoundTrip(t, "snowflake", tc.sql, tc.want)
+		})
+	}
+}
+
+// TestSnowflakeStorageIntegrationPretty pins the POST_WITH separator in pretty mode: the
+// Snowflake with_properties override (generators/snowflake.py:683-684) prefixes the list
+// with self.sep(""), so the first property starts on its own line.
+func TestSnowflakeStorageIntegrationPretty(t *testing.T) {
+	sql := "CREATE STORAGE INTEGRATION s3_int\nTYPE=EXTERNAL_STAGE\nSTORAGE_PROVIDER='S3'\nENABLED=TRUE"
+	node, err := sqlglot.ParseOne(sql, "snowflake")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := sqlglot.Generate(node, "snowflake", generator.Options{Pretty: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != sql {
+		t.Fatalf("pretty CREATE STORAGE INTEGRATION = %q, want %q", got, sql)
+	}
+}
+
+// TestSnowflakeExplodeProjectionToUnnest pins transforms.explode_projection_to_unnest
+// (transforms.py:402-552) as wired into the Snowflake Select preprocess
+// (generators/snowflake.py:549), mirroring upstream's test_flatten expectation.
+func TestSnowflakeExplodeProjectionToUnnest(t *testing.T) {
+	node := exp.SelectQuery(exp.AliasExpr(
+		exp.Explode(exp.Args{"this": exp.Column(exp.Args{"this": exp.ToIdentifier("x", false)})}),
+		"y", false,
+	))
+	got, err := sqlglot.Generate(node, "snowflake", generator.Options{Pretty: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `SELECT
+  IFF(_u.pos = _u_2.pos_2, _u_2.y, NULL) AS y
+FROM TABLE(FLATTEN(INPUT => ARRAY_GENERATE_RANGE(0, (
+  GREATEST(ARRAY_SIZE(x)) - 1
+) + 1))) AS _u(seq, key, path, index, pos, this)
+CROSS JOIN TABLE(FLATTEN(INPUT => x)) AS _u_2(seq, key, path, pos_2, y, this)
+WHERE
+  _u.pos = _u_2.pos_2
+  OR (
+    _u.pos > (
+      ARRAY_SIZE(x) - 1
+    ) AND _u_2.pos_2 = (
+      ARRAY_SIZE(x) - 1
+    )
+  )`
+	if got != want {
+		t.Fatalf("explode projection rewrite =\n%s\nwant\n%s", got, want)
+	}
+}
