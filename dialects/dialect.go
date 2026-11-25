@@ -658,6 +658,10 @@ type Dialect struct {
 	// DefaultNullType ports DEFAULT_NULL_TYPE (bigquery BIGINT): the type annotate_types gives a
 	// bare NULL.
 	DefaultNullType exp.DType
+	// SupportsNullType ports SUPPORTS_NULL_TYPE (dialects/dialect.py:651, base False;
+	// spark.py:15 True for Spark 3+, inherited by Databricks): when true, annotate_types keeps
+	// a bare NULL typed as NULL instead of folding it to DefaultNullType.
+	SupportsNullType bool
 	// FormatMapping / InverseFormatMapping port FORMAT_MAPPING (bigquery) and its reverse,
 	// the datetime-format tables used by the format_time inversions.
 	FormatMapping        map[string]string

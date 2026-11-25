@@ -22,6 +22,9 @@ func Spark() *Dialect {
 	d.SupportsOrderByAll = true
 	d.SupportsLimitAll = true
 	d.ArrayFuncsPropagatesNulls = true
+	// dialects/spark.py:15 SUPPORTS_NULL_TYPE = True (inherited by Databricks): Spark 3+ keeps
+	// NULL (VOID) as a real type under annotate_types.
+	d.SupportsNullType = true
 
 	// dialects/spark.py:32-43 Tokenizer: RAW_STRINGS = [(prefix + q, q) for q in QUOTES for
 	// prefix in ("r", "R")], STRING_ESCAPES_ALLOWED_IN_RAW_STRINGS = False and the DECLARE

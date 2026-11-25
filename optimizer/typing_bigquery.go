@@ -16,5 +16,8 @@ func init() {
 		// typing/bigquery.py:344-356: JSONExtractArray annotates by its document argument and
 		// wraps the result in an ARRAY.
 		"JSONExtractArray": {annotator: annByArgs(annotateArgs{keys: []string{"this"}, array: true})},
+		// typing/bigquery.py:127-193,364: BigQuery overrides Array to take the projection
+		// type from a single SELECT/set-operation argument instead of the base by-args rule.
+		"Array": {annotator: annBigQueryArray},
 	})
 }
