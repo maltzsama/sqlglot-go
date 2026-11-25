@@ -599,6 +599,22 @@ func TestSnowflakeClosedParityGaps(t *testing.T) {
 			"SELECT 1 FROM some_table AT (TIMESTAMP => TO_TIMESTAMP_TZ('2024-07-01 00:00:00+00:00'))",
 			"SELECT 1 FROM some_table AT (TIMESTAMP => CAST('2024-07-01 00:00:00+00:00' AS TIMESTAMPTZ))",
 		},
+		// generators/snowflake.py:957-973: the StrToTime function name follows TIMESTAMP_TYPES.
+		{
+			"SELECT TO_TIMESTAMP_TZ('2024-01-01', 'YYYY-MM-DD')",
+			"SELECT TO_TIMESTAMP_TZ('2024-01-01', 'yyyy-mm-DD')",
+		},
+		{
+			"SELECT TO_TIMESTAMP_LTZ('2024-01-01', 'YYYY-MM-DD')",
+			"SELECT TO_TIMESTAMP_LTZ('2024-01-01', 'yyyy-mm-DD')",
+		},
+		{
+			"SELECT TO_TIMESTAMP_NTZ('2024-01-01', 'YYYY-MM-DD')",
+			"SELECT TO_TIMESTAMP_NTZ('2024-01-01', 'yyyy-mm-DD')",
+		},
+		// Grammar extensions beyond upstream (testdata/upstream_extensions.jsonl).
+		{"COPY INTO t", "COPY INTO t"},
+		{"SHOW TABLES IN SCHEMA LIMIT 10", "SHOW TABLES IN SCHEMA LIMIT 10"},
 		// EXTERNAL/LOCATION/PARTITION BY properties plus `expr:KEY` -> GET_PATH.
 		{
 			"CREATE EXTERNAL TABLE et2 (col1 DATE AS (parse_json(m):COL1::date)) PARTITION BY (col1) LOCATION=@s2/logs/ FILE_FORMAT = (TYPE=PARQUET)",
@@ -658,5 +674,37 @@ WHERE
   )`
 	if got != want {
 		t.Fatalf("explode projection rewrite =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// TestSnowflakeExplodeProjectionQuotedAlias keeps the alias Identifier's quoted flag when
+// explode_projection_to_unnest rebuilds it (transforms.py:437-480 stores the identifier, not
+// just its name).
+func TestSnowflakeExplodeProjectionQuotedAlias(t *testing.T) {
+	node := exp.SelectQuery(exp.AliasNode(exp.Args{
+		"this":  exp.Explode(exp.Args{"this": exp.Column(exp.Args{"this": exp.ToIdentifier("x", false)})}),
+		"alias": exp.ToIdentifier("MyCol", true),
+	}))
+	got, err := sqlglot.Generate(node, "snowflake", generator.Options{Pretty: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `SELECT
+  IFF(_u.pos = _u_2.pos_2, _u_2."MyCol", NULL) AS "MyCol"
+FROM TABLE(FLATTEN(INPUT => ARRAY_GENERATE_RANGE(0, (
+  GREATEST(ARRAY_SIZE(x)) - 1
+) + 1))) AS _u(seq, key, path, index, pos, this)
+CROSS JOIN TABLE(FLATTEN(INPUT => x)) AS _u_2(seq, key, path, pos_2, "MyCol", this)
+WHERE
+  _u.pos = _u_2.pos_2
+  OR (
+    _u.pos > (
+      ARRAY_SIZE(x) - 1
+    ) AND _u_2.pos_2 = (
+      ARRAY_SIZE(x) - 1
+    )
+  )`
+	if got != want {
+		t.Fatalf("quoted explode alias rewrite =\n%s\nwant\n%s", got, want)
 	}
 }
