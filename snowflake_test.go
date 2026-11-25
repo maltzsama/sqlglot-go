@@ -372,6 +372,23 @@ func TestSnowflakeAlterSetOptions(t *testing.T) {
 	}
 }
 
+// TestSnowflakeLogNatural ports generators/snowflake.py:778-782: a one-argument
+// Log is Snowflake's natural logarithm, so it renders as LN.
+func TestSnowflakeLogNatural(t *testing.T) {
+	assertRoundTrip(t, "snowflake", "SELECT LN(5)", "SELECT LN(5)")
+	got, err := sqlglot.Generate(mustParse(t, "SELECT {fn LOG(5)}", "snowflake"), "snowflake", generator.Options{})
+	if err != nil || got != "SELECT LN(5)" {
+		t.Fatalf("got %q, %v; want %q", got, err, "SELECT LN(5)")
+	}
+}
+
+// TestSnowflakeUnnestToFlatten ports unnest_sql (generators/snowflake.py:804-844).
+func TestSnowflakeUnnestToFlatten(t *testing.T) {
+	assertRoundTrip(t, "snowflake",
+		"SELECT * FROM t, UNNEST(x) WITH ORDINALITY",
+		"SELECT * FROM t, TABLE(FLATTEN(INPUT => x)) AS _t0(seq, key, path, index, value, this)")
+}
+
 // TestSnowflakeCore ports the same-dialect round-trip core of test_snowflake
 // (tests/dialects/test_snowflake.py).
 func TestSnowflakeCore(t *testing.T) {

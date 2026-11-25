@@ -85,7 +85,15 @@ func init() {
 		expressions.KindManhattanDistance:     clickhouseRename("VECTOR_L1_DISTANCE"),
 		expressions.KindDotProduct:            clickhouseRename("VECTOR_INNER_PRODUCT"),
 		// generators/snowflake.py:510 exp.Levenshtein, with unsupported cost args.
-		expressions.KindLevenshtein:      clickhouseRename("EDITDISTANCE"),
+		expressions.KindLevenshtein: clickhouseRename("EDITDISTANCE"),
+		// generators/snowflake.py:778-782 log_sql: a one-arg Log is Snowflake's natural log.
+		expressions.KindLog: func(g *Generator, e expressions.Expression) string {
+			if e.Arg("expression") == nil {
+				return g.funcCall("LN", []any{e.Arg("this")}, "(", ")", true)
+			}
+			return g.logSQL(e)
+		},
+		expressions.KindUnnest:           snowflakeUnnestSQL,
 		expressions.KindIf:               snowflakeIfSQL,
 		expressions.KindStar:             snowflakeStarSQL,
 		expressions.KindMax:              snowflakeMaxOrGreatest,
@@ -427,6 +435,69 @@ func snowflakeIfSQL(g *Generator, e expressions.Expression) string {
 		falseValue = expressions.Null()
 	}
 	return g.funcCall("IFF", []any{e.This(), e.Arg("true"), falseValue}, "(", ")", true)
+}
+
+// snowflakeUnnestSQL ports unnest_sql (generators/snowflake.py:804-844): Snowflake
+// rewrites UNNEST to TABLE(FLATTEN(...)) with the flatten column list.
+func snowflakeUnnestSQL(g *Generator, e expressions.Expression) string {
+	aliasExpr := asExpression(e.Arg("alias"))
+	offset := e.Arg("offset")
+	parent := e.Parent()
+
+	value := expressions.Expression(nil)
+	if aliasExpr != nil {
+		if columns := listFromValue(aliasExpr.Arg("columns")); len(columns) > 0 {
+			value = asExpression(columns[0])
+		}
+	}
+	if value == nil {
+		value = expressions.ToIdentifier("value", false)
+	}
+	ordinal := expressions.Expression(expressions.ToIdentifier("index", false))
+	if offsetExpr := asExpression(offset); offsetExpr != nil {
+		ordinal = offsetExpr
+	}
+	columns := []expressions.Expression{
+		expressions.ToIdentifier("seq", false),
+		expressions.ToIdentifier("key", false),
+		expressions.ToIdentifier("path", false),
+		ordinal,
+		value,
+		expressions.ToIdentifier("this", false),
+	}
+	if aliasExpr != nil {
+		aliasExpr.Set("columns", columns)
+	} else if parent != nil && (parent.Kind() == expressions.KindFrom || parent.Kind() == expressions.KindJoin) {
+		// _qualify_unnested_columns (generators/snowflake.py:293-303) gives a From/Join
+		// unnest a columns-only alias; tablealias_sql then names it via nextNameSQL.
+		aliasExpr = expressions.TableAlias(expressions.Args{"columns": columns})
+	} else {
+		aliasExpr = expressions.TableAlias(expressions.Args{
+			"this": expressions.ToIdentifier("_u", false), "columns": columns,
+		})
+	}
+
+	inputs := e.Expressions()
+	tableInput := ""
+	if len(inputs) > 0 {
+		tableInput = g.gen(inputs[0])
+	}
+	if !strings.HasPrefix(tableInput, "INPUT =>") {
+		tableInput = "INPUT => " + tableInput
+	}
+	explode := "FLATTEN(" + tableInput + ")"
+	if parent == nil || parent.Kind() != expressions.KindLateral {
+		explode = "TABLE(" + explode + ")"
+	}
+	alias := g.gen(aliasExpr)
+	if alias != "" {
+		alias = " AS " + alias
+	}
+	prefix := ""
+	if parent == nil || (parent.Kind() != expressions.KindFrom && parent.Kind() != expressions.KindJoin && parent.Kind() != expressions.KindLateral) {
+		prefix = g.gen(value) + " FROM "
+	}
+	return prefix + explode + alias
 }
 
 // snowflakeMaxOrGreatest ports max_or_greatest (dialects/dialect.py:1807-1809).
