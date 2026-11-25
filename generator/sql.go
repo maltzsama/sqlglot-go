@@ -2014,6 +2014,16 @@ func (g *Generator) trimSQL(e expressions.Expression) string {
 	return g.trimSQLBase(e)
 }
 
+// padSQL ports pad_sql (generator.py): LPAD/RPAD(this, expression[, fill_pattern]), chosen by
+// the node's is_left flag.
+func (g *Generator) padSQL(e expressions.Expression) string {
+	prefix := "L"
+	if !boolValue(e.Arg("is_left")) {
+		prefix = "R"
+	}
+	return g.funcCall(prefix+"PAD", []any{e.Arg("this"), e.Arg("expression"), e.Arg("fill_pattern")}, "(", ")", true)
+}
+
 func (g *Generator) trimSQLBase(e expressions.Expression) string {
 	trimType := g.sqlKey(e, "position")
 	funcName := "TRIM"
