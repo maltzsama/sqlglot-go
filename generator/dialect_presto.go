@@ -27,7 +27,8 @@ func init() {
 		exp.KindEncode:         prestoCall("TO_UTF8", "this", "replace"),
 		exp.KindUnixToTime:     prestoCall("FROM_UNIXTIME", "this", "zone", "hours", "minutes"),
 		exp.KindGenerateSeries: prestoCall("SEQUENCE", "start", "end", "step"),
-		exp.KindStrPosition:    prestoCall("STRPOS", "this", "substr", "occurrence"),
+		// generators/presto.py:393 exp.StrPosition: strposition_sql(supports_occurrence=True).
+		exp.KindStrPosition: strPositionTranspileSQL("STRPOS", false, true),
 		// generators/presto.py:321 exp.ArrayConcat: rename_func("CONCAT").
 		exp.KindArrayConcat: renameFunc("CONCAT"),
 		exp.KindIf:          prestoCall("IF", "this", "true", "false"),

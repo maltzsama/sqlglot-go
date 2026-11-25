@@ -1048,6 +1048,8 @@ func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
 // generators/duckdb.py:1729 exp.SHA renders as SHA1.
 func init() {
 	registerDialectDispatch("duckdb", map[expressions.Kind]func(*Generator, expressions.Expression) string{
-		expressions.KindSHA: renameFunc("SHA1"),
+		// generators/duckdb.py:2727 exp.StrPosition: strposition_sql (STRPOS).
+		expressions.KindStrPosition: strPositionTranspileSQL("STRPOS", false, false),
+		expressions.KindSHA:         renameFunc("SHA1"),
 	})
 }
