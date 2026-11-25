@@ -122,10 +122,18 @@ type ArgError struct{ Msg string }
 
 func (e *ArgError) Error() string { return e.Msg }
 
+// argPair is one key/value entry in a Node's ordered argument list. Args are stored as a
+// small ordered slice rather than a map: most nodes carry one to three arguments, so a
+// linear scan beats hashing and avoids the per-node map header plus bucket allocations that
+// dominated AST construction and copy profiles (issue #89).
+type argPair struct {
+	key   string
+	value any
+}
+
 type Node struct {
 	kind     Kind
-	args     map[string]any
-	argOrder []string
+	args     []argPair
 	parent   Expression
 	argKey   string
 	index    int
@@ -144,44 +152,41 @@ func newNode(k Kind, args Args) *Node {
 	specs := argTypesFor(k)
 	n := &Node{kind: k, index: -1}
 	if len(args) > 0 {
-		// Niladic nodes (Star, Null, CurrentDate, ...) skip the map entirely; set/Append
+		// Niladic nodes (Star, Null, CurrentDate, ...) keep a nil args slice; Set/Append
 		// allocate it on the first write.
-		n.args = make(map[string]any, len(args))
-		n.argOrder = make([]string, 0, len(args))
-	}
-	for _, spec := range specs {
-		if value, ok := args[spec.Key]; ok {
-			n.args[spec.Key] = value
-			n.argOrder = append(n.argOrder, spec.Key)
+		pairs := make([]argPair, 0, len(args))
+		for _, spec := range specs {
+			if value, ok := args[spec.Key]; ok {
+				pairs = append(pairs, argPair{spec.Key, value})
+			}
 		}
-	}
-	var extras []string
-	for key := range args {
-		if !argSpecHasKey(specs, key) {
-			extras = append(extras, key)
+		var extras []string
+		for key := range args {
+			if !argSpecHasKey(specs, key) {
+				extras = append(extras, key)
+			}
 		}
-	}
-	sort.Strings(extras)
-	for _, key := range extras {
-		n.args[key] = args[key]
-		n.argOrder = append(n.argOrder, key)
+		sort.Strings(extras)
+		for _, key := range extras {
+			pairs = append(pairs, argPair{key, args[key]})
+		}
+		n.args = pairs
 	}
 	if !primitive[k] {
-		for _, key := range n.argOrder {
-			n.setParent(key, n.args[key], -1)
+		for _, pair := range n.args {
+			n.setParent(pair.key, pair.value, -1)
 		}
 	}
 	return n
 }
 
-// newEmptyNodeCapacity creates a bare node with room for size arg keys, used when the caller
+// newEmptyNodeCapacity creates a bare node with room for size arg pairs, used when the caller
 // knows the final shape (Node.Copy walks the source node's arg order). A zero size leaves the
-// args map nil, matching newNode's niladic fast path.
+// args slice nil, matching newNode's niladic fast path.
 func newEmptyNodeCapacity(k Kind, size int) *Node {
 	n := &Node{kind: k, index: -1}
 	if size > 0 {
-		n.args = make(map[string]any, size)
-		n.argOrder = make([]string, 0, size)
+		n.args = make([]argPair, 0, size)
 	}
 	return n
 }
@@ -207,7 +212,43 @@ func argSpecHasKey(specs []argSpec, key string) bool {
 
 func (n *Node) Kind() Kind { return n.kind }
 
-func (n *Node) Arg(key string) any { return n.args[key] }
+func (n *Node) Arg(key string) any { return n.argValue(key) }
+
+// argValue returns the value stored under key, or nil when the key is absent.
+func (n *Node) argValue(key string) any {
+	for i := range n.args {
+		if n.args[i].key == key {
+			return n.args[i].value
+		}
+	}
+	return nil
+}
+
+// argIndex returns the position of key in the ordered args list, or -1 when absent.
+func (n *Node) argIndex(key string) int {
+	for i := range n.args {
+		if n.args[i].key == key {
+			return i
+		}
+	}
+	return -1
+}
+
+// setArg stores value under key, replacing an existing entry or appending a new one.
+func (n *Node) setArg(key string, value any) {
+	if i := n.argIndex(key); i >= 0 {
+		n.args[i].value = value
+		return
+	}
+	n.args = append(n.args, argPair{key, value})
+}
+
+// removeArg deletes key from the ordered args list.
+func (n *Node) removeArg(key string) {
+	if i := n.argIndex(key); i >= 0 {
+		n.args = append(n.args[:i], n.args[i+1:]...)
+	}
+}
 
 func (n *Node) Set(key string, val any) { n.set(key, val, nil, true) }
 
@@ -217,19 +258,16 @@ func (n *Node) SetAt(key string, val any, index int, overwrite bool) {
 
 func (n *Node) Append(key string, val Expression) {
 	n.invalidateHash()
-	n.ensureArgs()
-	values, _ := n.args[key].([]Expression)
-	if values == nil {
-		values = []Expression{}
-		if !n.hasArgKey(key) {
-			n.argOrder = append(n.argOrder, key)
-		}
+	idx := n.argIndex(key)
+	var values []Expression
+	if idx >= 0 {
+		values, _ = n.args[idx].value.([]Expression)
 	}
 	if val != nil {
 		val.SetParent(n, key, len(values))
 	}
 	values = append(values, val)
-	n.args[key] = values
+	n.setArg(key, values)
 }
 
 func (n *Node) set(key string, val any, index *int, overwrite bool) {
@@ -246,8 +284,7 @@ func (n *Node) set(key string, val any, index *int, overwrite bool) {
 			for i := idx; i < len(expressions); i++ {
 				expressions[i].SetParent(n, key, i)
 			}
-			n.ensureArgs()
-			n.args[key] = expressions
+			n.setArg(key, expressions)
 			return
 		}
 		if list, ok := val.([]Expression); ok {
@@ -261,24 +298,12 @@ func (n *Node) set(key string, val any, index *int, overwrite bool) {
 		}
 		val = expressions
 	} else if val == nil {
-		delete(n.args, key)
-		n.dropArgKey(key)
+		n.removeArg(key)
 		return
 	}
 
-	if !n.hasArgKey(key) {
-		n.argOrder = append(n.argOrder, key)
-	}
-	n.ensureArgs()
-	n.args[key] = val
+	n.setArg(key, val)
 	n.setParent(key, val, -1)
-}
-
-// ensureArgs allocates the arg map on the first write for nodes created without one.
-func (n *Node) ensureArgs() {
-	if n.args == nil {
-		n.args = make(map[string]any, 1)
-	}
 }
 
 func (n *Node) setParent(key string, value any, index int) {
@@ -317,32 +342,14 @@ func (n *Node) invalidateHash() {
 	}
 }
 
-func (n *Node) hasArgKey(key string) bool {
-	for _, existing := range n.argOrder {
-		if existing == key {
-			return true
-		}
-	}
-	return false
-}
+func (n *Node) This() Expression { return asExpression(n.argValue("this")) }
 
-func (n *Node) dropArgKey(key string) {
-	for i, existing := range n.argOrder {
-		if existing == key {
-			n.argOrder = append(n.argOrder[:i], n.argOrder[i+1:]...)
-			return
-		}
-	}
-}
-
-func (n *Node) This() Expression { return asExpression(n.args["this"]) }
-
-func (n *Node) Expr() Expression { return asExpression(n.args["expression"]) }
+func (n *Node) Expr() Expression { return asExpression(n.argValue("expression")) }
 
 func (n *Node) Expressions() []Expression { return n.ExpressionsFor("expressions") }
 
 func (n *Node) ExpressionsFor(key string) []Expression {
-	value := n.args[key]
+	value := n.argValue(key)
 	switch v := value.(type) {
 	case []Expression:
 		return v
@@ -365,7 +372,7 @@ func (n *Node) ExpressionsFor(key string) []Expression {
 }
 
 func (n *Node) Text(key string) string {
-	field := n.args[key]
+	field := n.argValue(key)
 	switch v := field.(type) {
 	case string:
 		return v
@@ -418,7 +425,7 @@ func (n *Node) Name() string {
 }
 
 func (n *Node) Alias() string {
-	alias := n.args["alias"]
+	alias := n.argValue("alias")
 	if expr, ok := alias.(Expression); ok && expr != nil {
 		return expr.Name()
 	}
@@ -529,8 +536,8 @@ func (n *Node) Is(trait Trait) bool { return traitsOf[n.kind]&trait != 0 }
 func (n *Node) IsPrimitive() bool { return primitive[n.kind] }
 
 func (n *Node) IsLeaf() bool {
-	for _, value := range n.args {
-		switch v := value.(type) {
+	for _, pair := range n.args {
+		switch v := pair.value.(type) {
 		case Expression:
 			if v != nil {
 				return false
@@ -560,7 +567,16 @@ func (n *Node) iterExpressions(reverse bool) []Expression {
 }
 
 // ArgOrder returns the node's arg keys in insertion order, upstream's args dict order.
-func (n *Node) ArgOrder() []string { return append([]string(nil), n.argOrder...) }
+func (n *Node) ArgOrder() []string {
+	if len(n.args) == 0 {
+		return nil
+	}
+	out := make([]string, len(n.args))
+	for i := range n.args {
+		out[i] = n.args[i].key
+	}
+	return out
+}
 
 // IterExpressions ports Expr.iter_expressions: the node's direct child expressions, in arg
 // order (reversed when reverse is true).
@@ -571,15 +587,14 @@ func (n *Node) IterExpressions(reverse bool) []Expression {
 // appendExpressions appends this node's children to dst, avoiding the intermediate slice
 // iterExpressions would otherwise allocate for every visited node.
 func (n *Node) appendExpressions(dst []Expression, reverse bool) []Expression {
-	order := n.argOrder
 	if reverse {
-		for i := len(order) - 1; i >= 0; i-- {
-			dst = appendExpressionsFromValue(dst, n.args[order[i]], true)
+		for i := len(n.args) - 1; i >= 0; i-- {
+			dst = appendExpressionsFromValue(dst, n.args[i].value, true)
 		}
 		return dst
 	}
-	for _, key := range order {
-		dst = appendExpressionsFromValue(dst, n.args[key], false)
+	for i := range n.args {
+		dst = appendExpressionsFromValue(dst, n.args[i].value, false)
 	}
 	return dst
 }
@@ -778,7 +793,7 @@ func (n *Node) Copy() Expression {
 	// Build each copied node's args map and arg order directly instead of going through
 	// Set/Append: the copy is fresh, so there is no hash to invalidate and no parent to
 	// detach, and building a list in one pass avoids Append's repeated slice growth.
-	root := newEmptyNodeCapacity(n.kind, len(n.argOrder))
+	root := newEmptyNodeCapacity(n.kind, len(n.args))
 	stack := [][2]*Node{{n, root}}
 	for len(stack) > 0 {
 		pair := stack[len(stack)-1]
@@ -804,36 +819,33 @@ func (n *Node) Copy() Expression {
 			// Ports copy._type = deepcopy(node._type) (core.py:1011-1012).
 			copyNode.typ = node.typ.Copy()
 		}
-		for _, key := range node.argOrder {
-			value := node.args[key]
-			switch v := value.(type) {
+		for _, arg := range node.args {
+			key := arg.key
+			switch v := arg.value.(type) {
 			case Expression:
 				copied := v
 				if child, ok := v.(*Node); ok {
-					childCopy := newEmptyNodeCapacity(child.kind, len(child.argOrder))
+					childCopy := newEmptyNodeCapacity(child.kind, len(child.args))
 					stack = append(stack, [2]*Node{child, childCopy})
 					copied = childCopy
 				}
-				copyNode.args[key] = copied
-				copyNode.argOrder = append(copyNode.argOrder, key)
+				copyNode.args = append(copyNode.args, argPair{key, copied})
 				copied.SetParent(copyNode, key, -1)
 			case []Expression:
 				children := make([]Expression, 0, len(v))
 				for _, childExpr := range v {
 					if child, ok := childExpr.(*Node); ok {
-						childCopy := newEmptyNodeCapacity(child.kind, len(child.argOrder))
+						childCopy := newEmptyNodeCapacity(child.kind, len(child.args))
 						stack = append(stack, [2]*Node{child, childCopy})
 						children = append(children, childCopy)
 					} else if childExpr != nil {
 						children = append(children, childExpr)
 					}
 				}
-				copyNode.args[key] = children
-				copyNode.argOrder = append(copyNode.argOrder, key)
+				copyNode.args = append(copyNode.args, argPair{key, children})
 				copyNode.setParent(key, children, -1)
 			default:
-				copyNode.args[key] = cloneScalar(value)
-				copyNode.argOrder = append(copyNode.argOrder, key)
+				copyNode.args = append(copyNode.args, argPair{key, cloneScalar(arg.value)})
 			}
 		}
 	}
@@ -880,8 +892,8 @@ func (n *Node) HashKey() uint64 {
 			node := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
 			nodes = append(nodes, node)
-			for _, value := range node.args {
-				for _, child := range expressionsFromValue(value, false) {
+			for _, pair := range node.args {
+				for _, child := range expressionsFromValue(pair.value, false) {
 					if cn, ok := child.(*Node); ok && cn.hash == nil {
 						stack = append(stack, cn)
 					}
@@ -892,12 +904,12 @@ func (n *Node) HashKey() uint64 {
 			node := nodes[i]
 			hash := hashString(className[node.kind])
 			keys := make([]string, 0, len(node.args))
-			for key := range node.args {
-				keys = append(keys, key)
+			for _, pair := range node.args {
+				keys = append(keys, pair.key)
 			}
 			sort.Strings(keys)
 			for _, key := range keys {
-				value := node.args[key]
+				value := node.argValue(key)
 				if hashRaw[node.kind] {
 					if truthy(value) {
 						hash = hashCombine(hash, key, stableHashAny(value, true))
@@ -951,9 +963,9 @@ func (n *Node) ToS() string { return toS(n, false, 0, false) }
 
 func (n *Node) ErrorMessages(args []any) []string {
 	argTypes := argTypesFor(n.kind)
-	for _, key := range n.argOrder {
-		if !argSpecHasKey(argTypes, key) {
-			panic(&ArgError{Msg: fmt.Sprintf("Unexpected keyword: '%s' for %s", key, className[n.kind])})
+	for _, pair := range n.args {
+		if !argSpecHasKey(argTypes, pair.key) {
+			panic(&ArgError{Msg: fmt.Sprintf("Unexpected keyword: '%s' for %s", pair.key, className[n.kind])})
 		}
 	}
 	var messages []string
@@ -961,7 +973,7 @@ func (n *Node) ErrorMessages(args []any) []string {
 		if !spec.Required {
 			continue
 		}
-		value := n.args[spec.Key]
+		value := n.argValue(spec.Key)
 		if value == nil || isEmptyList(value) {
 			messages = append(messages, fmt.Sprintf("Required keyword: '%s' missing for %s", spec.Key, className[n.kind]))
 		}
@@ -978,13 +990,13 @@ func (n *Node) ErrorMessages(args []any) []string {
 }
 
 func (n *Node) IsString() bool {
-	value, _ := n.args["is_string"].(bool)
+	value, _ := n.argValue("is_string").(bool)
 	return n.kind == KindLiteral && value
 }
 
 func (n *Node) IsNumber() bool {
 	if n.kind == KindLiteral {
-		isString, _ := n.args["is_string"].(bool)
+		isString, _ := n.argValue("is_string").(bool)
 		return !isString
 	}
 	return n.kind == KindNeg && n.This() != nil && n.This().IsNumber()
@@ -1045,7 +1057,7 @@ func (n *Node) SameParent() bool {
 }
 
 func (n *Node) AliasColumnNames() []string {
-	alias := asExpression(n.args["alias"])
+	alias := asExpression(n.argValue("alias"))
 	aliasNode, ok := alias.(*Node)
 	if !ok || aliasNode == nil {
 		return nil
@@ -1079,12 +1091,12 @@ func (n *Node) Selects() []Expression {
 		}
 	case KindValues, KindUnnest, KindLateral:
 		var columns []Expression
-		if alias, ok := asExpression(n.args["alias"]).(*Node); ok && alias != nil {
+		if alias, ok := asExpression(n.argValue("alias")).(*Node); ok && alias != nil {
 			columns = alias.ExpressionsFor("columns")
 		}
 		// Unnest.selects (array.py:277-282): the ordinal column follows the alias columns.
 		if n.kind == KindUnnest {
-			if offset := n.args["offset"]; truthy(offset) {
+			if offset := n.argValue("offset"); truthy(offset) {
 				columns = append(append([]Expression(nil), columns...), unnestOffsetColumn(offset))
 			}
 		}
@@ -1176,7 +1188,7 @@ func (n *Node) ToPy() any {
 	case KindNull:
 		return nil
 	case KindBoolean:
-		return n.args["this"]
+		return n.argValue("this")
 	case KindNeg:
 		if n.This() != nil && n.This().IsNumber() {
 			switch v := n.This().ToPy().(type) {
@@ -1195,7 +1207,7 @@ func (n *Node) Parts() []Expression {
 	case KindColumn:
 		parts := []Expression{}
 		for _, key := range []string{"catalog", "schema", "table", "this"} {
-			if expr := asExpression(n.args[key]); expr != nil {
+			if expr := asExpression(n.argValue(key)); expr != nil {
 				parts = append(parts, expr)
 			}
 		}
@@ -1203,7 +1215,7 @@ func (n *Node) Parts() []Expression {
 	case KindTable:
 		parts := []Expression{}
 		for _, key := range []string{"catalog", "schema", "this"} {
-			part := asExpression(n.args[key])
+			part := asExpression(n.argValue(key))
 			if part == nil {
 				continue
 			}
@@ -1271,7 +1283,7 @@ func (n *Node) ToColumn() Expression {
 		}
 		col = Column_(at(0), at(1), at(2), at(3), fields)
 	}
-	if alias, ok := n.args["alias"].(Expression); ok && alias != nil {
+	if alias, ok := n.argValue("alias").(Expression); ok && alias != nil {
 		// alias_(col, alias.this, copy=True): copy both sides so the result shares no node with
 		// the table it is derived from (the caller typically replaces that table outright).
 		var aliasIdent Expression
@@ -1438,11 +1450,10 @@ func toS(node any, verbose bool, level int, reprStr bool) string {
 	delim := "," + indent
 
 	if expr, ok := node.(*Node); ok {
-		keys := make([]string, 0, len(expr.argOrder)+2)
-		for _, key := range expr.argOrder {
-			value := expr.args[key]
-			if verbose || (value != nil && !isEmptyList(value)) {
-				keys = append(keys, key)
+		keys := make([]string, 0, len(expr.args)+2)
+		for _, arg := range expr.args {
+			if verbose || (arg.value != nil && !isEmptyList(arg.value)) {
+				keys = append(keys, arg.key)
 			}
 		}
 		// Upstream also renders a cast's target type as its _type; that pre-existing cosmetic
@@ -1457,7 +1468,7 @@ func toS(node any, verbose bool, level int, reprStr bool) string {
 			indent = ""
 			delim = ", "
 		}
-		reprStr = expr.IsString() || (expr.kind == KindIdentifier && boolArg(expr.args["quoted"]))
+		reprStr = expr.IsString() || (expr.kind == KindIdentifier && boolArg(expr.argValue("quoted")))
 		items := make([]string, 0, len(keys))
 		for _, key := range keys {
 			var value any
@@ -1467,7 +1478,7 @@ func toS(node any, verbose bool, level int, reprStr bool) string {
 			case "_type":
 				value = expr.typ
 			default:
-				value = expr.args[key]
+				value = expr.argValue(key)
 			}
 			items = append(items, fmt.Sprintf("%s=%s", key, toSAny(value, verbose, level+1, reprStr)))
 		}

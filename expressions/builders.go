@@ -300,8 +300,8 @@ func IsWrapper(e Expression) bool {
 		return false
 	}
 	// newNode doesn't store nil args, so truthy matches upstream's "v is not None" wrapper check.
-	for _, key := range n.argOrder {
-		if key != "this" && truthy(n.args[key]) {
+	for _, arg := range n.args {
+		if arg.key != "this" && truthy(arg.value) {
 			return false
 		}
 	}
@@ -328,16 +328,16 @@ func transformColumnsToDot(node Expression) Expression {
 		return node
 	}
 	// Post-order (children before self), matching Expression.transform's bottom-up walk.
-	for _, key := range append([]string(nil), n.argOrder...) {
-		switch v := n.args[key].(type) {
+	for _, arg := range append([]argPair(nil), n.args...) {
+		switch v := arg.value.(type) {
 		case Expression:
 			if rewritten := transformColumnsToDot(v); rewritten != v {
-				n.Set(key, rewritten)
+				n.Set(arg.key, rewritten)
 			}
 		case []Expression:
 			for i, child := range v {
 				if rewritten := transformColumnsToDot(child); rewritten != child {
-					n.SetAt(key, rewritten, i, true)
+					n.SetAt(arg.key, rewritten, i, true)
 				}
 			}
 		}

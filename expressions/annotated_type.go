@@ -29,7 +29,7 @@ func (n *Node) Type() Expression {
 		return n.typ
 	}
 	if isCastKind(n.kind) {
-		return asExpression(n.args["to"])
+		return asExpression(n.argValue("to"))
 	}
 	return nil
 }
