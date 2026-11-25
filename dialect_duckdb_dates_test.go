@@ -17,3 +17,17 @@ func TestDuckDBDateCasts(t *testing.T) {
 		t.Run(sql, func(t *testing.T) { transpileCase(t, "", "duckdb", sql, want) })
 	}
 }
+
+// TestDuckDBApproxQuantiles ports approxquantiles_sql (generators/duckdb.py:4686-4720):
+// BigQuery's APPROX_QUANTILES(expr, n) becomes APPROX_QUANTILE(expr, [0, 1/n, ..., 1]).
+func TestDuckDBApproxQuantiles(t *testing.T) {
+	cases := map[string]string{
+		"APPROX_QUANTILES(x, 1)":          "APPROX_QUANTILE(x, [0, 1])",
+		"APPROX_QUANTILES(x, 2)":          "APPROX_QUANTILE(x, [0, 0.5, 1])",
+		"APPROX_QUANTILES(x, 4)":          "APPROX_QUANTILE(x, [0, 0.25, 0.5, 0.75, 1])",
+		"APPROX_QUANTILES(DISTINCT x, 2)": "APPROX_QUANTILE(DISTINCT x, [0, 0.5, 1])",
+	}
+	for sql, want := range cases {
+		t.Run(sql, func(t *testing.T) { transpileCase(t, "bigquery", "duckdb", sql, want) })
+	}
+}

@@ -1058,5 +1058,6 @@ func init() {
 		expressions.KindTsOrDsToDateStr: duckDBTsOrDsToDateStr,
 		expressions.KindDiToDate:        duckDBDiToDate,
 		expressions.KindTsOrDiToDi:      duckDBTsOrDiToDi,
+		expressions.KindApproxQuantiles: duckDBApproxQuantilesSQL,
 	})
 }

@@ -363,14 +363,6 @@
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"TIMESTAMP_TRUNC(TIMESTAMP '2024-03-15 14:35:47.123456', DAY, 'America/New_York')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"TO_JSON_STRING(x)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"WITH sample AS (SELECT * FROM UNNEST([TIMESTAMP '2024-03-15 14:35:46', TIMESTAMP '2024-03-16 01:12:03']) AS ts) SELECT ts, TIMESTAMP_TRUNC(ts, DAY, 'America/New_York') AS truncated_ts FROM sample"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"APPROX_QUANTILES(ABS(x), 2)"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"APPROX_QUANTILES(CASE WHEN x > 0 THEN x ELSE 0 END, 2)"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"APPROX_QUANTILES(DISTINCT x, 2)"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"APPROX_QUANTILES(x + y, 2)"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"APPROX_QUANTILES(x, 1)"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"APPROX_QUANTILES(x, 2 IGNORE NULLS)"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"APPROX_QUANTILES(x, 2)"}
-{"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"APPROX_QUANTILES(x, 4)"}
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"DECLARE x BIGDECIMAL(1e1000000, 4)"}
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"DECLARE x BIGDECIMAL(76, 38)"}
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"DECLARE x BIGNUMERIC(1e1000000, 4)"}
