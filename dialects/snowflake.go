@@ -40,6 +40,8 @@ var snowflakeTimeMapping = map[string]string{
 func Snowflake() *Dialect {
 	d := Base()
 	d.Name = "snowflake"
+	// generators/snowflake.py:393 ARRAY_CONCAT_IS_VAR_LEN = False: binary ARRAY_CAT nesting.
+	d.ArrayConcatIsVarLen = false
 	// generators/snowflake.py TRANSFORMS: eliminate_distinct_on.
 	d.EliminateDistinctOn = true
 	// generators/snowflake.py TRANSFORMS: eliminate_semi_and_anti_joins.

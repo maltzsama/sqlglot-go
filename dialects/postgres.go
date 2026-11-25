@@ -8,6 +8,8 @@ import (
 func Postgres() *Dialect {
 	d := Base()
 	d.Name = "postgres"
+	// generators/postgres.py:277 ARRAY_CONCAT_IS_VAR_LEN = False: binary ARRAY_CAT nesting.
+	d.ArrayConcatIsVarLen = false
 	// generators/postgres.py TRANSFORMS: eliminate_semi_and_anti_joins.
 	d.EliminateSemiAntiJoins = true
 	// generators/postgres.py NVL2_SUPPORTED = False.

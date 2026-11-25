@@ -75,34 +75,35 @@ func init() {
 		expressions.KindArgMax:                clickhouseRename("MAX_BY"),
 		expressions.KindArgMin:                clickhouseRename("MIN_BY"),
 		expressions.KindArray:                 func(g *Generator, e expressions.Expression) string { return g.inlineArraySQL(e) },
-		expressions.KindArrayConcat:           func(g *Generator, e expressions.Expression) string { return g.snowflakeArrayConcatSQL(e) },
-		expressions.KindArrayAppend:           snowflakeArrayAppendSQL("ARRAY_APPEND", false),
-		expressions.KindArrayPrepend:          snowflakeArrayAppendSQL("ARRAY_PREPEND", false),
-		expressions.KindArrayContains:         snowflakeArrayContainsSQL,
-		expressions.KindArrayPosition:         snowflakeArrayPositionSQL,
-		expressions.KindArrayIntersect:        clickhouseRename("ARRAY_INTERSECTION"),
-		expressions.KindArrayOverlaps:         clickhouseRename("ARRAYS_OVERLAP"),
-		expressions.KindBitwiseAnd:            clickhouseRename("BITAND"),
-		expressions.KindBitwiseOr:             clickhouseRename("BITOR"),
-		expressions.KindBitwiseXor:            clickhouseRename("BITXOR"),
-		expressions.KindBitwiseNot:            clickhouseRename("BITNOT"),
-		expressions.KindBitwiseAndAgg:         clickhouseRename("BITANDAGG"),
-		expressions.KindBitwiseOrAgg:          clickhouseRename("BITORAGG"),
-		expressions.KindBitwiseXorAgg:         clickhouseRename("BITXORAGG"),
-		expressions.KindBitwiseLeftShift:      clickhouseRename("BITSHIFTLEFT"),
-		expressions.KindBitwiseRightShift:     clickhouseRename("BITSHIFTRIGHT"),
-		expressions.KindDayOfMonth:            clickhouseRename("DAYOFMONTH"),
-		expressions.KindDayOfWeek:             clickhouseRename("DAYOFWEEK"),
-		expressions.KindDayOfWeekIso:          clickhouseRename("DAYOFWEEKISO"),
-		expressions.KindDayOfYear:             clickhouseRename("DAYOFYEAR"),
-		expressions.KindWeekOfYear:            clickhouseRename("WEEKISO"),
-		expressions.KindYearOfWeek:            clickhouseRename("YEAROFWEEK"),
-		expressions.KindYearOfWeekIso:         clickhouseRename("YEAROFWEEKISO"),
-		expressions.KindExplode:               clickhouseRename("FLATTEN"),
-		expressions.KindCosineDistance:        clickhouseRename("VECTOR_COSINE_SIMILARITY"),
-		expressions.KindEuclideanDistance:     clickhouseRename("VECTOR_L2_DISTANCE"),
-		expressions.KindManhattanDistance:     clickhouseRename("VECTOR_L1_DISTANCE"),
-		expressions.KindDotProduct:            clickhouseRename("VECTOR_INNER_PRODUCT"),
+		// generators/snowflake.py:413 exp.ArrayConcat: array_concat_sql("ARRAY_CAT").
+		expressions.KindArrayConcat:       arrayConcatSQL("ARRAY_CAT"),
+		expressions.KindArrayAppend:       snowflakeArrayAppendSQL("ARRAY_APPEND", false),
+		expressions.KindArrayPrepend:      snowflakeArrayAppendSQL("ARRAY_PREPEND", false),
+		expressions.KindArrayContains:     snowflakeArrayContainsSQL,
+		expressions.KindArrayPosition:     snowflakeArrayPositionSQL,
+		expressions.KindArrayIntersect:    clickhouseRename("ARRAY_INTERSECTION"),
+		expressions.KindArrayOverlaps:     clickhouseRename("ARRAYS_OVERLAP"),
+		expressions.KindBitwiseAnd:        clickhouseRename("BITAND"),
+		expressions.KindBitwiseOr:         clickhouseRename("BITOR"),
+		expressions.KindBitwiseXor:        clickhouseRename("BITXOR"),
+		expressions.KindBitwiseNot:        clickhouseRename("BITNOT"),
+		expressions.KindBitwiseAndAgg:     clickhouseRename("BITANDAGG"),
+		expressions.KindBitwiseOrAgg:      clickhouseRename("BITORAGG"),
+		expressions.KindBitwiseXorAgg:     clickhouseRename("BITXORAGG"),
+		expressions.KindBitwiseLeftShift:  clickhouseRename("BITSHIFTLEFT"),
+		expressions.KindBitwiseRightShift: clickhouseRename("BITSHIFTRIGHT"),
+		expressions.KindDayOfMonth:        clickhouseRename("DAYOFMONTH"),
+		expressions.KindDayOfWeek:         clickhouseRename("DAYOFWEEK"),
+		expressions.KindDayOfWeekIso:      clickhouseRename("DAYOFWEEKISO"),
+		expressions.KindDayOfYear:         clickhouseRename("DAYOFYEAR"),
+		expressions.KindWeekOfYear:        clickhouseRename("WEEKISO"),
+		expressions.KindYearOfWeek:        clickhouseRename("YEAROFWEEK"),
+		expressions.KindYearOfWeekIso:     clickhouseRename("YEAROFWEEKISO"),
+		expressions.KindExplode:           clickhouseRename("FLATTEN"),
+		expressions.KindCosineDistance:    clickhouseRename("VECTOR_COSINE_SIMILARITY"),
+		expressions.KindEuclideanDistance: clickhouseRename("VECTOR_L2_DISTANCE"),
+		expressions.KindManhattanDistance: clickhouseRename("VECTOR_L1_DISTANCE"),
+		expressions.KindDotProduct:        clickhouseRename("VECTOR_INNER_PRODUCT"),
 		// generators/snowflake.py:510 exp.Levenshtein, with unsupported cost args.
 		expressions.KindLevenshtein: clickhouseRename("EDITDISTANCE"),
 		// generators/snowflake.py:778-782 log_sql: a one-arg Log is Snowflake's natural log.
@@ -660,13 +661,6 @@ func snowflakePivot(g *Generator, e expressions.Expression) string {
 		}
 	}
 	return g.pivotSQL(e)
-}
-
-// snowflakeArrayConcatSQL ports array_concat_sql("ARRAY_CAT").
-func (g *Generator) snowflakeArrayConcatSQL(e expressions.Expression) string {
-	this := e.This()
-	rest := e.Expressions()
-	return g.funcCall("ARRAY_CAT", append([]any{this}, listToAny(rest)...), "(", ")", true)
 }
 
 func listToAny(exprs []expressions.Expression) []any {
