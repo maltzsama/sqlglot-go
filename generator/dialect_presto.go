@@ -28,13 +28,15 @@ func init() {
 		exp.KindUnixToTime:     prestoCall("FROM_UNIXTIME", "this", "zone", "hours", "minutes"),
 		exp.KindGenerateSeries: prestoCall("SEQUENCE", "start", "end", "step"),
 		exp.KindStrPosition:    prestoCall("STRPOS", "this", "substr", "occurrence"),
-		exp.KindIf:             prestoCall("IF", "this", "true", "false"),
-		exp.KindAtTimeZone:     prestoCall("AT_TIMEZONE", "this", "zone"),
-		exp.KindDataType:       (*Generator).prestoDataTypeSQL,
-		exp.KindStruct:         (*Generator).prestoStructSQL,
-		exp.KindBracket:        (*Generator).prestoBracketSQL,
-		exp.KindInterval:       (*Generator).prestoIntervalSQL,
-		exp.KindTransaction:    (*Generator).prestoTransactionSQL,
+		// generators/presto.py:321 exp.ArrayConcat: rename_func("CONCAT").
+		exp.KindArrayConcat: renameFunc("CONCAT"),
+		exp.KindIf:          prestoCall("IF", "this", "true", "false"),
+		exp.KindAtTimeZone:  prestoCall("AT_TIMEZONE", "this", "zone"),
+		exp.KindDataType:    (*Generator).prestoDataTypeSQL,
+		exp.KindStruct:      (*Generator).prestoStructSQL,
+		exp.KindBracket:     (*Generator).prestoBracketSQL,
+		exp.KindInterval:    (*Generator).prestoIntervalSQL,
+		exp.KindTransaction: (*Generator).prestoTransactionSQL,
 		exp.KindGroupConcat: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("ARRAY_JOIN", []any{g.funcCall("ARRAY_AGG", []any{e.Arg("this")}, "(", ")", true), e.Arg("separator")}, "(", ")", true)
 		},

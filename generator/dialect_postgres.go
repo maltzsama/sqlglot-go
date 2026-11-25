@@ -24,6 +24,9 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindBitwiseXor: func(g *Generator, e exp.Expression) string {
 			return g.binary(e, "#")
 		},
+		// generators/postgres.py:317 exp.ArrayConcat: array_concat_sql("ARRAY_CAT"):
+		// binary right-nested calls.
+		exp.KindArrayConcat: arrayConcatSQL("ARRAY_CAT"),
 		// generators/postgres.py:397 exp.TimestampTrunc: timestamptrunc_sql(zone=True) —
 		// DATE_TRUNC(unit, this[, zone]), with the unit rendered as a string literal via
 		// unit_to_str (dialects/dialect.py:2059-2083).

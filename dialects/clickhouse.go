@@ -11,6 +11,8 @@ import (
 func Clickhouse() *Dialect {
 	d := Base()
 	d.Name = "clickhouse"
+	// generators/clickhouse.py NVL2_SUPPORTED = False.
+	d.Nvl2Supported = false
 
 	// dialects/clickhouse.py:16-28 class flags.
 	d.IndexOffset = 1

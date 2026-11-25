@@ -13,6 +13,12 @@ import (
 func Hive() *Dialect {
 	d := Base()
 	d.Name = "hive"
+	// generators/hive.py TRANSFORMS: eliminate_distinct_on.
+	d.EliminateDistinctOn = true
+	// generators/hive.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
+	d.LimitFetch = "LIMIT"
+	// generators/hive.py NVL2_SUPPORTED = False.
+	d.Nvl2Supported = false
 	// dialects/hive.py:85-89 JSONPathTokenizer: VAR_TOKENS adds DASH.
 	d.JSONPathVarDash = true
 	// generators/hive.py:236 JSON_PATH_SINGLE_QUOTE_ESCAPE = True.

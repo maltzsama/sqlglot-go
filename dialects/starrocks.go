@@ -13,6 +13,12 @@ import (
 func StarRocks() *Dialect {
 	d := MySQL()
 	d.Name = "starrocks"
+	// StarRocks has its own eliminate_distinct_on path; the inherited MySQL flag would
+	// re-run the generic transform and lose the StarRocks NULL-ordering emulation.
+	d.EliminateDistinctOn = false
+	// generators/starrocks.py:121-124 overrides the Select preprocess without
+	// eliminate_semi_and_anti_joins, so LEFT SEMI/ANTI joins are preserved.
+	d.EliminateSemiAntiJoins = false
 	// generators/starrocks.py:60 restores PARSE_JSON.
 	d.ParseJSONName = stringPtr("PARSE_JSON")
 

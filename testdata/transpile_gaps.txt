@@ -1,13 +1,8 @@
-{"read":"","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
-{"read":"","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"","write":"athena","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE(the_array, target)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$.y[*]')"}
-{"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
-{"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SUM(f1) OVER (ORDER BY f2 ASC NULLS LAST) FROM t"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SUM(f1) OVER (ORDER BY f2 DESC NULLS FIRST) FROM t"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT color, ARRAY_AGG(id ORDER BY id ASC NULLS LAST) AS ids FROM colors GROUP BY 1"}
@@ -24,8 +19,6 @@
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT * FROM a INTERSECT SELECT * FROM b"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT * FROM a UNION SELECT * FROM b ORDER BY x LIMIT 1"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT 1 EXCEPT ALL SELECT 1"}
-{"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"databricks","category":"gen: cast/type","sql":"SELECT * FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2020-01-01', DATE '2020-02-01', INTERVAL 1 WEEK))"}
 {"read":"","write":"databricks","category":"gen: cast/type","sql":"TIME_STR_TO_TIME('2020-01-01 12:13:14-08:00', 'America/Los_Angeles')"}
 {"read":"","write":"databricks","category":"gen: cast/type","sql":"TIME_STR_TO_TIME('2020-01-01')"}
@@ -35,12 +28,7 @@
 {"read":"","write":"doris","category":"gen: cast/type","sql":"TS_OR_DS_TO_DATE_STR(x)"}
 {"read":"","write":"doris","category":"gen: transpile mismatch","sql":"DATE_ADD(x, 1)"}
 {"read":"","write":"doris","category":"gen: transpile mismatch","sql":"DAY(TS_OR_DS_TO_DATE(x))"}
-{"read":"","write":"doris","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
-{"read":"","write":"doris","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"","write":"doris","category":"gen: transpile mismatch","sql":"MONTH(TS_OR_DS_TO_DATE(x))"}
-{"read":"","write":"doris","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
-{"read":"","write":"doris","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"doris","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"doris","category":"gen: transpile mismatch","sql":"STR_TO_DATE(x, '%Y-%m-%dT%H:%M:%S')"}
 {"read":"","write":"doris","category":"gen: transpile mismatch","sql":"TIME_TO_STR(x, '%Y-%m-%d')"}
 {"read":"","write":"doris","category":"gen: transpile mismatch","sql":"TIME_TO_UNIX(x)"}
@@ -75,10 +63,7 @@
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"CONCAT_WS('-', 'a', 'b')"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"CONCAT_WS('-', x)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$[\"a b\"]')"}
-{"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
-{"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT 'foo' LIKE ANY((('bar', 'fo%')))"}
-{"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT ARRAY_EXCEPT(ARRAY(1, 2, 3), ARRAY(2))"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DECODE(a, 1, 'one')"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DECODE(a, 1, 'one', 'default')"}
@@ -86,8 +71,6 @@
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DECODE(a, b, c)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DECODE(tbl.col, 'some_string', 'foo')"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE CURRENT ROW)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE GROUP)"}
@@ -125,11 +108,8 @@
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"DATE_SUB('2020-01-01', 1)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"DATE_SUB('2020-01-01', 2, month)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"DATE_SUB(a, b)"}
-{"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT * FROM x CROSS JOIN UNNEST(a) AS j(lista) CROSS JOIN UNNEST(b) AS k(listb) CROSS JOIN UNNEST(c) AS l(listc)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT a, b FROM x CROSS JOIN UNNEST(y) AS t (a, b)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"TIME_TO_UNIX(x)"}
@@ -158,17 +138,11 @@
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"DATE_TRUNC('year', x)"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"DAY(TS_OR_DS_TO_DATE(x))"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$[\"a b\"]')"}
-{"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
-{"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"MONTH(TS_OR_DS_TO_DATE(x))"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT \"user id\", some_id, 1 as other_id, 2 as \"2 nd id\" FROM t QUALIFY COUNT(*) OVER () > 1"}
-{"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST 10 ROWS ONLY"}
-{"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT * FROM t QUALIFY COUNT(*) OVER () > 1"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT IS_ASCII(x)"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT a IS DISTINCT FROM b"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT a IS NOT DISTINCT FROM b"}
@@ -198,8 +172,6 @@
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT * FROM t QUALIFY COUNT(*) OVER () > 1"}
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT COUNT_IF(col % 2 = 0) FROM foo"}
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT IS_ASCII(x)"}
-{"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle)"}
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
 {"read":"","write":"postgres","category":"gen: transpile mismatch","sql":"UNIX_TO_TIME(x)"}
@@ -229,8 +201,6 @@
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"ARRAY_FILTER(the_array, x -> x > 0)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SORT_ARRAY(x)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
@@ -241,7 +211,6 @@
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"UNIX_TO_TIME(x)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"x NOT ILIKE '%y'"}
 {"read":"","write":"redshift","category":"gen: cast/type","sql":"TIME_TO_TIME_STR(x)"}
-{"read":"","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
 {"read":"","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT COUNT_IF(col % 2 = 0) FROM foo"}
 {"read":"","write":"redshift","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle)"}
 {"read":"","write":"redshift","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
@@ -268,7 +237,6 @@
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"ARRAY_FILTER(the_array, x -> x > 0)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"CONCAT_WS('-', 'a', 'b')"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"CONCAT_WS('-', x)"}
-{"read":"","write":"spark","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"SELECT * FROM x CROSS JOIN UNNEST(a) AS j(lista) CROSS JOIN UNNEST(b) AS k(listb) CROSS JOIN UNNEST(c) AS l(listc)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"SELECT a FROM x CROSS JOIN UNNEST(y) AS t (a)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"SELECT a FROM x CROSS JOIN UNNEST(y) WITH ORDINALITY AS t (a)"}
@@ -285,18 +253,9 @@
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"DATE_STR_TO_DATE(x)"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$.y[*]')"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$[\"a b\"]')"}
-{"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
-{"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
-{"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT x FROM y OFFSET 10 FETCH FIRST 3 ROWS ONLY"}
 {"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"DATE_ADD(x, 1)"}
 {"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"DAY(TS_OR_DS_TO_DATE(x))"}
-{"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
-{"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"MONTH(TS_OR_DS_TO_DATE(x))"}
-{"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"SELECT * FROM t FETCH FIRST ROWS ONLY"}
-{"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"STR_TO_DATE(x, '%Y-%m-%dT%H:%M:%S')"}
 {"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"UNIX_TO_STR(x, y)"}
 {"read":"","write":"starrocks","category":"gen: transpile mismatch","sql":"UNIX_TO_TIME(x)"}
@@ -317,8 +276,6 @@
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"MERGE INTO foo AS target USING (SELECT a, b FROM tbl) AS src ON src.a = target.a\n            WHEN MATCHED AND target.a <> src.a THEN UPDATE SET target.b = 'FOO'\n            WHEN NOT MATCHED THEN INSERT (target.a, target.b) VALUES (src.a, src.b)"}
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"MERGE INTO foo AS target USING (SELECT a, b FROM tbl) AS src ON src.a = target.a\n            WHEN MATCHED THEN UPDATE SET target.b = COALESCE(src.b, target.b)\n            WHEN NOT MATCHED THEN INSERT (target.a, target.b) VALUES (src.a, src.b)"}
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"trino","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"trino","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position, occurrence)"}
@@ -341,8 +298,6 @@
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM a UNION SELECT * FROM b ORDER BY x LIMIT 1"}
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM t QUALIFY COUNT(*) OVER () > 1"}
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT IS_ASCII(x)"}
-{"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b)"}
-{"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT NVL2(a, b, c)"}
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT x FROM t1 UNION ALL SELECT x FROM t2 LIMIT 1"}
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"WITH t1(x) AS (SELECT 1) SELECT * FROM (WITH t2(y) AS (SELECT 2) SELECT y FROM t2) AS subq"}
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"WITH x AS (SELECT 1) SELECT * FROM x UNION SELECT * FROM x ORDER BY 1 LIMIT 0"}
@@ -350,7 +305,6 @@
 {"read":"bigquery","write":"","category":"gen: transpile mismatch","sql":"UPPER(TO_HEX(x))"}
 {"read":"bigquery","write":"clickhouse","category":"gen: cast/type","sql":"SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONTH)"}
 {"read":"bigquery","write":"clickhouse","category":"gen: transpile mismatch","sql":"UPPER(TO_HEX(x))"}
-{"read":"bigquery","write":"databricks","category":"gen: transpile mismatch","sql":"ARRAY_CONCAT([1, 2], [3, 4], [5, 6])"}
 {"read":"bigquery","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT * FROM UNNEST([STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob', 92), STRUCT('Diana', 95)])"}
 {"read":"bigquery","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET "}
 {"read":"bigquery","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS pos"}
@@ -505,7 +459,6 @@
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"UPPER(TO_HEX(x))"}
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"WITH Races AS (SELECT '800M' AS race) SELECT race, name, laps FROM Races AS r CROSS JOIN UNNEST([STRUCT('Rudisha' AS name, [23.4, 26.3, 26.4, 26.1] AS laps)])"}
 {"read":"bigquery","write":"duckdb","category":"gen: transpile mismatch","sql":"WITH Races AS (SELECT '800M' AS race) SELECT race, participant FROM Races AS r CROSS JOIN UNNEST([STRUCT('Rudisha' AS name, [23.4, 26.3, 26.4, 26.1] AS laps)]) AS participant"}
-{"read":"bigquery","write":"hive","category":"gen: transpile mismatch","sql":"ARRAY_CONCAT([1, 2], [3, 4], [5, 6])"}
 {"read":"bigquery","write":"hive","category":"gen: transpile mismatch","sql":"DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)"}
 {"read":"bigquery","write":"hive","category":"gen: transpile mismatch","sql":"MD5(x)"}
 {"read":"bigquery","write":"hive","category":"gen: transpile mismatch","sql":"SAFE_DIVIDE(x + 1, 2 * y)"}
@@ -526,7 +479,6 @@
 {"read":"bigquery","write":"postgres","category":"gen: cast/type","sql":"SAFE_DIVIDE(x + 1, 2 * y)"}
 {"read":"bigquery","write":"postgres","category":"gen: cast/type","sql":"SAFE_DIVIDE(x, y)"}
 {"read":"bigquery","write":"postgres","category":"gen: cast/type","sql":"SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONTH)"}
-{"read":"bigquery","write":"postgres","category":"gen: transpile mismatch","sql":"ARRAY_CONCAT([1, 2], [3, 4], [5, 6])"}
 {"read":"bigquery","write":"postgres","category":"gen: transpile mismatch","sql":"BIT_AND(x)"}
 {"read":"bigquery","write":"postgres","category":"gen: transpile mismatch","sql":"BIT_OR(x)"}
 {"read":"bigquery","write":"postgres","category":"gen: transpile mismatch","sql":"BIT_XOR(x)"}
@@ -544,7 +496,6 @@
 {"read":"bigquery","write":"presto","category":"gen: cast/type","sql":"SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONTH)"}
 {"read":"bigquery","write":"presto","category":"gen: cast/type","sql":"TIMESTAMP(x)"}
 {"read":"bigquery","write":"presto","category":"gen: cast/type","sql":"TO_JSON_STRING(x)"}
-{"read":"bigquery","write":"presto","category":"gen: transpile mismatch","sql":"ARRAY_CONCAT([1, 2], [3, 4], [5, 6])"}
 {"read":"bigquery","write":"presto","category":"gen: transpile mismatch","sql":"DELETE FROM db.example_table AS tb WHERE example_table.x = 1"}
 {"read":"bigquery","write":"presto","category":"gen: transpile mismatch","sql":"DELETE FROM db.example_table AS tb WHERE tb.x = 1"}
 {"read":"bigquery","write":"presto","category":"gen: transpile mismatch","sql":"DELETE FROM db.example_table tb WHERE tb.x = 1"}
@@ -583,7 +534,6 @@
 {"read":"bigquery","write":"snowflake","category":"gen: cast/type","sql":"TIMESTAMP(x)"}
 {"read":"bigquery","write":"snowflake","category":"gen: ddl/properties","sql":"CREATE OR REPLACE TABLE `a.b.c` COPY `a.b.d`"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"\n            MERGE dataset.Inventory T\n            USING dataset.NewArrivals S ON FALSE\n            WHEN NOT MATCHED BY TARGET AND product LIKE '%a%'\n            THEN DELETE\n            WHEN NOT MATCHED BY SOURCE AND product LIKE '%b%'\n            THEN DELETE"}
-{"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"ARRAY_CONCAT([1, 2], [3, 4], [5, 6])"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SAFE_DIVIDE(x + 1, 2 * y)"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SAFE_DIVIDE(x, y)"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM (SELECT x FROM UNNEST([STRUCT('value' AS x)]))"}
@@ -617,13 +567,11 @@
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"WITH t1 AS (SELECT ARRAY(SELECT AS STRUCT 1 AS a, 2 AS b) AS array_col) SELECT array_col[0].a, array_col[0].b FROM t1"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"WITH t1 AS (SELECT ARRAY(SELECT AS STRUCT x1 AS alias_x1, x2 /* test */ FROM t2 WHERE x2 = 4) AS array_col) SELECT array_col[0].alias_x1, array_col[0].x2 FROM t1"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"WITH t1 AS (SELECT ARRAY(SELECT AS STRUCT x1 AS alias_x1, x2 /* test */ FROM t2) AS array_col) SELECT array_col[0].alias_x1, array_col[0].x2 FROM t1"}
-{"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"WITH x AS ( SELECT 1 AS id), test_cte AS ( SELECT ARRAY_CONCAT(( SELECT id FROM x WHERE FALSE)) AS result ) SELECT * FROM test_cte;"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"select _u, _u.foo, _u.bar from unnest([struct('x' as foo, 'y' AS bar)]) as _u"}
 {"read":"bigquery","write":"snowflake","category":"gen: transpile mismatch","sql":"select _u.foo[0].bar from unnest([struct([struct(1 as bar)] as foo)]) as _u"}
 {"read":"bigquery","write":"spark","category":"gen: cast/type","sql":"SELECT GENERATE_UUID()"}
 {"read":"bigquery","write":"spark","category":"gen: cast/type","sql":"SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONTH)"}
 {"read":"bigquery","write":"spark","category":"gen: cast/type","sql":"SELECT TIMESTAMP_SUB(TIMESTAMP \"2008-12-25 15:30:00+00\", INTERVAL 10 MINUTE)"}
-{"read":"bigquery","write":"spark","category":"gen: transpile mismatch","sql":"ARRAY_CONCAT([1, 2], [3, 4], [5, 6])"}
 {"read":"bigquery","write":"spark","category":"gen: transpile mismatch","sql":"DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)"}
 {"read":"bigquery","write":"spark","category":"gen: transpile mismatch","sql":"MD5(x)"}
 {"read":"bigquery","write":"spark","category":"gen: transpile mismatch","sql":"SELECT * FROM UNNEST(['7', '14']) AS x"}
@@ -633,7 +581,6 @@
 {"read":"bigquery","write":"spark","category":"gen: transpile mismatch","sql":"SELECT DATETIME_SUB('2023-01-01T00:00:00', INTERVAL 1 MILLISECOND)"}
 {"read":"bigquery","write":"spark","category":"gen: transpile mismatch","sql":"UPPER(TO_HEX(x))"}
 {"read":"bigquery","write":"spark2","category":"gen: cast/type","sql":"SELECT GENERATE_UUID()"}
-{"read":"bigquery","write":"spark2","category":"gen: transpile mismatch","sql":"ARRAY_CONCAT([1, 2], [3, 4], [5, 6])"}
 {"read":"bigquery","write":"spark2","category":"gen: transpile mismatch","sql":"SAFE_DIVIDE(x + 1, 2 * y)"}
 {"read":"bigquery","write":"spark2","category":"gen: transpile mismatch","sql":"SAFE_DIVIDE(x, y)"}
 {"read":"bigquery","write":"spark2","category":"gen: transpile mismatch","sql":"SELECT * FROM UNNEST([STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob', 92), STRUCT('Diana', 95)])"}
@@ -647,7 +594,6 @@
 {"read":"bigquery","write":"trino","category":"gen: cast/type","sql":"SELECT DATETIME_DIFF(DATETIME '2017-10-15 00:00:00', DATETIME '2017-10-14 00:00:00', WEEK)"}
 {"read":"bigquery","write":"trino","category":"gen: cast/type","sql":"SELECT DATETIME_DIFF(DATETIME '2021-02-01 00:00:00', DATETIME '2021-01-31 00:00:00', MONTH)"}
 {"read":"bigquery","write":"trino","category":"gen: cast/type","sql":"SELECT GENERATE_UUID()"}
-{"read":"bigquery","write":"trino","category":"gen: transpile mismatch","sql":"ARRAY_CONCAT([1, 2], [3, 4], [5, 6])"}
 {"read":"bigquery","write":"trino","category":"gen: transpile mismatch","sql":"LOWER(TO_HEX(x))"}
 {"read":"bigquery","write":"trino","category":"gen: transpile mismatch","sql":"SELECT TIMESTAMP_DIFF(TIMESTAMP_SECONDS(60), TIMESTAMP_SECONDS(0), minute)"}
 {"read":"bigquery","write":"trino","category":"gen: transpile mismatch","sql":"SELECT TO_HEX(MD5(some_string))"}
@@ -677,7 +623,6 @@
 {"read":"clickhouse","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT arrayJoin([1,2,3])"}
 {"read":"clickhouse","write":"presto","category":"gen: transpile mismatch","sql":"SELECT argMax(a.id, a.timestamp) FROM a"}
 {"read":"clickhouse","write":"starrocks","category":"gen: transpile mismatch","sql":"SELECT argMax(a, b), argMin(a, b) FROM t"}
-{"read":"databricks","write":"","category":"gen: transpile mismatch","sql":"JSON_OBJECT_KEYS(foo)"}
 {"read":"databricks","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SPACE(2)"}
 {"read":"databricks","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a BIGINT, b BIGINT) RETURNS BIGINT RETURN a"}
 {"read":"databricks","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a BIGINT, b BIGINT) RETURNS TABLE (a INT) RETURN SELECT a"}
@@ -707,16 +652,10 @@
 {"read":"doris","write":"","category":"gen: cast/type","sql":"MONTH(x)"}
 {"read":"doris","write":"","category":"gen: cast/type","sql":"YEAR(x)"}
 {"read":"doris","write":"","category":"gen: transpile mismatch","sql":"DATE_TRUNC('day', x)"}
-{"read":"doris","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
-{"read":"doris","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"doris","write":"postgres","category":"gen: transpile mismatch","sql":"SPLIT_BY_STRING('xx~^~yy~^~zz', '~^~', 'yy')"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"DATE_TRUNC('day', x)"}
-{"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
-{"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"SHA1(x)"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
-{"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (ORDER BY x)"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT UNNEST(ARRAY[1, 2, 3]), UNNEST(ARRAY[4, 5]), UNNEST(ARRAY[6])"}
@@ -732,10 +671,7 @@
 {"read":"duckdb","write":"clickhouse","category":"gen: transpile mismatch","sql":"DROP SCHEMA x"}
 {"read":"duckdb","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT quantile(a, [0.5, 0.4])"}
 {"read":"duckdb","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT quantile(a, [0.5])"}
-{"read":"duckdb","write":"doris","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"doris","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"hive","category":"gen: transpile mismatch","sql":"APPROX_QUANTILE(x, 0.5)"}
-{"read":"duckdb","write":"hive","category":"gen: transpile mismatch","sql":"LIST_CONCAT([1, 2], [3, 4])"}
 {"read":"duckdb","write":"hive","category":"gen: transpile mismatch","sql":"MAP([a, c], [b, d])"}
 {"read":"duckdb","write":"hive","category":"gen: transpile mismatch","sql":"STRING_TO_ARRAY(x, 'a')"}
 {"read":"duckdb","write":"hive","category":"gen: transpile mismatch","sql":"STRUCT_EXTRACT(STRUCT_EXTRACT(x, 'y'), 'abc')"}
@@ -745,8 +681,6 @@
 {"read":"duckdb","write":"hive","category":"gen: transpile mismatch","sql":"x // y"}
 {"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"EPOCH_MS(x)"}
 {"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT (-1) * col AS col FROM t1 LEFT JOIN t2 USING(id) ORDER BY col"}
-{"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT * FROM x ORDER BY 1 NULLS LAST"}
 {"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT FIRST_VALUE(c RESPECT NULLS) OVER (PARTITION BY gb ORDER BY ob) FROM t"}
 {"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)"}
@@ -759,11 +693,8 @@
 {"read":"duckdb","write":"postgres","category":"gen: cast/type","sql":"CAST(x AS DECIMAL)"}
 {"read":"duckdb","write":"postgres","category":"gen: cast/type","sql":"CAST(x AS NUMERIC)"}
 {"read":"duckdb","write":"postgres","category":"gen: cast/type","sql":"ROUND(x::DECIMAL, 4)"}
-{"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"LIST_CONCAT([1, 2], [3, 4])"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"LIST_CONTAINS([1, 2, NULL], 1)"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"LIST_CONTAINS([1, 2, NULL], NULL)"}
-{"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT QUANTILE_CONT(x, q) FROM t"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT QUANTILE_DISC(x, q) FROM t"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"STRUCT_EXTRACT(x, 'abc')"}
@@ -771,25 +702,18 @@
 {"read":"duckdb","write":"presto","category":"gen: cast/type","sql":"SELECT LAST_DAY(CAST('2008-11-25' AS DATE))"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"ARRAY_REVERSE_SORT(x)"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"ARRAY_TO_STRING(arr, delim)"}
-{"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"LIST_CONCAT([1, 2], [3, 4])"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"LIST_REVERSE_SORT(x)"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"LIST_SORT(x)"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"QUANTILE(x, 0.5)"}
-{"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"SELECT UNNEST(ARRAY[1, 2, 3]), UNNEST(ARRAY[4, 5]), UNNEST(ARRAY[6])"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"SELECT UNNEST(ARRAY[1, 2, 3]), UNNEST(ARRAY[4, 5]), UNNEST(ARRAY[6]) FROM x"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"STRUCT_EXTRACT(STRUCT_EXTRACT(x, 'y'), 'abc')"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"STRUCT_EXTRACT(x, 'abc')"}
-{"read":"duckdb","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"redshift","category":"gen: transpile mismatch","sql":"STRUCT_EXTRACT(x, 'abc')"}
 {"read":"duckdb","write":"snowflake","category":"gen: cast/type","sql":"CAST(start AS TIMESTAMPTZ) AT TIME ZONE 'America/New_York'"}
 {"read":"duckdb","write":"snowflake","category":"gen: cast/type","sql":"SELECT BIT_XOR(CAST(val AS DECIMAL)) FROM t"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM (VALUES ({'a': 1})) AS t(x)"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM (VALUES ({'a': 1}), ({'a': 2})) AS t(x)"}
-{"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT APPROX_QUANTILE(a, 0.5) FROM t"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ARRAY_AGG(DISTINCT a) FILTER (WHERE a IS NOT NULL)"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ARRAY_AGG(col ORDER BY sort_col) FILTER (WHERE col IS NOT NULL)"}
@@ -817,7 +741,6 @@
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"WITH cte(x) AS (SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3) SELECT AVG(x) FILTER (WHERE x > 1) FROM cte"}
 {"read":"duckdb","write":"spark","category":"gen: cast/type","sql":"SELECT DATEDIFF('month', CAST('1996-10-30' AS TIMESTAMPTZ), CAST('1997-02-28 10:30:00' AS TIMESTAMPTZ))"}
 {"read":"duckdb","write":"spark","category":"gen: cast/type","sql":"SELECT STRFTIME(CAST('2020-01-01' AS TIMESTAMP), CONCAT('%Y', '%m'))"}
-{"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"LIST_CONCAT([1, 2], [3, 4])"}
 {"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"SELECT * FROM (SELECT * FROM t) AS t1 TABLESAMPLE (1 ROWS), (SELECT * FROM t) AS t2 TABLESAMPLE (2 ROWS)"}
 {"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"SELECT CONCAT(COALESCE(['abc'], []), ['bcg'])"}
 {"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"SELECT RANGE(1, 1)"}
@@ -832,10 +755,6 @@
 {"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"STR_SPLIT(x, 'a')"}
 {"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"WITH t AS (SELECT 2 AS c) SELECT RANGE(1, c) FROM t"}
 {"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"WITH t AS (SELECT 5 AS c) SELECT RANGE(1, c) FROM t"}
-{"read":"duckdb","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"trino","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"trino","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"tsql","category":"gen: cast/type","sql":"SELECT STRFTIME(CAST('2020-01-01' AS TIMESTAMP), CONCAT('%Y', '%m'))"}
 {"read":"duckdb","write":"tsql","category":"gen: cast/type","sql":"WITH t1(c) AS (SELECT 1), t2 AS (SELECT CAST(c AS INTEGER) FROM t1) SELECT * FROM t2"}
 {"read":"duckdb","write":"tsql","category":"gen: ddl/properties","sql":"ALTER TABLE \"db\".\"t1\" RENAME TO \"db\".\"t2\""}
@@ -847,8 +766,6 @@
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT (-1) * col AS col FROM t1 LEFT JOIN t2 USING(id) ORDER BY col"}
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM (WITH RECURSIVE t(n) AS (SELECT 1 AS n UNION ALL SELECT n + 1 AS n FROM t WHERE n < 4) SELECT SUM(n) AS s4 FROM t) AS subq"}
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM t LIMIT 10 OFFSET 5"}
-{"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT 1 AS c UNION (WITH t(c) AS (SELECT 1) SELECT c FROM t)"}
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT e.employee_id FROM employees e LEFT JOIN employee_positions ep ON e.employee_id = ep.employee_id ORDER BY employee_id"}
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT t1.x + t2.y AS s FROM t1 JOIN t2 ON t1.id = t2.id ORDER BY s"}
@@ -920,8 +837,6 @@
 {"read":"mysql","write":"","category":"gen: cast/type","sql":"WEEK(x)"}
 {"read":"mysql","write":"","category":"gen: cast/type","sql":"WEEKOFYEAR(x)"}
 {"read":"mysql","write":"","category":"gen: cast/type","sql":"YEAR(x)"}
-{"read":"mysql","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
-{"read":"mysql","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"mysql","write":"","category":"gen: transpile mismatch","sql":"SELECT ISNULL(x)"}
 {"read":"mysql","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"mysql","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM test LIMIT 0 + 1, 0 + 1"}
@@ -1056,7 +971,6 @@
 {"read":"postgres","write":"hive","category":"gen: cast/type","sql":"GENERATE_SERIES('2019-01-01'::TIMESTAMP, NOW(), '1day')"}
 {"read":"postgres","write":"hive","category":"gen: cast/type","sql":"TRUNC(3.14159, 2)"}
 {"read":"postgres","write":"hive","category":"gen: transpile mismatch","sql":"SELECT * FROM GENERATE_SERIES(a, b)"}
-{"read":"postgres","write":"hive","category":"gen: transpile mismatch","sql":"SELECT * FROM x FETCH 1 ROW"}
 {"read":"postgres","write":"hive","category":"gen: transpile mismatch","sql":"SELECT UNNEST(ARRAY[1])"}
 {"read":"postgres","write":"hive","category":"gen: transpile mismatch","sql":"SELECT UNNEST(c) FROM t"}
 {"read":"postgres","write":"hive","category":"gen: transpile mismatch","sql":"SELECT col[1]"}
@@ -1107,14 +1021,12 @@
 {"read":"postgres","write":"spark","category":"gen: cast/type","sql":"GENERATE_SERIES('2019-01-01'::TIMESTAMP, NOW(), '1day')"}
 {"read":"postgres","write":"spark","category":"gen: cast/type","sql":"TRUNC(3.14159, 2)"}
 {"read":"postgres","write":"spark","category":"gen: transpile mismatch","sql":"SELECT * FROM GENERATE_SERIES(a, b)"}
-{"read":"postgres","write":"spark","category":"gen: transpile mismatch","sql":"SELECT * FROM x FETCH 1 ROW"}
 {"read":"postgres","write":"spark","category":"gen: transpile mismatch","sql":"SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount)"}
 {"read":"postgres","write":"spark","category":"gen: transpile mismatch","sql":"WITH t AS (SELECT ARRAY[1, 2, 3] AS col) SELECT * FROM t WHERE 1 <= ANY(col) AND 2 = ANY(col)"}
 {"read":"postgres","write":"spark2","category":"gen: cast/type","sql":"GENERATE_SERIES('2019-01-01'::TIMESTAMP, NOW(), '1day')"}
 {"read":"postgres","write":"spark2","category":"gen: transpile mismatch","sql":"SELECT * FROM GENERATE_SERIES(a, b)"}
 {"read":"postgres","write":"spark2","category":"gen: transpile mismatch","sql":"WITH t AS (SELECT ARRAY[1, 2, 3] AS col) SELECT * FROM t WHERE 1 <= ANY(col) AND 2 = ANY(col)"}
 {"read":"postgres","write":"sqlite","category":"gen: cast/type","sql":"1 / DIV(4, 2)"}
-{"read":"postgres","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT * FROM x FETCH 1 ROW"}
 {"read":"postgres","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT JSON_AGG(name) FROM t"}
 {"read":"postgres","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT JSON_OBJECT_AGG(name, value) FROM t"}
 {"read":"postgres","write":"trino","category":"gen: cast/type","sql":"GENERATE_SERIES('2019-01-01'::TIMESTAMP, NOW(), '1day')"}
@@ -1225,9 +1137,7 @@
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
-{"read":"redshift","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF('day', a, b)"}
 {"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
 {"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
@@ -1240,18 +1150,15 @@
 {"read":"redshift","write":"hive","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
 {"read":"redshift","write":"hive","category":"gen: transpile mismatch","sql":"DATEDIFF('day', a, b)"}
 {"read":"redshift","write":"hive","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"hive","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT DATEDIFF(DAY, y, x)"}
 {"read":"redshift","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
-{"read":"redshift","write":"oracle","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"postgres","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"postgres","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
 {"read":"redshift","write":"presto","category":"gen: cast/type","sql":"DATEDIFF('day', a, b)"}
 {"read":"redshift","write":"presto","category":"gen: cast/type","sql":"SELECT DATEADD(DAY, 1, CURRENT_DATE)"}
 {"read":"redshift","write":"presto","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"presto","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
-{"read":"redshift","write":"presto","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"presto","category":"gen: transpile mismatch","sql":"SELECT LEFT(a, 3), RIGHT(a, 3)"}
 {"read":"redshift","write":"presto","category":"gen: transpile mismatch","sql":"x is false"}
 {"read":"redshift","write":"presto","category":"gen: transpile mismatch","sql":"x is not false"}
@@ -1260,24 +1167,19 @@
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT *, 4 AS col4 EXCLUDE (col2, col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)"}
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT *, 4 AS col4 EXCLUDE col2, col3 FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)"}
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
-{"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT LISTAGG(x, ',') WITHIN GROUP (ORDER BY y) FILTER (WHERE z > 0) FROM t"}
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT col1, *, col2 EXCLUDE(col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)"}
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"x ~* 'pat'"}
 {"read":"redshift","write":"spark","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"spark","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"spark2","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"starrocks","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"trino","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
-{"read":"redshift","write":"trino","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"tsql","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
 {"read":"redshift","write":"tsql","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"snowflake","write":"","category":"gen: transpile mismatch","sql":"DATE_TRUNC('day', x)"}
 {"read":"snowflake","write":"","category":"gen: transpile mismatch","sql":"DATE_TRUNC(year, x)"}
 {"read":"snowflake","write":"","category":"gen: transpile mismatch","sql":"OBJECT_CONSTRUCT('a', b, 'c', d)"}
-{"read":"snowflake","write":"","category":"gen: transpile mismatch","sql":"OBJECT_KEYS(foo)"}
 {"read":"snowflake","write":"","category":"gen: transpile mismatch","sql":"SELECT TO_TIMESTAMP('2025-01-16 14:45:30.123', 'yyyy-mm-DD hh24:mi:ss.ff6')"}
 {"read":"snowflake","write":"bigquery","category":"gen: cast/type","sql":"SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONS)"}
 {"read":"snowflake","write":"bigquery","category":"gen: cast/type","sql":"SELECT TO_TIME('2024-01-15 14:30:00'::TIMESTAMP)"}
@@ -1688,7 +1590,6 @@
 {"read":"snowflake","write":"trino","category":"gen: cast/type","sql":"UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')"}
 {"read":"snowflake","write":"trino","category":"gen: transpile mismatch","sql":"SELECT i, p, o FROM qt QUALIFY ROW_NUMBER() OVER (PARTITION BY p ORDER BY o) = 1"}
 {"read":"snowflake","write":"tsql","category":"gen: ddl/properties","sql":"CREATE TABLE TEMP_NESTED_WITH AS WITH C AS (WITH A AS (SELECT 2 AS value) SELECT * FROM A) SELECT * FROM C"}
-{"read":"spark","write":"","category":"gen: transpile mismatch","sql":"JSON_OBJECT_KEYS(foo)"}
 {"read":"spark","write":"bigquery","category":"gen: cast/type","sql":"SELECT TO_DATE(x, 'MM/dd/yyyy')"}
 {"read":"spark","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"spark","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT /*+ BROADCAST(table) */ cola FROM table"}
@@ -1814,8 +1715,6 @@
 {"read":"starrocks","write":"","category":"gen: cast/type","sql":"YEAR(x)"}
 {"read":"starrocks","write":"","category":"gen: transpile mismatch","sql":"DATE_TRUNC('day', x)"}
 {"read":"starrocks","write":"","category":"gen: transpile mismatch","sql":"DATE_TRUNC('year', x)"}
-{"read":"starrocks","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
-{"read":"starrocks","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"starrocks","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT id, t.type, t.scores FROM example_table, unnest(split(type, \";\"), scores) AS t(type,scores)"}
 {"read":"starrocks","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT MAP('a', 1, 'b', 2)"}
 {"read":"starrocks","write":"spark","category":"gen: transpile mismatch","sql":"SELECT * FROM UNNEST(array['John','Jane','Jim','Jamie'], array[24,25,26,27]) AS t(name, age)"}
@@ -1854,7 +1753,6 @@
 {"read":"tsql","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETRUNC(year, CAST('foo1' AS date))"}
 {"read":"tsql","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE #mytemptable (a INTEGER)"}
 {"read":"tsql","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE [#temptest] (name INTEGER)"}
-{"read":"tsql","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT * FROM t ORDER BY (SELECT NULL) OFFSET 5 ROWS FETCH FIRST 10 ROWS ONLY"}
 {"read":"tsql","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT CONVERT(DATETIME, '2006-04-25T15:50:59.997', 126)"}
 {"read":"tsql","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DATETIMEFROMPARTS(2013, 4, 5, 12, 00, 00, 0)"}
 {"read":"tsql","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DATETRUNC(month, foo)"}
@@ -1950,5 +1848,4 @@
 {"read":"tsql","write":"spark2","category":"gen: ddl/properties","sql":"CREATE TABLE #mytemptable (a INTEGER)"}
 {"read":"tsql","write":"spark2","category":"gen: ddl/properties","sql":"CREATE TABLE x ([zip_cd] VARCHAR(5) NULL NOT FOR REPLICATION, [zip_cd_mkey] VARCHAR(5) NOT NULL, CONSTRAINT [pk_mytable] PRIMARY KEY CLUSTERED ([zip_cd_mkey] ASC) WITH (PAD_INDEX=ON, STATISTICS_NORECOMPUTE=OFF) ON [INDEX]) ON [SECONDARY]"}
 {"read":"tsql","write":"sqlite","category":"gen: ddl/properties","sql":"CREATE TABLE t (a INT, b AS (a * 2) PERSISTED NOT NULL)"}
-{"read":"tsql","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT * FROM t ORDER BY (SELECT NULL) OFFSET 5 ROWS FETCH FIRST 10 ROWS ONLY"}
 {"read":"tsql","write":"starrocks","category":"gen: ddl/properties","sql":"ALTER TABLE a ALTER COLUMN b INTEGER NOT NULL"}

@@ -73,6 +73,14 @@ func parseMySQLVersion(value string) (int, error) {
 func MySQL() *Dialect {
 	d := Base()
 	d.Name = "mysql"
+	// generators/mysql.py TRANSFORMS: eliminate_distinct_on.
+	d.EliminateDistinctOn = true
+	// generators/mysql.py TRANSFORMS: eliminate_semi_and_anti_joins.
+	d.EliminateSemiAntiJoins = true
+	// generators/mysql.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
+	d.LimitFetch = "LIMIT"
+	// generators/mysql.py NVL2_SUPPORTED = False.
+	d.Nvl2Supported = false
 	// parsers/mysql.py:298 LOG_DEFAULTS_TO_LN.
 	d.LogDefaultsToLn = true
 	// dialects/mysql.py:31 SAFE_TO_ELIMINATE_DOUBLE_NEGATION = False.

@@ -207,30 +207,30 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 // Read-side parse gaps surface under their target's bucket with a "parse:" category.
 // Pass and total floors are monotonic: raise them, never lower them.
 const (
-	minPassTranspileBase        = 889
+	minPassTranspileBase        = 902
 	minPassTranspileAthena      = 8
-	minPassTranspileBigQuery    = 626
-	minPassTranspileClickhouse  = 213
-	minPassTranspileDatabricks  = 224
-	minPassTranspileDoris       = 77
+	minPassTranspileBigQuery    = 632
+	minPassTranspileClickhouse  = 215
+	minPassTranspileDatabricks  = 226
+	minPassTranspileDoris       = 84
 	minPassTranspileDremio      = 31
-	minPassTranspileDuckDB      = 744
-	minPassTranspileHive        = 408
+	minPassTranspileDuckDB      = 750
+	minPassTranspileHive        = 415
 	minPassTranspileMaterialize = 29
-	minPassTranspileMySQL       = 241
-	minPassTranspileOracle      = 171
-	minPassTranspilePostgres    = 341
-	minPassTranspilePresto      = 450
-	minPassTranspileRedshift    = 174
+	minPassTranspileMySQL       = 249
+	minPassTranspileOracle      = 172
+	minPassTranspilePostgres    = 347
+	minPassTranspilePresto      = 457
+	minPassTranspileRedshift    = 177
 	minPassTranspileRisingWave  = 4
-	minPassTranspileSnowflake   = 832
-	minPassTranspileSpark       = 693
-	minPassTranspileSpark2      = 61
-	minPassTranspileSQLite      = 133
-	minPassTranspileStarrocks   = 83
+	minPassTranspileSnowflake   = 837
+	minPassTranspileSpark       = 698
+	minPassTranspileSpark2      = 62
+	minPassTranspileSQLite      = 142
+	minPassTranspileStarrocks   = 88
 	minPassTranspileTeradata    = 74
-	minPassTranspileTrino       = 94
-	minPassTranspileTSQL        = 327
+	minPassTranspileTrino       = 100
+	minPassTranspileTSQL        = 331
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.

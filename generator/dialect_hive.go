@@ -141,7 +141,9 @@ func init() {
 		expressions.KindJSONExtractScalar: hiveCall("GET_JSON_OBJECT", "this", "expression"),
 		expressions.KindGenerateSeries:    hiveCall("SEQUENCE", "start", "end", "step"),
 		expressions.KindArraySize:         hiveCall("SIZE", "this"),
-		expressions.KindStrToMap:          hiveCall("STR_TO_MAP", "this", "pair_delim", "key_value_delim"),
+		// generators/hive.py:282 exp.ArrayConcat: rename_func("CONCAT").
+		expressions.KindArrayConcat: renameFunc("CONCAT"),
+		expressions.KindStrToMap:    hiveCall("STR_TO_MAP", "this", "pair_delim", "key_value_delim"),
 		expressions.KindTimestampTrunc: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("TRUNC", []any{e.This(), expressions.LiteralString(e.Text("unit"))}, "(", ")", true)
 		},

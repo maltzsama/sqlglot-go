@@ -27,7 +27,13 @@ func (g *Generator) queryModifiers(e expressions.Expression, sqls ...string) str
 	if g.dialect.LimitFetch == "FETCH" && limit != nil && limit.Kind() == expressions.KindLimit {
 		limit = expressions.Fetch(expressions.Args{"direction": "FIRST", "count": limit.Arg("expression")})
 	} else if g.dialect.LimitFetch == "LIMIT" && limit != nil && limit.Kind() == expressions.KindFetch {
-		limit = expressions.Limit(expressions.Args{"expression": limit.Arg("count")})
+		// generator.py:3276-3281: a FETCH without a count means one row per the SQL standard;
+		// emitting a bare LIMIT would be invalid SQL, so substitute the literal 1.
+		count := limit.Arg("count")
+		if count == nil {
+			count = expressions.LiteralNumber("1")
+		}
+		limit = expressions.Limit(expressions.Args{"expression": count})
 	}
 	fetch := limit != nil && limit.Kind() == expressions.KindFetch
 	parts := make([]string, 0, len(sqls)+12)
@@ -98,6 +104,14 @@ func (g *Generator) optionsModifier(e expressions.Expression) string {
 }
 
 func (g *Generator) selectSQL(e expressions.Expression) string {
+	// transforms.py:616-631: dialects that lack native SEMI/ANTI joins rewrite them into
+	// correlated [NOT] EXISTS predicates before rendering the query.
+	if g.dialect.EliminateDistinctOn {
+		e = starRocksEliminateDistinctOn(g, e)
+	}
+	if g.dialect.EliminateSemiAntiJoins {
+		e = eliminateSemiAndAntiJoins(e)
+	}
 	hint := g.sqlKey(e, "hint")
 	distinct := g.sqlKey(e, "distinct")
 	if distinct != "" {

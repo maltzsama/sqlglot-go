@@ -13,6 +13,8 @@ import (
 func Oracle() *Dialect {
 	d := Base()
 	d.Name = "oracle"
+	// generators/oracle.py TRANSFORMS: eliminate_distinct_on.
+	d.EliminateDistinctOn = true
 
 	// dialects/oracle.py:16-22 class flags.
 	d.AliasPostTablesample = true
