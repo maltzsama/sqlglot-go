@@ -133,3 +133,16 @@ func duckDBArrayRemoveSQL(g *Generator, e expressions.Expression) string {
 	})
 	return g.gen(filter)
 }
+
+// duckDBTimeStrToTimeSQL ports timestrtotime_sql (dialects/dialect.py:1769-1786): CAST(this
+// AS TIMESTAMPTZ) when a zone is present, else CAST(this AS TIMESTAMP).
+func duckDBTimeStrToTimeSQL(g *Generator, e expressions.Expression) string {
+	dtype := expressions.DTypeTimestamp
+	if truthy(e.Arg("zone")) {
+		dtype = expressions.DTypeTimestampLtz
+	}
+	return g.gen(expressions.Cast(expressions.Args{
+		"this": e.This(),
+		"to":   expressions.DataType(expressions.Args{"this": dtype}),
+	}))
+}

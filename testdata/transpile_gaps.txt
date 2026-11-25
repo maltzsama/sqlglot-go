@@ -34,9 +34,6 @@
 {"read":"","write":"doris","category":"gen: transpile mismatch","sql":"x ILIKE '%y'"}
 {"read":"","write":"duckdb","category":"gen: cast/type","sql":"DATE_TO_DI(x)"}
 {"read":"","write":"duckdb","category":"gen: cast/type","sql":"SELECT * FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2020-01-01', DATE '2020-02-01', INTERVAL 1 WEEK))"}
-{"read":"","write":"duckdb","category":"gen: cast/type","sql":"TIME_STR_TO_TIME('2020-01-01 12:13:14-08:00', 'America/Los_Angeles')"}
-{"read":"","write":"duckdb","category":"gen: cast/type","sql":"TIME_STR_TO_TIME('2020-01-01')"}
-{"read":"","write":"duckdb","category":"gen: cast/type","sql":"TIME_STR_TO_TIME(col, 'America/Los_Angeles')"}
 {"read":"","write":"duckdb","category":"gen: cast/type","sql":"TIME_STR_TO_UNIX('2020-01-01')"}
 {"read":"","write":"duckdb","category":"gen: cast/type","sql":"TIME_TO_TIME_STR(x)"}
 {"read":"","write":"duckdb","category":"gen: cast/type","sql":"TS_OR_DS_ADD('2021-02-01', 1, 'DAY')"}
@@ -1664,10 +1661,6 @@
 {"read":"tsql","write":"databricks","category":"gen: cast/type","sql":"SELECT DATEDIFF_BIG(quarter, 'start', 'end')"}
 {"read":"tsql","write":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE #mytemptable (a INTEGER)"}
 {"read":"tsql","write":"duckdb","category":"gen: cast/type","sql":"EOMONTH(GETDATE(), -1)"}
-{"read":"tsql","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF(day, 1, '2021-01-01')"}
-{"read":"tsql","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF(quarter, 0, '2021-01-01')"}
-{"read":"tsql","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF_BIG(day, 1, '2021-01-01')"}
-{"read":"tsql","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF_BIG(quarter, 0, '2021-01-01')"}
 {"read":"tsql","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETRUNC(month, 'foo')"}
 {"read":"tsql","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETRUNC(year, CAST('foo1' AS date))"}
 {"read":"tsql","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE TABLE #mytemptable (a INTEGER)"}
