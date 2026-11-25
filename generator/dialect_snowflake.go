@@ -349,9 +349,16 @@ func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
 
 		posAlias := ""
 		explodeAlias := ""
+		var explodeAliasIdent expressions.Expression
 		alias := selectItem
 		if selectItem.Kind() == expressions.KindAlias {
-			explodeAlias = asExpression(selectItem.Arg("alias")).Name()
+			// Keep the alias Identifier node: upstream stores it (not just its name) so a
+			// quoted alias such as "MyCol" stays quoted in every rebuilt reference
+			// (transforms.py:437-480).
+			explodeAliasIdent = asExpression(selectItem.Arg("alias"))
+			if explodeAliasIdent != nil {
+				explodeAlias = explodeAliasIdent.Name()
+			}
 		} else {
 			// exp.alias_(select, ""): keep the projection but give it an (empty) alias slot.
 			renamed := expressions.AliasExpr(selectItem, "", false)
@@ -371,11 +378,14 @@ func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
 		if explodeAlias == "" {
 			explodeAlias = newName(takenSelectNames, "col")
 		}
+		if explodeAliasIdent == nil {
+			explodeAliasIdent = expressions.ToIdentifier(explodeAlias, false)
+		}
 		if posAlias == "" {
 			posAlias = newName(takenSelectNames, "pos")
 		}
 
-		alias.Set("alias", expressions.ToIdentifier(explodeAlias, false))
+		alias.Set("alias", explodeAliasIdent.Copy())
 
 		seriesColumn := func() expressions.Expression {
 			return expressions.Column(expressions.Args{
@@ -389,12 +399,18 @@ func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
 				"table": expressions.ToIdentifier(unnestSourceAlias, false),
 			})
 		}
+		explodeColumn := func() expressions.Expression {
+			return expressions.Column(expressions.Args{
+				"this":  explodeAliasIdent.Copy(),
+				"table": expressions.ToIdentifier(unnestSourceAlias, false),
+			})
+		}
 		explode.Replace(expressions.If(expressions.Args{
 			"this": expressions.EQ(expressions.Args{
 				"this":       seriesColumn(),
 				"expression": unnestColumn(posAlias),
 			}),
-			"true": unnestColumn(explodeAlias),
+			"true": explodeColumn(),
 		}))
 
 		if len(arrays) == 0 {
@@ -413,7 +429,7 @@ func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
 			"offset":      expressions.ToIdentifier(posAlias, false),
 			"alias": expressions.TableAlias(expressions.Args{
 				"this":    expressions.ToIdentifier(unnestSourceAlias, false),
-				"columns": []expressions.Expression{expressions.ToIdentifier(explodeAlias, false)},
+				"columns": []expressions.Expression{explodeAliasIdent.Copy()},
 			}),
 		}), expressions.JoinOptions{JoinType: "CROSS"})
 
@@ -451,10 +467,20 @@ func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
 }
 
 func snowflakeStrToTimeSQL(g *Generator, e expressions.Expression) string {
+	// generators/snowflake.py:957-973: the function name comes from TIMESTAMP_TYPES
+	// (parsers/snowflake.py:74-79), and TO_TIME stays for the port's TIME target.
 	name := "TO_TIMESTAMP"
-	if target := asExpression(e.Arg("target_type")); target != nil &&
-		target.Arg("this") == expressions.DTypeTime {
-		name = "TO_TIME"
+	if target := asExpression(e.Arg("target_type")); target != nil {
+		switch target.Arg("this") {
+		case expressions.DTypeTime:
+			name = "TO_TIME"
+		case expressions.DTypeTimestampLtz:
+			name = "TO_TIMESTAMP_LTZ"
+		case expressions.DTypeTimestampNtz:
+			name = "TO_TIMESTAMP_NTZ"
+		case expressions.DTypeTimestampTz:
+			name = "TO_TIMESTAMP_TZ"
+		}
 	}
 	if boolValue(e.Arg("safe")) {
 		name = "TRY_" + name
