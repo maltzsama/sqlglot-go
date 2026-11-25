@@ -27,7 +27,13 @@ func (g *Generator) queryModifiers(e expressions.Expression, sqls ...string) str
 	if g.dialect.LimitFetch == "FETCH" && limit != nil && limit.Kind() == expressions.KindLimit {
 		limit = expressions.Fetch(expressions.Args{"direction": "FIRST", "count": limit.Arg("expression")})
 	} else if g.dialect.LimitFetch == "LIMIT" && limit != nil && limit.Kind() == expressions.KindFetch {
-		limit = expressions.Limit(expressions.Args{"expression": limit.Arg("count")})
+		// generator.py:3276-3281: a FETCH without a count means one row per the SQL standard;
+		// emitting a bare LIMIT would be invalid SQL, so substitute the literal 1.
+		count := limit.Arg("count")
+		if count == nil {
+			count = expressions.LiteralNumber("1")
+		}
+		limit = expressions.Limit(expressions.Args{"expression": count})
 	}
 	fetch := limit != nil && limit.Kind() == expressions.KindFetch
 	parts := make([]string, 0, len(sqls)+12)

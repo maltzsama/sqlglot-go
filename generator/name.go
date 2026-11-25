@@ -28,6 +28,7 @@ var sqlNameOverrides = map[expressions.Kind]string{
 	expressions.KindJSONArrayAgg: "JSON_ARRAYAGG",
 	// JSON function classes whose camelToSnake split would emit J_S_O_N_*.
 	expressions.KindJSONType:        "JSON_TYPE",
+	expressions.KindJSONKeys:        "JSON_KEYS",
 	expressions.KindJSONSet:         "JSON_SET",
 	expressions.KindJSONRemove:      "JSON_REMOVE",
 	expressions.KindJSONArrayAppend: "JSON_ARRAY_APPEND",

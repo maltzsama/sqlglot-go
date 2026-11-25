@@ -68,6 +68,10 @@ var bigQueryInverseFormatMapping = func() map[string]string {
 func BigQuery() *Dialect {
 	d := Base()
 	d.Name = "bigquery"
+	// generators/bigquery.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
+	d.LimitFetch = "LIMIT"
+	// generators/bigquery.py NVL2_SUPPORTED = False.
+	d.Nvl2Supported = false
 
 	// dialects/bigquery.py:24-46 class attributes.
 	d.WeekOffset = -1

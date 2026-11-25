@@ -14,6 +14,10 @@ import (
 func SQLite() *Dialect {
 	d := Base()
 	d.Name = "sqlite"
+	// generators/sqlite.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
+	d.LimitFetch = "LIMIT"
+	// generators/sqlite.py NVL2_SUPPORTED = False.
+	d.Nvl2Supported = false
 
 	// dialects/sqlite.py:14-18. SQLite identifier matching is case-insensitive for ASCII
 	// (https://sqlite.org/forum/forumpost/5e575586ac5c711b?raw), division is typed and

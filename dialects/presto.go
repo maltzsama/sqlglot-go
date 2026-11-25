@@ -10,6 +10,8 @@ import (
 func Presto() *Dialect {
 	d := Base()
 	d.Name = "presto"
+	// generators/presto.py NVL2_SUPPORTED = False.
+	d.Nvl2Supported = false
 	// generators/presto.py:276 PARSE_JSON_NAME = "JSON_PARSE".
 	d.ParseJSONName = stringPtr("JSON_PARSE")
 	// generators/presto.py:439-500.

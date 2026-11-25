@@ -8,6 +8,8 @@ import (
 func Postgres() *Dialect {
 	d := Base()
 	d.Name = "postgres"
+	// generators/postgres.py NVL2_SUPPORTED = False.
+	d.Nvl2Supported = false
 	d.QuoteStart = "'"
 	d.QuoteEnd = "'"
 	d.IdentifierStart = "\""
