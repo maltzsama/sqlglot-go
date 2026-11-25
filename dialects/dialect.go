@@ -239,6 +239,10 @@ type Dialect struct {
 	// Nvl2Supported ports NVL2_SUPPORTED (generator.py:519, base True; dremio False): when
 	// false, NVL2 renders as a CASE expression instead of the function call.
 	Nvl2Supported bool
+	// PadFillPatternIsRequired ports PAD_FILL_PATTERN_IS_REQUIRED (generator.py:564, base
+	// False; hive, mysql, duckdb, presto True; spark overrides back to False): when true, a
+	// two-argument LPAD/RPAD renders the default space fill.
+	PadFillPatternIsRequired bool
 	// EliminateSemiAntiJoins ports the TRANSFORMS preprocess entry
 	// eliminate_semi_and_anti_joins (transforms.py:616-631), applied by bigquery, mysql,
 	// postgres, presto, redshift, snowflake, sqlite, teradata, and tsql: SEMI/ANTI joins

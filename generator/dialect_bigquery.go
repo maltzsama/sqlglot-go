@@ -409,13 +409,12 @@ func bigQueryGroupConcatSQL(g *Generator, e expressions.Expression) string {
 	return "STRING_AGG(" + argsSQL + modifiers + ")"
 }
 
-// bigQueryHexSQL ports hex_sql (generator.py:2020-2025).
+// bigQueryHexSQL ports the bigquery override generators/bigquery.py:345
+// exp.Hex: UPPER(TO_HEX(this)). (The base hex_sql would emit LOWER(TO_HEX(...)) because
+// bigquery sets HEX_LOWERCASE, but bigquery overrides Hex to the uppercase form.)
 func bigQueryHexSQL(g *Generator, e expressions.Expression) string {
 	text := g.funcCall(hexFuncName(g), []any{e.Arg("this")}, "(", ")", true)
-	if g.dialect.HexLowercase {
-		text = g.funcCall("LOWER", []any{text}, "(", ")", true)
-	}
-	return text
+	return g.funcCall("UPPER", []any{text}, "(", ")", true)
 }
 
 func hexFuncName(g *Generator) string {

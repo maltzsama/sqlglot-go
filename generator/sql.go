@@ -2021,7 +2021,13 @@ func (g *Generator) padSQL(e expressions.Expression) string {
 	if !boolValue(e.Arg("is_left")) {
 		prefix = "R"
 	}
-	return g.funcCall(prefix+"PAD", []any{e.Arg("this"), e.Arg("expression"), e.Arg("fill_pattern")}, "(", ")", true)
+	fill := e.Arg("fill_pattern")
+	// generator.py:5575-5577: a two-argument LPAD/RPAD renders an explicit space fill for
+	// dialects whose PAD_FILL_PATTERN_IS_REQUIRED is true.
+	if !truthy(fill) && g.dialect.PadFillPatternIsRequired {
+		fill = expressions.LiteralString(" ")
+	}
+	return g.funcCall(prefix+"PAD", []any{e.Arg("this"), e.Arg("expression"), fill}, "(", ")", true)
 }
 
 func (g *Generator) trimSQLBase(e expressions.Expression) string {

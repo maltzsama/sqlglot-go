@@ -29,6 +29,8 @@ var duckDBInverseTimeMapping = map[string]string{
 func DuckDB() *Dialect {
 	d := Base()
 	d.Name = "duckdb"
+	// generators/duckdb.py PAD_FILL_PATTERN_IS_REQUIRED = True.
+	d.PadFillPatternIsRequired = true
 	// generators/duckdb.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
 	d.LimitFetch = "LIMIT"
 	// generators/duckdb.py NVL2_SUPPORTED = False.

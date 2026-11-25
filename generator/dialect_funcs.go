@@ -359,3 +359,62 @@ func (g *Generator) nextValueForSQL(e expressions.Expression) string {
 func (g *Generator) prevValueForSQL(e expressions.Expression) string {
 	return "PREVIOUS VALUE FOR " + g.sqlKey(e, "this")
 }
+
+// strPositionTranspileSQL ports the strposition_sql branches (dialect.py:1321-1372) for
+// dialects that keep STRPOS/POSITION and lack a native position argument: the position is
+// transpiled into a SUBSTRING-wrapped STRPOS plus an offset, guarded by a zero check.
+func strPositionTranspileSQL(name string, supportsPosition, supportsOccurrence bool) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		stringExpr := e.This()
+		substr := asExpression(e.Arg("substr"))
+		position := asExpression(e.Arg("position"))
+		occurrence := asExpression(e.Arg("occurrence"))
+		zero := expressions.LiteralNumber("0")
+		one := expressions.LiteralNumber("1")
+
+		if supportsOccurrence && occurrence != nil && supportsPosition && position == nil {
+			position = one
+		}
+		transpilePosition := position != nil && !supportsPosition
+		if transpilePosition {
+			stringExpr = expressions.Substring(expressions.Args{"this": stringExpr, "start": position})
+		}
+
+		build := func() expressions.Expression {
+			if name == "POSITION" {
+				return expressions.Anonymous(expressions.Args{
+					"this": name,
+					"expressions": []expressions.Expression{
+						expressions.In(expressions.Args{"this": substr, "field": stringExpr}),
+					},
+				})
+			}
+			args := []expressions.Expression{stringExpr, substr}
+			if occurrence != nil {
+				if supportsOccurrence {
+					args = append(args, occurrence)
+				} else {
+					g.unsupported(name + " does not support the occurrence parameter.")
+				}
+			}
+			return expressions.Anonymous(expressions.Args{"this": name, "expressions": args})
+		}
+
+		if transpilePosition {
+			// dialect.py:1364-1368: IF(func = 0, 0, (func + position) - 1). `func + position`
+			// goes through Expression.__add__/_binop (core.py:1399-1408), which wraps a Binary
+			// operand in Paren; `func` is an Anonymous (not Binary) so only position can wrap.
+			offsetPosition := position
+			if offsetPosition.Is(expressions.TraitBinary) {
+				offsetPosition = expressions.Paren(expressions.Args{"this": offsetPosition.Copy()})
+			}
+			offset := expressions.Sub(expressions.Args{
+				"this":       expressions.Add(expressions.Args{"this": build(), "expression": offsetPosition}),
+				"expression": one,
+			})
+			cond := expressions.EQ(expressions.Args{"this": build(), "expression": zero})
+			return g.gen(expressions.If(expressions.Args{"this": cond, "true": zero, "false": offset}))
+		}
+		return g.gen(build())
+	}
+}

@@ -785,7 +785,9 @@ func buildLower(args []Expression) Expression {
 // buildUpper ports build_upper (parser.py:104-107): UPPER over a Hex simplifies to Hex.
 func buildUpper(args []Expression) Expression {
 	arg := seqGetExpr(args, 0)
-	if arg != nil && arg.Kind() == KindHex {
+	// parser.py:104-107: UPPER over a Hex simplifies to Hex. LowerHex subclasses Hex
+	// upstream (expressions/string.py:317), so it is included here too.
+	if arg != nil && (arg.Kind() == KindHex || arg.Kind() == KindLowerHex) {
 		return Hex(Args{"this": arg.This()})
 	}
 	return newNode(KindUpper, Args{"this": arg})
