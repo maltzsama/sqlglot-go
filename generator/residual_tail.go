@@ -43,6 +43,13 @@ func (g *Generator) hexstringSQL(e expressions.Expression) string {
 	return g.dialect.HexStart + this + g.dialect.HexEnd
 }
 
+// introducerSQL ports introducer_sql (generator.py:2334-2335): `<introducer> <literal>`,
+// e.g. mysql `_utf8mb4 'hola'`. `this` is the raw introducer text (a string arg), so it
+// renders as-is.
+func (g *Generator) introducerSQL(e expressions.Expression) string {
+	return g.sqlKey(e, "this") + " " + g.sqlKey(e, "expression")
+}
+
 // bytestringSQL ports bytestring_sql (generator.py:1599-1628): re-quote a byte-string
 // literal using the dialect's BYTE_START/BYTE_END (escape_backslash=False, so a literal
 // backslash - e.g. postgres `e'\176'`'s octal escape - round-trips unchanged instead of
@@ -213,6 +220,7 @@ func init() {
 	dispatch[expressions.KindBitString] = (*Generator).bitstringSQL
 	dispatch[expressions.KindHexString] = (*Generator).hexstringSQL
 	dispatch[expressions.KindByteString] = (*Generator).bytestringSQL
+	dispatch[expressions.KindIntroducer] = (*Generator).introducerSQL
 	dispatch[expressions.KindSessionParameter] = (*Generator).sessionParameterSQL
 	dispatch[expressions.KindPropertyEQ] = (*Generator).propertyEQSQL
 	dispatch[expressions.KindDistance] = (*Generator).distanceSQL

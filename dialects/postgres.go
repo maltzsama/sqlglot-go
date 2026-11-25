@@ -14,6 +14,8 @@ func Postgres() *Dialect {
 	d.IdentifierEnd = "\""
 	d.IndexOffset = 1
 	d.TypedDivision = true
+	// parsers/postgres.py:163-166 BITWISE adds HASH -> BitwiseXor, so `a # b` is a bitwise xor.
+	d.BitwiseXorIsHash = true
 	// dialects/postgres.py:15 CONCAT_COALESCE = True.
 	d.ConcatCoalesce = true
 	d.NullOrdering = "nulls_are_large"

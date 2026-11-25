@@ -11,13 +11,26 @@ var bitwiseTokens = map[tokens.TokenType]func(exp.Args) exp.Expression{
 	tokens.CARET: exp.BitwiseXor,
 }
 
+// bitwiseConstructor resolves the token→node constructor for the bitwise tier. The base
+// BITWISE dict is AMP/PIPE/CARET (parser.py:968-972); parsers/postgres.py:163-166 adds
+// HASH -> BitwiseXor so postgres reads `a # b` as a bitwise xor.
+func (p *Parser) bitwiseConstructor(tt tokens.TokenType) (func(exp.Args) exp.Expression, bool) {
+	if constructor, ok := bitwiseTokens[tt]; ok {
+		return constructor, true
+	}
+	if p.dialect.BitwiseXorIsHash && tt == tokens.HASH {
+		return exp.BitwiseXor, true
+	}
+	return nil, false
+}
+
 // parseBitwise ports _parse_bitwise (parser.py:6064-6095): AMP/PIPE/CARET plus, when
 // dialect-enabled, DPIPE-as-concat, DQMARK-as-Coalesce, and the two-token `<<`/`>>` shift
 // operators (matchPair, since LT LT / GT GT are two adjacent single-char tokens, not one).
 func (p *Parser) parseBitwise() exp.Expression {
 	this := p.parseTerm()
 	for {
-		if constructor, ok := bitwiseTokens[p.curr.TokenType]; ok {
+		if constructor, ok := p.bitwiseConstructor(p.curr.TokenType); ok {
 			p.advance()
 			this = p.expression(constructor(exp.Args{"this": this, "expression": p.parseTerm()}), nil, nil)
 		} else if p.dialect.DPipeIsStringConcat && p.match(tokens.DPIPE) {

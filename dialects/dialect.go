@@ -82,7 +82,10 @@ type Dialect struct {
 	DPipeIsStringConcat   bool
 	StrictStringConcat    bool
 	TypedDivision         bool
-	SafeDivision          bool
+	// BitwiseXorIsHash ports parsers/postgres.py:163-166 (the postgres BITWISE dict adds
+	// TokenType.HASH -> BitwiseXor): postgres reads `a # b` as BitwiseXor.
+	BitwiseXorIsHash bool
+	SafeDivision     bool
 	// CanImplementArrayAny ports CAN_IMPLEMENT_ARRAY_ANY (generator.py:520, base False):
 	// when true the generator rewrites ARRAY_ANY into an ARRAY_SIZE/FILTER emptiness
 	// check (generator.py:5252-5257) instead of warning and emitting the call verbatim.

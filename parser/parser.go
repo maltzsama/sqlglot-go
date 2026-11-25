@@ -2341,10 +2341,25 @@ func init() {
 	primaryParsers[tokens.BYTE_STRING] = func(p *Parser, token tokens.Token) exp.Expression {
 		return p.expression(exp.ByteString(exp.Args{"this": token.Text, "is_bytes": p.dialect.ByteStringIsBytesType}), &token, nil)
 	}
+	// PRIMARY_PARSERS (parser.py:1241): INTRODUCER -> _parse_introducer (parser.py:7410-7415).
+	primaryParsers[tokens.INTRODUCER] = func(p *Parser, token tokens.Token) exp.Expression {
+		return p.parseIntroducer(token)
+	}
 	// PRIMARY_PARSERS (parser.py:1171): SESSION_PARAMETER -> _parse_session_parameter().
 	primaryParsers[tokens.SESSION_PARAMETER] = func(p *Parser, token tokens.Token) exp.Expression {
 		return p.parseSessionParameter()
 	}
+}
+
+// parseIntroducer ports _parse_introducer (parser.py:7410-7415): a MySQL charset
+// introducer token (`_utf8mb4`, `_latin1`, ...) followed by a primary. If a literal
+// follows, build Introducer(this=<keyword>, expression=<literal>); otherwise treat the
+// introducer as a plain identifier.
+func (p *Parser) parseIntroducer(token tokens.Token) exp.Expression {
+	if literal := p.parsePrimary(); literal != nil {
+		return p.expression(exp.Introducer(exp.Args{"this": token.Text, "expression": literal}), &token, nil)
+	}
+	return p.identifierExpression(false)
 }
 
 // parseSessionParameter ports _parse_session_parameter (parser.py:7168-7176): mysql
@@ -3050,15 +3065,22 @@ func ksqlEmitModifierAhead(p *Parser) bool {
 	return ksqlEmitResults[stringsUpper(p.next.Text)]
 }
 
-// idVarTokensFor is ID_VAR_TOKENS plus the dialect's ID_VAR_TOKENS additions.
+// idVarTokensFor resolves the token set for _parse_id_var. An explicit set (ALIAS_TOKENS /
+// TABLE_ALIAS_TOKENS / a caller-supplied map) is used verbatim: the dialect's ID_VAR_TOKENS
+// additions apply only to the default set, mirroring _parse_id_var's
+// `self._match_set(tokens or self.ID_VAR_TOKENS)` (parser.py:8778-8791). Adding them to an
+// explicit set would, for example, let Snowflake's EXCEPT-as-ID_VAR consume the EXCEPT set
+// operator as a projection alias.
 func (p *Parser) idVarTokensFor(toks map[tokens.TokenType]bool) map[tokens.TokenType]bool {
-	base := tokensOrDefault(toks, idVarTokens)
+	if toks != nil {
+		return toks
+	}
 	extra := p.dialect.ExtraIdVarTokens
 	if len(extra) == 0 {
-		return base
+		return idVarTokens
 	}
-	merged := make(map[tokens.TokenType]bool, len(base)+len(extra))
-	for tt := range base {
+	merged := make(map[tokens.TokenType]bool, len(idVarTokens)+len(extra))
+	for tt := range idVarTokens {
 		merged[tt] = true
 	}
 	for tt := range extra {
@@ -3097,6 +3119,11 @@ func (p *Parser) parseNull() exp.Expression {
 	if p.curr.TokenType == tokens.NULL || p.curr.TokenType == tokens.UNKNOWN {
 		token := p.curr
 		p.advance()
+		// parser.py:8843-8845: both NULL and UNKNOWN route through the NULL primary parser,
+		// so `x IS UNKNOWN` folds to Is(expression=Null()) and renders `x IS NULL`.
+		if token.TokenType == tokens.UNKNOWN {
+			return p.expression(exp.Null(), &token, nil)
+		}
 		return p.primaryFromToken(token)
 	}
 	return p.parsePlaceholder()
@@ -4235,6 +4262,14 @@ func (p *Parser) canParseLimitOrOffset() bool {
 	index := p.index
 	result := p.tryParse(func() exp.Expression { return p.parseLimit(nil, false, false) }, true) != nil || p.tryParse(func() exp.Expression { return p.parseOffset(nil) }, true) != nil
 	p.retreat(index)
+	// `LIMIT ALL` is a no-op limit clause (parser.py:5753-5754): parseLimit returns the
+	// unchanged query (nil), so the tryParse result above is falsy, yet it is still a clause
+	// and must not be consumed as a table alias. Upstream never reaches this path for a plain
+	// `FROM t LIMIT ALL` because _parse_table's fast path returns the table as soon as it sees
+	// LIMIT (parser.py:5000-5008); this port skips that fast path, so recognize LIMIT ALL here.
+	if !result && p.dialect.SupportsLimitAll && p.curr.TokenType == tokens.LIMIT && p.next.TokenType == tokens.ALL {
+		result = true
+	}
 	if p.next.TokenType == tokens.MATCH_CONDITION {
 		result = false
 	}

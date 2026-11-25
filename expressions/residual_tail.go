@@ -12,6 +12,10 @@ func HexString(args Args) Expression { return newNode(KindHexString, args) }
 // byte-string literal, e.g. postgres `e'\n'`.
 func ByteString(args Args) Expression { return newNode(KindByteString, args) }
 
+// Introducer ports exp.Introducer (expressions/query.py:581-582): a MySQL charset
+// introducer, e.g. `_utf8mb4 'hola'` / `_latin1 X'4D7953514C'`.
+func Introducer(args Args) Expression { return newNode(KindIntroducer, args) }
+
 // SessionParameter ports exp.SessionParameter (expressions/core.py:1837-1838): mysql
 // `@@GLOBAL.max_connections` / bare `@@x` session-variable reference.
 func SessionParameter(args Args) Expression { return newNode(KindSessionParameter, args) }
