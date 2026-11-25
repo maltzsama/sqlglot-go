@@ -477,6 +477,11 @@ func DataTypeFromStr(dtype string, dialect DialectType, udt bool, kwargs Args) (
 	}
 	expr, err := ParseIntoFunc(dtype, dialect, KindDataType, true)
 	if err != nil {
+		// A simple single-word type name the type parser does not tokenize as a keyword
+		// (e.g. Snowflake FILE) still resolves through the global dtype table.
+		if dt, ok := dTypeByName[strings.ToUpper(strings.TrimSpace(dtype))]; ok {
+			return applyKwargs(DataType(Args{"this": dt}), kwargs), nil
+		}
 		if udt {
 			return applyKwargs(DataType(Args{"this": DTypeUserDefined, "kind": dtype}), kwargs), nil
 		}
