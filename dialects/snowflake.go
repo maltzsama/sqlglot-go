@@ -106,6 +106,8 @@ func Snowflake() *Dialect {
 	// dialects/snowflake.py:151-190 class Tokenizer.
 	cfg := d.TokenizerConfig
 	cfg.StringEscapes = map[rune]bool{'\\': true, '\'': true}
+	// Snowflake HEX_STRINGS is non-empty, so the number scanner accepts bare 0x literals.
+	cfg.HasHexStrings = true
 	cfg.FormatStrings = maps.Clone(cfg.FormatStrings)
 	if cfg.FormatStrings == nil {
 		cfg.FormatStrings = map[string]tokens.FormatString{}
@@ -197,6 +199,54 @@ func snowflakeDateUnit(unit exp.Expression) exp.Expression {
 // (parsers/snowflake.py:396-733) for the identity-relevant entries.
 func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expression {
 	out := map[string]func([]exp.Expression) exp.Expression{}
+	// Snowflake sets LEAST_GREATEST_IGNORES_NULLS=False, so plain GREATEST/LEAST carry
+	// ignore_nulls=false (the base builder hardcodes true).
+	buildGreatestLeast := func(kind exp.Kind) func([]exp.Expression) exp.Expression {
+		return func(args []exp.Expression) exp.Expression {
+			m := exp.Args{"ignore_nulls": d.LeastGreatestIgnoresNulls}
+			if len(args) > 0 {
+				m["this"] = args[0]
+			}
+			if len(args) > 1 {
+				m["expressions"] = args[1:]
+			}
+			return exp.New(kind, m)
+		}
+	}
+	out["GREATEST"] = buildGreatestLeast(exp.KindGreatest)
+	out["LEAST"] = buildGreatestLeast(exp.KindLeast)
+
+	// Snowflake alias builders.
+	safeFn := func(kind exp.Kind) func([]exp.Expression) exp.Expression {
+		return func(args []exp.Expression) exp.Expression {
+			e := exp.FromArgList(kind, args)
+			e.Set("safe", true)
+			return e
+		}
+	}
+	out["REGEXP_SUBSTR"] = exp.FromArgListFunc(exp.KindRegexpExtract)
+	out["COLLATE"] = exp.FromArgListFunc(exp.KindCollate)
+	out["DECODE"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindDecodeCase, exp.Args{"expressions": args})
+	}
+	out["TRY_DECRYPT"] = safeFn(exp.KindDecrypt)
+	out["TRY_DECRYPT_RAW"] = safeFn(exp.KindDecryptRaw)
+	out["TRY_TO_BOOLEAN"] = safeFn(exp.KindToBoolean)
+	out["TO_FILE"] = exp.FromArgListFunc(exp.KindToFile)
+	out["TRY_TO_FILE"] = safeFn(exp.KindToFile)
+	for name, kind := range map[string]exp.Kind{
+		"ARRAY_APPEND":  exp.KindArrayAppend,
+		"ARRAY_PREPEND": exp.KindArrayPrepend,
+		"ARRAY_REMOVE":  exp.KindArrayRemove,
+		"ARRAY_CAT":     exp.KindArrayConcat,
+	} {
+		kind := kind
+		out[name] = func(args []exp.Expression) exp.Expression {
+			e := exp.FromArgList(kind, args)
+			e.Set("null_propagation", d.ArrayFuncsPropagatesNulls)
+			return e
+		}
+	}
 	out["SEARCH"] = func(args []exp.Expression) exp.Expression {
 		values := exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1)}
 		for _, arg := range args[min(2, len(args)):] {
@@ -419,6 +469,12 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 				parsed.Set("safe", safe)
 				return parsed
 			}
+			if isTimestampType && len(args) > 1 {
+				parsed := exp.FromArgList(exp.KindStrToTime, args)
+				parsed.Set("safe", safe)
+				parsed.Set("target_type", exp.DataType(exp.Args{"this": target}))
+				return parsed
+			}
 			return exp.Anonymous(exp.Args{"this": name, "expressions": args})
 		}
 	}
@@ -433,7 +489,7 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return exp.DateAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
 	}
 	out["TIMESTAMPADD"] = func(args []exp.Expression) exp.Expression {
-		return exp.TimestampAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
+		return exp.DateAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
 	}
 	out["TIMEADD"] = func(args []exp.Expression) exp.Expression {
 		return exp.TimeAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
