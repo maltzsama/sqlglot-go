@@ -54,11 +54,11 @@ correctness rationale (matches the DB) or an explicit, tracked feature decision 
 
 `go test ./...` is green. The parse → generate pipeline is at **100% round-trip parity** for base +
 MySQL + Postgres — **1876/1876** base-corpus cases (base 980/980, MySQL 428/428, Postgres 468/468),
-and every registered dialect meets its floor in the per-dialect corpus
-(`testdata/dialect_identity.jsonl`, 6632 records); the open rows are 34 DuckDB cases and 332
-Snowflake cases (`testdata/parity_gaps.txt`). Cross-dialect transpilation is verified the same way
+and all 7609 cases in the per-dialect corpus pass
+(`testdata/dialect_identity.jsonl`; `testdata/parity_gaps.txt` is empty). Cross-dialect
+transpilation is verified the same way
 against upstream's `validate_all` read/write pairs (`testdata/transpile_corpus.jsonl`,
-`TestTranspileCorpus`): 6391/8881 pairs pass (2490 open), tracked in `testdata/transpile_gaps.txt`.
+`TestTranspileCorpus`): 6761/8881 pairs pass (2120 open), tracked in `testdata/transpile_gaps.txt`.
 AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
 `exp.Command` where upstream builds a structured node (`fidelity_test.go` +
 `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,

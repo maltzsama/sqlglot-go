@@ -151,7 +151,7 @@ pair.
 | Presto | `presto` | 170/170 |
 | Redshift | `redshift` | 171/171 |
 | RisingWave | `risingwave` | 7/7 |
-| Snowflake | `snowflake` | 1,396/1,543 |
+| Snowflake | `snowflake` | 1,543/1,543 |
 | Spark | `spark` | 227/227 |
 | Spark 2 | `spark2` | Covered by read/write pairs |
 | SQLite | `sqlite` | 136/136 |

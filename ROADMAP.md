@@ -8,10 +8,10 @@ records deliberate differences.
 
 ## Current status
 
-- **Identity corpus.** 7,462 of 7,609 cases pass, including all 1,876 base, MySQL, and
-  PostgreSQL cases. DuckDB is complete (565/565); Snowflake has 147 gaps. The
+- **Identity corpus.** 7,609 of 7,609 cases pass, including all 1,876 base, MySQL, and
+  PostgreSQL cases. DuckDB and Snowflake are complete (565/565 and 1,543/1,543); the
   [README dialect table](./README.md#dialects-and-verified-coverage) shows the per-dialect results.
-- **Transpile corpus.** 6,704 of 8,881 upstream `validate_all` read/write pairs pass, with 2,177
+- **Transpile corpus.** 6,761 of 8,881 upstream `validate_all` read/write pairs pass, with 2,120
   remaining gaps. These include same-dialect pairs. The initial harness shipped in
   [#33](https://github.com/maltzsama/sqlglot-go/issues/33).
 - **Optimizer.** The default rule pipeline, including qualification and scope analysis, is
@@ -930,11 +930,8 @@ function spellings, the Snowflake type map (VARIANT/OBJECT/VARCHAR/TIMESTAMPNTZ)
 `MAP(...)` / `ARRAY(...)` type delimiters, `OBJECT_CONSTRUCT`/`OBJECT_KEYS`, the `$` parameter token,
 and `COPY` without a `WITH` wrapper.
 
-Corpus: 1543 `validate_identity` cases from `tests/dialects/test_snowflake.py`, at **1209/1543**. The
-remaining rows are tracked in `testdata/parity_gaps.txt`: stage paths and `GET`/`PUT`, `AT`/`BEFORE`
-time travel, `SEMANTIC_VIEW`, `MATCH_RECOGNIZE`/`MATCH_CONDITION`, `IDENTIFIER` calls, JSON colon
-paths and `GET_PATH`/`FLATTEN` implicit columns, object/map literal keys, COPY parameter metadata,
-ALTER TABLE property statements, and the remaining DDL describe qualifiers. Newly active optimizer
+Corpus: 1543 `validate_identity` cases from `tests/dialects/test_snowflake.py`, at **1543/1543**
+(`testdata/parity_gaps.txt` is empty). Newly active optimizer
 fixtures are recorded in `optimizeGaps`, `simplify_gaps.txt`, and `annotate_gaps.txt`. Regression
 tests: `snowflake_test.go`.
 
