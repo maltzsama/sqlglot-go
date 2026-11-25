@@ -1045,9 +1045,3 @@ annotate_functions.sql||60
 annotate_functions.sql||66
 annotate_functions.sql||7
 annotate_functions.sql||8
-annotate_types.sql|bigquery|46
-annotate_types.sql|bigquery|47
-annotate_types.sql|bigquery|48
-annotate_types.sql|bigquery|49
-annotate_types.sql|databricks|17
-annotate_types.sql|spark|16
