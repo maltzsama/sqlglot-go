@@ -150,6 +150,7 @@ func annUnnest(a *TypeAnnotator, e exp.Expression)         { a.annotateUnnest(e)
 func annWithinGroup(a *TypeAnnotator, e exp.Expression)    { a.annotateWithinGroup(e) }
 func annSubquery(a *TypeAnnotator, e exp.Expression)       { a.annotateSubquery(e) }
 func annByArrayElement(a *TypeAnnotator, e exp.Expression) { a.annotateByArrayElement(e) }
+func annBigQueryArray(a *TypeAnnotator, e exp.Expression)  { a.annotateBigQueryArray(e) }
 func annTimeunit(a *TypeAnnotator, e exp.Expression)       { a.annotateTimeunit(e) }
 func annMap(a *TypeAnnotator, e exp.Expression)            { a.annotateMap(e) }
 func annNoop(*TypeAnnotator, exp.Expression)               {}

@@ -286,3 +286,36 @@ func TestPortedFunctionNodeAnnotation(t *testing.T) {
 		wantDType(t, tc.sql, e, tc.want)
 	}
 }
+
+// TestNullTypeAnnotation covers the DEFAULT_NULL_TYPE / SUPPORTS_NULL_TYPE split
+// (annotate_types.py:288-293): a bare NULL folds to the dialect's default null type, except
+// under dialects that keep NULL (VOID) as a real type.
+func TestNullTypeAnnotation(t *testing.T) {
+	wantDType(t, "base NULL", annotate(t, "NULL", nil, ""), exp.DTypeUnknown)
+	wantDType(t, "bigquery NULL", annotate(t, "NULL", nil, "bigquery"), exp.DTypeBigInt)
+	wantDType(t, "spark NULL", annotate(t, "NULL", nil, "spark"), exp.DTypeNull)
+	wantDType(t, "databricks NULL", annotate(t, "NULL", nil, "databricks"), exp.DTypeNull)
+}
+
+// TestBigQueryArrayAnnotation covers typing/bigquery.py:127-193: ARRAY(<set operation>) takes
+// the coerced first projection as its element type instead of the base by-args rule.
+func TestBigQueryArrayAnnotation(t *testing.T) {
+	for _, tc := range []struct {
+		sql  string
+		want exp.DType
+	}{
+		{"ARRAY(SELECT 1 UNION ALL SELECT 2)", exp.DTypeInt},
+		{"ARRAY(SELECT 1 UNION ALL SELECT 2.5)", exp.DTypeDouble},
+		{"ARRAY(SELECT 'a' UNION ALL SELECT 'b')", exp.DTypeVarchar},
+	} {
+		e := annotate(t, tc.sql, nil, "bigquery")
+		if e.Type() == nil || !e.Type().IsType(exp.DTypeArray) {
+			t.Fatalf("%s: type %v, want ARRAY", tc.sql, e.Type())
+		}
+		elems := e.Type().Expressions()
+		if len(elems) != 1 {
+			t.Fatalf("%s: element count %d, want 1", tc.sql, len(elems))
+		}
+		wantDType(t, tc.sql+" element", elems[0], tc.want)
+	}
+}

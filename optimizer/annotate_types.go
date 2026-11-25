@@ -335,6 +335,7 @@ type TypeAnnotator struct {
 	nullExpressions     map[exp.Expression]bool
 	nullExpressionOrder []exp.Expression
 	supportsNullType    bool
+	defaultNullType     exp.DType
 	// setopColumnTypes maps a set operation to its projection types, computed when it is the
 	// expression of a scope source.
 	setopColumnTypes map[exp.Expression]*typedMap
@@ -362,6 +363,12 @@ func NewTypeAnnotator(s schema.Schema) *TypeAnnotator {
 		}
 		s = empty
 	}
+	// DEFAULT_NULL_TYPE (dialects/dialect.py:787) defaults to UNKNOWN; BigQuery overrides it
+	// with BIGINT (dialects/bigquery.py:44).
+	defaultNullType := d.DefaultNullType
+	if defaultNullType == "" {
+		defaultNullType = exp.DTypeUnknown
+	}
 	return &TypeAnnotator{
 		schema:             s,
 		dialect:            d,
@@ -370,7 +377,8 @@ func NewTypeAnnotator(s schema.Schema) *TypeAnnotator {
 		binaryCoercions:    defaultBinaryCoercions,
 		visited:            map[exp.Expression]bool{},
 		nullExpressions:    map[exp.Expression]bool{},
-		supportsNullType:   false,
+		supportsNullType:   d.SupportsNullType,
+		defaultNullType:    defaultNullType,
 		setopColumnTypes:   map[exp.Expression]*typedMap{},
 		overwriteTypes:     true,
 		scopeSourceSelects: map[scopeSourceKey]*typedMap{},
@@ -441,7 +449,7 @@ func (a *TypeAnnotator) Annotate(expression exp.Expression, annotateScope bool) 
 	// not an actual type; it mostly aids type coercion, e.g. in set operations.
 	for _, expr := range a.nullExpressionOrder {
 		if a.nullExpressions[expr] {
-			a.setType(expr, exp.DTypeUnknown)
+			a.setType(expr, a.defaultNullType)
 		}
 	}
 	return expression
@@ -1051,6 +1059,83 @@ func (a *TypeAnnotator) annotateByArgs(expression exp.Expression, args annotateA
 		}))
 	}
 	return expression
+}
+
+// annotateBigQueryArray ports BigQuery's _annotate_array (typing/bigquery.py:127-193). For a
+// single ARRAY(...) argument that is a SELECT or a set operation, the element type is the
+// query's projection type (a set operation's coerced first projection) rather than the base
+// annByArgs rule, which sees the query itself as UNKNOWN.
+func (a *TypeAnnotator) annotateBigQueryArray(expression exp.Expression) exp.Expression {
+	arrayArgs := expression.Expressions()
+
+	if len(arrayArgs) == 1 {
+		unnested := arrayArgs[0].Unnest()
+		var projectionType any
+
+		if unnested != nil && unnested.Kind() == exp.KindSelect {
+			// ARRAY(SELECT ...) - single SELECT query.
+			if queryType, ok := unnested.MetaGet("query_type").(exp.Expression); ok && queryType != nil && queryType.IsType(exp.DTypeStruct) {
+				queryExprs := queryType.Expressions()
+				colDefs := make([]exp.Expression, 0, len(queryExprs))
+				for _, e := range queryExprs {
+					kind := asExpression(e.Arg("kind"))
+					if e.Kind() == exp.KindColumnDef && (kind == nil || !kind.IsType(exp.DTypeUnknown)) {
+						colDefs = append(colDefs, e)
+					}
+				}
+				if len(colDefs) == len(queryExprs) {
+					if unnested.Text("kind") == "STRUCT" {
+						// ARRAY(SELECT AS STRUCT ...) -> ARRAY<STRUCT<col1, col2, ...>>
+						projectionType = queryType
+					} else if len(colDefs) == 1 {
+						// ARRAY(SELECT col FROM ...) -> ARRAY<col_type>
+						if colType := asExpression(colDefs[0].Arg("kind")); colType != nil {
+							projectionType = colType
+						}
+					}
+				}
+			}
+		} else if unnested != nil && unnested.Is(exp.TraitSetOperation) {
+			// ARRAY(SELECT ... UNION ALL SELECT ...) - set operations.
+			colTypes := a.getSetopColumnTypes(unnested)
+			if left := unnested.This(); left != nil {
+				if selects := left.Selects(); len(selects) > 0 {
+					projectionType = colTypes.get(selects[0].AliasOrName())
+					if isNilType(projectionType) {
+						projectionType = nil
+					}
+				}
+			}
+		}
+
+		// If a projection type was determined and it is not UNKNOWN, wrap it in ARRAY.
+		unknown := false
+		switch p := projectionType.(type) {
+		case exp.DType:
+			unknown = p == exp.DTypeUnknown
+		case exp.Expression:
+			unknown = p != nil && p.IsType(exp.DTypeUnknown)
+		}
+		if projectionType != nil && !unknown {
+			var elementType exp.Expression
+			switch p := projectionType.(type) {
+			case exp.Expression:
+				elementType = p.Copy()
+			case exp.DType:
+				elementType = exp.DataType(exp.Args{"this": p})
+			}
+			if elementType != nil {
+				a.setType(expression, exp.DataType(exp.Args{
+					"this":        exp.DTypeArray,
+					"expressions": []exp.Expression{elementType},
+					"nested":      true,
+				}))
+				return expression
+			}
+		}
+	}
+
+	return a.annotateByArgs(expression, annotateArgs{keys: []string{"expressions"}, array: true})
 }
 
 // annotateTimeunit ports _annotate_timeunit (annotate_types.py:887-899).
