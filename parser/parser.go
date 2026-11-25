@@ -4612,11 +4612,17 @@ func init() {
 		// Registered unconditionally in the base singleton, but functionParser exposes it only
 		// through the Postgres fallback (parsers/postgres.py:156 FUNCTION_PARSERS). Base/MySQL
 		// have no DATE_PART entry, so DATE_PART(...) there parses as a plain Anonymous call.
-		"DATE_PART":      func(p *Parser) exp.Expression { return p.parseDatePart() },
-		"POSITION":       func(p *Parser) exp.Expression { return p.parsePosition() },
-		"SUBSTRING":      func(p *Parser) exp.Expression { return p.parseSubstring() },
-		"TRIM":           func(p *Parser) exp.Expression { return p.parseTrim() },
-		"STRING_AGG":     func(p *Parser) exp.Expression { return p.parseStringAgg() },
+		"DATE_PART":  func(p *Parser) exp.Expression { return p.parseDatePart() },
+		"POSITION":   func(p *Parser) exp.Expression { return p.parsePosition() },
+		"SUBSTRING":  func(p *Parser) exp.Expression { return p.parseSubstring() },
+		"TRIM":       func(p *Parser) exp.Expression { return p.parseTrim() },
+		"STRING_AGG": func(p *Parser) exp.Expression { return p.parseStringAgg() },
+		// parser.py:1559-1567: MAX_BY/MIN_BY/ARG_MAX/ARG_MIN take a DISTINCT that wraps only
+		// the first argument (unlike COUNT's multi-argument DISTINCT).
+		"MAX_BY":         func(p *Parser) exp.Expression { return p.parseDistinctArgFunction(exp.KindArgMax, 0) },
+		"MIN_BY":         func(p *Parser) exp.Expression { return p.parseDistinctArgFunction(exp.KindArgMin, 0) },
+		"ARG_MAX":        func(p *Parser) exp.Expression { return p.parseDistinctArgFunction(exp.KindArgMax, 0) },
+		"ARG_MIN":        func(p *Parser) exp.Expression { return p.parseDistinctArgFunction(exp.KindArgMin, 0) },
 		"JSON_TABLE":     func(p *Parser) exp.Expression { return p.parseJSONTable() },
 		"XMLELEMENT":     func(p *Parser) exp.Expression { return p.parseXMLElement() },
 		"XMLTABLE":       func(p *Parser) exp.Expression { return p.parseXMLTable() },

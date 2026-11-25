@@ -111,6 +111,10 @@ func (p *Parser) parseHiveQuantileFunction(kind exp.Kind) exp.Expression {
 // parseDistinctArgFunction ports _parse_distinct_arg_function (parser.py:10109-10122): the
 // optional DISTINCT prefix wraps the argument at distinctIndex.
 func (p *Parser) parseDistinctArgFunction(kind exp.Kind, distinctIndex int) exp.Expression {
+	if p.dialect.OpaqueFunctions {
+		opaqueName := p.captureOpaqueName()
+		return p.opaqueAnonymous(opaqueName, p.parseFunctionArgs(false))
+	}
 	isDistinct := p.match(tokens.DISTINCT)
 	if !isDistinct {
 		p.match(tokens.ALL)

@@ -2994,3 +2994,11 @@ func (g *Generator) translateCharactersSQL(e expressions.Expression) string {
 func (g *Generator) formatPhraseSQL(e expressions.Expression) string {
 	return g.sqlKey(e, "this") + " (FORMAT " + g.sqlKey(e, "format") + ")"
 }
+
+// intDivSQL ports intdiv_sql (generator.py:4438-4444): CAST(this / expression AS INT).
+func (g *Generator) intDivSQL(e expressions.Expression) string {
+	return g.gen(expressions.Cast(expressions.Args{
+		"this": expressions.Div(expressions.Args{"this": e.This(), "expression": e.Expr()}),
+		"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeInt}),
+	}))
+}

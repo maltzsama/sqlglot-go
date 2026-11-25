@@ -93,7 +93,7 @@ func normalizeCollate(collate exp.Expression) {
 var factorTokens = map[tokens.TokenType]func(exp.Args) exp.Expression{
 	tokens.SLASH:      exp.Div,
 	tokens.STAR:       exp.Mul,
-	tokens.DIV:        exp.Div,
+	tokens.DIV:        exp.IntDiv,
 	tokens.LR_ARROW:   exp.Distance,
 	tokens.LLRR_ARROW: exp.DistanceNd,
 }
@@ -108,7 +108,7 @@ func (p *Parser) parseFactor() exp.Expression {
 		p.advance()
 		comments := p.prevComments
 		args := exp.Args{"this": this, "expression": p.parseFactorOperand()}
-		if tokenType == tokens.SLASH || tokenType == tokens.DIV {
+		if tokenType == tokens.SLASH {
 			args["typed"] = p.dialect.TypedDivision
 			args["safe"] = p.dialect.SafeDivision
 		}

@@ -397,3 +397,11 @@ func (g *Generator) prestoRegexpExtractSQL(e exp.Expression) string {
 	}
 	return g.funcCall(name, []any{e.Arg("this"), e.Arg("expression"), group}, "(", ")", true)
 }
+
+// generators/presto.py:314-315 exp.ArgMax/exp.ArgMin: MAX_BY/MIN_BY.
+func init() {
+	registerDialectDispatch("presto", map[exp.Kind]func(*Generator, exp.Expression) string{
+		exp.KindArgMax: renameFunc("MAX_BY"),
+		exp.KindArgMin: renameFunc("MIN_BY"),
+	})
+}

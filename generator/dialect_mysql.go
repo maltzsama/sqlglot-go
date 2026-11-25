@@ -14,3 +14,23 @@ func init() {
 		expressions.KindVolatileProperty: propertyLocationUnsupported,
 	})
 }
+
+// MySQL function renames (generators/mysql.py TRANSFORMS), shared with the MySQL subclasses.
+func init() {
+	registerDialectDispatch("mysql", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindBitwiseAndAgg: renameFunc("BIT_AND"),
+		expressions.KindBitwiseOrAgg:  renameFunc("BIT_OR"),
+		expressions.KindBitwiseXorAgg: renameFunc("BIT_XOR"),
+		expressions.KindNumberToStr:   renameFunc("FORMAT"),
+		expressions.KindStuff:         renameFunc("INSERT"),
+		expressions.KindTimeFromParts: renameFunc("MAKETIME"),
+		expressions.KindUtcTimestamp:  renameFunc("UTC_TIMESTAMP"),
+	})
+}
+
+// generators/mysql.py: VERSION() spells CurrentVersion.
+func init() {
+	registerDialectDispatch("mysql", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindCurrentVersion: renameFunc("VERSION"),
+	})
+}

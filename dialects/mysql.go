@@ -158,6 +158,14 @@ func MySQL() *Dialect {
 		"DATABASE":         exp.FromArgListFunc(exp.KindCurrentSchema),
 		"SCHEMA":           exp.FromArgListFunc(exp.KindCurrentSchema),
 		"TIME_STR_TO_UNIX": exp.FromArgListFunc(exp.KindTimeStrToUnix),
+		// generators/mysql.py:177 exp.NumberToStr: FORMAT(value, decimals).
+		"FORMAT":  exp.FromArgListFunc(exp.KindNumberToStr),
+		"VERSION": exp.FromArgListFunc(exp.KindCurrentVersion),
+		"CONVERT_TZ": func(args []exp.Expression) exp.Expression {
+			return exp.New(exp.KindConvertTimezone, exp.Args{
+				"source_tz": hiveSeqGet(args, 1), "target_tz": hiveSeqGet(args, 2), "timestamp": hiveSeqGet(args, 0),
+			})
+		},
 		// parsers/mysql.py:108-110 (v30.17.0): MySQL DATEDIFF counts date-part boundaries.
 		"DATEDIFF": func(args []exp.Expression) exp.Expression {
 			return exp.New(exp.KindDateDiff, exp.Args{
