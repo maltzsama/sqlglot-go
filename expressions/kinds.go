@@ -603,6 +603,14 @@ const (
 	KindSetConfigProperty
 	KindCharacterSetProperty
 	KindRowFormatProperty
+	// KindHandlerProperty ports exp.HandlerProperty (properties.py:160-161, arg_types
+	// {"this": True}): the CREATE FUNCTION `HANDLER <expr>` property, rendered with an
+	// explicit `HANDLER = ` prefix by the Snowflake generator (generators/snowflake.py:483).
+	KindHandlerProperty
+	// KindDynamicProperty ports exp.DynamicProperty (properties.py:254-255, arg_types {}):
+	// the bare DYNAMIC marker of `CREATE DYNAMIC TABLE` (base PROPERTY_PARSERS, parser.py:1331;
+	// generator.py:181 renders it as "DYNAMIC", located POST_CREATE at generator.py:713).
+	KindDynamicProperty
 	// KindReturn ports exp.Return (query.py:882, `pass` - default {"this": True}): the
 	// `RETURN <expr>` wrapper _parse_create can apply to a UDF/procedure body
 	// (parser.py:2469-2470).
@@ -1699,6 +1707,8 @@ var argTypes = map[Kind][]argSpec{
 	KindSetConfigProperty:         {{"this", true}},
 	KindCharacterSetProperty:      {{"this", true}, {"default", false}},
 	KindRowFormatProperty:         {{"this", true}},
+	KindHandlerProperty:           {{"this", true}},
+	KindDynamicProperty:           {},
 	KindReturn:                    defaultArgTypes,
 	KindIndex:                     {{"this", false}, {"table", false}, {"unique", false}, {"primary", false}, {"amp", false}, {"params", false}},
 	KindOpclass:                   {{"this", true}, {"expression", true}},
@@ -3235,6 +3245,8 @@ var className = map[Kind]string{
 	KindSetConfigProperty:                   "SetConfigProperty",
 	KindCharacterSetProperty:                "CharacterSetProperty",
 	KindRowFormatProperty:                   "RowFormatProperty",
+	KindHandlerProperty:                     "HandlerProperty",
+	KindDynamicProperty:                     "DynamicProperty",
 	KindReturn:                              "Return",
 	KindIndex:                               "Index",
 	KindOpclass:                             "Opclass",

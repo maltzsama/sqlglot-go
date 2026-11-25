@@ -30,8 +30,112 @@ func init() {
 			tokens.POOL: true, tokens.ROLE: true, tokens.RULE: true, tokens.SEMI: true,
 			tokens.VOLUME: true, tokens.WINDOW: true,
 		},
-		TablePart: snowflakeTablePart,
+		// parsers/snowflake.py:772-778 PROPERTY_PARSERS additions. FILE_FORMAT and ROW are
+		// handled inline in parseProperty (they need the wrapped-options/location-path
+		// grammar); EXTERNAL is a plain marker.
+		PropertyParsers: map[string]propertyParserFunc{
+			"EXTERNAL": func(p *Parser, _ bool) exp.Expression {
+				return p.expression(exp.ExternalProperty(nil), nil, nil)
+			},
+		},
+		// parsers/snowflake.py:332 TYPED_LAMBDA_ARGS.
+		TypedLambdaArgs: true,
+		// parsers/snowflake.py:910-921 LAMBDAS: ARROW parses an assignment body and strips
+		// the type annotation from the stored parameter list.
+		Lambdas: map[tokens.TokenType]func(*Parser, []exp.Expression) exp.Expression{
+			tokens.ARROW: snowflakeArrowLambda,
+		},
+		LambdaArgParser: snowflakeLambdaArg,
+		FileLocation:    snowflakeFileLocation,
+		TablePart:       snowflakeTablePart,
 	})
+}
+
+// snowflakeFileLocation ports _parse_file_location (parsers/snowflake.py:1298-1304): COPY's
+// file list accepts a subquery or a staged file, the latter parsed as table parts.
+func snowflakeFileLocation(p *Parser) exp.Expression {
+	if p.match(tokens.L_PAREN, false) {
+		return p.parseSelect(true, false, false)
+	}
+	return p.snowflakeFileTableParts()
+}
+
+// snowflakeFileTableParts ports the Snowflake _parse_table_parts override
+// (parsers/snowflake.py:1097-1137) for the COPY file-location position: a string or
+// `@stage/path` location becomes a Table, optionally followed by the
+// `(FILE_FORMAT => ..., PATTERN => ...)` suffix.
+func (p *Parser) snowflakeFileTableParts() exp.Expression {
+	var table exp.Expression
+	switch {
+	case p.curr.TokenType == tokens.STRING:
+		table = p.parseString()
+	case p.curr.TokenType == tokens.PARAMETER && p.curr.Text == "@":
+		table = p.parseLocationPath()
+	}
+	if table == nil {
+		return p.parseTableParts(false, false, false, false)
+	}
+
+	var fileFormat, pattern exp.Expression
+	wrapped := p.match(tokens.L_PAREN)
+	for p.curr.IsValid() && wrapped && !p.match(tokens.R_PAREN) {
+		if p.matchTextSeq("FILE_FORMAT", "=>") {
+			fileFormat = p.parseString()
+			if fileFormat == nil {
+				fileFormat = p.parseTableParts(false, false, false, false)
+			}
+		} else if p.matchTextSeq("PATTERN", "=>") {
+			pattern = p.parseString()
+		} else {
+			break
+		}
+		p.match(tokens.COMMA)
+	}
+
+	return p.expression(exp.Table(exp.Args{"this": table, "format": fileFormat, "pattern": pattern}), nil, nil)
+}
+
+// parseLocationPath ports _parse_location_path (parsers/snowflake.py:1306-1318): consume
+// every connected token until a comma or paren, keeping the raw source text as a Var.
+func (p *Parser) parseLocationPath() exp.Expression {
+	start := p.curr
+	p.advanceAny(true)
+
+	for p.isConnected() && p.curr.TokenType != tokens.COMMA &&
+		p.curr.TokenType != tokens.L_PAREN && p.curr.TokenType != tokens.R_PAREN {
+		p.advanceAny(true)
+	}
+
+	return p.expression(exp.Var(exp.Args{"this": p.findSQL(start, p.prev)}), nil, nil)
+}
+
+// snowflakeLambdaArg ports _parse_lambda_arg (parsers/snowflake.py:1320-1331): the base
+// id-var followed by an optional type annotation, wrapped in a Cast.
+func snowflakeLambdaArg(p *Parser) exp.Expression {
+	this := p.parseIdVar(true, nil)
+	if this == nil {
+		return nil
+	}
+	if typ := p.parseTypes(false, false, false, false); typ != nil {
+		return p.expression(exp.Cast(exp.Args{"this": this, "to": typ}), nil, nil)
+	}
+	return this
+}
+
+// snowflakeArrowLambda ports the LAMBDAS[ARROW] override (parsers/snowflake.py:912-919):
+// the body is an assignment (not a disjunction) and the stored params drop the Cast wrapper
+// introduced by snowflakeLambdaArg, keeping only the annotated name.
+func snowflakeArrowLambda(p *Parser, params []exp.Expression) exp.Expression {
+	body := replaceLambda(p.parseAssignment(), params)
+	stripped := make([]exp.Expression, len(params))
+	for i, param := range params {
+		if param != nil && param.Kind() == exp.KindCast {
+			stripped[i] = param.This()
+		} else {
+			stripped[i] = param
+		}
+	}
+	return p.expression(exp.Lambda(exp.Args{"this": body, "expressions": stripped}), nil, nil)
 }
 
 func snowflakeTablePart(p *Parser, _ bool, this exp.Expression) exp.Expression {

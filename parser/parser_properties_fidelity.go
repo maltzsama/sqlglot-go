@@ -108,6 +108,15 @@ func (p *Parser) parsePropertyBefore() exp.Expression {
 	kw.minimum = p.matchTexts(map[string]bool{"MIN": true, "MINIMUM": true})
 	kw.maximum = p.matchTexts(map[string]bool{"MAX": true, "MAXIMUM": true})
 
+	// parsers/snowflake.py:988-998: the Snowflake PROPERTY_PARSERS overlay (FILE_FORMAT,
+	// ROW, LOCATION) is consulted before the base table, exactly as upstream's
+	// `super()._parse_property_before()` dispatches through the merged table.
+	if p.dialectIs("snowflake") {
+		if prop := p.parseSnowflakeInlineProperty(); prop != nil {
+			return prop
+		}
+	}
+
 	if p.matchTexts(p.propertyParserKeys()) {
 		key := stringsUpper(p.prev.Text)
 		truthy := kw.truthy()
@@ -133,6 +142,22 @@ func (p *Parser) parsePropertyBefore() exp.Expression {
 	// "CHARACTER SET" is two tokens since v30.17 (parser.py:2878-2880).
 	if p.matchTextSeq("CHARACTER", "SET") {
 		return p.parseCharacterSet(kw.isDefault)
+	}
+	// parsers/snowflake.py:988-998: beyond the base POST_NAME set, Snowflake parses a
+	// generic `key = value` property whenever the token after the key is `=` — this is how
+	// `CREATE TABLE t CHANGE_TRACKING=TRUE (id INT)` keeps the property before the schema.
+	// Snowflake's own PROPERTY_PARSERS entries (FILE_FORMAT, ROW ACCESS POLICY) win first,
+	// since upstream reaches them through the overridden `_parse_property_before`.
+	if p.dialectIs("snowflake") {
+		if prop := p.parseSnowflakeInlineProperty(); prop != nil {
+			return prop
+		}
+		if p.next.IsValid() && p.next.TokenType == tokens.EQ {
+			if seq := p.parseSequenceProperties(); seq != nil {
+				return seq
+			}
+			return p.parseKeyValueProperty(p.parsePrimaryOrVar)
+		}
 	}
 	return nil
 }
@@ -344,14 +369,15 @@ func (p *Parser) parseWrappedProperties() []exp.Expression {
 	return properties
 }
 
-// parseProperty ports _parse_property (parser.py:2795-2815) for the registered property
-// subset, followed by the generic key=value fallback. Unsupported registry entries are not
-// registered, so they consume nothing and the enclosing CREATE degrades to Command.
-func (p *Parser) parseProperty() exp.Expression {
-	if p.dialectIs("snowflake") && (p.matchTextSeq("WITH", "ROW", "ACCESS", "POLICY") || p.matchTextSeq("ROW", "ACCESS", "POLICY")) {
+// parseSnowflakeInlineProperty ports the Snowflake PROPERTY_PARSERS entries this port
+// implements inline rather than through the override table (parsers/snowflake.py:772-778):
+// ROW ACCESS POLICY and FILE_FORMAT. Returning nil means "no Snowflake-specific property
+// here", leaving the token stream untouched.
+func (p *Parser) parseSnowflakeInlineProperty() exp.Expression {
+	if p.matchTextSeq("WITH", "ROW", "ACCESS", "POLICY") || p.matchTextSeq("ROW", "ACCESS", "POLICY") {
 		return p.parseSnowflakeRowAccess()
 	}
-	if p.dialectIs("snowflake") && p.matchTextSeq("FILE_FORMAT") {
+	if p.matchTextSeq("FILE_FORMAT") {
 		p.match(tokens.EQ)
 		var options []exp.Expression
 		if p.match(tokens.L_PAREN, false) {
@@ -360,6 +386,23 @@ func (p *Parser) parseProperty() exp.Expression {
 			options = []exp.Expression{p.parseFormatName()}
 		}
 		return p.expression(exp.FileFormatProperty(exp.Args{"expressions": options}), nil, nil)
+	}
+	// parsers/snowflake.py:1294-1296: LOCATION = @stage/path.
+	if p.matchTextSeq("LOCATION") {
+		p.match(tokens.EQ)
+		return p.expression(exp.LocationProperty(exp.Args{"this": p.parseLocationPath()}), nil, nil)
+	}
+	return nil
+}
+
+// parseProperty ports _parse_property (parser.py:2795-2815) for the registered property
+// subset, followed by the generic key=value fallback. Unsupported registry entries are not
+// registered, so they consume nothing and the enclosing CREATE degrades to Command.
+func (p *Parser) parseProperty() exp.Expression {
+	if p.dialectIs("snowflake") {
+		if prop := p.parseSnowflakeInlineProperty(); prop != nil {
+			return prop
+		}
 	}
 	// parsers/bigquery.py:543-548: NOT DETERMINISTIC becomes a VOLATILE stability property.
 	if p.dialect.Name == "bigquery" && p.matchTextSeq("NOT", "DETERMINISTIC") {

@@ -54,6 +54,8 @@ func Snowflake() *Dialect {
 	d.PreferCTEAliasColumn = true
 	d.TablesampleSizeIsPercent = true
 	d.CopyParamsAreCsv = false
+	// generators/snowflake.py:390: COPY params use `NAME = value`.
+	d.CopyParamsEqRequired = true
 	d.ArrayFuncsPropagatesNulls = true
 	d.AlterTableAddRequiredForEachColumn = false
 	tryCastRequiresString := true
@@ -338,19 +340,26 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	}
 	for name, target := range map[string]exp.DType{
 		"TO_TIME": exp.DTypeTime, "TO_TIMESTAMP": exp.DTypeTimestamp,
-		"TRY_TO_DATE": exp.DTypeDate, "TRY_TO_TIME": exp.DTypeTime,
-		"TRY_TO_TIMESTAMP": exp.DTypeTimestamp,
+		"TO_TIMESTAMP_LTZ": exp.DTypeTimestampLtz, "TO_TIMESTAMP_NTZ": exp.DTypeTimestampNtz,
+		"TO_TIMESTAMP_TZ": exp.DTypeTimestampTz,
+		"TRY_TO_DATE":     exp.DTypeDate, "TRY_TO_TIME": exp.DTypeTime,
+		"TRY_TO_TIMESTAMP":     exp.DTypeTimestamp,
+		"TRY_TO_TIMESTAMP_LTZ": exp.DTypeTimestampLtz, "TRY_TO_TIMESTAMP_NTZ": exp.DTypeTimestampNtz,
+		"TRY_TO_TIMESTAMP_TZ": exp.DTypeTimestampTz,
 	} {
 		safe := strings.HasPrefix(name, "TRY_")
+		// TIMESTAMP_TYPES (parsers/snowflake.py:74-79) covers all four timestamp flavors.
+		isTimestampType := target == exp.DTypeTimestamp || target == exp.DTypeTimestampLtz ||
+			target == exp.DTypeTimestampNtz || target == exp.DTypeTimestampTz
 		out[name] = func(args []exp.Expression) exp.Expression {
 			value := seqGet(args, 0)
-			if target == exp.DTypeTimestamp && safe && len(args) == 1 &&
+			if isTimestampType && safe && len(args) == 1 &&
 				value != nil && value.IsString() {
 				if _, err := strconv.ParseInt(value.Name(), 10, 64); err == nil {
 					return exp.Anonymous(exp.Args{"this": name, "expressions": args})
 				}
 			}
-			if target == exp.DTypeTimestamp && !safe {
+			if isTimestampType && !safe {
 				scale := seqGet(args, 1)
 				valueIsInteger := false
 				if value != nil {
@@ -378,7 +387,7 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 			}
 			if len(args) == 1 && value != nil && value.IsString() {
 				_, integerString := strconv.ParseInt(value.Name(), 10, 64)
-				if target == exp.DTypeTimestamp && !safe && integerString == nil {
+				if isTimestampType && !safe && integerString == nil {
 					return exp.UnixToTime(exp.Args{
 						"this":        value,
 						"target_type": exp.DataType(exp.Args{"this": target}),

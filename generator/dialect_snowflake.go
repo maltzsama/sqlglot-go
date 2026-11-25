@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/maltzsama/sqlglot-go/dialects"
@@ -22,9 +23,12 @@ func init() {
 	})
 	// generators/snowflake.py:670-671 exp.SetProperty / exp.VolatileProperty: UNSUPPORTED.
 	registerDialectPropertyLocations("snowflake", map[expressions.Kind]propertyLocation{
-		expressions.KindSetProperty:       propertyLocationUnsupported,
-		expressions.KindVolatileProperty:  propertyLocationUnsupported,
-		expressions.KindRowAccessProperty: propertyLocationPostSchema,
+		expressions.KindSetProperty:           propertyLocationUnsupported,
+		expressions.KindVolatileProperty:      propertyLocationUnsupported,
+		expressions.KindRowAccessProperty:     propertyLocationPostSchema,
+		expressions.KindExternalProperty:      propertyLocationPostCreate,
+		expressions.KindPartitionedByProperty: propertyLocationPostSchema,
+		expressions.KindLocationProperty:      propertyLocationPostWith,
 	})
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
@@ -50,6 +54,21 @@ func init() {
 		},
 		expressions.KindFileFormatProperty: func(g *Generator, e expressions.Expression) string {
 			return "FILE_FORMAT=(" + g.expressions(exprsOptions{expression: e, flat: true, sep: " "}) + ")"
+		},
+		// generators/snowflake.py:483: `HANDLER = <expr>`.
+		expressions.KindHandlerProperty: func(g *Generator, e expressions.Expression) string {
+			return "HANDLER = " + g.sqlKey(e, "this")
+		},
+		// generators/snowflake.py:513/537: LOCATION=<expr> and PARTITION BY <expr>, plus
+		// the bare EXTERNAL marker of CREATE EXTERNAL TABLE.
+		expressions.KindLocationProperty: func(g *Generator, e expressions.Expression) string {
+			return "LOCATION=" + g.sqlKey(e, "this")
+		},
+		expressions.KindPartitionedByProperty: func(g *Generator, e expressions.Expression) string {
+			return "PARTITION BY " + g.sqlKey(e, "this")
+		},
+		expressions.KindExternalProperty: func(*Generator, expressions.Expression) string {
+			return "EXTERNAL"
 		},
 		expressions.KindApproxDistinct:        clickhouseRename("APPROX_COUNT_DISTINCT"),
 		expressions.KindApproximateSimilarity: clickhouseRename("APPROXIMATE_SIMILARITY"),
@@ -201,8 +220,234 @@ func init() {
 		},
 		expressions.KindUndrop:   snowflakeUndropSQL,
 		expressions.KindDescribe: snowflakeDescribeSQL,
+		// generators/snowflake.py:490-495: ARRAY_GENERATE_RANGE with an inclusive end.
+		expressions.KindGenerateSeries: snowflakeGenerateSeriesSQL,
+		// generators/snowflake.py:545-555: the Select preprocess chain.
+		expressions.KindSelect: snowflakeSelectSQL,
 	}
 	registerDialectDispatch("snowflake", handlers)
+}
+
+// snowflakeGenerateSeriesSQL ports the base Snowflake exp.GenerateSeries transform
+// (generators/snowflake.py:490-495).
+func snowflakeGenerateSeriesSQL(g *Generator, e expressions.Expression) string {
+	end := e.Arg("end")
+	if !boolValue(e.Arg("is_end_exclusive")) {
+		// `e.args["end"] + 1` goes through Expression._binop, which wraps a Binary operand in
+		// Paren (expressions/core.py:1399-1407); the transformed end is a Sub.
+		end = expressions.Add(expressions.Args{
+			"this":       wrapBinaryExpr(asExpression(e.Arg("end"))),
+			"expression": expressions.LiteralNumber("1"),
+		})
+	}
+	return g.funcCall("ARRAY_GENERATE_RANGE", []any{e.Arg("start"), end, e.Arg("step")}, "(", ")", true)
+}
+
+// wrapBinaryExpr ports expressions._wrap(expression, Binary): a Binary operand of a builder
+// comparison/arith node is parenthesized (expressions/core.py:2792-2793).
+func wrapBinaryExpr(expression expressions.Expression) expressions.Expression {
+	if expression != nil && expression.Is(expressions.TraitBinary) {
+		return expressions.Paren(expressions.Args{"this": expression})
+	}
+	return expression
+}
+
+// snowflakeSelectSQL ports the exp.Select preprocess entry (generators/snowflake.py:545-555).
+// Only explode_projection_to_unnest is ported here; the other upstream transforms either
+// have no equivalent construct in this port yet (eliminate_window_clause,
+// eliminate_distinct_on, eliminate_semi_and_anti_joins, _transform_generate_date_array) or
+// are folded into the dedicated generators (unnest_sql's alias handling covers part of
+// _qualify_unnested_columns, jsonextract_sql covers _eliminate_dot_variant_lookup).
+func snowflakeSelectSQL(g *Generator, e expressions.Expression) string {
+	snowflakeExplodeProjectionToUnnest(e)
+	return g.selectSQL(e)
+}
+
+// findNewName ports find_new_name (helper used by transforms.py:414-417).
+func findNewName(taken map[string]bool, base string) string {
+	if !taken[base] {
+		return base
+	}
+	for i := 2; ; i++ {
+		name := base + "_" + strconv.Itoa(i)
+		if !taken[name] {
+			return name
+		}
+	}
+}
+
+// snowflakeSelectSourceNames returns the aliases of the SELECT's own sources, the naming set
+// `Scope(expression).references` provides to explode_projection_to_unnest
+// (transforms.py:412). Only FROM/JOIN sources belong to this scope: projections and nested
+// selects live in child scopes and must not contribute names.
+func snowflakeSelectSourceNames(selectExpr expressions.Expression) map[string]bool {
+	names := map[string]bool{}
+	add := func(node expressions.Expression) {
+		if node == nil {
+			return
+		}
+		switch node.Kind() {
+		case expressions.KindTable, expressions.KindSubquery, expressions.KindUnnest,
+			expressions.KindLateral, expressions.KindValues:
+			if name := node.AliasOrName(); name != "" {
+				names[name] = true
+			}
+		}
+	}
+	if from := asExpression(selectExpr.Arg("from_")); from != nil {
+		add(from.This())
+		for _, source := range from.Expressions() {
+			add(source)
+		}
+	}
+	for _, joinValue := range listFromValue(selectExpr.Arg("joins")) {
+		if join := asExpression(joinValue); join != nil {
+			add(join.This())
+		}
+	}
+	return names
+}
+
+// snowflakeExplodeProjectionToUnnest ports explode_projection_to_unnest (transforms.py:402-
+// 552) with the default index_offset=0. A projection whose subtree contains an Explode (even
+// inside a nested subquery, which is why the outer SELECT is rewritten for the correlated
+// FLATTEN case) becomes a positional IFF over two FLATTEN sources plus a generated series.
+// The Posexplode/Aliases branches are not ported: this port has no Posexplode node, so they
+// are unreachable here.
+func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
+	takenSelectNames := map[string]bool{}
+	for _, name := range selectExpr.NamedSelects() {
+		takenSelectNames[name] = true
+	}
+	takenSourceNames := snowflakeSelectSourceNames(selectExpr)
+
+	newName := func(names map[string]bool, base string) string {
+		name := findNewName(names, base)
+		names[name] = true
+		return name
+	}
+
+	const indexOffset = 0
+	var arrays []expressions.Expression
+	seriesAlias := newName(takenSelectNames, "pos")
+	series := expressions.Unnest(expressions.Args{
+		"expressions": []expressions.Expression{expressions.GenerateSeries(expressions.Args{
+			"start": expressions.LiteralNumber(strconv.Itoa(indexOffset)),
+		})},
+		"alias": expressions.TableAlias(expressions.Args{
+			"this":    expressions.ToIdentifier(newName(takenSourceNames, "_u"), false),
+			"columns": []expressions.Expression{expressions.ToIdentifier(seriesAlias, false)},
+		}),
+	})
+	seriesTableAlias := asExpression(series.Arg("alias")).This()
+
+	for _, selectItem := range selectExpr.Selects() {
+		explode := selectItem.Find(expressions.KindExplode)
+		if explode == nil {
+			continue
+		}
+
+		posAlias := ""
+		explodeAlias := ""
+		alias := selectItem
+		if selectItem.Kind() == expressions.KindAlias {
+			explodeAlias = asExpression(selectItem.Arg("alias")).Name()
+		} else {
+			// exp.alias_(select, ""): keep the projection but give it an (empty) alias slot.
+			renamed := expressions.AliasExpr(selectItem, "", false)
+			selectItem.Replace(renamed)
+			alias = renamed
+			explode = renamed.Find(expressions.KindExplode)
+		}
+
+		explodeArg := explode.This()
+		// This ensures that we won't use EXPLODE's argument as a new selection
+		if explodeArg != nil && explodeArg.Kind() == expressions.KindColumn {
+			takenSelectNames[explodeArg.OutputName()] = true
+		}
+
+		unnestSourceAlias := newName(takenSourceNames, "_u")
+
+		if explodeAlias == "" {
+			explodeAlias = newName(takenSelectNames, "col")
+		}
+		if posAlias == "" {
+			posAlias = newName(takenSelectNames, "pos")
+		}
+
+		alias.Set("alias", expressions.ToIdentifier(explodeAlias, false))
+
+		seriesColumn := func() expressions.Expression {
+			return expressions.Column(expressions.Args{
+				"this":  expressions.ToIdentifier(seriesAlias, false),
+				"table": seriesTableAlias.Copy(),
+			})
+		}
+		unnestColumn := func(name string) expressions.Expression {
+			return expressions.Column(expressions.Args{
+				"this":  expressions.ToIdentifier(name, false),
+				"table": expressions.ToIdentifier(unnestSourceAlias, false),
+			})
+		}
+		explode.Replace(expressions.If(expressions.Args{
+			"this": expressions.EQ(expressions.Args{
+				"this":       seriesColumn(),
+				"expression": unnestColumn(posAlias),
+			}),
+			"true": unnestColumn(explodeAlias),
+		}))
+
+		if len(arrays) == 0 {
+			if selectExpr.Arg("from_") != nil {
+				selectExpr.Join(series, expressions.JoinOptions{JoinType: "CROSS"})
+			} else {
+				selectExpr.From_(series, false)
+			}
+		}
+
+		size := expressions.ArraySize(expressions.Args{"this": explodeArg.Copy()})
+		arrays = append(arrays, size)
+
+		selectExpr.Join(expressions.Unnest(expressions.Args{
+			"expressions": []expressions.Expression{explodeArg.Copy()},
+			"offset":      expressions.ToIdentifier(posAlias, false),
+			"alias": expressions.TableAlias(expressions.Args{
+				"this":    expressions.ToIdentifier(unnestSourceAlias, false),
+				"columns": []expressions.Expression{expressions.ToIdentifier(explodeAlias, false)},
+			}),
+		}), expressions.JoinOptions{JoinType: "CROSS"})
+
+		// index_offset != 1, so the positional bound is the (zero-based) last array index.
+		sizeBound := expressions.Sub(expressions.Args{
+			"this":       size.Copy(),
+			"expression": expressions.LiteralNumber("1"),
+		})
+		selectExpr.Where(true, false, expressions.Or_(
+			expressions.EQ(expressions.Args{
+				"this":       seriesColumn(),
+				"expression": unnestColumn(posAlias),
+			}),
+			expressions.And_(
+				expressions.GT(expressions.Args{
+					"this":       seriesColumn(),
+					"expression": wrapBinaryExpr(sizeBound.Copy()),
+				}),
+				expressions.EQ(expressions.Args{
+					"this":       unnestColumn(posAlias),
+					"expression": wrapBinaryExpr(sizeBound.Copy()),
+				}),
+			),
+		))
+	}
+
+	if len(arrays) > 0 {
+		end := expressions.Greatest(expressions.Args{"this": arrays[0], "expressions": arrays[1:]})
+		// index_offset != 1: end = end - (1 - index_offset).
+		end = expressions.Sub(expressions.Args{"this": end, "expression": expressions.LiteralNumber("1")})
+		if elements := series.Expressions(); len(elements) > 0 {
+			elements[0].Set("end", end)
+		}
+	}
 }
 
 func snowflakeStrToTimeSQL(g *Generator, e expressions.Expression) string {

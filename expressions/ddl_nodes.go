@@ -33,6 +33,12 @@ func SetConfigProperty(args Args) Expression    { return newNode(KindSetConfigPr
 func CharacterSetProperty(args Args) Expression { return newNode(KindCharacterSetProperty, args) }
 func RowFormatProperty(args Args) Expression    { return newNode(KindRowFormatProperty, args) }
 
+// HandlerProperty backs the CREATE FUNCTION `HANDLER <expr>` property (properties.py:160-161).
+func HandlerProperty(args Args) Expression { return newNode(KindHandlerProperty, args) }
+
+// DynamicProperty backs the bare DYNAMIC marker of CREATE DYNAMIC TABLE (properties.py:254-255).
+func DynamicProperty(args Args) Expression { return newNode(KindDynamicProperty, args) }
+
 // Return wraps a UDF/procedure body in `RETURN <expr>` (query.py:882-883).
 func Return(args Args) Expression { return newNode(KindReturn, args) }
 

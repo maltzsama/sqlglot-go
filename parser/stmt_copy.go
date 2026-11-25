@@ -33,7 +33,12 @@ func (p *Parser) parseCopy() exp.Expression {
 		kind = !p.matchTextSeq("TO")
 	}
 
-	files := p.parseCsv(func() exp.Expression { return p.parseField(false, nil, false) })
+	files := p.parseCsv(func() exp.Expression {
+		if parser := p.fileLocationParser(); parser != nil {
+			return parser(p)
+		}
+		return p.parseField(false, nil, false)
+	})
 	if p.match(tokens.EQ, false) {
 		// Backtrack one token since we've consumed the lhs of a parameter assignment here
 		// (parser.py:9924-9928): this can happen for Snowflake dialect. Instead, we'd like
