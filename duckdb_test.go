@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	sqlglot "github.com/maltzsama/sqlglot-go"
+	sqlerrors "github.com/maltzsama/sqlglot-go/errors"
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/generator"
 )
@@ -340,5 +341,108 @@ func TestDuckDBGroupingRegressions(t *testing.T) {
 	}
 	if want := "MAKE_TIMESTAMP_NS(EPOCH_NS(CAST(a AS TIMESTAMP_NS)) - (b + c))"; got != want {
 		t.Fatalf("nanosecond delta = %q, want %q", got, want)
+	}
+}
+
+// TestDuckDBMacroOverloads covers DuckDB's multi-signature CREATE MACRO (issue #91). The
+// table-first form previously degraded to a verbatim Command; it now parses into a
+// MacroOverloads list carrying each signature and its is_table flag, and round-trips
+// byte-for-byte. Single-body `AS TABLE` macros keep their existing round-trip.
+func TestDuckDBMacroOverloads(t *testing.T) {
+	const tableOverloads = "CREATE MACRO tbl (a) AS TABLE (SELECT a AS x), (a, b) AS TABLE (SELECT a AS x, b AS y)"
+	assertRoundTrip(t, "duckdb", tableOverloads, tableOverloads)
+
+	expr := mustParse(t, tableOverloads, "duckdb")
+	if expr.Kind() != exp.KindCreate {
+		t.Fatalf("root kind = %v, want Create", expr.Kind())
+	}
+	overloads, _ := expr.Arg("expression").(exp.Expression)
+	if overloads == nil || overloads.Kind() != exp.KindMacroOverloads {
+		t.Fatalf("expression = %v, want MacroOverloads", overloads)
+	}
+	items := overloads.Expressions()
+	if len(items) != 2 {
+		t.Fatalf("overload count = %d, want 2", len(items))
+	}
+	for i, want := range []struct {
+		params  int
+		isTable bool
+	}{{1, true}, {2, true}} {
+		item := items[i]
+		if item.Kind() != exp.KindMacroOverload {
+			t.Fatalf("overload %d kind = %v, want MacroOverload", i, item.Kind())
+		}
+		if got := item.Arg("is_table"); got != want.isTable {
+			t.Fatalf("overload %d is_table = %v, want %v", i, got, want.isTable)
+		}
+		if got := len(item.Expressions()); got != want.params {
+			t.Fatalf("overload %d param count = %d, want %d", i, got, want.params)
+		}
+		if body, _ := item.Arg("this").(exp.Expression); body == nil || body.Kind() != exp.KindSubquery {
+			t.Fatalf("overload %d body = %v, want Subquery", i, body)
+		}
+	}
+
+	// A mixed signature list keeps is_table per overload rather than on the list.
+	const mixed = "CREATE MACRO tbl(a) AS TABLE (SELECT a AS x), (a, b) AS (SELECT a AS x, b AS y)"
+	mixedWant := "CREATE MACRO tbl (a) AS TABLE (SELECT a AS x), (a, b) AS (SELECT a AS x, b AS y)"
+	assertRoundTrip(t, "duckdb", mixed, mixedWant)
+	mixedItems := mustParse(t, mixed, "duckdb").Arg("expression").(exp.Expression).Expressions()
+	if len(mixedItems) != 2 {
+		t.Fatalf("mixed overload count = %d, want 2", len(mixedItems))
+	}
+	if mixedItems[0].Arg("is_table") != true || mixedItems[1].Arg("is_table") != false {
+		t.Fatalf("mixed is_table flags = %v/%v, want true/false",
+			mixedItems[0].Arg("is_table"), mixedItems[1].Arg("is_table"))
+	}
+
+	// Overload lists with zero arguments and typed signatures round-trip too. The corpus
+	// oracle canonicalizes the signature spacing: the function name and the first
+	// `(params)` gain a space, matching upstream.
+	for _, tc := range []struct{ sql, want string }{
+		{
+			"CREATE MACRO tbl() AS TABLE (SELECT 1), (a) AS TABLE (SELECT a)",
+			"CREATE MACRO tbl () AS TABLE (SELECT 1), (a) AS TABLE (SELECT a)",
+		},
+		{
+			"CREATE MACRO tbl(a TINYINT) AS TABLE (SELECT a), (a INT) AS TABLE (SELECT a + 1)",
+			"CREATE MACRO tbl (a TINYINT) AS TABLE (SELECT a), (a INT) AS TABLE (SELECT a + 1)",
+		},
+		{
+			"CREATE OR REPLACE MACRO tbl(a) AS TABLE (SELECT a AS x), (a, b) AS TABLE (SELECT a AS x, b AS y)",
+			"CREATE OR REPLACE MACRO tbl (a) AS TABLE (SELECT a AS x), (a, b) AS TABLE (SELECT a AS x, b AS y)",
+		},
+	} {
+		assertRoundTrip(t, "duckdb", tc.sql, tc.want)
+	}
+
+	// Single-body AS TABLE macros keep round-tripping and keep the is_table marker.
+	for _, sql := range []string{
+		"CREATE MACRO tbl(a) AS TABLE (SELECT a AS x)",
+		"CREATE MACRO tbl(a) AS TABLE SELECT a",
+		"CREATE MACRO my_table_function(a, b) AS TABLE SELECT x, y FROM (VALUES (a, b)) AS tbl(x, y)",
+	} {
+		assertRoundTrip(t, "duckdb", sql, sql)
+		single := mustParse(t, sql, "duckdb")
+		properties := single.Arg("properties")
+		if properties == nil {
+			t.Fatalf("%q: expected a ReturnsProperty, got none", sql)
+		}
+		found := false
+		for _, property := range properties.(exp.Expression).Expressions() {
+			if property.Kind() == exp.KindReturnsProperty && property.Arg("is_table") == true {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("%q: expected an is_table ReturnsProperty", sql)
+		}
+	}
+
+	// The supported TABLE marker must not escalate as an unsupported property.
+	for _, level := range []sqlerrors.ErrorLevel{sqlerrors.RAISE, sqlerrors.IMMEDIATE} {
+		if _, err := sqlglot.Generate(expr, "duckdb", generator.Options{UnsupportedLevel: &level}); err != nil {
+			t.Fatalf("Generate at UnsupportedLevel=%v: %v", level, err)
+		}
 	}
 }
