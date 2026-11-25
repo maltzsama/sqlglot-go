@@ -24,7 +24,7 @@ from sqlglot.dialects.dialect import Dialect  # noqa: E402
 GO_DIALECTS = [
     "mysql", "postgres", "presto", "trino", "hive", "athena", "tsql",
     "clickhouse", "starrocks", "doris", "oracle", "redshift", "materialize", "risingwave",
-    "spark2", "spark", "databricks",
+    "spark2", "spark", "databricks", "bigquery", "duckdb", "snowflake",
 ]
 
 # Lambda / function source -> Go annotator expression (a func(*TypeAnnotator, exp.Expression)).
@@ -70,17 +70,44 @@ ANNOTATORS = {
     "lambda self, e: self._annotate_by_args(e, 'true', 'false', promote=True)": "annByArgs(annotateArgs{keys: []string{\"true\", \"false\"}, promote: true})",
     "lambda self, e: self._set_type(e, exp.DataType.build('FixedString(16)', dialect='clickhouse'))": "annBuild(\"FixedString(16)\", \"clickhouse\")",
     "lambda self, e: self._set_type(e, exp.DataType.build('Float64', dialect='clickhouse'))": "annBuild(\"Float64\", \"clickhouse\")",
-    "_annotate_reverse": "annMySQLReverse",
-    "_annotate_truncate": "annMySQLTruncate",
-    "_annotate_regexp_replace": "annMySQLRegexpReplace",
-    "_annotate_compress": "annMySQLCompress",
-    "_annotate_bit_func": "annMySQLBitFunc",
+    "sqlglot.typing.mysql._annotate_reverse": "annMySQLReverse",
+    "sqlglot.typing.mysql._annotate_truncate": "annMySQLTruncate",
+    "sqlglot.typing.mysql._annotate_regexp_replace": "annMySQLRegexpReplace",
+    "sqlglot.typing.mysql._annotate_compress": "annMySQLCompress",
+    "sqlglot.typing.mysql._annotate_bit_func": "annMySQLBitFunc",
     # spark2/spark/databricks annotators (typing/spark2.py, typing/spark.py,
     # typing/databricks.py).
     "lambda self, e: self._annotate_by_args(e, 'this', array=e.args['quantile'].is_type(exp.DType.ARRAY))": "annApproxQuantileArray",
     "lambda self, e: _annotate_by_similar_args(self, e, 'expressions')": "annBySimilarArgs(\"expressions\")",
     "lambda self, e: _annotate_by_similar_args(self, e, 'this', 'fill_pattern')": "annBySimilarArgs(\"this\", \"fill_pattern\")",
     "lambda self, e: self._set_type(e, exp.DataType.from_str('ARRAY<STRING>', dialect='databricks'))": "annBuild(\"ARRAY<STRING>\", \"databricks\")",
+    # BigQuery annotators (typing/bigquery.py).
+    "lambda self, e: _annotate_by_args_approx_top(self, e)": "annBQApproxTop",
+    "sqlglot.typing.bigquery._annotate_array": "annBigQueryArray",
+    "lambda self, e: _annotate_math_functions(self, e)": "annBQMath",
+    "sqlglot.typing.bigquery._annotate_concat": "annBQConcat",
+    "lambda self, e: _annotate_date_func(self, e)": "annBQDateFunc",
+    "lambda self, e: _annotate_by_args_with_coerce(self, e)": "annBQByArgsWithCoerce",
+    "lambda self, e: _annotate_safe_divide(self, e)": "annBQSafeDivide",
+    "lambda self, e: self._set_type(e, exp.DType.JSON if e.args.get('to_json') else exp.DType.VARCHAR)": "annBQJSONFormat",
+    "lambda self, e: self._set_type(e, exp.DataType.from_str('ARRAY<TIMESTAMP>', dialect='bigquery'))": "annBuild(\"ARRAY<TIMESTAMP>\", \"bigquery\")",
+    "lambda self, e: self._set_type(e, exp.DataType.from_str('ARRAY<VARCHAR>', dialect='bigquery'))": "annBuild(\"ARRAY<VARCHAR>\", \"bigquery\")",
+    "lambda self, e: self._set_type(e, exp.DataType.from_str('ARRAY<BIGINT>', dialect='bigquery'))": "annBuild(\"ARRAY<BIGINT>\", \"bigquery\")",
+    # Snowflake annotators (typing/snowflake.py).
+    "sqlglot.typing.snowflake._annotate_reverse": "annSFReverse",
+    "sqlglot.typing.snowflake._annotate_timestamp_from_parts": "annSFTimestampFromParts",
+    "sqlglot.typing.snowflake._annotate_date_or_time_add": "annSFDateOrTimeAdd",
+    "sqlglot.typing.snowflake._annotate_decode_case": "annSFDecodeCase",
+    "sqlglot.typing.snowflake._annotate_arg_max_min": "annSFArgMaxMin",
+    "sqlglot.typing.snowflake._annotate_within_group": "annSFWithinGroup",
+    "sqlglot.typing.snowflake._annotate_median": "annSFMedian",
+    "sqlglot.typing.snowflake._annotate_variance": "annSFVariance",
+    "sqlglot.typing.snowflake._annotate_kurtosis": "annSFKurtosis",
+    "sqlglot.typing.snowflake._annotate_math_with_float_decfloat": "annSFMathFloatDecfloat",
+    "sqlglot.typing.snowflake._annotate_str_to_time": "annSFStrToTime",
+    "lambda self, e: self._set_type(e, exp.DType.TIMESTAMPNTZ if e.args.get('source_tz') else exp.DType.TIMESTAMPTZ)": "annSFConvertTimezone",
+    "lambda self, e: self._set_type(e, exp.DataType.from_str('NUMBER', dialect='snowflake'))": "annBuild(\"NUMBER\", \"snowflake\")",
+    "lambda self, e: self._set_type(e, exp.DataType.from_str('NUMBER(19, 0)', dialect='snowflake'))": "annBuild(\"NUMBER(19, 0)\", \"snowflake\")",
 }
 
 _lambda_cache: dict = {}
@@ -88,7 +115,9 @@ _lambda_cache: dict = {}
 
 def annotator_source(fn) -> str:
     if fn.__name__ != "<lambda>":
-        return fn.__name__
+        # Qualify named annotators by module: several typing modules define a function with the
+        # same name (e.g. mysql and snowflake both have _annotate_reverse) but different bodies.
+        return f"{fn.__module__}.{fn.__name__}"
     path = inspect.getsourcefile(fn)
     if path not in _lambda_cache:
         tree = ast.parse(open(path).read())
