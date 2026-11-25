@@ -319,3 +319,70 @@ func TestBigQueryArrayAnnotation(t *testing.T) {
 		wantDType(t, tc.sql+" element", elems[0], tc.want)
 	}
 }
+
+// TestAliasFunctionArgShapes pins the argument mapping of the aliases ported for #94 that do
+// not follow their class's positional arg_types.
+func TestAliasFunctionArgShapes(t *testing.T) {
+	// MySQL CONVERT_TZ(timestamp, source_zone, target_zone).
+	ct, err := sqlglot.ParseOne("CONVERT_TZ('2026-01-01 12:00:00', '+00:00', '+02:00')", "mysql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ct.Kind() != exp.KindConvertTimezone {
+		t.Fatalf("CONVERT_TZ kind = %v", ct.Kind())
+	}
+	if got := ct.Text("timestamp"); got != "2026-01-01 12:00:00" {
+		t.Errorf("timestamp = %q", got)
+	}
+	if got := ct.Text("source_tz"); got != "+00:00" {
+		t.Errorf("source_tz = %q", got)
+	}
+	if got := ct.Text("target_tz"); got != "+02:00" {
+		t.Errorf("target_tz = %q", got)
+	}
+
+	// Snowflake EDITDISTANCE(a, b, max_distance) maps to Levenshtein.max_dist.
+	ed, err := sqlglot.ParseOne("EDITDISTANCE('a', 'abcdefgh', 2)", "snowflake")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ed.Kind() != exp.KindLevenshtein {
+		t.Fatalf("EDITDISTANCE kind = %v", ed.Kind())
+	}
+	if got := ed.Text("max_dist"); got != "2" {
+		t.Errorf("max_dist = %q", got)
+	}
+
+	// TRY_TO_TIMESTAMP normalizes the format through the Snowflake TIME_MAPPING and keeps safe.
+	ts, err := sqlglot.ParseOne("TRY_TO_TIMESTAMP('2024-01-02', 'YYYY-MM-DD')", "snowflake")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ts.Kind() != exp.KindStrToTime || ts.Arg("safe") != true {
+		t.Fatalf("TRY_TO_TIMESTAMP kind/safe = %v/%v", ts.Kind(), ts.Arg("safe"))
+	}
+	if got := ts.Text("format"); got != "%Y-%m-%d" {
+		t.Errorf("format = %q, want %%Y-%%m-%%d", got)
+	}
+
+	// DIV generates the CAST(... AS INT) form in base and MySQL.
+	for _, tc := range []struct{ dialect, want string }{
+		{"", "CAST(7 / 2 AS INT)"},
+		{"mysql", "CAST(7 / 2 AS SIGNED)"}, // MySQL maps INT to SIGNED.
+	} {
+		e, err := sqlglot.ParseOne("7 DIV 2", tc.dialect)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if e.Kind() != exp.KindIntDiv {
+			t.Fatalf("[%s] DIV kind = %v", tc.dialect, e.Kind())
+		}
+		got, err := sqlglot.Generate(e, tc.dialect, generator.Options{})
+		if err != nil {
+			t.Fatalf("[%s] Generate: %v", tc.dialect, err)
+		}
+		if got != tc.want {
+			t.Errorf("[%s] DIV = %q, want %q", tc.dialect, got, tc.want)
+		}
+	}
+}
