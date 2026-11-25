@@ -50,7 +50,6 @@ separately from allocation changes.
 | Group predicates and operator precedence in the parser | [#86](https://github.com/maltzsama/sqlglot-go/issues/86) |
 | Group query rendering in the generator | [#87](https://github.com/maltzsama/sqlglot-go/issues/87) |
 | Move cross-package dialect suites out of the module root | [#88](https://github.com/maltzsama/sqlglot-go/issues/88) |
-| Benchmark and reduce AST construction and copy allocations | [#89](https://github.com/maltzsama/sqlglot-go/issues/89) |
 
 ## Historical port notes
 
