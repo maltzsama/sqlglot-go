@@ -209,12 +209,12 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 const (
 	minPassTranspileBase        = 903
 	minPassTranspileAthena      = 9
-	minPassTranspileBigQuery    = 639
-	minPassTranspileClickhouse  = 216
+	minPassTranspileBigQuery    = 640
+	minPassTranspileClickhouse  = 217
 	minPassTranspileDatabricks  = 226
 	minPassTranspileDoris       = 84
 	minPassTranspileDremio      = 31
-	minPassTranspileDuckDB      = 773
+	minPassTranspileDuckDB      = 775
 	minPassTranspileHive        = 418
 	minPassTranspileMaterialize = 31
 	minPassTranspileMySQL       = 252

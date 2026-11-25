@@ -121,3 +121,15 @@ func quantileLiteral(i, n int) string {
 	}
 	return strconv.FormatFloat(float64(i)/float64(n), 'f', -1, 64)
 }
+
+// duckDBArrayRemoveSQL ports remove_from_array_using_filter (dialects/dialect.py:2319) for a
+// non-propagating source: ARRAY_REMOVE(a, x) becomes LIST_FILTER(a, _u -> _u <> x).
+func duckDBArrayRemoveSQL(g *Generator, e expressions.Expression) string {
+	lambdaID := expressions.ToIdentifier("_u")
+	cond := expressions.NEQ(expressions.Args{"this": lambdaID, "expression": e.Arg("expression")})
+	filter := expressions.ArrayFilter(expressions.Args{
+		"this":       e.This(),
+		"expression": expressions.Lambda(expressions.Args{"this": cond, "expressions": []expressions.Expression{lambdaID}}),
+	})
+	return g.gen(filter)
+}

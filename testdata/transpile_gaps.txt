@@ -1,5 +1,4 @@
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
-{"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE(the_array, target)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$.y[*]')"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SUM(f1) OVER (ORDER BY f2 ASC NULLS LAST) FROM t"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SUM(f1) OVER (ORDER BY f2 DESC NULLS FIRST) FROM t"}
@@ -8,7 +7,6 @@
 {"read":"","write":"clickhouse","category":"gen: cast/type","sql":"CAST(MAP('a', '1') AS MAP(TEXT, TEXT))"}
 {"read":"","write":"clickhouse","category":"gen: cast/type","sql":"TIME_STR_TO_TIME('2020-01-01 12:13:14-08:00', 'America/Los_Angeles')"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
-{"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE(the_array, target)"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$.y[*]')"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT * FROM a EXCEPT DISTINCT SELECT * FROM b"}
 {"read":"","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT * FROM a EXCEPT SELECT * FROM b"}
@@ -51,7 +49,6 @@
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_INSERT([1, 2, 3], 1, 99)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_INSERT([1, 2, 3], 3, 99)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_PREPEND(arr, x)"}
-{"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE(the_array, target)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"CONCAT_WS('-', 'a', 'b')"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"CONCAT_WS('-', x)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$[\"a b\"]')"}
@@ -1302,7 +1299,6 @@
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_INSERT([1, 2, 3], 0, 99)"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_INSERT([1, 2, 3], 1, 99)"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_INSERT([1, 2, 3], 3, 99)"}
-{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE([1, 2, 3], 2)"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE([1, 2, 3], NULL)"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE(the_array, target)"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE_AT([1, 2, 3], -1)"}
