@@ -583,10 +583,24 @@ func duckDBDateDiffSQL(g *Generator, e expressions.Expression) string {
 	return duckDBDateDiffImpl(g, e)
 }
 
-// duckDBTsOrDsDiffSQL ports the TsOrDsDiff lambda (generators/duckdb.py:1748-1752), which
-// shares _date_diff_sql's implicit datetime cast and unit_to_str behavior.
+// duckDBTsOrDsDiffSQL ports the TsOrDsDiff lambda (generators/duckdb.py:1779-1785): unlike
+// DateDiff, it casts BOTH operands to TIMESTAMP and renders the raw unit (or DAY).
 func duckDBTsOrDsDiffSQL(g *Generator, e expressions.Expression) string {
-	return duckDBDateDiffImpl(g, e)
+	unit := "DAY"
+	if u := asExpression(e.Arg("unit")); u != nil && u.Name() != "" {
+		unit = strings.ToUpper(u.Name())
+	}
+	ts := func(v expressions.Expression) expressions.Expression {
+		return expressions.Cast(expressions.Args{
+			"this": v,
+			"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeTimestamp}),
+		})
+	}
+	return g.funcCall("DATE_DIFF", []any{
+		expressions.LiteralString(unit),
+		ts(asExpression(e.Arg("expression"))),
+		ts(e.This()),
+	}, "(", ")", true)
 }
 
 func duckDBDateDiffImpl(g *Generator, e expressions.Expression) string {

@@ -1070,9 +1070,7 @@
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
 {"read":"redshift","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF('day', a, b)"}
 {"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
 {"read":"redshift","write":"duckdb","category":"gen: transpile mismatch","sql":"DECODE(x, a, b, c, d)"}
 {"read":"redshift","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT *, 4 AS col4 EXCLUDE (col2, col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)"}
 {"read":"redshift","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT *, 4 AS col4 EXCLUDE col2, col3 FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)"}
