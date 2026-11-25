@@ -207,7 +207,7 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 // Read-side parse gaps surface under their target's bucket with a "parse:" category.
 // Pass and total floors are monotonic: raise them, never lower them.
 const (
-	minPassTranspileBase        = 883
+	minPassTranspileBase        = 888
 	minPassTranspileAthena      = 8
 	minPassTranspileBigQuery    = 626
 	minPassTranspileClickhouse  = 213

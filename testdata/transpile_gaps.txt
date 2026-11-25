@@ -678,7 +678,6 @@
 {"read":"clickhouse","write":"presto","category":"gen: transpile mismatch","sql":"SELECT argMax(a.id, a.timestamp) FROM a"}
 {"read":"clickhouse","write":"starrocks","category":"gen: transpile mismatch","sql":"SELECT argMax(a, b), argMin(a, b) FROM t"}
 {"read":"databricks","write":"","category":"gen: transpile mismatch","sql":"JSON_OBJECT_KEYS(foo)"}
-{"read":"databricks","write":"","category":"parse: Invalid expression / Unexpected token","sql":"WITH t AS (SELECT 1 AS all) SELECT 1 FROM t LIMIT all"}
 {"read":"databricks","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SPACE(2)"}
 {"read":"databricks","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a BIGINT, b BIGINT) RETURNS BIGINT RETURN a"}
 {"read":"databricks","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a BIGINT, b BIGINT) RETURNS TABLE (a INT) RETURN SELECT a"}
@@ -715,7 +714,6 @@
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"SHA1(x)"}
-{"read":"duckdb","write":"","category":"parse: Invalid expression / Unexpected token","sql":"WITH t AS (SELECT 1 AS all) SELECT 1 FROM t LIMIT all"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
@@ -1023,7 +1021,6 @@
 {"read":"postgres","write":"","category":"gen: transpile mismatch","sql":"GEN_RANDOM_UUID()"}
 {"read":"postgres","write":"","category":"gen: transpile mismatch","sql":"x / y ^ z"}
 {"read":"postgres","write":"","category":"gen: transpile mismatch","sql":"x ^ y"}
-{"read":"postgres","write":"","category":"parse: Invalid expression / Unexpected token","sql":"WITH t AS (SELECT 1 AS all) SELECT 1 FROM t LIMIT all"}
 {"read":"postgres","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x # y"}
 {"read":"postgres","write":"athena","category":"gen: transpile mismatch","sql":"SELECT U&'a\nb'"}
 {"read":"postgres","write":"athena","category":"gen: transpile mismatch","sql":"SELECT U&'can''t'"}
@@ -1140,7 +1137,6 @@
 {"read":"postgres","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM t OFFSET 2"}
 {"read":"postgres","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT MAKE_TIME(23, 59, 59)"}
 {"read":"presto","write":"","category":"gen: transpile mismatch","sql":"SELECT ELEMENT_AT(ARRAY[1, 2, 3], 4)"}
-{"read":"presto","write":"","category":"parse: Invalid expression / Unexpected token","sql":"WITH t AS (SELECT 1 AS all) SELECT 1 FROM t LIMIT all"}
 {"read":"presto","write":"bigquery","category":"gen: cast/type","sql":"SELECT FROM_ISO8601_DATE('2020-05-11')"}
 {"read":"presto","write":"bigquery","category":"gen: cast/type","sql":"SELECT FROM_ISO8601_TIMESTAMP('2020-05-11T11:15:05')"}
 {"read":"presto","write":"bigquery","category":"gen: transpile mismatch","sql":"LOWER(TO_HEX(x))"}
@@ -1702,7 +1698,6 @@
 {"read":"snowflake","write":"trino","category":"gen: transpile mismatch","sql":"SELECT i, p, o FROM qt QUALIFY ROW_NUMBER() OVER (PARTITION BY p ORDER BY o) = 1"}
 {"read":"snowflake","write":"tsql","category":"gen: ddl/properties","sql":"CREATE TABLE TEMP_NESTED_WITH AS WITH C AS (WITH A AS (SELECT 2 AS value) SELECT * FROM A) SELECT * FROM C"}
 {"read":"spark","write":"","category":"gen: transpile mismatch","sql":"JSON_OBJECT_KEYS(foo)"}
-{"read":"spark","write":"","category":"parse: Invalid expression / Unexpected token","sql":"WITH t AS (SELECT 1 AS all) SELECT 1 FROM t LIMIT all"}
 {"read":"spark","write":"bigquery","category":"gen: cast/type","sql":"SELECT TO_DATE(x, 'MM/dd/yyyy')"}
 {"read":"spark","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"spark","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT /*+ BROADCAST(table) */ cola FROM table"}

@@ -4240,6 +4240,14 @@ func (p *Parser) canParseLimitOrOffset() bool {
 	index := p.index
 	result := p.tryParse(func() exp.Expression { return p.parseLimit(nil, false, false) }, true) != nil || p.tryParse(func() exp.Expression { return p.parseOffset(nil) }, true) != nil
 	p.retreat(index)
+	// `LIMIT ALL` is a no-op limit clause (parser.py:5753-5754): parseLimit returns the
+	// unchanged query (nil), so the tryParse result above is falsy, yet it is still a clause
+	// and must not be consumed as a table alias. Upstream never reaches this path for a plain
+	// `FROM t LIMIT ALL` because _parse_table's fast path returns the table as soon as it sees
+	// LIMIT (parser.py:5000-5008); this port skips that fast path, so recognize LIMIT ALL here.
+	if !result && p.dialect.SupportsLimitAll && p.curr.TokenType == tokens.LIMIT && p.next.TokenType == tokens.ALL {
+		result = true
+	}
 	if p.next.TokenType == tokens.MATCH_CONDITION {
 		result = false
 	}
