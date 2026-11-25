@@ -30,7 +30,6 @@ pass floors as fixes land.
 | Work | Tracking | Evidence |
 | --- | --- | --- |
 | Improve read/write parity between registered dialects | [#90](https://github.com/maltzsama/sqlglot-go/issues/90) | [Transpile gaps](./testdata/transpile_gaps.txt) |
-| Close DuckDB identity gaps | [#91](https://github.com/maltzsama/sqlglot-go/issues/91) | [Identity gaps](./testdata/parity_gaps.txt) |
 | Close Snowflake identity gaps, including historical table clauses | [#92](https://github.com/maltzsama/sqlglot-go/issues/92) | [Identity gaps](./testdata/parity_gaps.txt) |
 | Close standalone type annotation fixture gaps | [#94](https://github.com/maltzsama/sqlglot-go/issues/94) | [Annotation gaps](./optimizer/testdata/annotate_gaps.txt) |
 
