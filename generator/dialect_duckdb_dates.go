@@ -146,3 +146,27 @@ func duckDBTimeStrToTimeSQL(g *Generator, e expressions.Expression) string {
 		"to":   expressions.DataType(expressions.Args{"this": dtype}),
 	}))
 }
+
+// duckDBGenerateDateArraySQL ports _generate_datetime_array_sql (generators/duckdb.py:980-1000)
+// for GenerateDateArray: BQ's GENERATE_DATE_ARRAY becomes a GENERATE_SERIES cast to DATE[].
+func duckDBGenerateDateArraySQL(g *Generator, e expressions.Expression) string {
+	start := implicitDatetimeCastDays(asExpression(e.Arg("start")))
+	end := implicitDatetimeCastDays(asExpression(e.Arg("end")))
+	series := expressions.GenerateSeries(expressions.Args{
+		"start": start,
+		"end":   end,
+		"step":  e.Arg("step"),
+	})
+	arrayDate := expressions.DataType(expressions.Args{
+		"this": expressions.DTypeArray,
+		"expressions": []expressions.Expression{
+			expressions.DataType(expressions.Args{"this": expressions.DTypeDate}),
+		},
+	})
+	return g.gen(expressions.Cast(expressions.Args{"this": series, "to": arrayDate}))
+}
+
+// implicitDatetimeCastDays is _implicit_datetime_cast with the DATE default type.
+func implicitDatetimeCastDays(arg expressions.Expression) expressions.Expression {
+	return implicitDatetimeCast(arg)
+}

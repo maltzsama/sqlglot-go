@@ -114,6 +114,7 @@ func init() {
 		expressions.KindGroupConcat:           duckDBGroupConcatSQL,
 		expressions.KindGenerateSeries:        duckDBGenerateSeriesSQL,
 		expressions.KindLastDay:               duckDBLastDaySQL,
+		expressions.KindGenerateDateArray:     duckDBGenerateDateArraySQL,
 		expressions.KindTimeToStr:             duckDBTimeToStrSQL,
 		expressions.KindStrToTime:             duckDBStrToTimeSQL,
 		expressions.KindStrToDate:             duckDBStrToTimeSQL,
