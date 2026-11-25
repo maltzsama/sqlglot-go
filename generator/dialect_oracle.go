@@ -240,6 +240,11 @@ func oracleStrToTime(g *Generator, e exp.Expression) string {
 // oracleTrim ports _trim_sql (generators/oracle.py:14-20). Both branches call the same
 // standard trim helper upstream, so the standard form always applies.
 func oracleTrim(g *Generator, e exp.Expression) string {
+	// generators/oracle.py:14-20: an explicit LEADING/TRAILING position uses the base
+	// trim_sql (LTRIM/RTRIM); everything else uses the SQL-standard TRIM helper.
+	if position := strings.ToUpper(e.Text("position")); position == "LEADING" || position == "TRAILING" {
+		return g.trimSQL(e)
+	}
 	return g.trimSQLStandard(e)
 }
 
