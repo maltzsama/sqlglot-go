@@ -6,7 +6,7 @@ package expressions
 // classes the annotate_functions fixtures exercise.
 
 // GENERATED kind constants
-const kindExtensionBase Kind = KindRowAccessProperty + 1
+const kindExtensionBase Kind = KindIntroducer + 1
 const (
 	KindAIAgg                      Kind = kindExtensionBase + iota
 	KindAIClassify                 Kind = kindExtensionBase + iota

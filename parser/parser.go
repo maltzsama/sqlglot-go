@@ -2341,10 +2341,25 @@ func init() {
 	primaryParsers[tokens.BYTE_STRING] = func(p *Parser, token tokens.Token) exp.Expression {
 		return p.expression(exp.ByteString(exp.Args{"this": token.Text, "is_bytes": p.dialect.ByteStringIsBytesType}), &token, nil)
 	}
+	// PRIMARY_PARSERS (parser.py:1241): INTRODUCER -> _parse_introducer (parser.py:7410-7415).
+	primaryParsers[tokens.INTRODUCER] = func(p *Parser, token tokens.Token) exp.Expression {
+		return p.parseIntroducer(token)
+	}
 	// PRIMARY_PARSERS (parser.py:1171): SESSION_PARAMETER -> _parse_session_parameter().
 	primaryParsers[tokens.SESSION_PARAMETER] = func(p *Parser, token tokens.Token) exp.Expression {
 		return p.parseSessionParameter()
 	}
+}
+
+// parseIntroducer ports _parse_introducer (parser.py:7410-7415): a MySQL charset
+// introducer token (`_utf8mb4`, `_latin1`, ...) followed by a primary. If a literal
+// follows, build Introducer(this=<keyword>, expression=<literal>); otherwise treat the
+// introducer as a plain identifier.
+func (p *Parser) parseIntroducer(token tokens.Token) exp.Expression {
+	if literal := p.parsePrimary(); literal != nil {
+		return p.expression(exp.Introducer(exp.Args{"this": token.Text, "expression": literal}), &token, nil)
+	}
+	return p.identifierExpression(false)
 }
 
 // parseSessionParameter ports _parse_session_parameter (parser.py:7168-7176): mysql

@@ -1205,6 +1205,12 @@ const (
 	KindProjectionPolicyColumnConstraint
 	KindTags
 	KindRowAccessProperty
+	// KindIntroducer (query.py:581, `class Introducer(Expression)` with
+	// arg_types {"this": True, "expression": True}): MySQL charset introducers such as
+	// `_utf8mb4 'hola'` / `_latin1 X'4D7953514C'` (parser `_parse_introducer`,
+	// parser.py:7410-7415). Appended at the end of the iota block so existing Kind values
+	// are not renumbered (values aren't serialized).
+	KindIntroducer
 )
 
 type Trait uint32
@@ -1764,9 +1770,11 @@ var argTypes = map[Kind][]argSpec{
 	// above. BitString has no arg_types override (defaultArgTypes); HexString/ByteString
 	// add their own optional flag (query.py:480-487); SessionParameter/PropertyEQ/
 	// Distance/DistanceNd transcribed from core.py:1837-1838, 2150-2159.
-	KindBitString:        defaultArgTypes,
-	KindHexString:        {{"this", true}, {"is_integer", false}},
-	KindByteString:       {{"this", true}, {"is_bytes", false}},
+	KindBitString:  defaultArgTypes,
+	KindHexString:  {{"this", true}, {"is_integer", false}},
+	KindByteString: {{"this", true}, {"is_bytes", false}},
+	// KindIntroducer (query.py:581): {"this": True, "expression": True}.
+	KindIntroducer:       {{"this", true}, {"expression", true}},
 	KindSessionParameter: {{"this", true}, {"kind", false}},
 	KindPropertyEQ:       {{"this", true}, {"expression", true}},
 	KindKwarg:            {{"this", true}, {"expression", true}},
@@ -3293,6 +3301,7 @@ var className = map[Kind]string{
 	KindBitString:                           "BitString",
 	KindHexString:                           "HexString",
 	KindByteString:                          "ByteString",
+	KindIntroducer:                          "Introducer",
 	KindSessionParameter:                    "SessionParameter",
 	KindPropertyEQ:                          "PropertyEQ",
 	KindKwarg:                               "Kwarg",

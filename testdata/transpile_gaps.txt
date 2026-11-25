@@ -957,10 +957,6 @@
 {"read":"mysql","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT DATE_FORMAT('2007-10-04 22:23:00', '%H:%i:%s')"}
 {"read":"mysql","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT ISNULL(x)"}
 {"read":"mysql","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT TO_DAYS(x)"}
-{"read":"mysql","write":"mysql","category":"parse: Invalid expression / Unexpected token","sql":"_latin1 X'4D7953514C'"}
-{"read":"mysql","write":"mysql","category":"parse: Invalid expression / Unexpected token","sql":"_latin1 x'4D7953514C'"}
-{"read":"mysql","write":"mysql","category":"parse: Invalid expression / Unexpected token","sql":"_utf8mb4 'hola'"}
-{"read":"mysql","write":"mysql","category":"parse: Invalid expression / Unexpected token","sql":"_utf8mb4'hola'"}
 {"read":"mysql","write":"postgres","category":"gen: cast/type","sql":"SELECT DATEDIFF(x, y)"}
 {"read":"mysql","write":"postgres","category":"gen: cast/type","sql":"WITH t AS (SELECT CAST('2020-01-10' AS DATE) AS col, 5 AS num_days) SELECT DATE_ADD(col, INTERVAL num_days DAY) FROM t"}
 {"read":"mysql","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT CHARACTER_LENGTH('foo')"}

@@ -217,7 +217,7 @@ const (
 	minPassTranspileDuckDB      = 743
 	minPassTranspileHive        = 408
 	minPassTranspileMaterialize = 29
-	minPassTranspileMySQL       = 237
+	minPassTranspileMySQL       = 241
 	minPassTranspileOracle      = 171
 	minPassTranspilePostgres    = 339
 	minPassTranspilePresto      = 450
