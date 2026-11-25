@@ -321,10 +321,6 @@
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT GENERATE_TIMESTAMP_ARRAY('2016-10-05 00:00:00', '2016-10-07 00:00:00', INTERVAL '1' DAY)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT GENERATE_UUID()"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT INT64(JSON_QUERY(JSON '{\"key\": 2000}', '$.key'))"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT LAST_DAY(DATE '2008-11-10', ISOWEEK)"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT LAST_DAY(DATE '2008-11-10', WEEK(MONDAY))"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT LAST_DAY(DATE '2008-11-10', WEEK(SUNDAY))"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT LAST_DAY(DATE '2008-11-10', WEEK)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT LENGTH(foo)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT PARSE_DATE('%A %b %e %Y', 'Thursday Dec 25 2008')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT PARSE_DATE('%Y%m%d', '20081225')"}
@@ -1130,8 +1126,6 @@
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATE_TRUNC(MONTH, CAST('2024-06-15 14:23:45' AS TIMESTAMPTZ))"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATE_TRUNC(YEAR, TIMESTAMP '2026-01-01 00:00:00')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"JAROWINKLER_SIMILARITY('hello', 'world')"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"LAST_DAY(CAST('2024-01-15' AS DATE), QUARTER)"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"LAST_DAY(CAST('2024-06-15' AS DATE), YEAR)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"LAST_DAY(CAST('2025-12-15' AS DATE), WEEK)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"MAP_CONTAINS_KEY('k1', {'k1': 'v1', 'k2': 'v2', 'k3': 'v3'}::MAP(VARCHAR, VARCHAR))"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"MINHASH(4, col1)"}

@@ -2,6 +2,7 @@ package generator
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/maltzsama/sqlglot-go/dialects"
@@ -505,14 +506,103 @@ func duckDBGenerateSeriesSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall(name, []any{start, end, step}, "(", ")", true)
 }
 
-// duckDBLastDaySQL ports _last_day_sql (generators/duckdb.py:158-213) for the native
-// LAST_DAY forms.
+// duckDBLastDaySQL ports _last_day_sql (generators/duckdb.py:158-213): DuckDB's LAST_DAY only
+// handles the month, so YEAR/QUARTER/WEEK are emulated.
 func duckDBLastDaySQL(g *Generator, e expressions.Expression) string {
-	unit := strings.ToUpper(e.Text("unit"))
-	if unit == "" || unit == "MONTH" {
-		return g.funcCall("LAST_DAY", []any{e.This()}, "(", ")", true)
+	date := e.This()
+	unit := asExpression(e.Arg("unit"))
+	name := ""
+	if unit != nil {
+		name = strings.ToUpper(unit.Name())
 	}
+
+	if weekStart := duckDBWeekStartDow(unit, name); weekStart > 0 {
+		lastDow := weekStart - 1
+		dow := expressions.Extract(expressions.Args{
+			"this":       expressions.Var(expressions.Args{"this": "DAYOFWEEK"}),
+			"expression": date,
+		})
+		daysToLast := expressions.Mod(expressions.Args{
+			"this": expressions.Paren(expressions.Args{"this": expressions.Sub(expressions.Args{
+				"this":       expressions.LiteralNumber(duckDBIntStr(lastDow + 7)),
+				"expression": dow,
+			})}),
+			"expression": expressions.LiteralNumber("7"),
+		})
+		interval := expressions.Interval(expressions.Args{
+			"this": daysToLast,
+			"unit": expressions.Var(expressions.Args{"this": "DAY"}),
+		})
+		return g.gen(expressions.Cast(expressions.Args{
+			"this": expressions.Add(expressions.Args{"this": date, "expression": interval}),
+			"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeDate}),
+		}))
+	}
+
+	switch name {
+	case "", "MONTH":
+		return g.funcCall("LAST_DAY", []any{date}, "(", ")", true)
+	case "YEAR":
+		year := duckDBExtract("YEAR", date)
+		return g.gen(expressions.Anonymous(expressions.Args{"this": "MAKE_DATE", "expressions": []expressions.Expression{
+			year, expressions.LiteralNumber("12"), expressions.LiteralNumber("31"),
+		}}))
+	case "QUARTER":
+		year := duckDBExtract("YEAR", date)
+		quarter := duckDBExtract("QUARTER", date)
+		lastMonth := expressions.Mul(expressions.Args{"this": quarter, "expression": expressions.LiteralNumber("3")})
+		firstOfLast := expressions.Anonymous(expressions.Args{"this": "MAKE_DATE", "expressions": []expressions.Expression{
+			year, lastMonth, expressions.LiteralNumber("1"),
+		}})
+		return g.gen(expressions.Anonymous(expressions.Args{"this": "LAST_DAY", "expressions": []expressions.Expression{firstOfLast}}))
+	}
+	g.unsupported("Unsupported date part '" + name + "' in LAST_DAY function")
 	return g.functionFallbackSQL(e)
+}
+
+func duckDBExtract(part string, date expressions.Expression) expressions.Expression {
+	return expressions.Extract(expressions.Args{
+		"this":       expressions.Var(expressions.Args{"this": part}),
+		"expression": date,
+	})
+}
+
+// duckDBWeekStartDow maps a week-ish unit to its ISO 8601 day number (Monday=1..Sunday=7).
+// BigQuery's bare WEEK defaults to Sunday; ISOWEEK and WEEK(MONDAY) are Monday.
+func duckDBWeekStartDow(unit expressions.Expression, name string) int {
+	if unit == nil {
+		return 0
+	}
+	if unit.Kind() == expressions.KindWeekStart {
+		switch strings.ToUpper(unit.Name()) {
+		case "MONDAY":
+			return 1
+		case "TUESDAY":
+			return 2
+		case "WEDNESDAY":
+			return 3
+		case "THURSDAY":
+			return 4
+		case "FRIDAY":
+			return 5
+		case "SATURDAY":
+			return 6
+		case "SUNDAY":
+			return 7
+		}
+		return 0
+	}
+	switch name {
+	case "ISOWEEK":
+		return 1
+	case "WEEK":
+		return 7
+	}
+	return 0
+}
+
+func duckDBIntStr(i int) string {
+	return strconv.Itoa(i)
 }
 
 // duckDBTimeToStrSQL ports the TimeToStr lambda (generators/duckdb.py:1745-1746).
