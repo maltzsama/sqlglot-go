@@ -508,6 +508,75 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"INSTR":        genericFunction(KindStrPosition),
 	"CHARINDEX":    buildLocateStrPosition,
 	"LOCATE":       buildLocateStrPosition,
+	// Base FUNCTIONS entries whose classes this port already models but whose name mapping was
+	// missing; without them the call parses as Anonymous, so annotate_types cannot reach the
+	// class metadata. These are parser.py's `from_arg_list` mappings (plus Pad/Trim builders).
+	"ANY_VALUE":            genericFunction(KindAnyValue),
+	"ARRAY_DISTINCT":       genericFunction(KindArrayDistinct),
+	"ARRAY_EXCEPT":         genericFunction(KindArrayExcept),
+	"ARRAY_FIRST":          genericFunction(KindArrayFirst),
+	"ARRAY_REVERSE":        genericFunction(KindArrayReverse),
+	"ARRAY_SLICE":          genericFunction(KindArraySlice),
+	"ATAN2":                genericFunction(KindAtan2),
+	"CBRT":                 genericFunction(KindCbrt),
+	"CURRENT_CATALOG":      genericFunction(KindCurrentCatalog),
+	"CURRENT_DATABASE":     genericFunction(KindCurrentDatabase),
+	"CURRENT_ROLE":         genericFunction(KindCurrentRole),
+	"CURRENT_SCHEMA":       genericFunction(KindCurrentSchema),
+	"CURRENT_TIME":         genericFunction(KindCurrentTime),
+	"CURRENT_USER":         genericFunction(KindCurrentUser),
+	"DATE_FROM_PARTS":      genericFunction(KindDateFromParts),
+	"ENCODE":               genericFunction(KindEncode),
+	"FROM_BASE64":          genericFunction(KindFromBase64),
+	"IF":                   genericFunction(KindIf),
+	"LAST_DAY":             genericFunction(KindLastDay),
+	"LEFT":                 genericFunction(KindLeft),
+	"LENGTH":               genericFunction(KindLength),
+	"MEDIAN":               genericFunction(KindMedian),
+	"NULLIF":               genericFunction(KindNullif),
+	"REGEXP_REPLACE":       genericFunction(KindRegexpReplace),
+	"REPEAT":               genericFunction(KindRepeat),
+	"RIGHT":                genericFunction(KindRight),
+	"ROW_NUMBER":           genericFunction(KindRowNumber),
+	"SESSION_USER":         genericFunction(KindSessionUser),
+	"SOUNDEX":              genericFunction(KindSoundex),
+	"STUFF":                genericFunction(KindStuff),
+	"TIME_FROM_PARTS":      genericFunction(KindTimeFromParts),
+	"TIMESTAMP_FROM_PARTS": genericFunction(KindTimestampFromParts),
+	"TO_BASE64":            genericFunction(KindToBase64),
+	"TO_BINARY":            genericFunction(KindToBinary),
+	"TYPEOF":               genericFunction(KindTypeof),
+	"UNICODE":              genericFunction(KindUnicode),
+	"LPAD":                 func(args []Expression) Expression { return buildPad(args, true) },
+	"RPAD":                 func(args []Expression) Expression { return buildPad(args, false) },
+	"LTRIM":                func(args []Expression) Expression { return buildTrim(args, true) },
+	"RTRIM":                func(args []Expression) Expression { return buildTrim(args, false) },
+	"ARRAY_INTERSECT": func(args []Expression) Expression {
+		return newNode(KindArrayIntersect, Args{"expressions": args})
+	},
+}
+
+// buildPad ports build_pad (parser.py:138-144).
+func buildPad(args []Expression, isLeft bool) Expression {
+	return newNode(KindPad, Args{
+		"this":         seqGetExpr(args, 0),
+		"expression":   seqGetExpr(args, 1),
+		"fill_pattern": seqGetExpr(args, 2),
+		"is_left":      isLeft,
+	})
+}
+
+// buildTrim ports build_trim (parser.py:170-176).
+func buildTrim(args []Expression, isLeft bool) Expression {
+	position := "TRAILING"
+	if isLeft {
+		position = "LEADING"
+	}
+	return newNode(KindTrim, Args{
+		"this":       seqGetExpr(args, 0),
+		"expression": seqGetExpr(args, 1),
+		"position":   position,
+	})
 }
 
 // buildLocateStrPosition ports build_locate_strposition (parser.py:185-190): LOCATE and
