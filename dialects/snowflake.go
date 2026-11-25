@@ -226,6 +226,11 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	}
 	out["REGEXP_SUBSTR"] = exp.FromArgListFunc(exp.KindRegexpExtract)
 	out["COLLATE"] = exp.FromArgListFunc(exp.KindCollate)
+	out["EDITDISTANCE"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindLevenshtein, exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1), "max_dist": seqGet(args, 2),
+		})
+	}
 	out["DECODE"] = func(args []exp.Expression) exp.Expression {
 		return exp.New(exp.KindDecodeCase, exp.Args{"expressions": args})
 	}
@@ -470,7 +475,7 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 				return parsed
 			}
 			if isTimestampType && len(args) > 1 {
-				parsed := exp.FromArgList(exp.KindStrToTime, args)
+				parsed := postgresBuildFormattedTimeClass(d, exp.KindStrToTime)(args)
 				parsed.Set("safe", safe)
 				parsed.Set("target_type", exp.DataType(exp.Args{"this": target}))
 				return parsed

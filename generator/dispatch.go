@@ -147,6 +147,7 @@ func init() {
 	dispatch[expressions.KindTryCast] = (*Generator).tryCastSQL
 	dispatch[expressions.KindExtract] = (*Generator).extractSQL
 	dispatch[expressions.KindTrim] = (*Generator).trimSQL
+	dispatch[expressions.KindIntDiv] = (*Generator).intDivSQL
 	dispatch[expressions.KindPad] = (*Generator).padSQL
 	dispatch[expressions.KindCeil] = (*Generator).ceilFloorSQL
 	dispatch[expressions.KindFloor] = (*Generator).ceilFloorSQL

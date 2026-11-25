@@ -623,7 +623,6 @@ func init() {
 	FunctionByName["REGEXP_EXTRACT_ALL"] = genericFunction(KindRegexpExtractAll)
 	FunctionByName["FILTER"] = genericFunction(KindArrayFilter)
 	FunctionByName["TO_BOOLEAN"] = genericFunction(KindToBoolean)
-	FunctionByName["EDITDISTANCE"] = genericFunction(KindLevenshtein)
 	FunctionByName["INSERT"] = genericFunction(KindStuff)
 	FunctionByName["TO_FILE"] = genericFunction(KindToFile)
 	FunctionByName["TRY_TO_FILE"] = func(args []Expression) Expression {
@@ -695,7 +694,6 @@ func init() {
 	FunctionByName["UUID"] = genericFunction(KindUuid)
 	FunctionByName["GENERATE_UUID"] = genericFunction(KindUuid)
 	FunctionByName["SUBSTRING_INDEX"] = genericFunction(KindSubstringIndex)
-	FunctionByName["CONVERT_TZ"] = genericFunction(KindConvertTimezone)
 	FunctionByName["ISODOW"] = genericFunction(KindDayOfWeekIso)
 	FunctionByName["IS_NAN"] = genericFunction(KindIsNan)
 	FunctionByName["BYTE_LENGTH"] = genericFunction(KindByteLength)
