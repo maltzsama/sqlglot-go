@@ -10,6 +10,8 @@ import (
 func Presto() *Dialect {
 	d := Base()
 	d.Name = "presto"
+	// generators/presto.py PAD_FILL_PATTERN_IS_REQUIRED = True.
+	d.PadFillPatternIsRequired = true
 	// generators/presto.py TRANSFORMS: eliminate_distinct_on.
 	d.EliminateDistinctOn = true
 	// generators/presto.py TRANSFORMS: eliminate_semi_and_anti_joins.

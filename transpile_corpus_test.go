@@ -214,22 +214,22 @@ const (
 	minPassTranspileDatabricks  = 226
 	minPassTranspileDoris       = 84
 	minPassTranspileDremio      = 31
-	minPassTranspileDuckDB      = 750
-	minPassTranspileHive        = 415
+	minPassTranspileDuckDB      = 753
+	minPassTranspileHive        = 417
 	minPassTranspileMaterialize = 29
-	minPassTranspileMySQL       = 249
+	minPassTranspileMySQL       = 251
 	minPassTranspileOracle      = 172
 	minPassTranspilePostgres    = 347
-	minPassTranspilePresto      = 457
+	minPassTranspilePresto      = 459
 	minPassTranspileRedshift    = 177
 	minPassTranspileRisingWave  = 4
 	minPassTranspileSnowflake   = 837
 	minPassTranspileSpark       = 698
-	minPassTranspileSpark2      = 62
+	minPassTranspileSpark2      = 64
 	minPassTranspileSQLite      = 142
 	minPassTranspileStarrocks   = 88
 	minPassTranspileTeradata    = 74
-	minPassTranspileTrino       = 100
+	minPassTranspileTrino       = 102
 	minPassTranspileTSQL        = 331
 )
 

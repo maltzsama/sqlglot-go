@@ -70,8 +70,6 @@
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DECODE(a, NULL, 'null')"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DECODE(a, b, c)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DECODE(tbl.col, 'some_string', 'foo')"}
-{"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE CURRENT ROW)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE GROUP)"}
 {"read":"","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE TIES)"}
@@ -109,8 +107,6 @@
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"DATE_SUB('2020-01-01', 2, month)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"DATE_SUB(a, b)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT * FROM x CROSS JOIN UNNEST(a) AS j(lista) CROSS JOIN UNNEST(b) AS k(listb) CROSS JOIN UNNEST(c) AS l(listc)"}
-{"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"SELECT a, b FROM x CROSS JOIN UNNEST(y) AS t (a, b)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"TIME_TO_UNIX(x)"}
 {"read":"","write":"hive","category":"gen: transpile mismatch","sql":"TS_OR_DS_ADD('2021-02-01', 1, 'DAY')"}
@@ -142,8 +138,6 @@
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT \"user id\", some_id, 1 as other_id, 2 as \"2 nd id\" FROM t QUALIFY COUNT(*) OVER () > 1"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT * FROM t QUALIFY COUNT(*) OVER () > 1"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT IS_ASCII(x)"}
-{"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT a IS DISTINCT FROM b"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT a IS NOT DISTINCT FROM b"}
 {"read":"","write":"mysql","category":"gen: transpile mismatch","sql":"STR_TO_DATE(x, '%Y-%m-%dT%H:%M:%S')"}
@@ -200,8 +194,6 @@
 {"read":"","write":"presto","category":"gen: ddl/properties","sql":"CREATE TABLE a LIKE b"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"ARRAY_FILTER(the_array, x -> x > 0)"}
-{"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"SORT_ARRAY(x)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
 {"read":"","write":"presto","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position, occurrence)"}
@@ -245,8 +237,6 @@
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"SELECT numbers, animals, n, a FROM (SELECT ARRAY(2, 5) AS numbers, ARRAY('dog', 'cat', 'bird') AS animals UNION ALL SELECT ARRAY(7, 8, 9), ARRAY('cow', 'pig')) AS x CROSS JOIN UNNEST(numbers, animals) AS t(n, a)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"STRUCT_EXTRACT(foo, bar)"}
 {"read":"","write":"spark","category":"gen: transpile mismatch","sql":"TS_OR_DS_ADD('2021-02-01', 1, 'DAY')"}
-{"read":"","write":"spark2","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"spark2","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"spark2","category":"gen: transpile mismatch","sql":"SELECT a FROM x CROSS JOIN UNNEST(y) WITH ORDINALITY AS t (a)"}
 {"read":"","write":"sqlite","category":"gen: cast/type","sql":"SELECT IS_ASCII(x)"}
 {"read":"","write":"sqlite","category":"gen: ddl/properties","sql":"CREATE TABLE a LIKE b"}
@@ -275,8 +265,6 @@
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"ARRAY_SUM(ARRAY(1, 2))"}
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"MERGE INTO foo AS target USING (SELECT a, b FROM tbl) AS src ON src.a = target.a\n            WHEN MATCHED AND target.a <> src.a THEN UPDATE SET target.b = 'FOO'\n            WHEN NOT MATCHED THEN INSERT (target.a, target.b) VALUES (src.a, src.b)"}
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"MERGE INTO foo AS target USING (SELECT a, b FROM tbl) AS src ON src.a = target.a\n            WHEN MATCHED THEN UPDATE SET target.b = COALESCE(src.b, target.b)\n            WHEN NOT MATCHED THEN INSERT (target.a, target.b) VALUES (src.a, src.b)"}
-{"read":"","write":"trino","category":"gen: transpile mismatch","sql":"SELECT LPAD('bar', 5)"}
-{"read":"","write":"trino","category":"gen: transpile mismatch","sql":"SELECT RPAD('bar', 5)"}
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
 {"read":"","write":"trino","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position, occurrence)"}
 {"read":"","write":"tsql","category":"gen: cast/type","sql":"DATE_STR_TO_DATE(x)"}
@@ -1502,7 +1490,6 @@
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT ROUND(EXPR => 2.25, SCALE => 1, ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT ROUND(ROUNDING_MODE => 'HALF_TO_EVEN', EXPR => 2.25, SCALE => 1) AS value"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT ROUND(SCALE => 1, EXPR => 2.25, , ROUNDING_MODE => 'HALF_TO_EVEN') AS value"}
-{"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT RPAD('data', 8)"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT SEQ1() FROM test"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT SEQ1(0) FROM test"}
 {"read":"snowflake","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT SEQ1(1) FROM test"}
