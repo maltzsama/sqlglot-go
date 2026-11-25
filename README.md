@@ -126,7 +126,7 @@ See [DEVIATIONS.md](./DEVIATIONS.md) for these extensions and engine-specific be
 
 ## Dialects and verified coverage
 
-The identity corpus checks parse and generation under the same dialect. It passes **7,462 of
+The identity corpus checks parse and generation under the same dialect. It passes **7,609 of
 7,609** cases. The transpile corpus checks expected output from upstream `validate_all` read/write
 pairs. These figures describe the committed test corpora. Coverage varies by construct and dialect
 pair.
@@ -160,10 +160,12 @@ pair.
 | Trino | `trino` | 115/115 |
 | T-SQL | `tsql` | 613/613 |
 
-The transpile corpus passes **6,704 of 8,881** pairs, with **2,177** remaining gaps. Of the
+The transpile corpus passes **6,761 of 8,881** pairs, with **2,120** remaining gaps. Of the
 recorded pairs, 6,760 cross dialects.
-See [identity gaps](./testdata/parity_gaps.txt) and [transpile gaps](./testdata/transpile_gaps.txt)
-for the outstanding cases. The default optimizer pipeline passes its full `optimizer.sql`,
+The identity corpus has no outstanding gaps
+([parity_gaps.txt](./testdata/parity_gaps.txt) is empty); see
+[transpile gaps](./testdata/transpile_gaps.txt) for the remaining transpile cases. The default
+optimizer pipeline passes its full `optimizer.sql`,
 TPC-H, and TPC-DS suites. The standalone simplification fixtures now pass **521/521** cases;
 standalone type annotation gaps remain in
 [the annotation ledger](./optimizer/testdata/annotate_gaps.txt).
