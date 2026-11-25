@@ -399,26 +399,6 @@ func (p *Parser) parseCreateFunction(ctt tokens.TokenType) (this, expression exp
 	this = p.parseUserDefinedFunction()
 	overloadMode := false
 	isTable := false
-	duckDBTableBody := false
-	if ctt == tokens.FUNCTION && p.dialect.Name == "duckdb" && p.match(tokens.ALIAS) {
-		if p.match(tokens.TABLE) {
-			duckDBTableBody = true
-			properties = append(properties, p.expression(exp.ReturnsProperty(exp.Args{
-				"this":     exp.Var(exp.Args{"this": "TABLE"}),
-				"is_table": true,
-			}), nil, nil))
-			expression = p.parseStatement()
-			if p.curr.TokenType == tokens.COMMA && p.next.TokenType == tokens.L_PAREN {
-				overloadMode = true
-				isTable = true
-			} else {
-				return this, expression, properties, begin
-			}
-		}
-		if !duckDBTableBody {
-			p.retreat(p.index - 1)
-		}
-	}
 	// exp.Properties.Location.POST_SCHEMA (parser.py:2417): properties parsed before AS.
 	extendProperties(p.parseProperties())
 
@@ -1222,9 +1202,20 @@ func (p *Parser) parseTailProperty() exp.Expression {
 	return nil
 }
 
-// parseTailProperties ports _parse_function_properties (parser.py:7091-7106). It returns
+// parseTailProperties ports _parse_function_properties (parser.py:7335-7355). It returns
 // the raw list so CREATE FUNCTION can merge its successive property passes in order.
 func (p *Parser) parseTailProperties() []exp.Expression {
+	// parsers/duckdb.py:254-264: DuckDB overrides _parse_function_properties to match a
+	// leading TABLE and return only a ReturnsProperty(this=Schema(Var(TABLE)), is_table),
+	// short-circuiting the generic property loop. This is the non-overload `AS TABLE <body>`
+	// form; the multi-signature case is consumed by the table-overload attempt in
+	// parseCreateFunction and never reaches this pass.
+	if p.dialect.Name == "duckdb" && p.match(tokens.TABLE) {
+		return []exp.Expression{p.expression(exp.ReturnsProperty(exp.Args{
+			"this":     exp.Schema(exp.Args{"this": exp.Var(exp.Args{"this": "TABLE"})}),
+			"is_table": true,
+		}), nil, nil)}
+	}
 	var properties []exp.Expression
 	for {
 		property := p.parseTailProperty()
