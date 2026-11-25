@@ -3097,6 +3097,11 @@ func (p *Parser) parseNull() exp.Expression {
 	if p.curr.TokenType == tokens.NULL || p.curr.TokenType == tokens.UNKNOWN {
 		token := p.curr
 		p.advance()
+		// parser.py:8843-8845: both NULL and UNKNOWN route through the NULL primary parser,
+		// so `x IS UNKNOWN` folds to Is(expression=Null()) and renders `x IS NULL`.
+		if token.TokenType == tokens.UNKNOWN {
+			return p.expression(exp.Null(), &token, nil)
+		}
 		return p.primaryFromToken(token)
 	}
 	return p.parsePlaceholder()

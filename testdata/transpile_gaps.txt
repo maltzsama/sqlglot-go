@@ -1,7 +1,5 @@
 {"read":"","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
 {"read":"","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
-{"read":"","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS NOT UNKNOWN"}
-{"read":"","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
 {"read":"","write":"athena","category":"gen: transpile mismatch","sql":"STR_POSITION(haystack, needle, position)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"ARRAY_ANY(arr, x -> pred)"}
 {"read":"","write":"bigquery","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE(the_array, target)"}
@@ -350,8 +348,6 @@
 {"read":"","write":"tsql","category":"gen: transpile mismatch","sql":"WITH x AS (SELECT 1) SELECT * FROM x UNION SELECT * FROM x ORDER BY 1 LIMIT 0"}
 {"read":"bigquery","write":"","category":"gen: transpile mismatch","sql":"JSON_STRIP_NULLS(PARSE_JSON('[{\"f1\":1,\"f2\":null},2,null,3]'))"}
 {"read":"bigquery","write":"","category":"gen: transpile mismatch","sql":"UPPER(TO_HEX(x))"}
-{"read":"bigquery","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS NOT UNKNOWN"}
-{"read":"bigquery","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
 {"read":"bigquery","write":"clickhouse","category":"gen: cast/type","sql":"SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONTH)"}
 {"read":"bigquery","write":"clickhouse","category":"gen: transpile mismatch","sql":"UPPER(TO_HEX(x))"}
 {"read":"bigquery","write":"databricks","category":"gen: transpile mismatch","sql":"ARRAY_CONCAT([1, 2], [3, 4], [5, 6])"}
@@ -683,8 +679,6 @@
 {"read":"clickhouse","write":"starrocks","category":"gen: transpile mismatch","sql":"SELECT argMax(a, b), argMin(a, b) FROM t"}
 {"read":"databricks","write":"","category":"gen: transpile mismatch","sql":"JSON_OBJECT_KEYS(foo)"}
 {"read":"databricks","write":"","category":"parse: Invalid expression / Unexpected token","sql":"WITH t AS (SELECT 1 AS all) SELECT 1 FROM t LIMIT all"}
-{"read":"databricks","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS NOT UNKNOWN"}
-{"read":"databricks","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
 {"read":"databricks","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SPACE(2)"}
 {"read":"databricks","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a BIGINT, b BIGINT) RETURNS BIGINT RETURN a"}
 {"read":"databricks","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a BIGINT, b BIGINT) RETURNS TABLE (a INT) RETURN SELECT a"}
@@ -722,8 +716,6 @@
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"SHA1(x)"}
 {"read":"duckdb","write":"","category":"parse: Invalid expression / Unexpected token","sql":"WITH t AS (SELECT 1 AS all) SELECT 1 FROM t LIMIT all"}
-{"read":"duckdb","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS NOT UNKNOWN"}
-{"read":"duckdb","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
@@ -934,8 +926,6 @@
 {"read":"mysql","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo)"}
 {"read":"mysql","write":"","category":"gen: transpile mismatch","sql":"JSON_KEYS(foo, '$.a')"}
 {"read":"mysql","write":"","category":"gen: transpile mismatch","sql":"SELECT ISNULL(x)"}
-{"read":"mysql","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS NOT UNKNOWN"}
-{"read":"mysql","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
 {"read":"mysql","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"mysql","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM test LIMIT 0 + 1, 0 + 1"}
 {"read":"mysql","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT 0x0000CC"}
@@ -1035,8 +1025,6 @@
 {"read":"postgres","write":"","category":"gen: transpile mismatch","sql":"x ^ y"}
 {"read":"postgres","write":"","category":"parse: Invalid expression / Unexpected token","sql":"WITH t AS (SELECT 1 AS all) SELECT 1 FROM t LIMIT all"}
 {"read":"postgres","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x # y"}
-{"read":"postgres","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS NOT UNKNOWN"}
-{"read":"postgres","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
 {"read":"postgres","write":"athena","category":"gen: transpile mismatch","sql":"SELECT U&'a\nb'"}
 {"read":"postgres","write":"athena","category":"gen: transpile mismatch","sql":"SELECT U&'can''t'"}
 {"read":"postgres","write":"bigquery","category":"gen: cast/type","sql":"1 / DIV(4, 2)"}
@@ -1245,8 +1233,6 @@
 {"read":"presto","write":"spark2","category":"gen: transpile mismatch","sql":"IS_NAN(x)"}
 {"read":"presto","write":"starrocks","category":"gen: transpile mismatch","sql":"SELECT MAP(ARRAY['a', 'b'], ARRAY[1, 2])"}
 {"read":"redshift","write":"","category":"gen: transpile mismatch","sql":"FARMFINGERPRINT64(x)"}
-{"read":"redshift","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS NOT UNKNOWN"}
-{"read":"redshift","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"DATEDIFF('day', a, b)"}
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
@@ -1717,8 +1703,6 @@
 {"read":"snowflake","write":"tsql","category":"gen: ddl/properties","sql":"CREATE TABLE TEMP_NESTED_WITH AS WITH C AS (WITH A AS (SELECT 2 AS value) SELECT * FROM A) SELECT * FROM C"}
 {"read":"spark","write":"","category":"gen: transpile mismatch","sql":"JSON_OBJECT_KEYS(foo)"}
 {"read":"spark","write":"","category":"parse: Invalid expression / Unexpected token","sql":"WITH t AS (SELECT 1 AS all) SELECT 1 FROM t LIMIT all"}
-{"read":"spark","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS NOT UNKNOWN"}
-{"read":"spark","write":"","category":"parse: Invalid expression / Unexpected token","sql":"x IS UNKNOWN"}
 {"read":"spark","write":"bigquery","category":"gen: cast/type","sql":"SELECT TO_DATE(x, 'MM/dd/yyyy')"}
 {"read":"spark","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
 {"read":"spark","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT /*+ BROADCAST(table) */ cola FROM table"}
