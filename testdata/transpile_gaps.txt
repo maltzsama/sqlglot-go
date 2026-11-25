@@ -274,7 +274,6 @@
 {"read":"bigquery","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"CAST(a AS NUMERIC)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"CURRENT_DATE('UTC')"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"DATE_DIFF('2021-01-01', '2020-01-01', DAY)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SAFE_CAST(some_date AS DATE FORMAT 'DD MONTH YYYY')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SAFE_CAST(some_date AS DATE FORMAT 'YYYY-MM-DD') AS some_date"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT * FROM UNNEST(ARRAY<STRUCT<device_id INT64, time DATETIME, signal INT64, state STRING>>[STRUCT(1, DATETIME '2023-11-01 09:34:01', 74, 'INACTIVE'),STRUCT(4, DATETIME '2023-11-01 09:38:01', 80, 'ACTIVE')])"}
@@ -291,7 +290,6 @@
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME('2020-01-01')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME('2020-01-01', 'America/Los_Angeles')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME('2020-01-01', TIME '23:59:59')"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_DIFF('2023-01-01T00:00:00', '2023-01-01T05:00:00', MILLISECOND)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_DIFF(DATETIME '2017-10-15 00:00:00', DATETIME '2017-10-14 00:00:00', WEEK)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_TRUNC('2023-01-01T01:01:01', HOUR)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_TRUNC(DATETIME '2008-11-10 14:30:00', WEEK(SUNDAY))"}
@@ -1128,13 +1126,10 @@
 {"read":"snowflake","write":"databricks","category":"gen: transpile mismatch","sql":"UNIFORM(1, 10, 5)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"APPROXIMATE_SIMILARITY(sig_col)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATE(x)"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF(MONTH, '2020-01-15', '2023-06-20')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF(NANOSECOND, '2023-01-01 10:00:00.000000000', '2023-01-01 10:00:00.123456789')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF(NANOSECOND, start_time, end_time)"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF(QUARTER, '2020-01-15', '2023-06-20')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF(WEEK, '2024-12-13', '2024-12-17')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF(WEEK, '2024-12-15', '2024-12-16')"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF(YEAR, '2020-01-15', '2023-06-20')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATE_TRUNC('HOUR', CAST('14:23:45.123456' AS TIME))"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATE_TRUNC('HOUR', CAST('2026-01-01' AS DATE))"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"DATE_TRUNC(MONTH, CAST('2024-06-15 14:23:45' AS TIMESTAMPTZ))"}
@@ -1174,9 +1169,6 @@
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT BOOLXOR_AGG(c1) FROM test"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT CAST(1.5 AS DECFLOAT)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT CEIL(1.234, 1.5)"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF('day', '2020-01-01', '2025-10-12')"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF('second', '2020-01-01', '2025-10-12 00:56:42.345')"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF('second', '2020-01-01', '2025-10-12 00:56:42.345+07:00')"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATE_FROM_PARTS(2024 + 2, 1 + 2, 2 + 3)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATE_FROM_PARTS(2024, 1, 60)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATE_FROM_PARTS(2026, -14, -32)"}

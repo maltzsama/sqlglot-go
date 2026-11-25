@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/maltzsama/sqlglot-go/dialects"
@@ -579,20 +580,43 @@ func duckDBUnixSecondsSQL(g *Generator, e expressions.Expression) string {
 // duckDBDateDiffSQL ports _date_diff_sql (generators/duckdb.py:953-980) for the non-boundary
 // form.
 func duckDBDateDiffSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("DATE_DIFF", []any{
-		duckDBDiffUnit(asExpression(e.Arg("unit"))),
-		e.Arg("expression"),
-		e.This(),
-	}, "(", ")", true)
+	return duckDBDateDiffImpl(g, e)
 }
 
-// duckDBTsOrDsDiffSQL ports the TsOrDsDiff lambda (generators/duckdb.py:1748-1752).
+// duckDBTsOrDsDiffSQL ports the TsOrDsDiff lambda (generators/duckdb.py:1748-1752), which
+// shares _date_diff_sql's implicit datetime cast and unit_to_str behavior.
 func duckDBTsOrDsDiffSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("DATE_DIFF", []any{
-		duckDBDiffUnit(asExpression(e.Arg("unit"))),
-		e.Arg("expression"),
-		e.This(),
-	}, "(", ")", true)
+	return duckDBDateDiffImpl(g, e)
+}
+
+func duckDBDateDiffImpl(g *Generator, e expressions.Expression) string {
+	unit := asExpression(e.Arg("unit"))
+	this := implicitDatetimeCast(asExpression(e.This()))
+	expr := implicitDatetimeCast(asExpression(e.Arg("expression")))
+	return g.funcCall("DATE_DIFF", []any{duckDBDiffUnit(unit), expr, this}, "(", ")", true)
+}
+
+var duckDBTimezonePattern = regexp.MustCompile(`[+-]\d{2}:?\d{2}$|Z$`)
+
+// implicitDatetimeCast ports _implicit_datetime_cast (generators/duckdb.py:890-905): a string
+// literal becomes a DATE, promoted to TIMESTAMP/TIMESTAMPTZ when it carries a time (and a
+// timezone), so DATE_DIFF/DATE_TRUNC receive a typed operand.
+func implicitDatetimeCast(arg expressions.Expression) expressions.Expression {
+	if arg == nil || arg.Kind() != expressions.KindLiteral || !truthy(arg.Arg("is_string")) {
+		return arg
+	}
+	name := arg.Name()
+	dtype := expressions.DTypeDate
+	if strings.Contains(name, ":") {
+		dtype = expressions.DTypeTimestamp
+		if duckDBTimezonePattern.MatchString(name) {
+			dtype = expressions.DTypeTimestampLtz
+		}
+	}
+	return expressions.Cast(expressions.Args{
+		"this": arg,
+		"to":   expressions.DataType(expressions.Args{"this": dtype}),
+	})
 }
 
 // duckDBTimestampTruncSQL ports timestamptrunc_sql (generators/duckdb.py:4462-...): DuckDB
