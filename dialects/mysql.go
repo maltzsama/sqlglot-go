@@ -73,6 +73,8 @@ func parseMySQLVersion(value string) (int, error) {
 func MySQL() *Dialect {
 	d := Base()
 	d.Name = "mysql"
+	// generators/mysql.py TRANSFORMS: eliminate_semi_and_anti_joins.
+	d.EliminateSemiAntiJoins = true
 	// generators/mysql.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
 	d.LimitFetch = "LIMIT"
 	// generators/mysql.py NVL2_SUPPORTED = False.

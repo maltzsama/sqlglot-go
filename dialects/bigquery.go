@@ -68,6 +68,8 @@ var bigQueryInverseFormatMapping = func() map[string]string {
 func BigQuery() *Dialect {
 	d := Base()
 	d.Name = "bigquery"
+	// generators/bigquery.py TRANSFORMS: eliminate_semi_and_anti_joins.
+	d.EliminateSemiAntiJoins = true
 	// generators/bigquery.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
 	d.LimitFetch = "LIMIT"
 	// generators/bigquery.py NVL2_SUPPORTED = False.

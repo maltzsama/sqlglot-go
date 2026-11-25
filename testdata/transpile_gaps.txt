@@ -665,8 +665,6 @@
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"DATE_TRUNC('day', x)"}
 {"read":"duckdb","write":"","category":"gen: transpile mismatch","sql":"SHA1(x)"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"HEX(x)"}
-{"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (ORDER BY x)"}
 {"read":"duckdb","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT UNNEST(ARRAY[1, 2, 3]), UNNEST(ARRAY[4, 5]), UNNEST(ARRAY[6])"}
@@ -682,8 +680,6 @@
 {"read":"duckdb","write":"clickhouse","category":"gen: transpile mismatch","sql":"DROP SCHEMA x"}
 {"read":"duckdb","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT quantile(a, [0.5, 0.4])"}
 {"read":"duckdb","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT quantile(a, [0.5])"}
-{"read":"duckdb","write":"doris","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"doris","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"hive","category":"gen: transpile mismatch","sql":"APPROX_QUANTILE(x, 0.5)"}
 {"read":"duckdb","write":"hive","category":"gen: transpile mismatch","sql":"LIST_CONCAT([1, 2], [3, 4])"}
 {"read":"duckdb","write":"hive","category":"gen: transpile mismatch","sql":"MAP([a, c], [b, d])"}
@@ -695,8 +691,6 @@
 {"read":"duckdb","write":"hive","category":"gen: transpile mismatch","sql":"x // y"}
 {"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"EPOCH_MS(x)"}
 {"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT (-1) * col AS col FROM t1 LEFT JOIN t2 USING(id) ORDER BY col"}
-{"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT * FROM x ORDER BY 1 NULLS LAST"}
 {"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT FIRST_VALUE(c RESPECT NULLS) OVER (PARTITION BY gb ORDER BY ob) FROM t"}
 {"read":"duckdb","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT SUM(X) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)"}
@@ -712,8 +706,6 @@
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"LIST_CONCAT([1, 2], [3, 4])"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"LIST_CONTAINS([1, 2, NULL], 1)"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"LIST_CONTAINS([1, 2, NULL], NULL)"}
-{"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT QUANTILE_CONT(x, q) FROM t"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT QUANTILE_DISC(x, q) FROM t"}
 {"read":"duckdb","write":"postgres","category":"gen: transpile mismatch","sql":"STRUCT_EXTRACT(x, 'abc')"}
@@ -725,21 +717,15 @@
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"LIST_REVERSE_SORT(x)"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"LIST_SORT(x)"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"QUANTILE(x, 0.5)"}
-{"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"SELECT UNNEST(ARRAY[1, 2, 3]), UNNEST(ARRAY[4, 5]), UNNEST(ARRAY[6])"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"SELECT UNNEST(ARRAY[1, 2, 3]), UNNEST(ARRAY[4, 5]), UNNEST(ARRAY[6]) FROM x"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"STRUCT_EXTRACT(STRUCT_EXTRACT(x, 'y'), 'abc')"}
 {"read":"duckdb","write":"presto","category":"gen: transpile mismatch","sql":"STRUCT_EXTRACT(x, 'abc')"}
-{"read":"duckdb","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"redshift","category":"gen: transpile mismatch","sql":"STRUCT_EXTRACT(x, 'abc')"}
 {"read":"duckdb","write":"snowflake","category":"gen: cast/type","sql":"CAST(start AS TIMESTAMPTZ) AT TIME ZONE 'America/New_York'"}
 {"read":"duckdb","write":"snowflake","category":"gen: cast/type","sql":"SELECT BIT_XOR(CAST(val AS DECIMAL)) FROM t"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM (VALUES ({'a': 1})) AS t(x)"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM (VALUES ({'a': 1}), ({'a': 2})) AS t(x)"}
-{"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT APPROX_QUANTILE(a, 0.5) FROM t"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ARRAY_AGG(DISTINCT a) FILTER (WHERE a IS NOT NULL)"}
 {"read":"duckdb","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ARRAY_AGG(col ORDER BY sort_col) FILTER (WHERE col IS NOT NULL)"}
@@ -782,10 +768,6 @@
 {"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"STR_SPLIT(x, 'a')"}
 {"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"WITH t AS (SELECT 2 AS c) SELECT RANGE(1, c) FROM t"}
 {"read":"duckdb","write":"spark","category":"gen: transpile mismatch","sql":"WITH t AS (SELECT 5 AS c) SELECT RANGE(1, c) FROM t"}
-{"read":"duckdb","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"trino","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"trino","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"tsql","category":"gen: cast/type","sql":"SELECT STRFTIME(CAST('2020-01-01' AS TIMESTAMP), CONCAT('%Y', '%m'))"}
 {"read":"duckdb","write":"tsql","category":"gen: cast/type","sql":"WITH t1(c) AS (SELECT 1), t2 AS (SELECT CAST(c AS INTEGER) FROM t1) SELECT * FROM t2"}
 {"read":"duckdb","write":"tsql","category":"gen: ddl/properties","sql":"ALTER TABLE \"db\".\"t1\" RENAME TO \"db\".\"t2\""}
@@ -797,8 +779,6 @@
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT (-1) * col AS col FROM t1 LEFT JOIN t2 USING(id) ORDER BY col"}
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM (WITH RECURSIVE t(n) AS (SELECT 1 AS n UNION ALL SELECT n + 1 AS n FROM t WHERE n < 4) SELECT SUM(n) AS s4 FROM t) AS subq"}
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM t LIMIT 10 OFFSET 5"}
-{"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x"}
-{"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x"}
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT 1 AS c UNION (WITH t(c) AS (SELECT 1) SELECT c FROM t)"}
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT e.employee_id FROM employees e LEFT JOIN employee_positions ep ON e.employee_id = ep.employee_id ORDER BY employee_id"}
 {"read":"duckdb","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT t1.x + t2.y AS s FROM t1 JOIN t2 ON t1.id = t2.id ORDER BY s"}

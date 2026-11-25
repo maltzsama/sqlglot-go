@@ -13,6 +13,9 @@ import (
 func StarRocks() *Dialect {
 	d := MySQL()
 	d.Name = "starrocks"
+	// generators/starrocks.py:121-124 overrides the Select preprocess without
+	// eliminate_semi_and_anti_joins, so LEFT SEMI/ANTI joins are preserved.
+	d.EliminateSemiAntiJoins = false
 	// generators/starrocks.py:60 restores PARSE_JSON.
 	d.ParseJSONName = stringPtr("PARSE_JSON")
 

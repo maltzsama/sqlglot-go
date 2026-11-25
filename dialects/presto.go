@@ -10,6 +10,8 @@ import (
 func Presto() *Dialect {
 	d := Base()
 	d.Name = "presto"
+	// generators/presto.py TRANSFORMS: eliminate_semi_and_anti_joins.
+	d.EliminateSemiAntiJoins = true
 	// generators/presto.py NVL2_SUPPORTED = False.
 	d.Nvl2Supported = false
 	// generators/presto.py:276 PARSE_JSON_NAME = "JSON_PARSE".

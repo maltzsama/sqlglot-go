@@ -11,6 +11,8 @@ import (
 func TSQL() *Dialect {
 	d := Base()
 	d.Name = "tsql"
+	// generators/tsql.py TRANSFORMS: eliminate_semi_and_anti_joins.
+	d.EliminateSemiAntiJoins = true
 	// generators/tsql.py NVL2_SUPPORTED = False.
 	d.Nvl2Supported = false
 	// generators/tsql.py:146 PARSE_JSON_NAME = None (bare value).

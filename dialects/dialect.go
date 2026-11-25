@@ -239,6 +239,11 @@ type Dialect struct {
 	// Nvl2Supported ports NVL2_SUPPORTED (generator.py:519, base True; dremio False): when
 	// false, NVL2 renders as a CASE expression instead of the function call.
 	Nvl2Supported bool
+	// EliminateSemiAntiJoins ports the TRANSFORMS preprocess entry
+	// eliminate_semi_and_anti_joins (transforms.py:616-631), applied by bigquery, mysql,
+	// postgres, presto, redshift, snowflake, sqlite, teradata, and tsql: SEMI/ANTI joins
+	// become correlated [NOT] EXISTS predicates.
+	EliminateSemiAntiJoins bool
 	// TrySupported ports TRY_SUPPORTED (generator.py:543, base True; mysql/postgres/dremio
 	// False): a TryCast renders TRY_CAST when supported, else a plain CAST.
 	TrySupported bool

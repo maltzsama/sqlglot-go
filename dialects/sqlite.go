@@ -14,6 +14,8 @@ import (
 func SQLite() *Dialect {
 	d := Base()
 	d.Name = "sqlite"
+	// generators/sqlite.py TRANSFORMS: eliminate_semi_and_anti_joins.
+	d.EliminateSemiAntiJoins = true
 	// generators/sqlite.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
 	d.LimitFetch = "LIMIT"
 	// generators/sqlite.py NVL2_SUPPORTED = False.

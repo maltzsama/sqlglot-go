@@ -209,28 +209,28 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 const (
 	minPassTranspileBase        = 902
 	minPassTranspileAthena      = 8
-	minPassTranspileBigQuery    = 629
+	minPassTranspileBigQuery    = 631
 	minPassTranspileClickhouse  = 215
 	minPassTranspileDatabricks  = 224
-	minPassTranspileDoris       = 82
+	minPassTranspileDoris       = 84
 	minPassTranspileDremio      = 31
 	minPassTranspileDuckDB      = 750
 	minPassTranspileHive        = 412
 	minPassTranspileMaterialize = 29
-	minPassTranspileMySQL       = 247
+	minPassTranspileMySQL       = 249
 	minPassTranspileOracle      = 171
-	minPassTranspilePostgres    = 343
-	minPassTranspilePresto      = 452
-	minPassTranspileRedshift    = 175
+	minPassTranspilePostgres    = 345
+	minPassTranspilePresto      = 454
+	minPassTranspileRedshift    = 177
 	minPassTranspileRisingWave  = 4
-	minPassTranspileSnowflake   = 832
+	minPassTranspileSnowflake   = 834
 	minPassTranspileSpark       = 695
 	minPassTranspileSpark2      = 61
-	minPassTranspileSQLite      = 139
+	minPassTranspileSQLite      = 141
 	minPassTranspileStarrocks   = 88
 	minPassTranspileTeradata    = 74
-	minPassTranspileTrino       = 96
-	minPassTranspileTSQL        = 329
+	minPassTranspileTrino       = 98
+	minPassTranspileTSQL        = 331
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
