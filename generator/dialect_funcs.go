@@ -401,9 +401,15 @@ func strPositionTranspileSQL(name string, supportsPosition, supportsOccurrence b
 		}
 
 		if transpilePosition {
-			// dialect.py:1364-1368: IF(func = 0, 0, (func + position) - 1).
+			// dialect.py:1364-1368: IF(func = 0, 0, (func + position) - 1). `func + position`
+			// goes through Expression.__add__/_binop (core.py:1399-1408), which wraps a Binary
+			// operand in Paren; `func` is an Anonymous (not Binary) so only position can wrap.
+			offsetPosition := position
+			if offsetPosition.Is(expressions.TraitBinary) {
+				offsetPosition = expressions.Paren(expressions.Args{"this": offsetPosition.Copy()})
+			}
 			offset := expressions.Sub(expressions.Args{
-				"this":       expressions.Add(expressions.Args{"this": build(), "expression": position}),
+				"this":       expressions.Add(expressions.Args{"this": build(), "expression": offsetPosition}),
 				"expression": one,
 			})
 			cond := expressions.EQ(expressions.Args{"this": build(), "expression": zero})
