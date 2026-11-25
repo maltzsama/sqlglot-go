@@ -96,7 +96,9 @@ func replaceLambda(node exp.Expression, params []exp.Expression) exp.Expression 
 			dotOrID = column.This()
 		}
 		if typ := lambdaTypes[parts[0].Name()]; typ != nil {
-			dotOrID = exp.Cast(exp.Args{"this": dotOrID, "to": typ})
+			// Each replacement cast needs its own type node: sharing one would reparent it
+			// and break parent-based traversal (the single-reference case is unaffected).
+			dotOrID = exp.Cast(exp.Args{"this": dotOrID, "to": typ.Copy()})
 		}
 
 		parent := column.Parent()
