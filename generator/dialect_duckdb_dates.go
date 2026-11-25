@@ -170,3 +170,75 @@ func duckDBGenerateDateArraySQL(g *Generator, e expressions.Expression) string {
 func implicitDatetimeCastDays(arg expressions.Expression) expressions.Expression {
 	return implicitDatetimeCast(arg)
 }
+
+// duckDBArrayInsertSQL ports _array_insert_sql (generators/duckdb.py:360-450): ARRAY_INSERT
+// becomes a NULL-guarded LIST_CONCAT of slices around the inserted element.
+func duckDBArrayInsertSQL(g *Generator, e expressions.Expression) string {
+	this := e.This()
+	position := asExpression(e.Arg("position"))
+	element := asExpression(e.Arg("expression"))
+	elementArray := expressions.Array(expressions.Args{"expressions": []expressions.Expression{element}})
+
+	posValue, ok := duckDBIntLiteral(position)
+	if !ok {
+		g.unsupported("ARRAY_INSERT can only be transpiled with a literal position")
+		return g.funcCall("ARRAY_INSERT", []any{this, position, element}, "(", ")", true)
+	}
+	offset, _ := duckDBIntLiteral(asExpression(e.Arg("offset")))
+	if posValue > 0 {
+		posValue -= offset
+	} else if posValue < 0 {
+		posValue += offset
+	}
+
+	slice := func(bounds ...int) expressions.Expression {
+		return expressions.Bracket(expressions.Args{"this": this, "expressions": []expressions.Expression{
+			expressions.Slice(expressions.Args{"this": expressions.LiteralNumber(strconv.Itoa(bounds[0])), "expression": expressions.LiteralNumber(strconv.Itoa(bounds[1]))}),
+		}})
+	}
+
+	var concat []expressions.Expression
+	switch {
+	case posValue == 0:
+		concat = []expressions.Expression{elementArray, this}
+	case posValue > 0:
+		right := expressions.Bracket(expressions.Args{"this": this, "expressions": []expressions.Expression{
+			expressions.Slice(expressions.Args{"this": expressions.LiteralNumber(strconv.Itoa(posValue + 1))}),
+		}})
+		concat = []expressions.Expression{slice(1, posValue), elementArray, right}
+	default:
+		arrLen := expressions.Length(expressions.Args{"this": this})
+		sliceEndPos := expressions.Add(expressions.Args{"this": arrLen, "expression": expressions.LiteralNumber(strconv.Itoa(posValue))})
+		sliceStartPos := expressions.Add(expressions.Args{"this": sliceEndPos, "expression": expressions.LiteralNumber("1")})
+		left := expressions.Bracket(expressions.Args{"this": this, "expressions": []expressions.Expression{
+			expressions.Slice(expressions.Args{"this": expressions.LiteralNumber("1"), "expression": sliceEndPos}),
+		}})
+		right := expressions.Bracket(expressions.Args{"this": this, "expressions": []expressions.Expression{
+			expressions.Slice(expressions.Args{"this": sliceStartPos}),
+		}})
+		concat = []expressions.Expression{left, elementArray, right}
+	}
+
+	listConcat := expressions.Anonymous(expressions.Args{"this": "LIST_CONCAT", "expressions": concat})
+	return g.gen(expressions.If(expressions.Args{
+		"this":  expressions.Is(expressions.Args{"this": this, "expression": expressions.Null()}),
+		"true":  expressions.Null(),
+		"false": listConcat,
+	}))
+}
+
+// duckDBIntLiteral returns the integer value of a literal, accepting a leading negation.
+func duckDBIntLiteral(e expressions.Expression) (int, bool) {
+	if e == nil {
+		return 0, false
+	}
+	if e.Kind() == expressions.KindNeg {
+		v, ok := duckDBIntLiteral(asExpression(e.This()))
+		return -v, ok
+	}
+	if e.Kind() == expressions.KindLiteral && e.IsInt() {
+		v, err := strconv.Atoi(e.Text("this"))
+		return v, err == nil
+	}
+	return 0, false
+}
