@@ -3065,15 +3065,22 @@ func ksqlEmitModifierAhead(p *Parser) bool {
 	return ksqlEmitResults[stringsUpper(p.next.Text)]
 }
 
-// idVarTokensFor is ID_VAR_TOKENS plus the dialect's ID_VAR_TOKENS additions.
+// idVarTokensFor resolves the token set for _parse_id_var. An explicit set (ALIAS_TOKENS /
+// TABLE_ALIAS_TOKENS / a caller-supplied map) is used verbatim: the dialect's ID_VAR_TOKENS
+// additions apply only to the default set, mirroring _parse_id_var's
+// `self._match_set(tokens or self.ID_VAR_TOKENS)` (parser.py:8778-8791). Adding them to an
+// explicit set would, for example, let Snowflake's EXCEPT-as-ID_VAR consume the EXCEPT set
+// operator as a projection alias.
 func (p *Parser) idVarTokensFor(toks map[tokens.TokenType]bool) map[tokens.TokenType]bool {
-	base := tokensOrDefault(toks, idVarTokens)
+	if toks != nil {
+		return toks
+	}
 	extra := p.dialect.ExtraIdVarTokens
 	if len(extra) == 0 {
-		return base
+		return idVarTokens
 	}
-	merged := make(map[tokens.TokenType]bool, len(base)+len(extra))
-	for tt := range base {
+	merged := make(map[tokens.TokenType]bool, len(idVarTokens)+len(extra))
+	for tt := range idVarTokens {
 		merged[tt] = true
 	}
 	for tt := range extra {
