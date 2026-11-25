@@ -13,6 +13,8 @@ import (
 func Hive() *Dialect {
 	d := Base()
 	d.Name = "hive"
+	// generators/hive.py TRANSFORMS: eliminate_distinct_on.
+	d.EliminateDistinctOn = true
 	// generators/hive.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
 	d.LimitFetch = "LIMIT"
 	// generators/hive.py NVL2_SUPPORTED = False.

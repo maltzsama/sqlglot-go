@@ -244,6 +244,11 @@ type Dialect struct {
 	// postgres, presto, redshift, snowflake, sqlite, teradata, and tsql: SEMI/ANTI joins
 	// become correlated [NOT] EXISTS predicates.
 	EliminateSemiAntiJoins bool
+	// EliminateDistinctOn ports the TRANSFORMS preprocess entry eliminate_distinct_on
+	// (transforms.py:144), applied by bigquery, redshift, hive, mysql, oracle, presto,
+	// snowflake, sqlite, and tsql (and inherited by spark, databricks, doris, starrocks,
+	// trino): DISTINCT ON becomes a ROW_NUMBER() window filter.
+	EliminateDistinctOn bool
 	// TrySupported ports TRY_SUPPORTED (generator.py:543, base True; mysql/postgres/dremio
 	// False): a TryCast renders TRY_CAST when supported, else a plain CAST.
 	TrySupported bool

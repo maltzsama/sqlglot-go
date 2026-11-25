@@ -11,6 +11,8 @@ import (
 func TSQL() *Dialect {
 	d := Base()
 	d.Name = "tsql"
+	// generators/tsql.py TRANSFORMS: eliminate_distinct_on.
+	d.EliminateDistinctOn = true
 	// generators/tsql.py TRANSFORMS: eliminate_semi_and_anti_joins.
 	d.EliminateSemiAntiJoins = true
 	// generators/tsql.py NVL2_SUPPORTED = False.

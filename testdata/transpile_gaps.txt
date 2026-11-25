@@ -1150,9 +1150,7 @@
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
-{"read":"redshift","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF('day', a, b)"}
 {"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
 {"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
@@ -1165,18 +1163,15 @@
 {"read":"redshift","write":"hive","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
 {"read":"redshift","write":"hive","category":"gen: transpile mismatch","sql":"DATEDIFF('day', a, b)"}
 {"read":"redshift","write":"hive","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"hive","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT DATEDIFF(DAY, y, x)"}
 {"read":"redshift","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
-{"read":"redshift","write":"oracle","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"postgres","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"postgres","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
 {"read":"redshift","write":"presto","category":"gen: cast/type","sql":"DATEDIFF('day', a, b)"}
 {"read":"redshift","write":"presto","category":"gen: cast/type","sql":"SELECT DATEADD(DAY, 1, CURRENT_DATE)"}
 {"read":"redshift","write":"presto","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"presto","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
-{"read":"redshift","write":"presto","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"presto","category":"gen: transpile mismatch","sql":"SELECT LEFT(a, 3), RIGHT(a, 3)"}
 {"read":"redshift","write":"presto","category":"gen: transpile mismatch","sql":"x is false"}
 {"read":"redshift","write":"presto","category":"gen: transpile mismatch","sql":"x is not false"}
@@ -1185,17 +1180,13 @@
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT *, 4 AS col4 EXCLUDE (col2, col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)"}
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT *, 4 AS col4 EXCLUDE col2, col3 FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)"}
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
-{"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT LISTAGG(x, ',') WITHIN GROUP (ORDER BY y) FILTER (WHERE z > 0) FROM t"}
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT col1, *, col2 EXCLUDE(col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)"}
 {"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"x ~* 'pat'"}
 {"read":"redshift","write":"spark","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"spark","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"spark2","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"starrocks","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"trino","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
-{"read":"redshift","write":"trino","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}
 {"read":"redshift","write":"tsql","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
 {"read":"redshift","write":"tsql","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC"}

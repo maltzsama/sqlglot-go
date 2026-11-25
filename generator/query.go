@@ -106,6 +106,9 @@ func (g *Generator) optionsModifier(e expressions.Expression) string {
 func (g *Generator) selectSQL(e expressions.Expression) string {
 	// transforms.py:616-631: dialects that lack native SEMI/ANTI joins rewrite them into
 	// correlated [NOT] EXISTS predicates before rendering the query.
+	if g.dialect.EliminateDistinctOn {
+		e = starRocksEliminateDistinctOn(g, e)
+	}
 	if g.dialect.EliminateSemiAntiJoins {
 		e = eliminateSemiAndAntiJoins(e)
 	}
