@@ -902,3 +902,12 @@ func bigQuerySelectSQL(g *Generator, e expressions.Expression) string {
 	}
 	return g.selectSQL(e)
 }
+
+// BigQuery's COLLATE_IS_FUNC=True renders COLLATE as a function (generators/bigquery.py:260).
+func init() {
+	registerDialectDispatch("bigquery", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindCollate: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("COLLATE", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+		},
+	})
+}

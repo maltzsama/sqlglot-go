@@ -187,7 +187,7 @@ func init() {
 		expressions.KindRegexpExtractAll: duckDBRegexpExtractSQL,
 		expressions.KindStar:             duckDBStarSQL,
 		expressions.KindRegexpFullMatch: func(g *Generator, e expressions.Expression) string {
-			return g.funcCall("REGEXP_FULL_MATCH", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+			return g.funcCall("REGEXP_FULL_MATCH", []any{e.This(), e.Arg("expression"), e.Arg("options")}, "(", ")", true)
 		},
 		expressions.KindStartsWith: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("STARTS_WITH", []any{e.This(), e.Arg("expression")}, "(", ")", true)
@@ -1043,4 +1043,11 @@ func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
 		}
 	}
 	return g.joinSQL(e)
+}
+
+// generators/duckdb.py:1729 exp.SHA renders as SHA1.
+func init() {
+	registerDialectDispatch("duckdb", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindSHA: renameFunc("SHA1"),
+	})
 }

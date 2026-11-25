@@ -452,3 +452,12 @@ func hiveIsCastTimeFormat(e expressions.Expression, format string) bool {
 	}
 	return false
 }
+
+// Hive function renames (generators/hive.py TRANSFORMS); Spark/Databricks inherit them.
+func init() {
+	registerDialectDispatch("hive", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindArgMax:      renameFunc("MAX_BY"),
+		expressions.KindArgMin:      renameFunc("MIN_BY"),
+		expressions.KindNumberToStr: renameFunc("FORMAT_NUMBER"),
+	})
+}

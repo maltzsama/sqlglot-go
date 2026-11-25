@@ -77,7 +77,7 @@ func init() {
 		expressions.KindArray:                 func(g *Generator, e expressions.Expression) string { return g.inlineArraySQL(e) },
 		expressions.KindArrayConcat:           func(g *Generator, e expressions.Expression) string { return g.snowflakeArrayConcatSQL(e) },
 		expressions.KindArrayAppend:           snowflakeArrayAppendSQL("ARRAY_APPEND", false),
-		expressions.KindArrayPrepend:          snowflakeArrayAppendSQL("ARRAY_PREPEND", true),
+		expressions.KindArrayPrepend:          snowflakeArrayAppendSQL("ARRAY_PREPEND", false),
 		expressions.KindArrayContains:         snowflakeArrayContainsSQL,
 		expressions.KindArrayPosition:         snowflakeArrayPositionSQL,
 		expressions.KindArrayIntersect:        clickhouseRename("ARRAY_INTERSECTION"),
@@ -224,6 +224,11 @@ func init() {
 		expressions.KindGenerateSeries: snowflakeGenerateSeriesSQL,
 		// generators/snowflake.py:545-555: the Select preprocess chain.
 		expressions.KindSelect: snowflakeSelectSQL,
+		// generators/snowflake.py function renames (same-dialect spelling).
+		expressions.KindByteLength: renameFunc("OCTET_LENGTH"),
+		expressions.KindSHA2Digest: renameFunc("SHA2_BINARY"),
+		expressions.KindTimeSlice:  renameFunc("TIME_SLICE"),
+		expressions.KindDecodeCase: renameFunc("DECODE"),
 	}
 	registerDialectDispatch("snowflake", handlers)
 }
@@ -965,4 +970,66 @@ func snowflakeUndropSQL(g *Generator, e expressions.Expression) string {
 		rename = " RENAME TO " + rename
 	}
 	return "UNDROP " + kind + g.sqlKey(e, "this") + rename
+}
+
+// Snowflake's TO_/TRY_TO_/APPROX_PERCENTILE/GREATEST_IGNORE_NULLS spellings.
+func init() {
+	registerDialectDispatch("snowflake", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindToBinary: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall(tryPrefix(e)+"TO_BINARY", g.fallbackArgs(e), "(", ")", true)
+		},
+		expressions.KindToDouble: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall(tryPrefix(e)+"TO_DOUBLE", g.fallbackArgs(e), "(", ")", true)
+		},
+		expressions.KindToFile: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall(tryPrefix(e)+"TO_FILE", g.fallbackArgs(e), "(", ")", true)
+		},
+		expressions.KindApproxQuantile: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("APPROX_PERCENTILE", []any{e.This(), e.Arg("quantile")}, "(", ")", true)
+		},
+		expressions.KindGreatest: func(g *Generator, e expressions.Expression) string {
+			name := "GREATEST"
+			if truthy(e.Arg("ignore_nulls")) {
+				name = "GREATEST_IGNORE_NULLS"
+			}
+			return g.funcCall(name, g.fallbackArgs(e), "(", ")", true)
+		},
+		expressions.KindLeast: func(g *Generator, e expressions.Expression) string {
+			name := "LEAST"
+			if truthy(e.Arg("ignore_nulls")) {
+				name = "LEAST_IGNORE_NULLS"
+			}
+			return g.funcCall(name, g.fallbackArgs(e), "(", ")", true)
+		},
+	})
+}
+
+func tryPrefix(e expressions.Expression) string {
+	if truthy(e.Arg("safe")) {
+		return "TRY_"
+	}
+	return ""
+}
+
+func init() {
+	registerDialectDispatch("snowflake", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindDecrypt: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall(tryPrefix(e)+"DECRYPT", g.fallbackArgs(e), "(", ")", true)
+		},
+		expressions.KindDecryptRaw: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall(tryPrefix(e)+"DECRYPT_RAW", g.fallbackArgs(e), "(", ")", true)
+		},
+		expressions.KindToBoolean: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall(tryPrefix(e)+"TO_BOOLEAN", g.fallbackArgs(e), "(", ")", true)
+		},
+	})
+}
+
+// Snowflake's COLLATE_IS_FUNC=True renders COLLATE as a function (generators/snowflake.py:384).
+func init() {
+	registerDialectDispatch("snowflake", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindCollate: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("COLLATE", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+		},
+	})
 }

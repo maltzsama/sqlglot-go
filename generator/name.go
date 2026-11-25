@@ -48,6 +48,14 @@ func (g *Generator) sqlName(kind expressions.Kind) string {
 	return camelToSnake(expressions.ClassName(kind))
 }
 
+// renameFunc ports generator.rename_func: render the node through the generic function form
+// under a fixed SQL name (upstream's per-dialect TRANSFORMS renames).
+func renameFunc(name string) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		return g.funcCall(name, g.fallbackArgs(e), "(", ")", true)
+	}
+}
+
 func camelToSnake(s string) string {
 	var b strings.Builder
 	for i, r := range s {
