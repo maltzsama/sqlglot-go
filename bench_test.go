@@ -9,10 +9,12 @@ import (
 	"testing"
 
 	sqlglot "github.com/maltzsama/sqlglot-go"
+	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/generator"
 )
 
 var benchSQLSink string
+var benchCopySink exp.Expression
 
 const benchBase = "SELECT a, b, COUNT(*) FROM t1 JOIN t2 ON t1.id = t2.id WHERE a > 1 AND b <> 'x' GROUP BY a, b ORDER BY 1 LIMIT 10"
 const benchCH = "SELECT a, uniq(x), countIf(y) FROM t FINAL PREWHERE a > 1 WHERE b = 'x' GROUP BY a ORDER BY a SETTINGS max_threads = 4"
@@ -21,6 +23,7 @@ const benchOracle = "SELECT last_name, LEVEL FROM employees START WITH employee_
 const benchMySQL = "SELECT DATE_FORMAT(a, '%Y'), IFNULL(b, 0), GROUP_CONCAT(c) FROM t WHERE a = 1 GROUP BY a"
 const benchTSQL = "SELECT TOP 10 CONVERT(VARCHAR(10), a, 120), ISNULL(b, 0), DATEADD(day, 1, c) FROM t ORDER BY a"
 const benchPostgres = "SELECT a::int, COALESCE(b, 0), POSITION('x' IN c) FROM t WHERE a = ANY(ARRAY[1,2])"
+const benchCTE = "WITH recent AS (SELECT user_id, SUM(amount) AS total FROM orders WHERE created_at > '2020-01-01' GROUP BY user_id), ranked AS (SELECT user_id, total, ROW_NUMBER() OVER (ORDER BY total DESC) AS rn FROM recent) SELECT u.name, r.total FROM users u JOIN ranked r ON u.id = r.user_id WHERE r.rn <= 10 ORDER BY r.total DESC"
 
 func benchParseGenerate(b *testing.B, sql, dialect string) {
 	b.ReportAllocs()
@@ -100,4 +103,31 @@ func BenchmarkParseGenerateTSQL(b *testing.B) {
 }
 func BenchmarkParseGeneratePostgres(b *testing.B) {
 	benchParseGenerate(b, benchPostgres, "postgres")
+}
+
+// BenchmarkCopy exercises the deep-copy path on representative parsed ASTs (issue #89). The
+// synthetic widths in expressions/core_bench_test.go isolate construction shape; these carry
+// real planner nodes, so a change to Copy is measured against the trees the parser builds.
+func BenchmarkCopy(b *testing.B) {
+	for _, tc := range []struct {
+		name    string
+		sql     string
+		dialect string
+	}{
+		{"base", benchBase, ""},
+		{"clickhouse", benchCH, "clickhouse"},
+		{"cte", benchCTE, ""},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			expr, err := sqlglot.ParseOne(tc.sql, tc.dialect)
+			if err != nil {
+				b.Fatal(err)
+			}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				benchCopySink = expr.Copy()
+			}
+		})
+	}
 }

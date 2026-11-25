@@ -7,9 +7,9 @@ func ArgsOf(e Expression) map[string]any {
 	if !ok || n == nil {
 		return nil
 	}
-	out := make(map[string]any, len(n.argOrder))
-	for _, k := range n.argOrder {
-		out[k] = n.args[k]
+	out := make(map[string]any, len(n.args))
+	for i := range n.args {
+		out[n.args[i].key] = n.args[i].value
 	}
 	return out
 }

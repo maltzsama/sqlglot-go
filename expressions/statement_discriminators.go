@@ -60,7 +60,7 @@ const (
 
 // Into returns the INTO clause of a query (the `into` arg) as an Expression, or nil when absent — a
 // typed read of an arg that would otherwise be fetched and type-asserted by hand.
-func (n *Node) Into() Expression { return asExpression(n.args["into"]) }
+func (n *Node) Into() Expression { return asExpression(n.argValue("into")) }
 
 // Keyword returns the normalized value of a Command node's `this` — upper-cased, trimmed, with
 // internal whitespace collapsed to single spaces — so it is stable across both Command builder paths
