@@ -57,7 +57,8 @@ func expressionMetadataFor(dialect string) map[exp.Kind]typeSpec {
 // numeric, temporal, binary, boolean and interval types.
 func coercesToFor(dialect string) map[exp.DType]map[exp.DType]bool {
 	switch strings.ToLower(dialect) {
-	case "hive":
+	case "hive", "spark", "spark2":
+		// Spark2/Spark subclass Hive, so they inherit Hive's COERCES_TO (dialects/hive.py:37-44).
 		hiveCoercesToOnce.Do(func() {
 			hiveCoercesTo = copyCoercesTo()
 			targets := map[exp.DType]bool{exp.DTypeInterval: true}
