@@ -934,12 +934,32 @@ func duckDBDateDeltaSQL(op string) func(*Generator, expressions.Expression) stri
 			return "MAKE_TIMESTAMP_NS(EPOCH_NS(" + timestampNS + ") " + op + " " + delta + ")"
 		}
 		if interval == nil || interval.Kind() != expressions.KindInterval {
+			unitVar := unitToVarValue(unit)
+			if unitVar != nil && unitVar.Kind() == expressions.KindVar {
+				unitVar = expressions.Var(expressions.Args{"this": strings.ToUpper(unitVar.Name())})
+			}
 			interval = expressions.Interval(expressions.Args{
 				"this": interval,
-				"unit": unitToVarValue(unit),
+				"unit": unitVar,
 			})
 		}
-		return g.sqlKey(e, "this") + " " + op + " " + g.gen(interval)
+		// dialect.py:2029-2051: cast TsOrDsAdd to its return_type, and a string-literal delta
+		// operand to DATE (or DATETIME for the Datetime* variants), so the +/- interval works.
+		thisSQL := g.sqlKey(e, "this")
+		var toType expressions.Expression
+		if e.Kind() == expressions.KindTsOrDsAdd {
+			toType = asExpression(e.Arg("return_type"))
+		} else if this := asExpression(e.This()); this != nil && this.Kind() == expressions.KindLiteral && truthy(this.Arg("is_string")) {
+			dtype := expressions.DTypeDate
+			if e.Kind() == expressions.KindDatetimeAdd || e.Kind() == expressions.KindDatetimeSub {
+				dtype = expressions.DTypeDatetime
+			}
+			toType = expressions.DataType(expressions.Args{"this": dtype})
+		}
+		if toType != nil {
+			thisSQL = g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": toType}))
+		}
+		return thisSQL + " " + op + " " + g.gen(interval)
 	}
 }
 

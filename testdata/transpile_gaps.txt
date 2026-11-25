@@ -291,10 +291,8 @@
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME('2020-01-01')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME('2020-01-01', 'America/Los_Angeles')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME('2020-01-01', TIME '23:59:59')"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_ADD('2023-01-01T00:00:00', INTERVAL 1 MILLISECOND)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_DIFF('2023-01-01T00:00:00', '2023-01-01T05:00:00', MILLISECOND)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_DIFF(DATETIME '2017-10-15 00:00:00', DATETIME '2017-10-14 00:00:00', WEEK)"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_SUB('2023-01-01T00:00:00', INTERVAL 1 MILLISECOND)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_TRUNC('2023-01-01T01:01:01', HOUR)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_TRUNC(DATETIME '2008-11-10 14:30:00', WEEK(SUNDAY))"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATETIME_TRUNC(DATETIME '2008-11-10 14:30:00', WEEK)"}
@@ -1075,7 +1073,6 @@
 {"read":"redshift","write":"bigquery","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
 {"read":"redshift","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"DATEDIFF('day', a, b)"}
-{"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
 {"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')"}
 {"read":"redshift","write":"duckdb","category":"gen: transpile mismatch","sql":"DECODE(x, a, b, c, d)"}
