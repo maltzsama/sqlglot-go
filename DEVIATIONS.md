@@ -347,6 +347,8 @@ reconciliation note); malformed/engine-invalid forms fail closed to `Command` or
 | `pg-comment-is-null` | PG `COMMENT ON … IS NULL` (drops a comment) → `Comment{expression:Null}` (upstream parse-errors) |
 | `pg-returns-setof` | PG `RETURNS SETOF <type>` → `ReturnsProperty{this:DataType, setof:true}` (an added `setof` arg; upstream leaves `SETOF` unparsed and the CREATE degrades to `Command`) |
 | `mysql-create-user`, `mysql-create-role`, `mysql-alter-user`, `mysql-drop-user`, `mysql-drop-role` | account DDL → structured `Create`/`Alter`/`Drop` root with `kind:"USER"\|"ROLE"`; body kept verbatim in a `Command` child |
+| `snowflake-copy-without-from` | `COPY INTO t` with the file location omitted (loads from the table's own stage) → `Copy` with no `files`; upstream parse-errors at EOF |
+| `snowflake-show-empty-scope` | `SHOW … IN SCHEMA [<name>] [LIMIT n]` with the optional name omitted → `Show{scope_kind, limit}`; upstream consumes `LIMIT` as the scope name and parse-errors |
 
 Cross-cutting rules for the SET/SHOW family:
 - **Quoted dispatch keywords never match** — `SET "ROLE" x`, `` SET PASSWORD `=` 'x' ``,

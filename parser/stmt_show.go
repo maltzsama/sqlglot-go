@@ -14,6 +14,13 @@ import (
 // MySQL's table and the MySQL gate below stands in for that class-level override: outside MySQL,
 // SHOW always falls straight through to the raw-text Command fallback, matching upstream exactly.
 func (p *Parser) parseShow() exp.Expression {
+	if p.dialectIs("snowflake") {
+		start := p.prev
+		if parse := p.findParser(snowflakeShowParsers, snowflakeShowTrie); parse != nil {
+			return parse(p)
+		}
+		return p.parseAsCommand(start)
+	}
 	if p.dialectIs("mysql") {
 		start := p.prev
 		if parse := p.findParser(showParsers, showTrie); parse != nil {

@@ -601,6 +601,10 @@ func (p *Parser) parseAlterTableSet() exp.Expression {
 		alterSet.Set("tablespace", p.parseField(false, nil, false))
 	case p.matchTextSeq("FILE", "FORMAT") || p.matchTextSeq("FILEFORMAT"):
 		alterSet.Set("file_format", []exp.Expression{p.parseField(false, nil, false)})
+	case p.matchTextSeq("STAGE_FILE_FORMAT"):
+		alterSet.Set("file_format", p.parseWrappedOptions())
+	case p.matchTextSeq("STAGE_COPY_OPTIONS"):
+		alterSet.Set("copy_options", p.parseWrappedOptions())
 	case p.matchTextSeq("TAG") || p.matchTextSeq("TAGS"):
 		alterSet.Set("tag", p.parseCsv(p.parseAssignment))
 	default:

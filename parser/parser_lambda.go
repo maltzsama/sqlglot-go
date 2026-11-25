@@ -53,11 +53,7 @@ func (p *Parser) parseLambdaArg() exp.Expression {
 	return p.parseIdVar(true, nil)
 }
 
-// replaceLambda ports _replace_lambda (parser.py:9436-9464), simplified for this part's
-// scope: the upstream Cast branch (wrapping a matched column in exp.Cast when the param
-// carries a "to" type annotation) never fires here - only Snowflake builds such params,
-// and Materialize's TYPED_LAMBDA_ARGS=True re-parses a plain field (parsers/materialize.py:
-// 16-17), which has no "to" arg - so it's dropped accordingly.
+// replaceLambda ports _replace_lambda (parser.py:9729-9757).
 //
 // For every exp.Column in the lambda body whose leading part (parts[0], i.e. the outermost
 // qualifier - catalog/db/table/this in that priority) names a parameter, the column is
@@ -67,15 +63,23 @@ func (p *Parser) parseLambdaArg() exp.Expression {
 // 323 columnPartsToDot; core.go:990 Parts) but needs its own walk here because to_dot's
 // default include_dots=True also folds in outer exp.Dot ancestors that columnPartsToDot
 // (include_dots=False) does not.
+//
+// A parameter carrying a "to" type annotation (Snowflake's TYPED_LAMBDA_ARGS, e.g.
+// `x INT -> ...`) wraps the replacement in exp.Cast, matching the upstream `if typ:`
+// branch at parser.py:9742-9743.
 func replaceLambda(node exp.Expression, params []exp.Expression) exp.Expression {
 	if node == nil {
 		return nil
 	}
 
 	names := make(map[string]bool, len(params))
+	lambdaTypes := make(map[string]exp.Expression, len(params))
 	for _, param := range params {
 		if param != nil {
 			names[param.Name()] = true
+			if typ, ok := param.Arg("to").(exp.Expression); ok && typ != nil {
+				lambdaTypes[param.Name()] = typ
+			}
 		}
 	}
 
@@ -90,6 +94,11 @@ func replaceLambda(node exp.Expression, params []exp.Expression) exp.Expression 
 			dotOrID = columnToDot(column, parts)
 		} else {
 			dotOrID = column.This()
+		}
+		if typ := lambdaTypes[parts[0].Name()]; typ != nil {
+			// Each replacement cast needs its own type node: sharing one would reparent it
+			// and break parent-based traversal (the single-reference case is unaffected).
+			dotOrID = exp.Cast(exp.Args{"this": dotOrID, "to": typ.Copy()})
 		}
 
 		parent := column.Parent()

@@ -54,6 +54,8 @@ func Snowflake() *Dialect {
 	d.PreferCTEAliasColumn = true
 	d.TablesampleSizeIsPercent = true
 	d.CopyParamsAreCsv = false
+	// generators/snowflake.py:390: COPY params use `NAME = value`.
+	d.CopyParamsEqRequired = true
 	d.ArrayFuncsPropagatesNulls = true
 	d.AlterTableAddRequiredForEachColumn = false
 	tryCastRequiresString := true
@@ -195,6 +197,60 @@ func snowflakeDateUnit(unit exp.Expression) exp.Expression {
 // (parsers/snowflake.py:396-733) for the identity-relevant entries.
 func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expression {
 	out := map[string]func([]exp.Expression) exp.Expression{}
+	out["SEARCH"] = func(args []exp.Expression) exp.Expression {
+		values := exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1)}
+		for _, arg := range args[min(2, len(args)):] {
+			if arg != nil && arg.Kind() == exp.KindKwarg && arg.This() != nil {
+				values[strings.ToLower(arg.This().Name())] = arg
+			}
+		}
+		return exp.New(exp.KindSearch, values)
+	}
+	out["GENERATOR"] = func(args []exp.Expression) exp.Expression {
+		names := []string{"ROWCOUNT", "TIMELIMIT"}
+		mapped := make([]exp.Expression, 0, len(args))
+		for i, arg := range args {
+			if arg == nil {
+				continue
+			}
+			if arg.Kind() == exp.KindKwarg {
+				mapped = append(mapped, arg)
+				continue
+			}
+			if i < len(names) {
+				mapped = append(mapped, exp.Kwarg(exp.Args{
+					"this": exp.ToIdentifier(names[i]), "expression": arg,
+				}))
+			} else {
+				mapped = append(mapped, arg)
+			}
+		}
+		return exp.Anonymous(exp.Args{"this": "GENERATOR", "expressions": mapped})
+	}
+	out["IDENTIFIER"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindDynamicIdentifier, exp.Args{"this": seqGet(args, 0)})
+	}
+	out["ROUND"] = func(args []exp.Expression) exp.Expression {
+		values := exp.Args{"casts_non_integer_decimals": true}
+		keys := []string{"this", "decimals", "truncate"}
+		pos := 0
+		for _, arg := range args {
+			if arg != nil && arg.Kind() == exp.KindKwarg {
+				switch strings.ToUpper(arg.This().Name()) {
+				case "EXPR":
+					values["this"] = arg.Expr()
+				case "SCALE":
+					values["decimals"] = arg.Expr()
+				case "ROUNDING_MODE":
+					values["truncate"] = arg.Expr()
+				}
+			} else if pos < len(keys) {
+				values[keys[pos]] = arg
+				pos++
+			}
+		}
+		return exp.Round(values)
+	}
 
 	// parsers/snowflake.py:502 `_build_datetime("DATE", DType.DATE)` handles
 	// explicit format strings as TsOrDsToDate and converts the format via TIME_MAPPING.
@@ -284,19 +340,26 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	}
 	for name, target := range map[string]exp.DType{
 		"TO_TIME": exp.DTypeTime, "TO_TIMESTAMP": exp.DTypeTimestamp,
-		"TRY_TO_DATE": exp.DTypeDate, "TRY_TO_TIME": exp.DTypeTime,
-		"TRY_TO_TIMESTAMP": exp.DTypeTimestamp,
+		"TO_TIMESTAMP_LTZ": exp.DTypeTimestampLtz, "TO_TIMESTAMP_NTZ": exp.DTypeTimestampNtz,
+		"TO_TIMESTAMP_TZ": exp.DTypeTimestampTz,
+		"TRY_TO_DATE":     exp.DTypeDate, "TRY_TO_TIME": exp.DTypeTime,
+		"TRY_TO_TIMESTAMP":     exp.DTypeTimestamp,
+		"TRY_TO_TIMESTAMP_LTZ": exp.DTypeTimestampLtz, "TRY_TO_TIMESTAMP_NTZ": exp.DTypeTimestampNtz,
+		"TRY_TO_TIMESTAMP_TZ": exp.DTypeTimestampTz,
 	} {
 		safe := strings.HasPrefix(name, "TRY_")
+		// TIMESTAMP_TYPES (parsers/snowflake.py:74-79) covers all four timestamp flavors.
+		isTimestampType := target == exp.DTypeTimestamp || target == exp.DTypeTimestampLtz ||
+			target == exp.DTypeTimestampNtz || target == exp.DTypeTimestampTz
 		out[name] = func(args []exp.Expression) exp.Expression {
 			value := seqGet(args, 0)
-			if target == exp.DTypeTimestamp && safe && len(args) == 1 &&
+			if isTimestampType && safe && len(args) == 1 &&
 				value != nil && value.IsString() {
 				if _, err := strconv.ParseInt(value.Name(), 10, 64); err == nil {
 					return exp.Anonymous(exp.Args{"this": name, "expressions": args})
 				}
 			}
-			if target == exp.DTypeTimestamp && !safe {
+			if isTimestampType && !safe {
 				scale := seqGet(args, 1)
 				valueIsInteger := false
 				if value != nil {
@@ -324,7 +387,7 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 			}
 			if len(args) == 1 && value != nil && value.IsString() {
 				_, integerString := strconv.ParseInt(value.Name(), 10, 64)
-				if target == exp.DTypeTimestamp && !safe && integerString == nil {
+				if isTimestampType && !safe && integerString == nil {
 					return exp.UnixToTime(exp.Args{
 						"this":        value,
 						"target_type": exp.DataType(exp.Args{"this": target}),

@@ -56,6 +56,10 @@ type dialectParserOverrideSet struct {
 	// LambdaArgParser ports a dialect's _parse_lambda_arg override
 	// (parsers/materialize.py:16-17: _parse_field).
 	LambdaArgParser func(*Parser) exp.Expression
+	// FileLocation ports a dialect's _parse_file_location override, used by COPY's file
+	// list (parsers/snowflake.py:1298-1304: a subquery or table parts, so string and
+	// `@stage/path` locations parse structurally).
+	FileLocation func(*Parser) exp.Expression
 	// DisableTableHints ports RisingWaveParser._parse_table_hints (parsers/risingwave.py:
 	// 34-37): the dialect has no T-SQL/MySQL hint grammar, so `FROM a WITH (...)` must not
 	// swallow the connector properties that follow the table.
@@ -311,6 +315,17 @@ func (p *Parser) disableTableHints() bool {
 func (p *Parser) lambdaArgParser() func(*Parser) exp.Expression {
 	for _, key := range p.overrideChain() {
 		if parser := dialectParserOverrides[key].LambdaArgParser; parser != nil {
+			return parser
+		}
+	}
+	return nil
+}
+
+// fileLocationParser resolves a dialect's _parse_file_location override, falling back to
+// the base field parse (parser.py:9906-9907).
+func (p *Parser) fileLocationParser() func(*Parser) exp.Expression {
+	for _, key := range p.overrideChain() {
+		if parser := dialectParserOverrides[key].FileLocation; parser != nil {
 			return parser
 		}
 	}

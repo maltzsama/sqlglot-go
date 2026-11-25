@@ -43,6 +43,7 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindWithSystemVersioningProperty: propertyLocationPostSchema,
 	expressions.KindCharacterSetProperty:         propertyLocationPostSchema,
 	expressions.KindCollateProperty:              propertyLocationPostSchema,
+	expressions.KindHandlerProperty:              propertyLocationPostSchema,
 	expressions.KindEngineProperty:               propertyLocationPostSchema,
 	expressions.KindInheritsProperty:             propertyLocationPostSchema,
 	expressions.KindLanguageProperty:             propertyLocationPostSchema,
@@ -105,6 +106,7 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindMergeBlockRatioProperty:  propertyLocationPostName,
 	expressions.KindWithJournalTableProperty: propertyLocationPostName,
 	expressions.KindGlobalProperty:           propertyLocationPostCreate,
+	expressions.KindDynamicProperty:          propertyLocationPostCreate,
 	expressions.KindSetProperty:              propertyLocationPostCreate,
 	expressions.KindVolatileProperty:         propertyLocationPostCreate,
 }
@@ -136,6 +138,8 @@ func init() {
 	dispatch[expressions.KindMaterializedProperty] = (*Generator).materializedPropertySQL
 	dispatch[expressions.KindUnloggedProperty] = (*Generator).unloggedPropertySQL
 	dispatch[expressions.KindInheritsProperty] = (*Generator).inheritsPropertySQL
+	dispatch[expressions.KindHandlerProperty] = (*Generator).handlerPropertySQL
+	dispatch[expressions.KindDynamicProperty] = (*Generator).dynamicPropertySQL
 	dispatch[expressions.KindLikeProperty] = (*Generator).likePropertySQL
 	dispatch[expressions.KindModuleProperty] = (*Generator).modulePropertySQL
 	dispatch[expressions.KindVirtualProperty] = (*Generator).virtualPropertySQL
@@ -258,11 +262,12 @@ func (g *Generator) renderProperties(properties expressions.Expression, prefix, 
 	return prefix + space + sql + suffix
 }
 
-// withPropertiesSQL ports with_properties (generator.py:2064-2065). Base, MySQL, and
-// Postgres all use the base WITH_PROPERTIES_PREFIX of "WITH".
+// withPropertiesSQL ports with_properties (generator.py:2090-2091) and the Snowflake
+// override (generators/snowflake.py:683-684): Snowflake renders the property list with no
+// `WITH` keyword and a bare `self.sep("")` prefix (`\n` when pretty, nothing otherwise).
 func (g *Generator) withPropertiesSQL(properties expressions.Expression) string {
 	if g.isDialect("snowflake") {
-		return g.renderProperties(properties, "", " ", "", false)
+		return g.renderProperties(properties, g.sep(""), " ", "", false)
 	}
 	return g.renderProperties(properties, g.seg(g.dialect.WithPropertiesPrefix, ""), ", ", "", true)
 }
@@ -333,8 +338,17 @@ func (g *Generator) virtualPropertySQL(expressions.Expression) string      { ret
 func (g *Generator) materializedPropertySQL(expressions.Expression) string { return "MATERIALIZED" }
 func (g *Generator) unloggedPropertySQL(expressions.Expression) string     { return "UNLOGGED" }
 
+// dynamicPropertySQL ports the base exp.DynamicProperty transform (generator.py:181).
+func (g *Generator) dynamicPropertySQL(expressions.Expression) string { return "DYNAMIC" }
+
 func (g *Generator) inheritsPropertySQL(e expressions.Expression) string {
 	return "INHERITS (" + g.expressions(exprsOptions{expression: e, flat: true}) + ")"
+}
+
+// handlerPropertySQL ports the base exp.HandlerProperty transform (generator.py:186):
+// `HANDLER <expr>`. Snowflake overrides it with an explicit `=` in dialect_snowflake.go.
+func (g *Generator) handlerPropertySQL(e expressions.Expression) string {
+	return "HANDLER " + g.sqlKey(e, "this")
 }
 
 // likePropertySQL ports likeproperty_sql (generator.py:2097-2112). All in-scope dialects

@@ -773,6 +773,9 @@ func (p *Parser) parseStatement() exp.Expression {
 	if !p.curr.IsValid() {
 		return nil
 	}
+	if p.statementDepth == 1 && p.dialectIs("snowflake") && (stringsUpper(p.curr.Text) == "PUT" || stringsUpper(p.curr.Text) == "GET") && p.next.TokenType != tokens.L_PAREN {
+		return snowflakeFileTransfer(p)
+	}
 	if parse := p.statementParser(p.curr.TokenType); parse != nil {
 		p.advance()
 		comments := p.prevComments
@@ -1701,6 +1704,9 @@ func (p *Parser) parseDuckDBHistorical(table exp.Expression) {
 }
 
 func (p *Parser) parseTableParts(schema bool, isDBReference bool, wildcard bool, fast bool) exp.Expression {
+	if p.dialectIs("snowflake") && (p.curr.TokenType == tokens.STRING || p.curr.Text == "@") {
+		return p.parseSnowflakeStageTable(isDBReference)
+	}
 	var catalog exp.Expression
 	// schemaPart holds the ANSI-schema-level qualifier (upstream's "db" arg — the port renames
 	// this arg to "schema"; the local can't be named "schema" here as that is already the
@@ -1743,6 +1749,12 @@ func (p *Parser) parseTableParts(schema bool, isDBReference bool, wildcard bool,
 		p.raiseError(fmt.Sprintf("Expected database name but got %s", p.curr.String()))
 	}
 	result := p.expression(exp.Table(exp.Args{"this": table, "schema": schemaPart, "catalog": catalog}), nil, nil)
+	if changes := p.parseChanges(); changes != nil {
+		result.Set("changes", changes)
+	}
+	if historical := p.parseHistoricalData(); historical != nil {
+		result.Set("when", historical)
+	}
 	// parser.py:4973-4975: a PIVOT clause binds to the table parts, ahead of any alias, so a
 	// bare `pivot` that is not followed by `(` stays available as an alias.
 	if pivots := p.parsePivots(); pivots != nil {
@@ -1767,6 +1779,24 @@ func (p *Parser) parseTablePartBase(schema bool) exp.Expression {
 	// or `FROM JSON_TABLE(...)`: outside schema position, a function call takes priority over
 	// a plain identifier so the parsed Func node becomes exp.Table's "this" arg.
 	if !schema {
+		if p.dialectIs("snowflake") && stringsUpper(p.curr.Text) == "DIRECTORY" && p.next.TokenType == tokens.L_PAREN {
+			p.advance(2)
+			table := p.parseTableParts(false, false, false, false)
+			var stage exp.Expression
+			if table != nil && table.Kind() == exp.KindTable {
+				stage = table.This()
+			} else {
+				stage = table
+			}
+			p.matchRParen(stage)
+			return p.expression(exp.New(exp.KindDirectoryStage, exp.Args{"this": stage}), nil, nil)
+		}
+		if p.dialectIs("snowflake") && stringsUpper(p.curr.Text) == "SEMANTIC_VIEW" && p.next.TokenType == tokens.L_PAREN {
+			p.advance(2)
+			result := p.parseSemanticView()
+			p.matchRParen(result)
+			return result
+		}
 		if expression := p.parseFunction(nil, false, false, false); expression != nil {
 			return expression
 		}
@@ -2430,7 +2460,7 @@ func (p *Parser) parseColumnPartsFast() exp.Expression {
 		hasDot := p.match(tokens.DOT)
 		currTT := p.curr.TokenType
 		if !hasDot {
-			if columnFastBailTokens[currTT] {
+			if columnFastBailTokens[currTT] || (p.dialectIs("snowflake") && currTT == tokens.EXCLAMATION) {
 				p.retreat(index)
 				return nil
 			}
@@ -2590,6 +2620,12 @@ func (p *Parser) parseColumnOpsBase(this exp.Expression) exp.Expression {
 	for p.curr.IsValid() {
 		opToken := p.curr.TokenType
 		op, ok := columnOperators[opToken]
+		if p.dialectIs("snowflake") && opToken == tokens.EXCLAMATION {
+			ok = true
+			op = func(p *Parser, left, right exp.Expression) exp.Expression {
+				return p.expression(exp.New(exp.KindModelAttribute, exp.Args{"this": left, "expression": right}), nil, nil)
+			}
+		}
 		// parsers/clickhouse.py:412-413 removes PLACEHOLDER from COLUMN_OPERATORS, so `?`
 		// never binds as the postgres jsonb-contains operator there.
 		if !ok || (p.dialect.JSONOperatorsAreBinary && jsonOperatorTokens[opToken]) ||
@@ -3615,6 +3651,14 @@ func (p *Parser) parseFunction(functions map[string]func([]exp.Expression) exp.E
 		fnSyntax = true
 	}
 	fn := p.parseFunctionCall(functions, anonymous, optionalParens, anyToken)
+	if p.dialectIs("snowflake") && fn != nil && fn.Kind() == exp.KindDynamicIdentifier && p.match(tokens.L_PAREN) {
+		args := p.parseFunctionArgs(true)
+		if args == nil {
+			args = []exp.Expression{}
+		}
+		fn.Set("expressions", args)
+		p.matchRParen(fn)
+	}
 	if fnSyntax {
 		p.match(tokens.R_BRACE)
 	}
@@ -4244,12 +4288,11 @@ func (p *Parser) parseWindow(this exp.Expression, alias bool) exp.Expression {
 	}
 	// FIRST_VALUE(t.c IGNORE|RESPECT NULLS) OVER ... is hoisted to FIRST_VALUE(t.c) IGNORE|RESPECT
 	// NULLS OVER ... (parser.py:8636-8641); the trailing form is parsed just below.
-	if p.dialectIs("snowflake") && this != nil && this.Kind() == exp.KindNthValue &&
-		p.matchTextSeq("FROM") {
-		fromFirst := p.matchTextSeq("FIRST")
-		fromLast := !fromFirst && p.matchTextSeq("LAST")
-		if fromFirst || fromLast {
-			this.Set("from_first", fromFirst)
+	if p.dialectIs("snowflake") && this != nil && this.Kind() == exp.KindNthValue {
+		if p.matchTextSeq("FROM", "FIRST") {
+			this.Set("from_first", true)
+		} else if p.matchTextSeq("FROM", "LAST") {
+			this.Set("from_first", false)
 		}
 	}
 	if this != nil && this.Is(exp.TraitAggFunc) {

@@ -425,6 +425,12 @@ func (p *Parser) parseTypesBase(checkFunc, schema, allowIdentifiers, withCollati
 			p.retreat(index)
 			return nil
 		}
+		if p.dialectIs("snowflake") && dtype == exp.DTypeDecimal && len(expressions) == 0 {
+			expressions = []exp.Expression{
+				exp.DataTypeParam(exp.Args{"this": exp.LiteralNumber("38")}),
+				exp.DataTypeParam(exp.Args{"this": exp.LiteralNumber("0")}),
+			}
+		}
 		// Upstream's scalar branch (parser.py:6429-6433) always sets nested=nested
 		// (True or False), unlike the TZ/interval/null branches which omit it. The
 		// shared dataTypeArgs helper drops a false nested, so build args inline here
@@ -691,7 +697,11 @@ func (p *Parser) parseBracketBase(this exp.Expression) exp.Expression {
 		return this
 	}
 	bracketKind := p.prev.TokenType
-	expressions := p.parseCsv(p.parseBracketKeyValue)
+	parseElement := p.parseBracketKeyValue
+	if bracketKind == tokens.L_BRACE && p.dialectIs("snowflake") {
+		parseElement = p.parseSnowflakeObjectEntry
+	}
+	expressions := p.parseCsv(parseElement)
 	if bracketKind == tokens.L_BRACKET && !p.match(tokens.R_BRACKET) {
 		p.raiseError("Expected ]")
 	} else if bracketKind == tokens.L_BRACE && !p.match(tokens.R_BRACE) {

@@ -2199,11 +2199,14 @@ func (g *Generator) arraySizeSQL(e expressions.Expression) string {
 		dim = nil
 	}
 	// ARRAY_SIZE_NAME (generator.py:593) defaults to ARRAY_LENGTH; teradata overrides it
-	// with CARDINALITY (generators/teradata.py:55). The other per-dialect names (hive
-	// SIZE, presto CARDINALITY, ...) are dispatch-level renames upstream of this method.
+	// with CARDINALITY (generators/teradata.py:55) and snowflake with ARRAY_SIZE
+	// (generators/snowflake.py:397). The other per-dialect names (hive SIZE, presto
+	// CARDINALITY, ...) are dispatch-level renames upstream of this method.
 	name := "ARRAY_LENGTH"
 	if g.isDialect("teradata") {
 		name = "CARDINALITY"
+	} else if g.isDialect("snowflake") {
+		name = "ARRAY_SIZE"
 	}
 	return g.funcCall(name, []any{e.Arg("this"), dim}, "(", ")", true)
 }

@@ -603,6 +603,14 @@ const (
 	KindSetConfigProperty
 	KindCharacterSetProperty
 	KindRowFormatProperty
+	// KindHandlerProperty ports exp.HandlerProperty (properties.py:160-161, arg_types
+	// {"this": True}): the CREATE FUNCTION `HANDLER <expr>` property, rendered with an
+	// explicit `HANDLER = ` prefix by the Snowflake generator (generators/snowflake.py:483).
+	KindHandlerProperty
+	// KindDynamicProperty ports exp.DynamicProperty (properties.py:254-255, arg_types {}):
+	// the bare DYNAMIC marker of `CREATE DYNAMIC TABLE` (base PROPERTY_PARSERS, parser.py:1331;
+	// generator.py:181 renders it as "DYNAMIC", located POST_CREATE at generator.py:713).
+	KindDynamicProperty
 	// KindReturn ports exp.Return (query.py:882, `pass` - default {"this": True}): the
 	// `RETURN <expr>` wrapper _parse_create can apply to a UDF/procedure body
 	// (parser.py:2469-2470).
@@ -1185,6 +1193,18 @@ const (
 	KindKsqlWindow
 	// DuckDB/Python-style `[value FOR item[, position] IN array IF condition]`.
 	KindComprehension
+	KindHistoricalData
+	KindChanges
+	KindSemanticView
+	KindDirectoryStage
+	KindGet
+	KindPut
+	KindModelAttribute
+	KindDynamicIdentifier
+	KindMaskingPolicyColumnConstraint
+	KindProjectionPolicyColumnConstraint
+	KindTags
+	KindRowAccessProperty
 )
 
 type Trait uint32
@@ -1687,6 +1707,8 @@ var argTypes = map[Kind][]argSpec{
 	KindSetConfigProperty:         {{"this", true}},
 	KindCharacterSetProperty:      {{"this", true}, {"default", false}},
 	KindRowFormatProperty:         {{"this", true}},
+	KindHandlerProperty:           {{"this", true}},
+	KindDynamicProperty:           {},
 	KindReturn:                    defaultArgTypes,
 	KindIndex:                     {{"this", false}, {"table", false}, {"unique", false}, {"primary", false}, {"amp", false}, {"params", false}},
 	KindOpclass:                   {{"this", true}, {"expression", true}},
@@ -1811,35 +1833,47 @@ var argTypes = map[Kind][]argSpec{
 	KindInOutColumnConstraint:        {{"input_", false}, {"output", false}, {"variadic", false}},
 	// presto cluster: arg_types mirrored 1:1 from the upstream classes (dict order drives
 	// FromArgList positional mapping). See expressions/presto_nodes.go for per-Kind citations.
-	KindAnyValue:              defaultArgTypes,                                                                                          // aggregate.py:17 (pass -> {"this": True})
-	KindApproxQuantile:        {{"this", true}, {"quantile", true}, {"accuracy", false}, {"weight", false}, {"error_tolerance", false}}, // aggregate.py:234
-	KindApproxQuantiles:       {{"this", true}, {"expression", false}},
-	KindArrayUniqueAgg:        defaultArgTypes,                                                                                                             // aggregate.py:83 (pass)
-	KindDayOfWeekIso:          defaultArgTypes,                                                                                                             // temporal.py:217 (pass)
-	KindDecode:                {{"this", true}, {"charset", true}, {"replace", false}},                                                                     // string.py:285
-	KindEncode:                {{"this", true}, {"charset", true}},                                                                                         // string.py:289
-	KindJSONFormat:            {{"this", false}, {"options", false}, {"is_json", false}, {"to_json", false}},                                               // json.py:145
-	KindLevenshtein:           {{"this", true}, {"expression", false}, {"ins_cost", false}, {"del_cost", false}, {"sub_cost", false}, {"max_dist", false}}, // string.py:74
-	KindMD5Digest:             {{"this", true}, {"expressions", false}},                                                                                    // string.py:540 (is_var_len_args)
-	KindSHA2:                  {{"this", true}, {"length", false}},                                                                                         // string.py:562
-	KindSHA2Digest:            {{"this", true}, {"length", false}},
-	KindStrToMap:              {{"this", true}, {"pair_delim", false}, {"key_value_delim", false}, {"duplicate_resolution_callback", false}},                        // string.py:203
-	KindTimeToUnix:            defaultArgTypes,                                                                                                                      // temporal.py:484 (pass)
-	KindUnixToTime:            {{"this", true}, {"scale", false}, {"zone", false}, {"hours", false}, {"minutes", false}, {"format", false}, {"target_type", false}}, // temporal.py:532
-	KindUnhex:                 {{"this", true}, {"expression", false}},                                                                                              // string.py:405
-	KindArraySlice:            {{"this", true}, {"start", true}, {"end", false}, {"step", false}, {"zero_based", false}},                                            // array.py:85
-	KindCurrentTimestamp:      {{"this", false}, {"sysdate", false}},                                                                                                // temporal.py:37
-	KindCurrentUser:           {{"this", false}},                                                                                                                    // functions.py:309
-	KindCurrentRole:           {},                                                                                                                                   // functions.py:277 (empty arg_types)
-	KindSessionUser:           {},                                                                                                                                   // functions.py:325 (empty arg_types)
-	KindLocaltime:             {{"this", false}},                                                                                                                    // temporal.py:49
-	KindLocaltimestamp:        {{"this", false}},                                                                                                                    // temporal.py:53
-	KindUnicodeString:         {{"this", true}, {"escape", false}},
-	KindVersion:               {{"this", true}, {"kind", true}, {"expression", false}},
-	KindMatchRecognize:        {{"partition_by", false}, {"order", false}, {"measures", false}, {"rows", false}, {"after", false}, {"pattern", false}, {"define", false}, {"alias", false}},
-	KindMatchRecognizeMeasure: {{"this", true}, {"window_frame", false}},
-	KindRegexpReplace:         {{"this", true}, {"expression", true}, {"replacement", false}, {"position", false}, {"occurrence", false}, {"modifiers", false}, {"single_replace", false}},
-	KindParseJSON:             {{"this", true}, {"expression", false}, {"safe", false}},
+	KindAnyValue:                         defaultArgTypes,                                                                                          // aggregate.py:17 (pass -> {"this": True})
+	KindApproxQuantile:                   {{"this", true}, {"quantile", true}, {"accuracy", false}, {"weight", false}, {"error_tolerance", false}}, // aggregate.py:234
+	KindApproxQuantiles:                  {{"this", true}, {"expression", false}},
+	KindArrayUniqueAgg:                   defaultArgTypes, // aggregate.py:83 (pass)
+	KindHistoricalData:                   {{"this", true}, {"kind", true}, {"expression", true}},
+	KindChanges:                          {{"information", true}, {"at_before", false}, {"end", false}},
+	KindSemanticView:                     {{"this", true}, {"metrics", false}, {"dimensions", false}, {"facts", false}, {"where", false}},
+	KindDirectoryStage:                   {{"this", true}},
+	KindGet:                              {{"this", true}, {"target", true}, {"properties", false}},
+	KindPut:                              {{"this", true}, {"target", true}, {"properties", false}},
+	KindModelAttribute:                   {{"this", true}, {"expression", true}},
+	KindDynamicIdentifier:                {{"this", true}, {"expressions", false}},
+	KindMaskingPolicyColumnConstraint:    {{"this", true}, {"expressions", false}},
+	KindProjectionPolicyColumnConstraint: {{"this", true}},
+	KindTags:                             {{"expressions", true}},
+	KindRowAccessProperty:                {{"this", false}, {"expressions", false}},
+	KindDayOfWeekIso:                     defaultArgTypes,                                                                                                             // temporal.py:217 (pass)
+	KindDecode:                           {{"this", true}, {"charset", true}, {"replace", false}},                                                                     // string.py:285
+	KindEncode:                           {{"this", true}, {"charset", true}},                                                                                         // string.py:289
+	KindJSONFormat:                       {{"this", false}, {"options", false}, {"is_json", false}, {"to_json", false}},                                               // json.py:145
+	KindLevenshtein:                      {{"this", true}, {"expression", false}, {"ins_cost", false}, {"del_cost", false}, {"sub_cost", false}, {"max_dist", false}}, // string.py:74
+	KindMD5Digest:                        {{"this", true}, {"expressions", false}},                                                                                    // string.py:540 (is_var_len_args)
+	KindSHA2:                             {{"this", true}, {"length", false}},                                                                                         // string.py:562
+	KindSHA2Digest:                       {{"this", true}, {"length", false}},
+	KindStrToMap:                         {{"this", true}, {"pair_delim", false}, {"key_value_delim", false}, {"duplicate_resolution_callback", false}},                        // string.py:203
+	KindTimeToUnix:                       defaultArgTypes,                                                                                                                      // temporal.py:484 (pass)
+	KindUnixToTime:                       {{"this", true}, {"scale", false}, {"zone", false}, {"hours", false}, {"minutes", false}, {"format", false}, {"target_type", false}}, // temporal.py:532
+	KindUnhex:                            {{"this", true}, {"expression", false}},                                                                                              // string.py:405
+	KindArraySlice:                       {{"this", true}, {"start", true}, {"end", false}, {"step", false}, {"zero_based", false}},                                            // array.py:85
+	KindCurrentTimestamp:                 {{"this", false}, {"sysdate", false}},                                                                                                // temporal.py:37
+	KindCurrentUser:                      {{"this", false}},                                                                                                                    // functions.py:309
+	KindCurrentRole:                      {},                                                                                                                                   // functions.py:277 (empty arg_types)
+	KindSessionUser:                      {},                                                                                                                                   // functions.py:325 (empty arg_types)
+	KindLocaltime:                        {{"this", false}},                                                                                                                    // temporal.py:49
+	KindLocaltimestamp:                   {{"this", false}},                                                                                                                    // temporal.py:53
+	KindUnicodeString:                    {{"this", true}, {"escape", false}},
+	KindVersion:                          {{"this", true}, {"kind", true}, {"expression", false}},
+	KindMatchRecognize:                   {{"partition_by", false}, {"order", false}, {"measures", false}, {"rows", false}, {"after", false}, {"pattern", false}, {"define", false}, {"alias", false}},
+	KindMatchRecognizeMeasure:            {{"this", true}, {"window_frame", false}},
+	KindRegexpReplace:                    {{"this", true}, {"expression", true}, {"replacement", false}, {"position", false}, {"occurrence", false}, {"modifiers", false}, {"single_replace", false}},
+	KindParseJSON:                        {{"this", true}, {"expression", false}, {"safe", false}},
 	// trino cluster: arg_types mirror the pinned declarations exactly. In particular,
 	// CurrentCatalog and CurrentVersion have genuinely empty arg maps, not optional `this`.
 	KindCurrentCatalog:           {},                                      // functions.py:249-250
@@ -3211,6 +3245,8 @@ var className = map[Kind]string{
 	KindSetConfigProperty:                   "SetConfigProperty",
 	KindCharacterSetProperty:                "CharacterSetProperty",
 	KindRowFormatProperty:                   "RowFormatProperty",
+	KindHandlerProperty:                     "HandlerProperty",
+	KindDynamicProperty:                     "DynamicProperty",
 	KindReturn:                              "Return",
 	KindIndex:                               "Index",
 	KindOpclass:                             "Opclass",
@@ -3317,47 +3353,59 @@ var className = map[Kind]string{
 	KindWithOperator:                        "WithOperator",
 	KindInOutColumnConstraint:               "InOutColumnConstraint",
 	// presto cluster: class names match the upstream Presto FUNCTIONS canonical class.
-	KindAnyValue:              "AnyValue",
-	KindArrayConstructCompact: "ArrayConstructCompact",
-	KindAttach:                "Attach",
-	KindAttachOption:          "AttachOption",
-	KindDateBin:               "DateBin",
-	KindUnixSeconds:           "UnixSeconds",
-	KindInstall:               "Install",
-	KindPositionalColumn:      "PositionalColumn",
-	KindSortArray:             "SortArray",
-	KindRegexpFullMatch:       "RegexpFullMatch",
-	KindSummarize:             "Summarize",
-	KindUnpivotColumns:        "UnpivotColumns",
-	KindToVariant:             "ToVariant",
-	KindApproxQuantile:        "ApproxQuantile",
-	KindApproxQuantiles:       "ApproxQuantiles",
-	KindArrayUniqueAgg:        "ArrayUniqueAgg",
-	KindDayOfWeekIso:          "DayOfWeekIso",
-	KindDecode:                "Decode",
-	KindEncode:                "Encode",
-	KindJSONFormat:            "JSONFormat",
-	KindLevenshtein:           "Levenshtein",
-	KindMD5Digest:             "MD5Digest",
-	KindSHA2:                  "SHA2",
-	KindSHA2Digest:            "SHA2Digest",
-	KindStrToMap:              "StrToMap",
-	KindTimeToUnix:            "TimeToUnix",
-	KindUnixToTime:            "UnixToTime",
-	KindUnhex:                 "Unhex",
-	KindArraySlice:            "ArraySlice",
-	KindCurrentTimestamp:      "CurrentTimestamp",
-	KindCurrentUser:           "CurrentUser",
-	KindCurrentRole:           "CurrentRole",
-	KindSessionUser:           "SessionUser",
-	KindLocaltime:             "Localtime",
-	KindLocaltimestamp:        "Localtimestamp",
-	KindUnicodeString:         "UnicodeString",
-	KindVersion:               "Version",
-	KindMatchRecognize:        "MatchRecognize",
-	KindMatchRecognizeMeasure: "MatchRecognizeMeasure",
-	KindRegexpReplace:         "RegexpReplace",
-	KindParseJSON:             "ParseJSON",
+	KindAnyValue:                         "AnyValue",
+	KindArrayConstructCompact:            "ArrayConstructCompact",
+	KindAttach:                           "Attach",
+	KindAttachOption:                     "AttachOption",
+	KindDateBin:                          "DateBin",
+	KindUnixSeconds:                      "UnixSeconds",
+	KindInstall:                          "Install",
+	KindPositionalColumn:                 "PositionalColumn",
+	KindSortArray:                        "SortArray",
+	KindRegexpFullMatch:                  "RegexpFullMatch",
+	KindSummarize:                        "Summarize",
+	KindUnpivotColumns:                   "UnpivotColumns",
+	KindToVariant:                        "ToVariant",
+	KindApproxQuantile:                   "ApproxQuantile",
+	KindApproxQuantiles:                  "ApproxQuantiles",
+	KindArrayUniqueAgg:                   "ArrayUniqueAgg",
+	KindHistoricalData:                   "HistoricalData",
+	KindChanges:                          "Changes",
+	KindSemanticView:                     "SemanticView",
+	KindDirectoryStage:                   "DirectoryStage",
+	KindGet:                              "Get",
+	KindPut:                              "Put",
+	KindModelAttribute:                   "ModelAttribute",
+	KindDynamicIdentifier:                "DynamicIdentifier",
+	KindMaskingPolicyColumnConstraint:    "MaskingPolicyColumnConstraint",
+	KindProjectionPolicyColumnConstraint: "ProjectionPolicyColumnConstraint",
+	KindTags:                             "Tags",
+	KindRowAccessProperty:                "RowAccessProperty",
+	KindDayOfWeekIso:                     "DayOfWeekIso",
+	KindDecode:                           "Decode",
+	KindEncode:                           "Encode",
+	KindJSONFormat:                       "JSONFormat",
+	KindLevenshtein:                      "Levenshtein",
+	KindMD5Digest:                        "MD5Digest",
+	KindSHA2:                             "SHA2",
+	KindSHA2Digest:                       "SHA2Digest",
+	KindStrToMap:                         "StrToMap",
+	KindTimeToUnix:                       "TimeToUnix",
+	KindUnixToTime:                       "UnixToTime",
+	KindUnhex:                            "Unhex",
+	KindArraySlice:                       "ArraySlice",
+	KindCurrentTimestamp:                 "CurrentTimestamp",
+	KindCurrentUser:                      "CurrentUser",
+	KindCurrentRole:                      "CurrentRole",
+	KindSessionUser:                      "SessionUser",
+	KindLocaltime:                        "Localtime",
+	KindLocaltimestamp:                   "Localtimestamp",
+	KindUnicodeString:                    "UnicodeString",
+	KindVersion:                          "Version",
+	KindMatchRecognize:                   "MatchRecognize",
+	KindMatchRecognizeMeasure:            "MatchRecognizeMeasure",
+	KindRegexpReplace:                    "RegexpReplace",
+	KindParseJSON:                        "ParseJSON",
 	// trino cluster: exact upstream PascalCase class names.
 	KindCurrentCatalog:           "CurrentCatalog",
 	KindCurrentVersion:           "CurrentVersion",

@@ -193,6 +193,9 @@ func (g *Generator) baseComputedColumnConstraintSQL(e expressions.Expression) st
 // TOKEN_MAPPING is empty and neither MySQL nor Postgres override it, so token_sql just
 // falls back to the token's name, "AUTO_INCREMENT" (generator.py:4712-4713).
 func (g *Generator) autoIncrementColumnConstraintSQL(e expressions.Expression) string {
+	if g.isDialect("snowflake") {
+		return "AUTOINCREMENT"
+	}
 	return g.tokenSQL(tokens.AUTO_INCREMENT)
 }
 
@@ -206,6 +209,23 @@ func (g *Generator) autoIncrementColumnConstraintSQL(e expressions.Expression) s
 // rendering doesn't vary by dialect, so we render them with the generator's normal
 // dialect-aware g.sqlKey instead of replicating the base-dialect quirk.
 func (g *Generator) generatedAsIdentityColumnConstraintSQL(e expressions.Expression) string {
+	if g.isDialect("snowflake") {
+		sql := "AUTOINCREMENT"
+		if start := g.sqlKey(e, "start"); start != "" {
+			sql += " START " + start
+		}
+		if increment := g.sqlKey(e, "increment"); increment != "" {
+			sql += " INCREMENT " + increment
+		}
+		if order := e.Arg("order"); order != nil {
+			if boolValue(order) {
+				sql += " ORDER"
+			} else {
+				sql += " NOORDER"
+			}
+		}
+		return sql
+	}
 	thisSQL := ""
 	if thisArg := e.Arg("this"); thisArg != nil {
 		onNull := ""

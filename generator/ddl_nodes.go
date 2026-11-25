@@ -57,12 +57,10 @@ func (g *Generator) propertiesSQL(e expressions.Expression) string {
 
 	rootSQL := g.rootPropertiesSQL(rootProperties)
 	withSQL := g.withPropertiesSQL(withProperties)
-	if rootSQL != "" && withSQL != "" {
-		if g.isDialect("snowflake") && g.pretty {
-			withSQL = "\n" + withSQL
-		} else if !g.pretty {
-			withSQL = " " + withSQL
-		}
+	if rootSQL != "" && withSQL != "" && !g.pretty {
+		// generator.py:2065-2066: only the non-pretty path needs the separating space; when
+		// pretty, the WITH list already carries its own `sep()` prefix.
+		withSQL = " " + withSQL
 	}
 	return rootSQL + withSQL
 }

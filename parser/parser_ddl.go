@@ -1012,6 +1012,15 @@ func init() {
 				return p.expression(exp.FileFormatProperty(exp.Args{"this": this}), nil, nil)
 			})
 		},
+		"HANDLER": func(p *Parser, _ bool) exp.Expression {
+			return p.parsePropertyAssignment(func(this exp.Expression) exp.Expression {
+				return p.expression(exp.HandlerProperty(exp.Args{"this": this}), nil, nil)
+			})
+		},
+		// parser.py:1331: the bare DYNAMIC marker of `CREATE DYNAMIC TABLE`.
+		"DYNAMIC": func(p *Parser, _ bool) exp.Expression {
+			return p.expression(exp.DynamicProperty(nil), nil, nil)
+		},
 		"IMMUTABLE": func(p *Parser, _ bool) exp.Expression { return p.parseStabilityProperty("IMMUTABLE") },
 		"INHERITS": func(p *Parser, _ bool) exp.Expression {
 			return p.expression(exp.InheritsProperty(exp.Args{
