@@ -64,7 +64,10 @@ func (p *Parser) parseSnowflakeShow(name string, terse, iceberg bool) exp.Expres
 			}
 		}
 		args["scope_kind"] = scopeKind
-		if scopeKind != "ACCOUNT" && p.curr.IsValid() {
+		// `SHOW TABLES IN SCHEMA LIMIT 10` omits the (optional) schema name; without this
+		// guard LIMIT would be consumed as the table name. See
+		// testdata/upstream_extensions.jsonl (snowflake-show-empty-scope).
+		if scopeKind != "ACCOUNT" && p.curr.IsValid() && p.curr.TokenType != tokens.LIMIT {
 			args["scope"] = p.parseTableParts(false, false, false, false)
 		}
 	}

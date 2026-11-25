@@ -54,6 +54,12 @@ func init() {
 // snowflakeFileLocation ports _parse_file_location (parsers/snowflake.py:1298-1304): COPY's
 // file list accepts a subquery or a staged file, the latter parsed as table parts.
 func snowflakeFileLocation(p *Parser) exp.Expression {
+	if !p.curr.IsValid() {
+		// `COPY INTO t` omits the file location (Snowflake loads from the table's own
+		// stage); upstream also returns no files here. See testdata/upstream_extensions.jsonl
+		// (snowflake-copy-without-from).
+		return nil
+	}
 	if p.match(tokens.L_PAREN, false) {
 		return p.parseSelect(true, false, false)
 	}
