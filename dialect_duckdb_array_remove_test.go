@@ -6,7 +6,8 @@ import "testing"
 // ARRAY_REMOVE(a, x) becomes LIST_FILTER(a, _u -> _u <> x). The base ARRAY_REMOVE function
 // name also maps to the ArrayRemove node now.
 func TestDuckDBArrayRemove(t *testing.T) {
+	// DEVIATIONS §1.32: keep NULL array elements, matching Snowflake.
 	transpileCase(t, "", "duckdb",
 		"ARRAY_REMOVE(the_array, target)",
-		"LIST_FILTER(the_array, _u -> _u <> target)")
+		"LIST_FILTER(the_array, _u -> _u IS DISTINCT FROM target)")
 }

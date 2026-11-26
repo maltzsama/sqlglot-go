@@ -136,7 +136,11 @@ func duckDBArrayRemoveSQL(g *Generator, e expressions.Expression) string {
 	removal := asExpression(e.Arg("expression"))
 	lambdaName := duckDBCollisionFreeName("_u", removal)
 	lambdaID := expressions.ToIdentifier(lambdaName)
-	cond := expressions.NEQ(expressions.Args{"this": lambdaID, "expression": removal})
+	operand := removal
+	if operand != nil && (operand.Is(expressions.TraitPredicate) || operand.Is(expressions.TraitConnector) || operand.Kind() == expressions.KindNot) {
+		operand = expressions.Paren(expressions.Args{"this": operand})
+	}
+	cond := expressions.NullSafeNEQ(expressions.Args{"this": lambdaID, "expression": operand})
 	filter := expressions.ArrayFilter(expressions.Args{
 		"this":       e.This(),
 		"expression": expressions.Lambda(expressions.Args{"this": cond, "expressions": []expressions.Expression{lambdaID}}),
@@ -145,11 +149,28 @@ func duckDBArrayRemoveSQL(g *Generator, e expressions.Expression) string {
 	if !truthy(e.Arg("null_propagation")) {
 		return filterSQL
 	}
-	if removal != nil && (removal.Kind() == expressions.KindArray ||
-		(removal.Kind() == expressions.KindLiteral)) {
-		return filterSQL
+	inner := duckDBUnnestOperand(removal)
+	if inner != nil {
+		switch inner.Kind() {
+		case expressions.KindLiteral, expressions.KindBoolean, expressions.KindArray:
+			return filterSQL
+		}
+		for inner != nil && inner.Kind() == expressions.KindNeg {
+			inner = duckDBUnnestOperand(asExpression(inner.This()))
+		}
+		if inner != nil && inner.IsNumber() {
+			return filterSQL
+		}
 	}
 	return "CASE WHEN " + g.gen(removal) + " IS NULL THEN NULL ELSE " + filterSQL + " END"
+}
+
+// duckDBUnnestOperand unwraps parentheses around an operand.
+func duckDBUnnestOperand(e expressions.Expression) expressions.Expression {
+	for e != nil && e.Kind() == expressions.KindParen {
+		e = asExpression(e.This())
+	}
+	return e
 }
 
 // duckDBTimeStrToTimeSQL ports timestrtotime_sql (dialects/dialect.py:1769-1786): CAST(this

@@ -220,8 +220,6 @@
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT GENERATE_UUID()"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT INT64(JSON_QUERY(JSON '{\"key\": 2000}', '$.key'))"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT LENGTH(foo)"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT TIMESTAMP_TRUNC(TIMESTAMP '2008-11-10 14:30:00+00', WEEK(SUNDAY), 'America/New_York')"}
-{"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT TIMESTAMP_TRUNC(TIMESTAMP '2008-11-10 14:30:00+00', WEEK, 'America/New_York')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT TIME_DIFF('12:00:00', '12:30:00', MINUTE)"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT UNIX_DATE(DATE '2008-12-25')"}
 {"read":"bigquery","write":"duckdb","category":"gen: cast/type","sql":"SELECT UNIX_MICROS('2008-12-25 15:30:00+00')"}

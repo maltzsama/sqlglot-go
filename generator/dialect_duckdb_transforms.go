@@ -264,7 +264,8 @@ func duckDBCountIfSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("COUNT_IF", []any{cond}, "(", ")", true)
 }
 
-// duckDBMonthsBetweenSQL ports months_between_sql (dialects/dialect.py:1539-1588).
+// duckDBMonthsBetweenSQL follows Snowflake's real MONTHS_BETWEEN: whole months plus a
+// fraction that includes the time of day, with a zero fraction for two month-end dates.
 func duckDBMonthsBetweenSQL(g *Generator, e expressions.Expression) string {
 	date1 := expressions.Cast(expressions.Args{"this": e.This(), "to": expressions.DTypeDate.IntoExpr(nil)})
 	date2 := expressions.Cast(expressions.Args{"this": e.Arg("expression"), "to": expressions.DTypeDate.IntoExpr(nil)})
@@ -277,15 +278,27 @@ func duckDBMonthsBetweenSQL(g *Generator, e expressions.Expression) string {
 	lastDay := func(x expressions.Expression) expressions.Expression {
 		return duckDBAnon("LAST_DAY", x)
 	}
-	day1 := day(date1.Copy())
-	day2 := day(date2.Copy())
-	bothLast := expressions.And(expressions.Args{
-		"this":       expressions.EQ(expressions.Args{"this": day1.Copy(), "expression": day(lastDay(date1.Copy()))}),
-		"expression": expressions.EQ(expressions.Args{"this": day2.Copy(), "expression": day(lastDay(date2.Copy()))}),
+	timeFraction := func(x expressions.Expression) expressions.Expression {
+		return expressions.Div(expressions.Args{
+			"this": expressions.Anonymous(expressions.Args{"this": "DATE_DIFF", "expressions": []expressions.Expression{
+				expressions.LiteralString("MICROSECOND"),
+				duckDBAnon("DATE_TRUNC", expressions.LiteralString("DAY"), x),
+				x,
+			}}),
+			"expression": expressions.LiteralNumber("86400000000"),
+		})
+	}
+	dayDiff := expressions.Sub(expressions.Args{"this": day(e.This()), "expression": day(asExpression(e.Arg("expression")))})
+	fracNumerator := expressions.Add(expressions.Args{
+		"this":       dayDiff,
+		"expression": expressions.Sub(expressions.Args{"this": timeFraction(e.This()), "expression": timeFraction(asExpression(e.Arg("expression")))}),
 	})
-	fractional := expressions.Div(expressions.Args{
-		"this":       expressions.Paren(expressions.Args{"this": expressions.Sub(expressions.Args{"this": day1, "expression": day2})}),
-		"expression": expressions.LiteralNumber("31.0"),
+	fractional := expressions.Div(expressions.Args{"this": expressions.Paren(expressions.Args{"this": fracNumerator}), "expression": expressions.LiteralNumber("31.0")})
+	bothLast := expressions.And(expressions.Args{
+		"this": expressions.EQ(expressions.Args{"this": day(e.This()), "expression": day(lastDay(e.This()))}),
+		"expression": expressions.EQ(expressions.Args{
+			"this": day(asExpression(e.Arg("expression"))), "expression": day(lastDay(asExpression(e.Arg("expression")))),
+		}),
 	})
 	result := expressions.Add(expressions.Args{
 		"this": whole,
@@ -332,11 +345,19 @@ func duckDBUnixToTimeStrSQL(g *Generator, e expressions.Expression) string {
 	return "CAST(TO_TIMESTAMP(" + g.sqlKey(e, "this") + ") AS TEXT)"
 }
 
-// duckDBDateSQL ports _date_sql (generators/duckdb.py:288-304).
+// duckDBDateSQL ports _date_sql (generators/duckdb.py:288-304), specialized so an instant
+// (TIMESTAMPTZ) converts in the requested zone without a session-timezone-dependent cast.
 func duckDBDateSQL(g *Generator, e expressions.Expression) string {
 	this := e.This()
 	zone := asExpression(e.Arg("zone"))
 	if zone != nil {
+		if dtype, ok := castResultDType(this); ok &&
+			(dtype == expressions.DTypeTimestampTz || dtype == expressions.DTypeTimestampLtz) {
+			return g.gen(expressions.Cast(expressions.Args{
+				"this": expressions.AtTimeZone(expressions.Args{"this": this, "zone": zone}),
+				"to":   expressions.DTypeDate.IntoExpr(nil),
+			}))
+		}
 		this = expressions.Cast(expressions.Args{"this": this, "to": expressions.DTypeTimestamp.IntoExpr(nil)})
 		atUTC := expressions.AtTimeZone(expressions.Args{"this": this, "zone": expressions.LiteralString("UTC")})
 		this = expressions.AtTimeZone(expressions.Args{"this": atUTC, "zone": zone})
@@ -827,24 +848,30 @@ func duckDBBase64EncodeSQL(g *Generator, e expressions.Expression) string {
 	return base
 }
 
-// duckDBReplaceAlphabet applies the upstream base64 alphabet replacement chain.
+// duckDBReplaceAlphabet ports _apply_base64_alphabet_replacements
+// (generators/duckdb.py:107-134): one TRANSLATE avoids cascading replacements.
 func duckDBReplaceAlphabet(g *Generator, base, alphabet string, reverse bool) string {
-	defaults := []string{"+", "/", "="}
+	defaults := "+/="
+	var from, to strings.Builder
 	for i, r := range alphabet {
 		if i >= len(defaults) {
 			break
 		}
-		def := defaults[i]
+		def := defaults[i : i+1]
 		if string(r) == def {
 			continue
 		}
-		src, dst := def, string(r)
-		if reverse {
-			src, dst = string(r), def
-		}
-		base = g.funcCall("REPLACE", []any{base, expressions.LiteralString(src), expressions.LiteralString(dst)}, "(", ")", true)
+		from.WriteString(def)
+		to.WriteRune(r)
 	}
-	return base
+	if from.Len() == 0 {
+		return base
+	}
+	src, dst := from.String(), to.String()
+	if reverse {
+		src, dst = dst, src
+	}
+	return g.funcCall("TRANSLATE", []any{base, expressions.LiteralString(src), expressions.LiteralString(dst)}, "(", ")", true)
 }
 
 // duckDBBase64DecodeSQL ports _base64_decode_sql (generators/duckdb.py:136-156).
@@ -1239,7 +1266,7 @@ func duckDBDateTruncSQL(g *Generator, e expressions.Expression) string {
 		date = expressions.Cast(expressions.Args{"this": date, "to": expressions.DTypeDatetime.IntoExpr(nil)})
 	}
 	// BigQuery TIMESTAMP_TRUNC with a zone truncates in that timezone and returns UTC.
-	if zone := asExpression(e.Arg("zone")); zone != nil && duckDBIsDateUnit(unit) {
+	if zone := asExpression(e.Arg("zone")); zone != nil {
 		shifted := expressions.AtTimeZone(expressions.Args{"this": date, "zone": zone})
 		var truncated expressions.Expression
 		if weekStart > 0 {

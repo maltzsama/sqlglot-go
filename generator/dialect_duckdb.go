@@ -422,6 +422,14 @@ func duckDBArrowJSONExtractArray(g *Generator, e expressions.Expression) string 
 	if err != nil {
 		return g.gen(extract)
 	}
+	if e.Kind() == expressions.KindJSONValueArray {
+		// BigQuery returns SQL NULL when any element is an object or array.
+		extractSQL := g.gen(extract)
+		jsonArray := "CAST(" + extractSQL + " AS JSON[])"
+		nonScalar := "LIST_FILTER(" + jsonArray + ", x -> JSON_TYPE(x) IN ('OBJECT', 'ARRAY'))"
+		return "CASE WHEN " + extractSQL + " IS NULL THEN NULL WHEN LENGTH(" + nonScalar + ") = 0 THEN " +
+			g.gen(expressions.Cast(expressions.Args{"this": extract, "to": to})) + " ELSE NULL END"
+	}
 	return g.gen(expressions.Cast(expressions.Args{"this": extract, "to": to}))
 }
 
@@ -1152,8 +1160,8 @@ func isRealOrTextDataType(dtype expressions.DType) bool {
 // duckDBParseJSONSQL ports parsejson_sql (generators/duckdb.py:2840-2847) for the plain form.
 func duckDBParseJSONSQL(g *Generator, e expressions.Expression) string {
 	if truthy(e.Arg("safe")) {
-		this := g.sqlKey(e, "this")
-		return "CASE WHEN JSON_VALID(" + this + ") THEN CAST(" + this + " AS JSON) ELSE NULL END"
+		// One evaluation: TRY_CAST returns NULL for invalid JSON and JSON for valid input.
+		return "TRY_CAST(" + g.sqlKey(e, "this") + " AS JSON)"
 	}
 	return g.funcCall("JSON", []any{e.This()}, "(", ")", true)
 }
@@ -1367,9 +1375,15 @@ func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
 			// DuckDB's SEMI/ANTI joins are left-sided by default.
 			e.Set("side", nil)
 		case "RIGHT":
-			// Dropping RIGHT would change which rows survive; DuckDB has no right-sided
-			// SEMI/ANTI join, so report it instead of silently rewriting it.
-			g.unsupported("RIGHT " + kind + " JOIN is not supported in DuckDB")
+			// DuckDB 1.4 expresses right-sided SEMI/ANTI joins as a typed join.
+			joinOp := "RIGHT_" + kind
+			savedSide, savedKind := e.Arg("side"), e.Arg("kind")
+			e.Set("side", nil)
+			e.Set("kind", nil)
+			out := g.joinSQL(e)
+			e.Set("side", savedSide)
+			e.Set("kind", savedKind)
+			return strings.Replace(out, "JOIN ", "JOIN BY (TYPE "+joinOp+") ", 1)
 		}
 	}
 	if !truthy(e.Arg("using")) && !truthy(e.Arg("on")) && strings.ToUpper(e.Text("method")) == "" {
