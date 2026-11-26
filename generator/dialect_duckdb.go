@@ -104,6 +104,9 @@ func init() {
 		expressions.KindIntDiv:           func(g *Generator, e expressions.Expression) string { return g.binary(e, "//") },
 		expressions.KindCurrentTime:      func(*Generator, expressions.Expression) string { return "CURRENT_TIME" },
 		expressions.KindCurrentTimestamp: func(g *Generator, e expressions.Expression) string {
+			if truthy(e.Arg("sysdate")) {
+				return "CURRENT_TIMESTAMP AT TIME ZONE 'UTC'"
+			}
 			return "CURRENT_TIMESTAMP"
 		},
 		expressions.KindLocaltime:             func(*Generator, expressions.Expression) string { return "LOCALTIME" },
@@ -633,11 +636,13 @@ func duckDBWeekStartDow(unit expressions.Expression, name string) int {
 		}
 		return 0
 	}
-	switch name {
-	case "ISOWEEK":
-		return 1
-	case "WEEK":
+	if unit.Kind() == expressions.KindColumn && name == "WEEK" {
+		// BigQuery's bare WEEK starts on Sunday; the parser keeps it as a Column.
 		return 7
+	}
+	switch name {
+	case "WEEK", "ISOWEEK":
+		return 1
 	}
 	return 0
 }

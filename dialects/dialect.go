@@ -123,9 +123,16 @@ type Dialect struct {
 	// JSONPathBracketedKeySupported allows the ["key"] form (base True).
 	JSONPathBracketedKeySupported bool
 	NullOrdering                  string
-	SupportsOrderByAll            bool
-	TryCastRequiresString         *bool
-	DatePartMapping               map[string]string
+	// SetAssignmentRequiresVariableKeyword ports SET_ASSIGNMENT_REQUIRES_VARIABLE_KEYWORD
+	// (generator.py:617, default false; DuckDB/Spark set true).
+	SetAssignmentRequiresVariableKeyword bool
+	// NullOrderingSupported ports NULL_ORDERING_SUPPORTED (generator.py:301): true emits
+	// NULLS FIRST/LAST, nil simulates it with a CASE key, false drops it for unsupported
+	// aggregate/window combinations (BigQuery).
+	NullOrderingSupported *bool
+	SupportsOrderByAll    bool
+	TryCastRequiresString *bool
+	DatePartMapping       map[string]string
 	// TimeMapping / InverseTimeMapping port TIME_MAPPING (dialects/dialect.py:447) and the
 	// metaclass-generated INVERSE_TIME_MAPPING (dialect.py:261-271): the dialect's TO_CHAR-style
 	// pattern table (parse side, consumed by build_formatted_time) and its inverse (generate
@@ -761,6 +768,8 @@ type Dialect struct {
 // stringPtr returns a pointer to s, for optional string dialect flags (e.g. ParseJSONName).
 func stringPtr(s string) *string { return &s }
 
+func boolPtr(v bool) *bool { return &v }
+
 func Base() *Dialect {
 	datePartMapping := baseDatePartMapping()
 	return &Dialect{
@@ -771,6 +780,7 @@ func Base() *Dialect {
 		StarExcludeRequiresDerivedTable: true,
 		// generator.py LOG_BASE_FIRST = True, HEX_FUNC = "HEX" (base).
 		LogBaseFirst:              true,
+		NullOrderingSupported:     boolPtr(true),
 		HexFunc:                   "HEX",
 		IgnoreNullsBeforeOrder:    true,
 		UnnestWithOrdinality:      true,

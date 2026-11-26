@@ -73,6 +73,8 @@ func parseMySQLVersion(value string) (int, error) {
 func MySQL() *Dialect {
 	d := Base()
 	d.Name = "mysql"
+	// generators/mysql.py:124 / generators/tsql.py:138 NULL_ORDERING_SUPPORTED = None.
+	d.NullOrderingSupported = nil
 	// generators/mysql.py PAD_FILL_PATTERN_IS_REQUIRED = True.
 	d.PadFillPatternIsRequired = true
 	// generators/mysql.py TRANSFORMS: eliminate_distinct_on.

@@ -21,6 +21,7 @@ var sqlNameOverrides = map[expressions.Kind]string{
 	// SHA2->SHA2 (string.py:562), DayOfWeekIso->DAYOFWEEK_ISO (temporal.py:217).
 	expressions.KindJSONFormat:   "JSON_FORMAT",
 	expressions.KindMD5Digest:    "MD5_DIGEST",
+	expressions.KindSHA:          "SHA",
 	expressions.KindSHA2:         "SHA2",
 	expressions.KindSHA2Digest:   "SHA2_DIGEST",
 	expressions.KindDayOfWeekIso: "DAYOFWEEK_ISO",

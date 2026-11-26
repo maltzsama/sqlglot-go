@@ -68,6 +68,8 @@ var bigQueryInverseFormatMapping = func() map[string]string {
 func BigQuery() *Dialect {
 	d := Base()
 	d.Name = "bigquery"
+	// generators/bigquery.py:266 NULL_ORDERING_SUPPORTED = False.
+	d.NullOrderingSupported = boolPtr(false)
 	// generators/bigquery.py TRANSFORMS: eliminate_distinct_on.
 	d.EliminateDistinctOn = true
 	// generators/bigquery.py TRANSFORMS: eliminate_semi_and_anti_joins.

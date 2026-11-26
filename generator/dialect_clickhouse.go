@@ -11,6 +11,14 @@ import (
 // .reference/sqlglot-v30.17.0/sqlglot/generators/clickhouse.py.
 func init() {
 	registerDialectDispatch("clickhouse", clickhouseDispatch())
+	registerDialectDispatch("clickhouse", map[exp.Kind]func(*Generator, exp.Expression) string{
+		exp.KindDrop: func(g *Generator, e exp.Expression) string {
+			if stringValue(e.Arg("kind")) == "SCHEMA" {
+				e.Set("kind", "DATABASE")
+			}
+			return g.dropSQL(e)
+		},
+	})
 	registerDialectTypeMapping("clickhouse", clickhouseTypeMapping())
 	registerDialectPropertyLocations("clickhouse", map[exp.Kind]propertyLocation{
 		exp.KindAutoRefreshProperty:   propertyLocationPostName,
@@ -149,11 +157,11 @@ func clickhouseUnixToTime(g *Generator, e exp.Expression) string {
 	}
 	name := "fromUnixTimestamp"
 	switch strings.ToUpper(toString(scale)) {
-	case "MILLIS":
+	case "3", "MILLIS":
 		name = "fromUnixTimestamp64Milli"
-	case "MICROS":
+	case "6", "MICROS":
 		name = "fromUnixTimestamp64Micro"
-	case "NANOS":
+	case "9", "NANOS":
 		name = "fromUnixTimestamp64Nano"
 	}
 	return clickhouseCall(g, name, exp.Cast(exp.Args{"this": e.This(), "to": exp.DTypeBigInt.IntoExpr(nil)}))
@@ -172,7 +180,11 @@ func clickhouseQuantileSQL(g *Generator, e exp.Expression) string {
 	quantile := asExpression(e.Arg("quantile"))
 	args := "(" + g.sqlKey(e, "this") + ")"
 	if quantile != nil && quantile.Kind() == exp.KindArray {
-		return g.funcCall("quantiles", []any{quantile.Expressions()}, "(", ")", true) + args
+		qs := make([]any, 0, len(quantile.Expressions()))
+		for _, q := range quantile.Expressions() {
+			qs = append(qs, q)
+		}
+		return g.funcCall("quantiles", qs, "(", ")", true) + args
 	}
 	return g.funcCall("quantile", []any{quantile}, "(", ")", true) + args
 }
@@ -772,6 +784,9 @@ func clickhouseGroupConcat(g *Generator, e exp.Expression) string {
 // clickhouseCreate ports create_sql (generators/clickhouse.py:625-641): a CTAS comment
 // property moves after the query, which is parenthesized.
 func clickhouseCreate(g *Generator, e exp.Expression) string {
+	if stringValue(e.Arg("kind")) == "SCHEMA" {
+		e.Set("kind", "DATABASE")
+	}
 	query := asExpression(e.Arg("expression"))
 	var comment exp.Expression
 	if query != nil && query.Is(exp.TraitQuery) {

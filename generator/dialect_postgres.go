@@ -19,6 +19,22 @@ func init() {
 
 func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 	return map[exp.Kind]func(*Generator, exp.Expression) string{
+		exp.KindStructExtract: structExtractSQL,
+		exp.KindIntDiv: func(g *Generator, e exp.Expression) string {
+			return g.funcCall("DIV", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+		},
+		exp.KindArrayContains: func(g *Generator, e exp.Expression) string {
+			value := asExpression(e.Arg("expression"))
+			array := e.This()
+			coalesce := exp.Coalesce(exp.Args{"this": exp.EQ(exp.Args{"this": value, "expression": exp.Any(exp.Args{"this": exp.Paren(exp.Args{"this": array})})}), "expressions": []exp.Expression{exp.Boolean(exp.Args{"this": false})}})
+			ifs := []exp.Expression{
+				exp.If(exp.Args{"this": exp.Is(exp.Args{"this": array, "expression": exp.Null()}), "true": exp.Null()}),
+				exp.If(exp.Args{"this": exp.Is(exp.Args{"this": value, "expression": exp.Null()}), "true": exp.Null()}),
+			}
+			return g.gen(exp.Case(exp.Args{"ifs": ifs, "default": coalesce}))
+		},
+		exp.KindPercentileCont: percentileOrderedSQL("PERCENTILE_CONT"),
+		exp.KindPercentileDisc: percentileOrderedSQL("PERCENTILE_DISC"),
 		// generators/postgres.py:323 exp.BitwiseXor: binary(e, "#") — postgres renders a
 		// bitwise xor with the `#` operator (parsed back via parsers/postgres.py:163-166).
 		exp.KindBitwiseXor: func(g *Generator, e exp.Expression) string {

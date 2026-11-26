@@ -18,6 +18,8 @@ func Spark2() *Dialect {
 	d.Name = "spark2"
 	// generators/spark2.py NVL2_SUPPORTED = True.
 	d.Nvl2Supported = true
+	// generators/spark.py:74 SET_ASSIGNMENT_REQUIRES_VARIABLE_KEYWORD = True.
+	d.SetAssignmentRequiresVariableKeyword = true
 	// generators/spark2.py:115 PARSE_JSON_NAME = None (bare value).
 	d.ParseJSONName = stringPtr("")
 

@@ -11,6 +11,13 @@ import (
 func Clickhouse() *Dialect {
 	d := Base()
 	d.Name = "clickhouse"
+	// generators/clickhouse.py AUTO_REFRESH_BARE_INTERVALS + full interval unit names.
+	d.MapIntervalUnits = true
+	d.DatePartMapping = maps.Clone(d.DatePartMapping)
+	if d.DatePartMapping == nil {
+		d.DatePartMapping = map[string]string{}
+	}
+	d.DatePartMapping["US"] = "MICROSECOND"
 	// generators/clickhouse.py NVL2_SUPPORTED = False.
 	d.Nvl2Supported = false
 

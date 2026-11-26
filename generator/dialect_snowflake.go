@@ -201,6 +201,44 @@ func init() {
 			return "CURRENT_TIMESTAMP()"
 		},
 		expressions.KindStripNullValue: renameFunc("STRIP_NULL_VALUE"),
+		expressions.KindFilter:         snowflakeFilterSQL,
+		expressions.KindPercentileCont: percentileOrderedSQL("PERCENTILE_CONT"),
+		expressions.KindPercentileDisc: percentileOrderedSQL("PERCENTILE_DISC"),
+		expressions.KindWithinGroup:    snowflakeWithinGroupSQL,
+		expressions.KindAtTimeZone: func(g *Generator, e expressions.Expression) string {
+			if dtype, ok := castResultDType(e.This()); ok && dtype == expressions.DTypeTimestamp {
+				// A naive timestamp must be read in the supplied zone; Snowflake's two-argument
+				// CONVERT_TIMEZONE would read it in the session zone instead.
+				return g.funcCall("CONVERT_TIMEZONE", []any{e.Arg("zone"), expressions.LiteralString("UTC"), e.This()}, "(", ")", true)
+			}
+			return g.funcCall("CONVERT_TIMEZONE", []any{e.Arg("zone"), e.This()}, "(", ")", true)
+		},
+		expressions.KindCurrentSchemas: func(g *Generator, e expressions.Expression) string {
+			return "CURRENT_SCHEMAS()"
+		},
+		expressions.KindArrayDistinct: func(g *Generator, e expressions.Expression) string {
+			if truthy(e.Arg("check_null")) {
+				return g.funcCall("ARRAY_DISTINCT", []any{e.This()}, "(", ")", true)
+			}
+			return g.funcCall("ARRAY_DISTINCT", []any{g.funcCall("ARRAY_COMPACT", []any{e.This()}, "(", ")", true)}, "(", ")", true)
+		},
+		expressions.KindArrayAgg: snowflakeArrayAggSQL,
+		expressions.KindValues: func(g *Generator, e expressions.Expression) string {
+			if e.Find(expressions.KindStruct) != nil || e.Find(expressions.KindStarMap) != nil || e.Find(expressions.KindVarMap) != nil || e.Find(expressions.KindMap) != nil {
+				return g.valuesSQLAsTable(e, false)
+			}
+			return g.valuesSQL(e)
+		},
+		expressions.KindJSONArray: func(g *Generator, e expressions.Expression) string {
+			args := make([]any, 0, len(e.Expressions()))
+			for _, arg := range e.Expressions() {
+				if arg != nil && arg.Kind() == expressions.KindNull {
+					arg = expressions.ParseJSON(expressions.Args{"this": expressions.LiteralString("null")})
+				}
+				args = append(args, arg)
+			}
+			return g.funcCall("TO_VARIANT", []any{g.funcCall("ARRAY_CONSTRUCT", args, "(", ")", true)}, "(", ")", true)
+		},
 		expressions.KindGetExtract: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("GET", []any{e.This(), e.Arg("expression")}, "(", ")", true)
 		},
@@ -219,9 +257,6 @@ func init() {
 		expressions.KindGenerator:     snowflakeGeneratorSQL,
 		expressions.KindTableFromRows: snowflakeTableFromRowsSQL,
 		expressions.KindSortArray:     snowflakeSortArraySQL,
-		expressions.KindCurrentSchemas: func(g *Generator, e expressions.Expression) string {
-			return g.funcCall("CURRENT_SCHEMAS", []any{e.This()}, "(", ")", true)
-		},
 		expressions.KindXor: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("BOOLXOR", []any{e.This(), e.Arg("expression")}, "(", ")", true)
 		},
@@ -861,11 +896,29 @@ func snowflakeDescribeSQL(g *Generator, e expressions.Expression) string {
 // snowflakeGroupConcatSQL ports the GroupConcat lambda (generators/snowflake.py:709-712)
 // for the plain LISTAGG form.
 func snowflakeGroupConcatSQL(g *Generator, e expressions.Expression) string {
-	args := []any{e.This()}
-	if sep := asExpression(e.Arg("separator")); sep != nil {
+	this := asExpression(e.This())
+	var order expressions.Expression
+	if this != nil && this.Kind() == expressions.KindOrder {
+		order = this
+		this = asExpression(this.This())
+	}
+	sep := asExpression(e.Arg("separator"))
+	if sep != nil && sep.Kind() == expressions.KindOrder {
+		if order == nil {
+			order = sep
+		}
+		sep = asExpression(sep.This())
+	}
+	args := []any{this}
+	if sep != nil {
 		args = append(args, sep)
 	}
-	return g.funcCall("LISTAGG", args, "(", ")", true)
+	sql := g.funcCall("LISTAGG", args, "(", ")", true)
+	if order != nil {
+		orderOnly := expressions.Order(expressions.Args{"expressions": order.Expressions()})
+		sql += " WITHIN GROUP (" + strings.TrimSpace(g.gen(orderOnly)) + ")"
+	}
+	return sql
 }
 
 // snowflakeStrPositionSQL ports the StrPosition lambda (generators/snowflake.py:743-746).
@@ -994,6 +1047,7 @@ func snowflakeUndropSQL(g *Generator, e expressions.Expression) string {
 // Snowflake's TO_/TRY_TO_/APPROX_PERCENTILE/GREATEST_IGNORE_NULLS spellings.
 func init() {
 	registerDialectDispatch("snowflake", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindStructExtract: structExtractSQL,
 		expressions.KindToBinary: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall(tryPrefix(e)+"TO_BINARY", g.fallbackArgs(e), "(", ")", true)
 		},
@@ -1106,4 +1160,100 @@ func snowflakeTableFromRowsSQL(g *Generator, e expressions.Expression) string {
 		sql += " AS " + alias
 	}
 	return sql
+}
+
+// snowflakeFilterSQL ports filter_sql (generators/snowflake.py:1178-1248): rewrite
+// FILTER into IFF inside the aggregate's argument, or COUNT_IF for star counts.
+func snowflakeFilterSQL(g *Generator, e expressions.Expression) string {
+	agg := asExpression(e.This())
+	if agg == nil {
+		return g.functionFallbackSQL(e)
+	}
+	cond := asExpression(e.Arg("expression"))
+	if cond != nil && cond.Kind() == expressions.KindWhere {
+		cond = asExpression(cond.This())
+	}
+	if cond == nil {
+		return g.functionFallbackSQL(e)
+	}
+	aggArg := asExpression(agg.This())
+	if agg.Kind() == expressions.KindWithinGroup {
+		inner := asExpression(agg.This())
+		if inner == nil {
+			return g.functionFallbackSQL(e)
+		}
+		if inner.Kind() == expressions.KindMode || inner.Kind() == expressions.KindPercentileCont || inner.Kind() == expressions.KindPercentileDisc {
+			if order := asExpression(agg.Arg("expression")); order != nil {
+				for _, ordered := range order.Expressions() {
+					key := asExpression(ordered.This())
+					ordered.Set("this", expressions.If(expressions.Args{"this": cond.Copy(), "true": key.Copy()}))
+				}
+			}
+			return g.gen(agg)
+		}
+		if inner.Kind() == expressions.KindArrayAgg || inner.Kind() == expressions.KindGroupConcat {
+			aggArg = asExpression(inner.This())
+		} else {
+			g.unsupported("Unable to rewrite FILTER into the aggregate's arguments")
+			return g.gen(agg)
+		}
+	}
+	if agg.Kind() == expressions.KindCount && aggArg != nil && aggArg.IsStar() {
+		// COUNT_IF returns NULL on an empty input; COUNT(IFF(cond, 1, NULL)) returns 0.
+		iff := g.funcCall("IFF", []any{cond, expressions.LiteralNumber("1"), expressions.Null()}, "(", ")", true)
+		return g.funcCall("COUNT", []any{iff}, "(", ")", true)
+	}
+	var orderNode expressions.Expression
+	if aggArg != nil && aggArg.Kind() == expressions.KindOrder {
+		orderNode = aggArg
+		aggArg = asExpression(aggArg.This())
+	}
+	var targets []expressions.Expression
+	if aggArg != nil && aggArg.Kind() == expressions.KindDistinct {
+		targets = aggArg.Expressions()
+		if orderNode != nil {
+			// Snowflake requires the DISTINCT expression and the order key to match.
+			for _, ordered := range orderNode.Expressions() {
+				key := asExpression(ordered.This())
+				for _, target := range targets {
+					if key != nil && target != nil && key.Kind() == target.Kind() && key.Name() == target.Name() {
+						ordered.Set("this", expressions.If(expressions.Args{"this": cond.Copy(), "true": key.Copy()}))
+						break
+					}
+				}
+			}
+		}
+	} else {
+		targets = []expressions.Expression{aggArg}
+	}
+	for _, target := range targets {
+		if target == nil {
+			continue
+		}
+		target.Replace(expressions.If(expressions.Args{"this": cond.Copy(), "true": target.Copy()}))
+	}
+	return g.gen(agg)
+}
+
+// snowflakeWithinGroupSQL ports withingroup_sql (generators/snowflake.py:1250-1259).
+func snowflakeWithinGroupSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.This())
+	if this != nil && this.Kind() == expressions.KindMode && this.This() == nil {
+		if order := asExpression(e.Arg("expression")); order != nil && order.Kind() == expressions.KindOrder && len(order.Expressions()) == 1 {
+			return g.gen(expressions.New(expressions.KindMode, expressions.Args{"this": asExpression(order.Expressions()[0].This())}))
+		}
+	}
+	return g.withinGroupSQL(e)
+}
+
+// snowflakeArrayAggSQL moves an inline ORDER BY into WITHIN GROUP, which is the only
+// form Snowflake accepts for an ordered ARRAY_AGG.
+func snowflakeArrayAggSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.This())
+	if this != nil && this.Kind() == expressions.KindOrder {
+		order := expressions.Order(expressions.Args{"expressions": this.Expressions()})
+		sql := g.funcCall("ARRAY_AGG", []any{this.This()}, "(", ")", true)
+		return sql + " WITHIN GROUP (" + strings.TrimSpace(g.gen(order)) + ")"
+	}
+	return g.arrayAggSQL(e)
 }
