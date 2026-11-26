@@ -113,33 +113,57 @@ func init() {
 		expressions.KindSHA1Digest:             duckDBSHA1DigestSQL,
 		expressions.KindSHA2Digest:             duckDBSHA2DigestSQL,
 		expressions.KindXor:                    duckDBXorSQL,
-		expressions.KindPosexplode:             duckDBPosexplodeSQL,
-		expressions.KindDecodeCase:             duckDBDecodeCaseSQL,
-		expressions.KindSeq1:                   duckDBSeqSQL(1),
-		expressions.KindSeq2:                   duckDBSeqSQL(2),
-		expressions.KindSeq4:                   duckDBSeqSQL(4),
-		expressions.KindSeq8:                   duckDBSeqSQL(8),
-		expressions.KindToArray:                duckDBToArraySQL,
-		expressions.KindTimeFromParts:          duckDBTimeFromPartsSQL,
-		expressions.KindNumberToStr:            duckDBNumberToStrSQL,
-		expressions.KindRegexpILike:            duckDBRegexpILikeSQL,
-		expressions.KindNextDay:                duckDBDayNavigationSQL,
-		expressions.KindPreviousDay:            duckDBDayNavigationSQL,
-		expressions.KindLateral:                duckDBLateralSQL,
-		expressions.KindTsOrDsToDatetime:       duckDBTsOrDsToDatetimeSQL,
-		expressions.KindGetExtract:             duckDBGetExtractSQL,
-		expressions.KindParseDatetime:          duckDBParseDatetimeSQL,
-		expressions.KindFilter:                 duckDBFilterSQL,
-		expressions.KindWindow:                 duckDBWindowSQL,
-		expressions.KindNormal:                 duckDBNormalSQL,
-		expressions.KindUniform:                duckDBUniformSQL,
-		expressions.KindRandstr:                duckDBRandstrSQL,
-		expressions.KindStripNullValue:         duckDBStripNullValueSQL,
-		expressions.KindTsOrDsToTime:           duckDBTsOrDsToTimeSQL,
-		expressions.KindTsOrDsToTimestamp:      duckDBTsOrDsToTimestampSQL,
-		expressions.KindStarMap:                duckDBStarMapSQL,
-		expressions.KindStrPosition:            duckDBStrPositionSQL,
-		expressions.KindParseTime:              duckDBParseTimeSQL,
+		expressions.KindLength:                 duckDBLengthSQL,
+		expressions.KindCheckJson:              duckDBCheckJSONSQL,
+		expressions.KindApproxDistinct: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("APPROX_COUNT_DISTINCT", []any{e.This()}, "(", ")", true)
+		},
+		expressions.KindCreate: func(g *Generator, e expressions.Expression) string {
+			if strings.EqualFold(e.Text("kind"), "DATABASE") {
+				e.Set("kind", "SCHEMA")
+			}
+			return g.createSQL(e)
+		},
+		expressions.KindDrop: func(g *Generator, e expressions.Expression) string {
+			if strings.EqualFold(e.Text("kind"), "DATABASE") {
+				e.Set("kind", "SCHEMA")
+			}
+			return g.dropSQL(e)
+		},
+		expressions.KindJSONObject:                    duckDBJSONObjectSQL,
+		expressions.KindAutoIncrementColumnConstraint: duckDBAutoIncrementSQL,
+		expressions.KindTimestampLtzFromParts:         duckDBTimestampLtzFromPartsSQL,
+		expressions.KindTimestampTzFromParts:          duckDBTimestampTzFromPartsSQL,
+		expressions.KindFromISO8601Date:               duckDBFromISO8601SQL(expressions.DTypeDate),
+		expressions.KindFromISO8601Timestamp:          duckDBFromISO8601SQL(expressions.DTypeTimestampTz),
+		expressions.KindFromISO8601TimestampNanos:     duckDBFromISO8601SQL(expressions.DTypeTimestampTz),
+		expressions.KindPosexplode:                    duckDBPosexplodeSQL,
+		expressions.KindDecodeCase:                    duckDBDecodeCaseSQL,
+		expressions.KindSeq1:                          duckDBSeqSQL(1),
+		expressions.KindSeq2:                          duckDBSeqSQL(2),
+		expressions.KindSeq4:                          duckDBSeqSQL(4),
+		expressions.KindSeq8:                          duckDBSeqSQL(8),
+		expressions.KindToArray:                       duckDBToArraySQL,
+		expressions.KindTimeFromParts:                 duckDBTimeFromPartsSQL,
+		expressions.KindNumberToStr:                   duckDBNumberToStrSQL,
+		expressions.KindRegexpILike:                   duckDBRegexpILikeSQL,
+		expressions.KindNextDay:                       duckDBDayNavigationSQL,
+		expressions.KindPreviousDay:                   duckDBDayNavigationSQL,
+		expressions.KindLateral:                       duckDBLateralSQL,
+		expressions.KindTsOrDsToDatetime:              duckDBTsOrDsToDatetimeSQL,
+		expressions.KindGetExtract:                    duckDBGetExtractSQL,
+		expressions.KindParseDatetime:                 duckDBParseDatetimeSQL,
+		expressions.KindFilter:                        duckDBFilterSQL,
+		expressions.KindWindow:                        duckDBWindowSQL,
+		expressions.KindNormal:                        duckDBNormalSQL,
+		expressions.KindUniform:                       duckDBUniformSQL,
+		expressions.KindRandstr:                       duckDBRandstrSQL,
+		expressions.KindStripNullValue:                duckDBStripNullValueSQL,
+		expressions.KindTsOrDsToTime:                  duckDBTsOrDsToTimeSQL,
+		expressions.KindTsOrDsToTimestamp:             duckDBTsOrDsToTimestampSQL,
+		expressions.KindStarMap:                       duckDBStarMapSQL,
+		expressions.KindStrPosition:                   duckDBStrPositionSQL,
+		expressions.KindParseTime:                     duckDBParseTimeSQL,
 	})
 }
 
@@ -493,6 +517,9 @@ func duckDBToNumberSQL(g *Generator, e expressions.Expression) string {
 				"expressions": []expressions.Expression{precision, scale},
 			}),
 		}))
+	}
+	if format == nil && precision == nil && scale == nil {
+		return g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": expressions.DTypeDouble.IntoExpr(nil)}))
 	}
 	return g.functionFallbackSQL(e)
 }
@@ -2514,4 +2541,79 @@ func duckDBXorSQL(g *Generator, e expressions.Expression) string {
 	a := g.gen(this)
 	b := g.gen(expr)
 	return "(" + a + " AND (NOT " + b + ")) OR ((NOT " + a + ") AND " + b + ")"
+}
+
+// duckDBLengthSQL ports length_sql (generators/duckdb.py:3238-3263).
+func duckDBLengthSQL(g *Generator, e expressions.Expression) string {
+	arg := e.This()
+	if !truthy(e.Arg("binary")) || (arg != nil && arg.IsString()) {
+		return g.funcCall("LENGTH", []any{arg}, "(", ")", true)
+	}
+	blob := expressions.Cast(expressions.Args{"this": arg, "to": expressions.DTypeVarBinary.IntoExpr(nil)})
+	varchar := expressions.Cast(expressions.Args{"this": arg, "to": expressions.DTypeVarchar.IntoExpr(nil)})
+	caseExpr := expressions.Case(expressions.Args{
+		"this": duckDBAnon("TYPEOF", arg),
+		"ifs": []expressions.Expression{expressions.If(expressions.Args{
+			"this": expressions.LiteralString("BLOB"),
+			"true": duckDBAnon("OCTET_LENGTH", blob),
+		})},
+		"default": duckDBAnon("LENGTH", varchar),
+	})
+	return g.gen(caseExpr)
+}
+
+// duckDBCheckJSONSQL ports checkjson_sql (generators/duckdb.py:2829-2838).
+func duckDBCheckJSONSQL(g *Generator, e expressions.Expression) string {
+	this := g.sqlKey(e, "this")
+	return "CASE WHEN " + this + " IS NULL OR " + this + " = '' OR JSON_VALID(" + this + ") THEN NULL ELSE 'Invalid JSON' END"
+}
+
+// duckDBFromISO8601SQL renders the Presto ISO-8601 parsers as casts.
+func duckDBFromISO8601SQL(dtype expressions.DType) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		return g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": dtype.IntoExpr(nil)}))
+	}
+}
+
+// duckDBJSONObjectSQL renders JSON_OBJECT key/value pairs in positional form.
+func duckDBJSONObjectSQL(g *Generator, e expressions.Expression) string {
+	args := make([]any, 0, len(e.Expressions())*2)
+	for _, pair := range e.Expressions() {
+		if pair.Kind() == expressions.KindJSONKeyValue {
+			args = append(args, pair.This(), pair.Arg("expression"))
+		} else {
+			args = append(args, pair)
+		}
+	}
+	return g.funcCall("JSON_OBJECT", args, "(", ")", true)
+}
+
+// duckDBAutoIncrementSQL drops AUTOINCREMENT, which DuckDB does not support.
+func duckDBAutoIncrementSQL(g *Generator, e expressions.Expression) string {
+	g.unsupported("AUTOINCREMENT is not supported in DuckDB")
+	return ""
+}
+
+// duckDBTimestampLtzFromPartsSQL / TzFromParts render the timezone-carrying variants.
+func duckDBTimestampLtzFromPartsSQL(g *Generator, e expressions.Expression) string {
+	base := expressions.Anonymous(expressions.Args{"this": "MAKE_TIMESTAMP", "expressions": timestampFromPartsArgs(e)})
+	return g.gen(expressions.Cast(expressions.Args{"this": base, "to": expressions.DTypeTimestampTz.IntoExpr(nil)}))
+}
+
+func duckDBTimestampTzFromPartsSQL(g *Generator, e expressions.Expression) string {
+	base := expressions.Anonymous(expressions.Args{"this": "MAKE_TIMESTAMP", "expressions": timestampFromPartsArgs(e)})
+	if zone := asExpression(e.Arg("zone")); zone != nil {
+		return g.gen(expressions.AtTimeZone(expressions.Args{"this": base, "zone": zone}))
+	}
+	return g.gen(base)
+}
+
+func timestampFromPartsArgs(e expressions.Expression) []expressions.Expression {
+	args := make([]expressions.Expression, 0, 6)
+	for _, key := range []string{"year", "month", "day", "hour", "min", "sec"} {
+		if arg := asExpression(e.Arg(key)); arg != nil {
+			args = append(args, arg)
+		}
+	}
+	return args
 }

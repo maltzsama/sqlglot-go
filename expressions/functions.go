@@ -99,6 +99,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"ARRAY_MAX":       genericFunction(KindArrayMax),
 	"ARRAY_MIN":       genericFunction(KindArrayMin),
 	"ARRAY_TO_STRING": genericFunction(KindArrayToString),
+	"ARRAY_JOIN":      genericFunction(KindArrayToString),
 	"ARRAY_REMOVE":    genericFunction(KindArrayRemove),
 	"ARRAY_APPEND":    genericFunction(KindArrayAppend),
 	"ARRAY_PREPEND":   genericFunction(KindArrayPrepend),

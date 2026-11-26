@@ -114,6 +114,9 @@ const (
 	KindPosexplode                 Kind = kindExtensionBase + iota
 	KindGetExtract                 Kind = kindExtensionBase + iota
 	KindStripNullValue             Kind = kindExtensionBase + iota
+	KindFromISO8601Date            Kind = kindExtensionBase + iota
+	KindFromISO8601Timestamp       Kind = kindExtensionBase + iota
+	KindFromISO8601TimestampNanos  Kind = kindExtensionBase + iota
 )
 
 // GENERATED init
@@ -763,4 +766,29 @@ func init() {
 	className[KindStripNullValue] = "StripNullValue"
 	kindByClassName["StripNullValue"] = KindStripNullValue
 	FunctionByName["STRIP_NULL_VALUE"] = genericFunction(KindStripNullValue)
+}
+
+func init() {
+	for name, kind := range map[string]Kind{
+		"FROM_ISO8601_DATE":            KindFromISO8601Date,
+		"FROM_ISO8601_TIMESTAMP":       KindFromISO8601Timestamp,
+		"FROM_ISO8601_TIMESTAMP_NANOS": KindFromISO8601TimestampNanos,
+	} {
+		argTypes[kind] = []argSpec{{"this", true}}
+		traitsOf[kind] = TraitCondition | TraitFunc
+		className[kind] = camelFromName(name)
+		kindByClassName[className[kind]] = kind
+		FunctionByName[name] = genericFunction(kind)
+	}
+}
+
+func camelFromName(name string) string {
+	switch name {
+	case "FROM_ISO8601_DATE":
+		return "FromISO8601Date"
+	case "FROM_ISO8601_TIMESTAMP":
+		return "FromISO8601Timestamp"
+	default:
+		return "FromISO8601TimestampNanos"
+	}
 }

@@ -346,6 +346,11 @@ func bigQueryFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Express
 	out["DATE_ADD"] = bigQueryBuildDateDeltaWithInterval(exp.KindDateAdd)
 	out["DATE_DIFF"] = bigQueryBuildDateDiff(exp.KindDateDiff)
 	out["DATE_SUB"] = bigQueryBuildDateDeltaWithInterval(exp.KindDateSub)
+	out["GENERATE_UUID"] = func([]exp.Expression) exp.Expression {
+		u := exp.New(exp.KindUuid, exp.Args{})
+		u.Set("is_string", true)
+		return u
+	}
 	out["DATE_TRUNC"] = bigQueryBuildDateTrunc
 	// parsers/bigquery.py:105-120: PARSE_DATE/PARSE_DATETIME/PARSE_TIMESTAMP reverse their
 	// (format, value) arguments and default the year to 1970.
