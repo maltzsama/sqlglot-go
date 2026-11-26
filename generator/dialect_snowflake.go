@@ -77,11 +77,29 @@ func init() {
 		expressions.KindArgMin:                clickhouseRename("MIN_BY"),
 		expressions.KindArray:                 snowflakeArraySQL,
 		// generators/snowflake.py:413 exp.ArrayConcat: array_concat_sql("ARRAY_CAT").
-		expressions.KindArrayConcat:       arrayConcatSQL("ARRAY_CAT"),
-		expressions.KindArrayAppend:       snowflakeArrayAppendSQL("ARRAY_APPEND", false),
-		expressions.KindArrayPrepend:      snowflakeArrayAppendSQL("ARRAY_PREPEND", false),
-		expressions.KindArrayContains:     snowflakeArrayContainsSQL,
-		expressions.KindArrayPosition:     snowflakeArrayPositionSQL,
+		expressions.KindArrayConcat:   arrayConcatSQL("ARRAY_CAT"),
+		expressions.KindArrayAppend:   snowflakeArrayAppendSQL("ARRAY_APPEND", false),
+		expressions.KindArrayPrepend:  snowflakeArrayAppendSQL("ARRAY_PREPEND", false),
+		expressions.KindArrayContains: snowflakeArrayContainsSQL,
+		expressions.KindArrayPosition: snowflakeArrayPositionSQL,
+		expressions.KindRegexpILike: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("REGEXP_LIKE", []any{e.This(), e.Arg("expression"), "'i'"}, "(", ")", true)
+		},
+		expressions.KindAnonymous: func(g *Generator, e expressions.Expression) string {
+			switch strings.ToUpper(e.Text("this")) {
+			case "ARRAY_POSITION":
+				if args := e.Expressions(); len(args) == 2 {
+					return g.funcCall("ARRAY_POSITION", []any{args[1], args[0]}, "(", ")", true)
+				}
+			case "FORMAT":
+				if args := e.Expressions(); len(args) == 2 {
+					if format := asExpression(args[0]); format != nil && format.IsString() && format.Name() == "%s" {
+						return g.funcCall("TO_CHAR", []any{args[1]}, "(", ")", true)
+					}
+				}
+			}
+			return g.anonymousSQL(e)
+		},
 		expressions.KindArrayIntersect:    clickhouseRename("ARRAY_INTERSECTION"),
 		expressions.KindArrayOverlaps:     clickhouseRename("ARRAYS_OVERLAP"),
 		expressions.KindBitwiseAnd:        clickhouseRename("BITAND"),
