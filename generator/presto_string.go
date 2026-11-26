@@ -2,20 +2,46 @@ package generator
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
-// unicodeStringSQL ports unicodestring_sql (generator.py:1653-1680) for dialects with
-// UNICODE_START set ("U&'" / "'"): only the delimiter is escaped, by doubling it.
+// escapedUnicodePattern ports ESCAPED_UNICODE_RE (generator.py:28).
+var escapedUnicodePattern = regexp.MustCompile(`\\(\d+)`)
+
+// unicodeStringSQL ports unicodestring_sql (generator.py:1653-1680).
 func (g *Generator) unicodeStringSQL(e expressions.Expression) string {
-	escape := g.sqlKey(e, "escape")
-	if escape != "" {
-		escape = " UESCAPE " + escape
+	escape := asExpression(e.Arg("escape"))
+	supportsUEscape := g.supportsUEscape()
+	left, right := g.dialect.QuoteStart, g.dialect.QuoteEnd
+	substitute := `\u$1`
+	escapeSQL := ""
+	if g.dialect.UnicodeStart != "" {
+		left, right = g.dialect.UnicodeStart, g.dialect.UnicodeEnd
+		substitute = `\$1`
+		if escape != nil && supportsUEscape {
+			escapeSQL = " UESCAPE " + g.gen(escape)
+		}
 	}
-	this := strings.ReplaceAll(g.replaceLineBreaks(e.Name()), "'", "''")
-	return "U&'" + this + "'" + escape
+
+	this := e.Name()
+	if g.dialect.UnicodeStart == "" || (escape != nil && !supportsUEscape) {
+		if escape != nil {
+			pattern := regexp.MustCompile(regexp.QuoteMeta(escape.Name()) + `(\d+)`)
+			this = pattern.ReplaceAllString(this, substitute)
+		} else {
+			this = escapedUnicodePattern.ReplaceAllString(this, substitute)
+		}
+	}
+	this = strings.ReplaceAll(g.replaceLineBreaks(this), "'", "''")
+	return left + this + right + escapeSQL
+}
+
+// supportsUEscape ports SUPPORTS_UESCAPE (base True; bigquery, clickhouse and dremio False).
+func (g *Generator) supportsUEscape() bool {
+	return !g.isDialect("bigquery") && !g.isDialect("clickhouse") && !g.isDialect("dremio")
 }
 
 // structSQL ports struct_sql (generator.py:5267-5278): PropertyEQ fields render as aliases.

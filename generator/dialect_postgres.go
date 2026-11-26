@@ -781,7 +781,7 @@ func postgresIntervalExpr(text string) exp.Expression {
 	if digits == "" || unit == "" {
 		return nil
 	}
-	return exp.Interval(exp.Args{"this": exp.LiteralNumber(digits), "unit": exp.Var(exp.Args{"this": unit})})
+	return exp.Interval(exp.Args{"this": exp.LiteralString(digits), "unit": exp.Var(exp.Args{"this": unit})})
 }
 
 // postgresIntervalFromString converts '  2   days  ' or '1day' into INTERVAL '2 DAY'.

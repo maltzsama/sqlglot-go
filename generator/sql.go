@@ -1014,7 +1014,11 @@ func (g *Generator) convertSQL(e expressions.Expression) string {
 			case expressions.DTypeDatetime, expressions.DTypeDatetime2:
 				transformed = expressions.StrToTime(expressions.Args{"this": value, "format": fmt, "safe": safe})
 			case expressions.DTypeVarchar, expressions.DTypeNVarchar, expressions.DTypeChar, expressions.DTypeNChar:
-				transformed = expressions.Cast(expressions.Args{
+				kind := expressions.KindCast
+				if safe {
+					kind = expressions.KindTryCast
+				}
+				transformed = expressions.New(kind, expressions.Args{
 					"this": expressions.New(expressions.KindTimeToStr, expressions.Args{"this": value, "format": fmt}),
 					"to":   to, "safe": safe,
 				})
@@ -1030,7 +1034,11 @@ func (g *Generator) convertSQL(e expressions.Expression) string {
 		if safe {
 			kind = expressions.KindTryCast
 		}
-		transformed = expressions.New(kind, expressions.Args{"this": value, "to": to})
+		args := expressions.Args{"this": value, "to": to}
+		if safe {
+			args["safe"] = true
+		}
+		transformed = expressions.New(kind, args)
 	}
 	return g.gen(transformed)
 }
@@ -2023,7 +2031,7 @@ func (g *Generator) dataTypeSQL(e expressions.Expression) string {
 
 func (g *Generator) dataTypeParamSQL(e expressions.Expression) string {
 	this := g.sqlKey(e, "this")
-	if suffix := g.sqlKey(e, "expression"); suffix != "" {
+	if suffix := g.sqlKey(e, "expression"); suffix != "" && g.dialect.DataTypeSpecifiersAllowed {
 		return this + " " + suffix
 	}
 	return this
@@ -2725,7 +2733,7 @@ func (g *Generator) pivotSQL(e expressions.Expression) string {
 	}
 	// Snowflake's IDENTIFY_PIVOT_STRINGS names the output after the quoted IN value. DuckDB
 	// names it after the bare value, so alias each literal explicitly.
-	if g.isDialect("duckdb") && truthy(e.Arg("identify_pivot_strings")) {
+	if truthy(e.Arg("identify_pivot_strings")) && !g.dialect.IdentifyPivotStrings {
 		for _, fieldValue := range listFromValue(e.Arg("fields")) {
 			in := asExpression(fieldValue)
 			if in == nil || in.Kind() != expressions.KindIn {
@@ -3379,4 +3387,16 @@ func (g *Generator) intDivSQL(e expressions.Expression) string {
 		"this": expressions.Div(expressions.Args{"this": e.This(), "expression": e.Expr()}),
 		"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeInt}),
 	}))
+}
+
+// toNumberSQL ports tonumber_sql (generator.py:4893-4903): without a conversion format a
+// TO_NUMBER is rendered as a DOUBLE cast.
+func (g *Generator) toNumberSQL(e expressions.Expression) string {
+	if asExpression(e.Arg("format")) == nil {
+		return g.gen(expressions.Cast(expressions.Args{
+			"this": e.This(),
+			"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeDouble}),
+		}))
+	}
+	return g.funcCall("TO_NUMBER", []any{e.This(), e.Arg("format")}, "(", ")", true)
 }

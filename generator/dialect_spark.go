@@ -11,8 +11,8 @@ import (
 // (generators/spark.py:149-207). Databricks inherits this table through dialectParents.
 func init() {
 	registerDialectTypeMapping("spark", map[expressions.DType]string{
-		expressions.DTypeMoney:        "DECIMAL",
-		expressions.DTypeSmallMoney:   "DECIMAL",
+		expressions.DTypeMoney:        "DECIMAL(15, 4)",
+		expressions.DTypeSmallMoney:   "DECIMAL(6, 4)",
 		expressions.DTypeUUID:         "STRING",
 		expressions.DTypeTimestampLtz: "TIMESTAMP_LTZ",
 		expressions.DTypeTimestampNtz: "TIMESTAMP_NTZ",
@@ -46,6 +46,7 @@ func init() {
 		// generators/spark.py:139-141: a safe TryCast renders TRY_CAST, otherwise the Spark 2
 		// cast_sql override applies unchanged.
 		expressions.KindTryCast: sparkTryCastSQL,
+		expressions.KindIfBlock: sparkIfBlockSQL,
 		// generators/spark.py:142-144 removes the inherited mappings so the base behavior
 		// applies: AnyValue keeps its own name, DateDiff uses datediff_sql, With the base
 		// with_sql.
@@ -76,13 +77,76 @@ func init() {
 				if args := e.Expressions(); len(args) == 1 {
 					return g.funcCall("HEX", []any{args[0]}, "(", ")", true)
 				}
+			case "DATEFROMPARTS":
+				return g.funcCall("MAKE_DATE", listToAny(e.Expressions()), "(", ")", true)
+			case "TRY":
+				// generators/hive.py:224 TRY_SUPPORTED = False: TRY(...) collapses to its input.
+				if args := e.Expressions(); len(args) == 1 {
+					return g.gen(args[0])
+				}
+			case "TO_NUMBER":
+				if args := e.Expressions(); len(args) == 1 {
+					return g.gen(expressions.Cast(expressions.Args{
+						"this": args[0],
+						"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeDouble}),
+					}))
+				}
 			}
 			return g.anonymousSQL(e)
+		},
+		expressions.KindMD5Digest: func(g *Generator, e expressions.Expression) string {
+			return "UNHEX(MD5(" + g.sqlKey(e, "this") + "))"
+		},
+		expressions.KindUuid: func(g *Generator, e expressions.Expression) string {
+			if truthy(e.Arg("is_string")) || e.Arg("name") != nil {
+				return "CAST(UUID() AS STRING)"
+			}
+			return "UUID()"
+		},
+		expressions.KindLastDay: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("LAST_DAY", []any{e.This()}, "(", ")", true)
+		},
+		expressions.KindTrunc: func(g *Generator, e expressions.Expression) string {
+			return "CAST(" + g.sqlKey(e, "this") + " AS BIGINT)"
+		},
+		expressions.KindArrayConstructCompact: func(g *Generator, e expressions.Expression) string {
+			return "ARRAY_COMPACT(ARRAY(" + g.expressions(exprsOptions{expression: e, flat: true}) + "))"
+		},
+		expressions.KindExtract: func(g *Generator, e expressions.Expression) string {
+			unit := ""
+			if u := asExpression(e.Arg("this")); u != nil {
+				unit = u.Name()
+			}
+			return "EXTRACT(" + unit + " FROM " + g.sqlKey(e, "expression") + ")"
+		},
+		expressions.KindToArray:      sparkToArraySQL,
+		expressions.KindDatetimeAdd:  sparkIntervalOpSQL("+"),
+		expressions.KindDatetimeSub:  sparkIntervalOpSQL("-"),
+		expressions.KindTimestampSub: sparkIntervalOpSQL("-"),
+		expressions.KindJoin: func(g *Generator, e expressions.Expression) string {
+			if e.Arg("hint") != nil {
+				e = e.Copy()
+				e.Set("hint", nil)
+			}
+			return g.joinSQL(e)
+		},
+		expressions.KindTable: func(g *Generator, e expressions.Expression) string {
+			if e.Arg("hints") != nil {
+				e = e.Copy()
+				e.Set("hints", nil)
+			}
+			if this := asExpression(e.This()); this != nil && this.Kind() == expressions.KindGenerateSeries {
+				return hiveTableSQL(g, e)
+			}
+			return g.tableSQL(e)
+		},
+		expressions.KindNational: func(g *Generator, e expressions.Expression) string {
+			return g.gen(expressions.LiteralString(e.Name()))
 		},
 	})
 }
 
-// sparkCreate ports the exp.Create preprocess chain (generators/spark.py:107-115).
+// sparkCreate ports the expressions.Create preprocess chain (generators/spark.py:107-115).
 func sparkCreate(g *Generator, e expressions.Expression) string {
 	return g.createSQL(movePartitionedByToSchemaColumns(
 		ctasWithTmpTablesToCreateTmpView(removeUniqueConstraints(e), true)))
@@ -239,4 +303,65 @@ func sparkISO8601Cast(name string) func(*Generator, expressions.Expression) stri
 // sparkMinBySQL drops MIN_BY's optional count argument, which Spark does not accept.
 func sparkMinBySQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("MIN_BY", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+}
+
+func sparkToArraySQL(g *Generator, e expressions.Expression) string {
+	if this := asExpression(e.This()); this != nil && this.Kind() == expressions.KindArray {
+		return g.gen(this)
+	}
+	value := g.sqlKey(e, "this")
+	return "IF(" + value + " IS NULL, NULL, ARRAY(" + value + "))"
+}
+
+func sparkIntervalOpSQL(op string) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		count := asExpression(e.Arg("expression"))
+		unit := asExpression(e.Arg("unit"))
+		unitName := "DAY"
+		if unit != nil {
+			unitName = strings.ToUpper(unit.Name())
+		}
+		value := ""
+		if count != nil {
+			if count.IsString() {
+				value = count.Name()
+			} else {
+				value = g.gen(count)
+			}
+		}
+		return g.sqlKey(e, "this") + " " + op + " INTERVAL '" + value + "' " + unitName
+	}
+}
+
+// sparkIfBlockSQL ports ifblock_sql (generators/spark.py:189-207): the temp-table guard
+// IF OBJECT_ID(...) IS NOT NULL BEGIN DROP TABLE ... END becomes DROP TABLE IF EXISTS.
+func sparkIfBlockSQL(g *Generator, e expressions.Expression) string {
+	condition := asExpression(e.Arg("this"))
+	trueBlock := asExpression(e.Arg("true"))
+
+	var conditionExpr expressions.Expression
+	if condition != nil && condition.Kind() == expressions.KindNot {
+		if inner := asExpression(condition.This()); inner != nil && inner.Kind() == expressions.KindIs {
+			if asExpression(inner.Arg("expression")) != nil && asExpression(inner.Arg("expression")).Kind() == expressions.KindNull {
+				conditionExpr = asExpression(inner.This())
+			}
+		}
+	}
+
+	if conditionExpr != nil && conditionExpr.Kind() == expressions.KindAnonymous && strings.EqualFold(conditionExpr.Text("this"), "OBJECT_ID") {
+		var objectType expressions.Expression
+		if args := conditionExpr.Expressions(); len(args) > 1 {
+			objectType = args[1]
+		}
+		if objectType == nil || strings.EqualFold(objectType.Name(), "U") {
+			if trueBlock != nil && trueBlock.Kind() == expressions.KindBlock {
+				if block := trueBlock.Expressions(); len(block) > 0 && block[0].Kind() == expressions.KindDrop {
+					drop := block[0]
+					drop.Set("exists", true)
+					return g.gen(drop)
+				}
+			}
+		}
+	}
+	return g.ifBlockSQL(e)
 }

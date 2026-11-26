@@ -39,6 +39,7 @@ func init() {
 		expressions.KindFrom:           spark2FromSQL,
 		expressions.KindFromTimeZone:   spark2FromTimeZoneSQL,
 		expressions.KindJSONFormat:     spark2JSONFormatSQL,
+		expressions.KindLogicalAnd:     clickhouseRename("BOOL_AND"),
 		expressions.KindLogicalOr:      clickhouseRename("BOOL_OR"),
 		expressions.KindMap:            spark2MapSQL,
 		expressions.KindPivot:          oraclePivot,
@@ -57,6 +58,15 @@ func init() {
 		},
 		expressions.KindVariancePop: clickhouseRename("VAR_POP"),
 		expressions.KindWithinGroup: spark2WithinGroupSQL,
+		// generators/spark2.py:188-195: the Select preprocess chain.
+		expressions.KindSelect: func(g *Generator, e expressions.Expression) string {
+			if asExpression(e.Arg("qualify")) != nil {
+				e = eliminateQualify(e)
+			}
+			e = unnestToExplode(e, true)
+			e = anyToExists(e)
+			return g.selectSQL(e)
+		},
 		// generators/spark2.py:216-263 method overrides.
 		expressions.KindStruct:             (*Generator).structSQL,
 		expressions.KindCast:               spark2CastSQL,
@@ -310,6 +320,9 @@ func spark2AlterColumnSQL(g *Generator, e expressions.Expression) string {
 	}
 	if newName != this {
 		return "RENAME COLUMN " + this + " TO " + newName
+	}
+	if comment := g.sqlKey(e, "comment"); comment != "" {
+		return "ALTER COLUMN " + this + " COMMENT " + comment
 	}
 	return g.alterColumnSQL(e)
 }

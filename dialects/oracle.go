@@ -15,6 +15,8 @@ func Oracle() *Dialect {
 	d.Name = "oracle"
 	// generators/oracle.py TRANSFORMS: eliminate_distinct_on.
 	d.EliminateDistinctOn = true
+	// generators/oracle.py:31 DATA_TYPE_SPECIFIERS_ALLOWED = True.
+	d.DataTypeSpecifiersAllowed = true
 
 	// dialects/oracle.py:16-22 class flags.
 	d.AliasPostTablesample = true

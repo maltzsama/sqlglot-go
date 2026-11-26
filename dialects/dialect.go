@@ -499,6 +499,13 @@ type Dialect struct {
 	// ConcatWsCoalesce ports CONCAT_WS_COALESCE (base False; duckdb True): CONCAT_WS ignores
 	// NULL arguments.
 	ConcatWsCoalesce bool
+	// DataTypeSpecifiersAllowed ports DATA_TYPE_SPECIFIERS_ALLOWED (base False; oracle True):
+	// a DataTypeParam's specifier (VARCHAR2(10 BYTE)) is rendered.
+	DataTypeSpecifiersAllowed bool
+	// UnicodeStart/UnicodeEnd port the tokenizer-derived UNICODE_START/UNICODE_END pair: the
+	// delimiters used to render a UnicodeString (base empty, i.e. no U& support).
+	UnicodeStart string
+	UnicodeEnd   string
 	// StrictJSONPathSyntax ports STRICT_JSON_PATH_SYNTAX (base True; duckdb and starrocks
 	// False): an invalid JSON path logs a warning and the literal is kept.
 	StrictJSONPathSyntax bool

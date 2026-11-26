@@ -11,6 +11,9 @@ func Postgres() *Dialect {
 	// dialects/postgres.py CONCAT_WS_COALESCE = True.
 	d.ConcatWsCoalesce = true
 	d.Name = "postgres"
+	// Postgres tokenizes U&'...' as UNICODE_STRING, so it renders in that syntax.
+	d.UnicodeStart = "U&'"
+	d.UnicodeEnd = "'"
 	// generators/postgres.py:277 ARRAY_CONCAT_IS_VAR_LEN = False: binary ARRAY_CAT nesting.
 	d.ArrayConcatIsVarLen = false
 	// generators/postgres.py TRANSFORMS: eliminate_semi_and_anti_joins.
