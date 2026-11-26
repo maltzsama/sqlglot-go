@@ -58,9 +58,27 @@ func init() {
 		expressions.KindIgnoreNulls: (*Generator).ignoreNullsSQL,
 		expressions.KindBracket:     sparkBracketSQL,
 		// generators/spark.py:159-186.
-		expressions.KindComputedColumnConstraint: sparkComputedColumnConstraintSQL,
-		expressions.KindPlaceholder:              sparkPlaceholderSQL,
-		expressions.KindReadParquet:              sparkReadParquetSQL,
+		expressions.KindComputedColumnConstraint:  sparkComputedColumnConstraintSQL,
+		expressions.KindPlaceholder:               sparkPlaceholderSQL,
+		expressions.KindReadParquet:               sparkReadParquetSQL,
+		expressions.KindIsNan:                     clickhouseRename("ISNAN"),
+		expressions.KindFromISO8601Date:           sparkISO8601Cast("DATE"),
+		expressions.KindFromISO8601Timestamp:      sparkISO8601Cast("TIMESTAMP"),
+		expressions.KindFromISO8601TimestampNanos: sparkISO8601Cast("TIMESTAMP"),
+		expressions.KindArgMin:                    sparkMinBySQL,
+		expressions.KindAnonymous: func(g *Generator, e expressions.Expression) string {
+			switch strings.ToUpper(e.Text("this")) {
+			case "MAP":
+				if args := e.Expressions(); len(args) == 2 {
+					return g.funcCall("MAP_FROM_ARRAYS", listToAny(args), "(", ")", true)
+				}
+			case "TO_HEX":
+				if args := e.Expressions(); len(args) == 1 {
+					return g.funcCall("HEX", []any{args[0]}, "(", ")", true)
+				}
+			}
+			return g.anonymousSQL(e)
+		},
 	})
 }
 
@@ -210,4 +228,15 @@ func sparkReadParquetSQL(g *Generator, e expressions.Expression) string {
 		return ""
 	}
 	return "parquet.`" + e.Expressions()[0].Name() + "`"
+}
+
+func sparkISO8601Cast(name string) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		return "CAST(" + g.sqlKey(e, "this") + " AS " + name + ")"
+	}
+}
+
+// sparkMinBySQL drops MIN_BY's optional count argument, which Spark does not accept.
+func sparkMinBySQL(g *Generator, e expressions.Expression) string {
+	return g.funcCall("MIN_BY", []any{e.This(), e.Arg("expression")}, "(", ")", true)
 }
