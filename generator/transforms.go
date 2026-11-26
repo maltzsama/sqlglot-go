@@ -193,7 +193,7 @@ func removeWithinGroupForPercentiles(e expressions.Expression) expressions.Expre
 	}
 	this := asExpression(e.Arg("this"))
 	order := asExpression(e.Arg("expression"))
-	if this == nil || this.Kind() != expressions.KindPercentileDisc || order == nil || order.Kind() != expressions.KindOrder {
+	if this == nil || (this.Kind() != expressions.KindPercentileDisc && this.Kind() != expressions.KindPercentileCont) || order == nil || order.Kind() != expressions.KindOrder {
 		return e
 	}
 	ordered := e.Find(expressions.KindOrdered)

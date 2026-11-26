@@ -59,6 +59,7 @@ func init() {
 	dispatch[expressions.KindConvertTimezone] = (*Generator).convertTimezoneSQL
 	dispatch[expressions.KindFromTimeZone] = (*Generator).fromTimeZoneSQL
 	dispatch[expressions.KindConvert] = (*Generator).convertSQL
+	dispatch[expressions.KindToNumber] = (*Generator).toNumberSQL
 	dispatch[expressions.KindForClause] = (*Generator).forClauseSQL
 	dispatch[expressions.KindUnixSeconds] = (*Generator).unixSecondsSQL
 	dispatch[expressions.KindTsOrDsToTimestamp] = (*Generator).tsOrDsToTimestampSQL

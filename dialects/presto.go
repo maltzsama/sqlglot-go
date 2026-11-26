@@ -10,6 +10,10 @@ import (
 func Presto() *Dialect {
 	d := Base()
 	d.Name = "presto"
+	// The UNICODE_STRING token starts with U&' and ends with ', so UnicodeString renders back
+	// in that syntax (dialects/dialect.py:325 get_start_end).
+	d.UnicodeStart = "U&'"
+	d.UnicodeEnd = "'"
 	// generators/presto.py PAD_FILL_PATTERN_IS_REQUIRED = True.
 	d.PadFillPatternIsRequired = true
 	// generators/presto.py TRANSFORMS: eliminate_distinct_on.

@@ -99,6 +99,24 @@ func init() {
 			return "CAST(" + hiveStrToTimeInner(g, e) + " AS TIMESTAMP)"
 		},
 		expressions.KindDateAdd: (*Generator).hiveAddDateSQL,
+		// generators/hive.py:587-591: EXISTS over an array lambda is a function call.
+		expressions.KindExists: func(g *Generator, e expressions.Expression) string {
+			if e.Arg("expression") != nil {
+				return g.functionFallbackSQL(e)
+			}
+			return g.existsSQL(e)
+		},
+		// generators/hive.py:351: GENERATE_SERIES in a FROM becomes an UNNEST.
+		expressions.KindTable: hiveTableSQL,
+		// generators/hive.py:335-342: the Select preprocess chain (no arrays_zip).
+		expressions.KindSelect: func(g *Generator, e expressions.Expression) string {
+			if asExpression(e.Arg("qualify")) != nil {
+				e = eliminateQualify(e)
+			}
+			e = unnestToExplode(e, false)
+			e = anyToExists(e)
+			return g.selectSQL(e)
+		},
 		expressions.KindDateStrToDate: func(g *Generator, e expressions.Expression) string {
 			return "CAST(" + g.sqlKey(e, "this") + " AS DATE)"
 		},
@@ -215,6 +233,7 @@ func init() {
 		expressions.KindJSONExtract:       hiveCall("GET_JSON_OBJECT", "this", "expression"),
 		expressions.KindJSONExtractScalar: hiveCall("GET_JSON_OBJECT", "this", "expression"),
 		expressions.KindGenerateSeries:    hiveSequenceSQL,
+		expressions.KindGenerateDateArray: hiveSequenceSQL,
 		expressions.KindArraySize:         hiveCall("SIZE", "this"),
 		// generators/hive.py:282 exp.ArrayConcat: rename_func("CONCAT").
 		expressions.KindArrayConcat: renameFunc("CONCAT"),
@@ -225,7 +244,7 @@ func init() {
 	}
 	// Go 1.22+ gives each range iteration its own k/name, so the closure can capture them
 	// directly; the previous `name := name` copy is no longer needed.
-	for k, name := range map[expressions.Kind]string{expressions.KindAnyValue: "FIRST", expressions.KindFromBase64: "UNBASE64", expressions.KindToBase64: "BASE64", expressions.KindJSONFormat: "TO_JSON", expressions.KindQuantile: "PERCENTILE", expressions.KindApproxQuantile: "PERCENTILE_APPROX", expressions.KindRegexpSplit: "SPLIT", expressions.KindArrayUniqueAgg: "COLLECT_SET", expressions.KindTimeStrToDate: "TO_DATE", expressions.KindTimeStrToUnix: "UNIX_TIMESTAMP", expressions.KindTimeToUnix: "UNIX_TIMESTAMP", expressions.KindWeekOfYear: "WEEKOFYEAR", expressions.KindDayOfMonth: "DAYOFMONTH", expressions.KindDayOfWeek: "DAYOFWEEK", expressions.KindUnnest: "EXPLODE", expressions.KindStarMap: "MAP"} {
+	for k, name := range map[expressions.Kind]string{expressions.KindAnyValue: "FIRST", expressions.KindFromBase64: "UNBASE64", expressions.KindToBase64: "BASE64", expressions.KindJSONFormat: "TO_JSON", expressions.KindQuantile: "PERCENTILE", expressions.KindApproxQuantile: "PERCENTILE_APPROX", expressions.KindRegexpSplit: "SPLIT", expressions.KindArrayUniqueAgg: "COLLECT_SET", expressions.KindTimeStrToDate: "TO_DATE", expressions.KindTimeStrToUnix: "UNIX_TIMESTAMP", expressions.KindTimeToUnix: "UNIX_TIMESTAMP", expressions.KindWeekOfYear: "WEEKOFYEAR", expressions.KindDayOfMonth: "DAYOFMONTH", expressions.KindDayOfWeek: "DAYOFWEEK", expressions.KindUnnest: "EXPLODE", expressions.KindStarMap: "MAP", expressions.KindUnicode: "ASCII"} {
 		handlers[k] = func(g *Generator, e expressions.Expression) string {
 			return g.funcCall(name, g.fallbackArgs(e), "(", ")", true)
 		}
@@ -472,6 +491,11 @@ func (g *Generator) hiveAddDateSQL(e expressions.Expression) string {
 	}
 	inc := e.Expr()
 	sql := g.gen(inc)
+	if inc != nil && inc.Kind() == expressions.KindLiteral {
+		if _, err := strconv.ParseFloat(inc.Name(), 64); err == nil {
+			sql = inc.Name()
+		}
+	}
 	if mult != 1 {
 		if inc != nil && inc.Kind() == expressions.KindLiteral {
 			if n, err := strconv.ParseFloat(inc.Name(), 64); err == nil {
@@ -558,9 +582,37 @@ func init() {
 
 // hiveSequenceSQL ports sequence_sql (dialects/dialect.py:2396-2436) for GenerateSeries.
 func hiveSequenceSQL(g *Generator, e expressions.Expression) string {
+	if truthy(e.Arg("exploding")) {
+		parent := e.Parent()
+		if parent != nil && (parent.Kind() == expressions.KindAlias || parent.Kind() == expressions.KindTableAlias) {
+			parent = parent.Parent()
+		}
+		if parent == nil || (parent.Kind() != expressions.KindTable && parent.Kind() != expressions.KindUnnest) {
+			copy := e.Copy()
+			copy.Set("exploding", nil)
+			return g.gen(expressions.Unnest(expressions.Args{
+				"expressions": []expressions.Expression{copy},
+			}))
+		}
+	}
 	start := asExpression(e.Arg("start"))
 	end := asExpression(e.Arg("end"))
 	step := asExpression(e.Arg("step"))
+	if step != nil && step.IsString() {
+		if interval := postgresIntervalExpr(step.Name()); interval != nil {
+			step = interval
+		}
+	}
+	// dialects/dialect.py:2401-2413: when either bound is a date/timestamp cast, cast the
+	// other bound to the same type so SEQUENCE sees a uniform range.
+	if target := hiveSeriesCastTarget(start, end); target != nil {
+		if start.Kind() != expressions.KindCast {
+			start = expressions.Cast(expressions.Args{"this": start, "to": target.Copy()})
+		}
+		if end.Kind() != expressions.KindCast {
+			end = expressions.Cast(expressions.Args{"this": end, "to": target.Copy()})
+		}
+	}
 	if start == nil || end == nil || !truthy(e.Arg("is_end_exclusive")) {
 		return g.funcCall("SEQUENCE", []any{start, end, step}, "(", ")", true)
 	}
@@ -696,9 +748,10 @@ func hiveDateSubSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("DATE_ADD", []any{e.This(), count}, "(", ")", true)
 }
 
-// hiveConcatWsSQL ports the CONCAT_WS null-propagating form (CONCAT_WS_COALESCE=False).
+// hiveConcatWsSQL ports concatws_sql's CONCAT_WS_COALESCE branch (generator.py:3726-3736).
+// Hive and its descendants (Spark, Databricks) set the flag.
 func hiveConcatWsSQL(g *Generator, e expressions.Expression) string {
-	if g.dialect.Name != "hive" {
+	if !g.dialect.ConcatWsCoalesce {
 		return g.functionFallbackSQL(e)
 	}
 	args := e.Expressions()
@@ -765,4 +818,41 @@ func (g *Generator) hiveDateDiffUnits(e expressions.Expression) string {
 		return "(" + diff + ") * 1000"
 	}
 	return g.functionFallbackSQL(e)
+}
+
+// hiveTableSQL ports the Table preprocess chain (generators/hive.py:351): a GENERATE_SERIES
+// table reference becomes an UNNEST so it renders as EXPLODE(SEQUENCE(...)).
+func hiveTableSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.This())
+	if this == nil || this.Kind() != expressions.KindGenerateSeries {
+		return g.tableSQL(e)
+	}
+	args := expressions.Args{"expressions": []expressions.Expression{this}}
+	if alias := asExpression(e.Arg("alias")); alias != nil {
+		args["alias"] = alias.Copy()
+	}
+	return g.gen(expressions.Unnest(args))
+}
+
+// hiveSeriesCastTarget returns the DATE/TIMESTAMP target when one bound is already a cast,
+// mirroring sequence_sql's target_type detection (dialects/dialect.py:2401-2406).
+func hiveSeriesCastTarget(start, end expressions.Expression) expressions.Expression {
+	var cast expressions.Expression
+	switch {
+	case start != nil && start.Kind() == expressions.KindCast:
+		cast = start
+	case end != nil && end.Kind() == expressions.KindCast:
+		cast = end
+	default:
+		return nil
+	}
+	to := asExpression(cast.Arg("to"))
+	if to == nil {
+		return nil
+	}
+	dtype, _ := to.Arg("this").(expressions.DType)
+	if dtype != expressions.DTypeDate && dtype != expressions.DTypeTimestamp && dtype != expressions.DTypeTimestampTz {
+		return nil
+	}
+	return to
 }

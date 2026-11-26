@@ -17,7 +17,13 @@ func init() {
 		expressions.KindDateAdd:        dateDeltaSQL("DATEADD", false),
 		// generators/databricks.py:58-59 removes the inherited RegexpLike and TryCast
 		// mappings, so the base rendering applies.
-		expressions.KindRegexpLike:  func(g *Generator, e expressions.Expression) string { return g.functionFallbackSQL(e) },
+		expressions.KindRegexpLike: func(g *Generator, e expressions.Expression) string { return g.functionFallbackSQL(e) },
+		// generators/databricks.py:41-47: no eliminate_qualify (Databricks supports QUALIFY).
+		expressions.KindSelect: func(g *Generator, e expressions.Expression) string {
+			e = unnestToExplode(e, true)
+			e = anyToExists(e)
+			return g.selectSQL(e)
+		},
 		expressions.KindTryCast:     (*Generator).tryCastSQL,
 		expressions.KindDateDiff:    dateDeltaSQL("DATEDIFF", false),
 		expressions.KindGroupConcat: sparkGroupConcat,
