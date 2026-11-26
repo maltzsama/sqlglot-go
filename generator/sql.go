@@ -950,6 +950,32 @@ func (g *Generator) caseSQL(e expressions.Expression) string {
 	return strings.Join(statements, " ")
 }
 
+// tsOrDsToTimestampSQL ports tsordstotimestamp_sql (generator.py:5188-5193).
+func (g *Generator) tsOrDsToTimestampSQL(e expressions.Expression) string {
+	this := asExpression(e.This())
+	if this != nil && (this.Kind() == expressions.KindTsOrDsToTimestamp ||
+		expressions.DataTypeIsType(this, false, expressions.DTypeTimestamp)) {
+		return g.gen(this)
+	}
+	return g.gen(expressions.Cast(expressions.Args{"this": this, "to": expressions.DTypeTimestamp.IntoExpr(nil)}))
+}
+
+// unixSecondsSQL ports unixseconds_sql (generator.py:5876-5884).
+func (g *Generator) unixSecondsSQL(e expressions.Expression) string {
+	if g.dialect.SupportsUnixSeconds {
+		return g.functionFallbackSQL(e)
+	}
+	start := expressions.Cast(expressions.Args{
+		"this": expressions.LiteralString("1970-01-01 00:00:00+00"),
+		"to":   expressions.DTypeTimestampTz.IntoExpr(nil),
+	})
+	return g.gen(expressions.TimestampDiff(expressions.Args{
+		"this":       e.This(),
+		"expression": start,
+		"unit":       expressions.Var(expressions.Args{"this": "SECONDS"}),
+	}))
+}
+
 // convertSQL ports convert_sql (generator.py:5308-5353): T-SQL's CONVERT(type, value, style)
 // becomes a formatted parse when the style maps to a known pattern, else a CAST/TRY_CAST.
 func (g *Generator) convertSQL(e expressions.Expression) string {
@@ -1744,6 +1770,17 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 	}
 	clone := g.sqlKey(e, "clone")
 	if clone != "" {
+		upperClone := strings.ToUpper(clone)
+		if !strings.HasPrefix(upperClone, "CLONE ") && !strings.HasPrefix(upperClone, "COPY ") {
+			keyword := "CLONE"
+			if g.isDialect("bigquery") && truthy(e.MetaGet("clone_copy")) {
+				keyword = "COPY"
+			}
+			if truthy(e.MetaGet("clone_shallow")) {
+				keyword = "SHALLOW " + keyword
+			}
+			clone = keyword + " " + clone
+		}
 		clone = " " + clone
 	}
 
@@ -1876,6 +1913,19 @@ func (g *Generator) dataTypeSQL(e expressions.Expression) string {
 		if g.dialect.VarcharRequiresSize && expressions.IsType(e, expressions.DTypeVarchar) && len(listFromValue(e.Arg("expressions"))) == 0 {
 			// VARCHAR must always have a size - if it doesn't, we always generate TEXT.
 			return "TEXT"
+		}
+	} else if g.isDialect("snowflake") && expressions.IsType(e, expressions.DTypeStruct) {
+		// Snowflake OBJECT keeps no parameters for an unnamed struct; named struct fields are
+		// preserved as OBJECT(field TYPE).
+		named := false
+		for _, field := range e.Expressions() {
+			if field != nil && (field.Kind() == expressions.KindColumnDef) {
+				named = true
+				break
+			}
+		}
+		if !named {
+			return "OBJECT"
 		}
 	} else if g.isDialect("postgres") {
 		if expressions.IsType(e, expressions.DTypeArray) {
@@ -3032,7 +3082,7 @@ func (g *Generator) intervalSQL(e expressions.Expression) string {
 func (g *Generator) tableParts(e expressions.Expression) string {
 	// generator.py table_parts override (bigquery): a dotted reference parsed as one quoted
 	// path keeps the whole path quoted (`proj.dataset.table`).
-	if truthy(e.MetaGet("quoted_table")) {
+	if g.isDialect("bigquery") && truthy(e.MetaGet("quoted_table")) {
 		parts := e.Parts()
 		names := make([]string, 0, len(parts))
 		for _, part := range parts {

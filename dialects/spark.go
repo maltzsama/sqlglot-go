@@ -15,6 +15,8 @@ func Spark() *Dialect {
 	d.Name = "spark"
 	// generators/spark.py:69 PAD_FILL_PATTERN_IS_REQUIRED = False (overrides Hive).
 	d.PadFillPatternIsRequired = false
+	// generators/spark.py:72 SUPPORTS_UNIX_SECONDS = True.
+	d.SupportsUnixSeconds = true
 	// generators/redshift.py:33 / snowflake.py:394 / spark.py:70: native CONVERT_TIMEZONE.
 	d.SupportsConvertTimezone = true
 

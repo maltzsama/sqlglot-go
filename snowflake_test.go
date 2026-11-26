@@ -1,6 +1,7 @@
 package sqlglot_test
 
 import (
+	"strings"
 	"testing"
 
 	sqlglot "github.com/maltzsama/sqlglot-go"
@@ -706,5 +707,46 @@ WHERE
   )`
 	if got != want {
 		t.Fatalf("quoted explode alias rewrite =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// TestBigQuerySnowflakeTail pins the BigQuery-to-Snowflake transpile fixes as a regression net
+// on top of the corpus pairs.
+func TestBigQuerySnowflakeTail(t *testing.T) {
+	cases := []struct{ sql, want string }{
+		{"CURRENT_DATE('UTC')", "CAST(CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP()) AS DATE)"},
+		{"SAFE_CAST(x AS TIMESTAMP)", "CAST(x AS TIMESTAMPTZ)"},
+		{"SELECT DATE_SUB(DATE '2008-12-25', INTERVAL 5 DAY)", "SELECT DATEADD(DAY, '5' * -1, CAST('2008-12-25' AS DATE))"},
+		{"SELECT TIMESTAMP_DIFF(TIMESTAMP_SECONDS(60), TIMESTAMP_SECONDS(0), minute)", "SELECT TIMESTAMPDIFF(MINUTE, TO_TIMESTAMP(0), TO_TIMESTAMP(60))"},
+		{"SELECT PARSE_DATE('%Y%m%d', '20081225')", "SELECT DATE('20081225', 'yyyymmDD')"},
+		{"SELECT PARSE_DATETIME('%F %T', '2023-01-15 14:30:00')", "SELECT PARSE_DATETIME('2023-01-15 14:30:00', '%Y-%m-%d %H:%M:%S')"},
+		{"TIMESTAMP(x)", "CAST(x AS TIMESTAMPTZ)"},
+		{"SELECT UNIX_SECONDS('2008-12-25 15:30:00+00')", "SELECT TIMESTAMPDIFF(SECONDS, CAST('1970-01-01 00:00:00+00' AS TIMESTAMPTZ), '2008-12-25 15:30:00+00')"},
+		{"SELECT JSON_VALUE('{\"name\": \"Jakob\"}', '$.name')", "SELECT JSON_EXTRACT_PATH_TEXT('{\"name\": \"Jakob\"}', 'name')"},
+		{"SELECT INT64(x)", "SELECT CAST(x AS BIGINT)"},
+		{"SELECT TO_HEX(SHA1('abc'))", "SELECT TO_CHAR(SHA1_BINARY('abc'))"},
+		{"SELECT TRUE IS TRUE", "SELECT TRUE"},
+		{"SELECT ts + MAKE_INTERVAL(1, 2, minute => 5, day => 3)", "SELECT ts + INTERVAL '1 year, 2 month, 5 minute, 3 day'"},
+		{"SELECT ARRAY_CONCAT_AGG(arr)", "SELECT ARRAY_FLATTEN(ARRAY_AGG(arr))"},
+		{"SELECT CAST(STRUCT(1) AS STRUCT<INT64>)", "SELECT CAST(OBJECT_CONSTRUCT('_0', 1) AS OBJECT)"},
+		{"SELECT CAST(col AS STRUCT<fld1 STRUCT<fld2 INT>>).fld1.fld2", "SELECT CAST(col AS OBJECT(fld1 OBJECT(fld2 INT))):fld1.fld2"},
+		{"CREATE OR REPLACE TABLE `a.b.c` COPY `a.b.d`", "CREATE OR REPLACE TABLE \"a\".\"b\".\"c\" CLONE \"a\".\"b\".\"d\""},
+	}
+	for _, tc := range cases {
+		out, err := sqlglot.Transpile(tc.sql, "bigquery", "snowflake", generator.Options{})
+		if err != nil || len(out) != 1 || out[0] != tc.want {
+			t.Fatalf("%s\n got: %v %v\nwant: %s", tc.sql, out, err, tc.want)
+		}
+	}
+	for _, tc := range []struct{ sql, contains string }{
+		{"SELECT JSON_EXTRACT_ARRAY('{\"fruits\": [1]}', '$.fruits')", "TRANSFORM(GET_PATH(PARSE_JSON('{\"fruits\": [1]}'), 'fruits'), x -> PARSE_JSON(TO_JSON(x)))"},
+		{"SELECT ARRAY(SELECT AS STRUCT 1 AS a, 2 AS b)", "(SELECT ARRAY_AGG(OBJECT_CONSTRUCT('a', 1, 'b', 2)))"},
+		{"SELECT purchases, LAST_VALUE(item) OVER item_window AS p FROM Produce WINDOW item_window AS (PARTITION BY purchases)", "LAST_VALUE(item) OVER (PARTITION BY purchases) AS p"},
+		{"SELECT x FROM UNNEST([STRUCT('x' AS x)])", "value['x'] AS x"},
+	} {
+		out, err := sqlglot.Transpile(tc.sql, "bigquery", "snowflake", generator.Options{})
+		if err != nil || len(out) != 1 || !strings.Contains(out[0], tc.contains) {
+			t.Fatalf("%s: %v %v", tc.sql, out, err)
+		}
 	}
 }

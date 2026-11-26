@@ -266,6 +266,9 @@ type Dialect struct {
 	// LimitOnlyLiterals ports LIMIT_ONLY_LITERALS (generator.py:531, base False; dremio True):
 	// a non-literal LIMIT/OFFSET argument is simplified to a literal before rendering.
 	LimitOnlyLiterals bool
+	// SupportsUnixSeconds ports SUPPORTS_UNIX_SECONDS (generator.py:579, base false):
+	// dialects with a native UNIX_SECONDS render the call; others build a TimestampDiff.
+	SupportsUnixSeconds bool
 	// SelectKinds ports SELECT_KINDS (generator.py:397, base STRUCT/VALUE; DuckDB none):
 	// the SELECT AS <kind> forms a dialect can render. Other kinds fall back to a struct
 	// literal (STRUCT) or are dropped (VALUE).

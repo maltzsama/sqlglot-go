@@ -71,6 +71,8 @@ func Snowflake() *Dialect {
 	d.TryCastRequiresString = &tryCastRequiresString
 	d.SupportsAliasRefsInJoinConditions = true
 	d.LeastGreatestIgnoresNulls = false
+	// generators/snowflake.py:402 IS_BOOL_ALLOWED = False.
+	d.IsBoolAllowed = false
 	d.UUIDIsStringType = true
 	d.StarIlikeBackslashEscape = true
 	d.JSONExtractRequiresJSONExpression = true
@@ -523,7 +525,7 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0)), "date_part_boundary": true})
 	}
 	out["TIMESTAMPDIFF"] = func(args []exp.Expression) exp.Expression {
-		return exp.TimestampDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0)), "date_part_boundary": true})
+		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0)), "date_part_boundary": true})
 	}
 	out["TIMEDIFF"] = func(args []exp.Expression) exp.Expression {
 		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})

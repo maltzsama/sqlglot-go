@@ -112,6 +112,8 @@ func BigQuery() *Dialect {
 	d.JSONPathVarDash = true
 	d.JSONPathVarNumber = true
 	d.LeastGreatestIgnoresNulls = false
+	// generators/bigquery.py:276 SUPPORTS_UNIX_SECONDS = True.
+	d.SupportsUnixSeconds = true
 	d.DefaultNullType = exp.DTypeBigInt
 	d.PrioritizeNonLiteralTypes = true
 	d.AliasPostVersion = false

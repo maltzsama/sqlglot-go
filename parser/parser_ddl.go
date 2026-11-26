@@ -111,6 +111,8 @@ func (p *Parser) parseCreateStructured(start tokens.Token) exp.Expression {
 	var indexes []exp.Expression
 	var noSchemaBinding any
 	var begin any
+	var clone exp.Expression
+	cloneCopy := false
 
 	switch {
 	case ctt == tokens.FUNCTION || ctt == tokens.PROCEDURE:
@@ -208,6 +210,18 @@ func (p *Parser) parseCreateStructured(start tokens.Token) exp.Expression {
 	default:
 		return nil
 	}
+	// parser.py:2703-2707: CREATE TABLE ... [SHALLOW] {CLONE|COPY} <table>, matched after the
+	// optional body/properties so COPY GRANTS on a view is not mistaken for a clone.
+	cloneShallow := false
+	if ctt == tokens.TABLE {
+		cloneShallow = p.matchTextSeq("SHALLOW")
+		if p.matchTextSeq("CLONE") {
+			clone = p.parseTable(true, false, nil, false, false, false, false)
+		} else if p.matchTextSeq("COPY") {
+			clone = p.parseTable(true, false, nil, false, false, false, false)
+			cloneCopy = true
+		}
+	}
 	if p.curr.IsValid() && !p.matchSet(rParenCommaSet, false) {
 		// Upstream degrades IN PLACE here (`return self._parse_as_command(start)`,
 		// parser.py:2624): the Command spans through the chunk the parse stopped in (a block
@@ -222,7 +236,7 @@ func (p *Parser) parseCreateStructured(start tokens.Token) exp.Expression {
 	if len(properties) > 0 {
 		propertiesNode = p.expression(exp.Properties(exp.Args{"expressions": properties}), nil, nil)
 	}
-	return p.expression(exp.Create(exp.Args{
+	create := p.expression(exp.Create(exp.Args{
 		"this":              this,
 		"kind":              kind,
 		"replace":           replace,
@@ -236,7 +250,15 @@ func (p *Parser) parseCreateStructured(start tokens.Token) exp.Expression {
 		"concurrently":      concurrently,
 		"begin":             begin,
 		"clustered":         clustered,
+		"clone":             clone,
 	}), nil, nil)
+	if create != nil && cloneCopy {
+		create.Meta()["clone_copy"] = true
+	}
+	if create != nil && cloneShallow {
+		create.Meta()["clone_shallow"] = true
+	}
+	return create
 }
 
 // parseUserDefinedFunction ports _parse_user_defined_function (parser.py:7114-7124): a

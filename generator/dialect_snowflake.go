@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -74,7 +75,7 @@ func init() {
 		expressions.KindApproximateSimilarity: clickhouseRename("APPROXIMATE_SIMILARITY"),
 		expressions.KindArgMax:                clickhouseRename("MAX_BY"),
 		expressions.KindArgMin:                clickhouseRename("MIN_BY"),
-		expressions.KindArray:                 func(g *Generator, e expressions.Expression) string { return g.inlineArraySQL(e) },
+		expressions.KindArray:                 snowflakeArraySQL,
 		// generators/snowflake.py:413 exp.ArrayConcat: array_concat_sql("ARRAY_CAT").
 		expressions.KindArrayConcat:       arrayConcatSQL("ARRAY_CAT"),
 		expressions.KindArrayAppend:       snowflakeArrayAppendSQL("ARRAY_APPEND", false),
@@ -146,31 +147,47 @@ func init() {
 		expressions.KindStrtok: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("STRTOK", []any{e.This(), e.Arg("delimiter"), e.Arg("part_index")}, "(", ")", true)
 		},
-		expressions.KindStddevSamp:         clickhouseRename("STDDEV"),
-		expressions.KindStuff:              clickhouseRename("INSERT"),
-		expressions.KindStPoint:            clickhouseRename("ST_MAKEPOINT"),
-		expressions.KindStringToArray:      clickhouseRename("STRTOK_TO_ARRAY"),
-		expressions.KindStrtokToArray:      clickhouseRename("STRTOK_TO_ARRAY"),
-		expressions.KindToArray:            clickhouseRename("TO_ARRAY"),
-		expressions.KindBooland:            clickhouseRename("BOOLAND"),
-		expressions.KindBoolor:             clickhouseRename("BOOLOR"),
-		expressions.KindLogicalAnd:         clickhouseRename("BOOLAND_AGG"),
-		expressions.KindLogicalOr:          clickhouseRename("BOOLOR_AGG"),
-		expressions.KindUnhex:              clickhouseRename("HEX_DECODE_BINARY"),
-		expressions.KindUuid:               clickhouseRename("UUID_STRING"),
-		expressions.KindJSONValueArray:     snowflakeJSONValueArraySQL,
-		expressions.KindJSONExtractArray:   snowflakeJSONValueArraySQL,
-		expressions.KindDateAdd:            snowflakeDateDeltaSQL("DATEADD"),
-		expressions.KindDateSub:            snowflakeDateDeltaSQL("DATEADD"),
-		expressions.KindDateDiff:           snowflakeDateDeltaSQL("DATEDIFF"),
-		expressions.KindDatetimeAdd:        snowflakeDateDeltaSQL("TIMESTAMPADD"),
-		expressions.KindDatetimeSub:        snowflakeDateDeltaSQL("TIMESTAMPADD"),
-		expressions.KindDatetimeDiff:       snowflakeDateDeltaSQL("TIMESTAMPDIFF"),
-		expressions.KindTimeAdd:            snowflakeDateDeltaSQL("TIMEADD"),
-		expressions.KindTimeSub:            snowflakeDateDeltaSQL("TIMEADD"),
-		expressions.KindTimestampAdd:       snowflakeDateDeltaSQL("DATEADD"),
-		expressions.KindTimestampSub:       snowflakeDateDeltaSQL("TIMESTAMPADD"),
-		expressions.KindTimestampDiff:      snowflakeDateDeltaSQL("DATEDIFF"),
+		expressions.KindStddevSamp:       clickhouseRename("STDDEV"),
+		expressions.KindStuff:            clickhouseRename("INSERT"),
+		expressions.KindStPoint:          clickhouseRename("ST_MAKEPOINT"),
+		expressions.KindStringToArray:    clickhouseRename("STRTOK_TO_ARRAY"),
+		expressions.KindStrtokToArray:    clickhouseRename("STRTOK_TO_ARRAY"),
+		expressions.KindToArray:          clickhouseRename("TO_ARRAY"),
+		expressions.KindBooland:          clickhouseRename("BOOLAND"),
+		expressions.KindBoolor:           clickhouseRename("BOOLOR"),
+		expressions.KindLogicalAnd:       clickhouseRename("BOOLAND_AGG"),
+		expressions.KindLogicalOr:        clickhouseRename("BOOLOR_AGG"),
+		expressions.KindUnhex:            clickhouseRename("HEX_DECODE_BINARY"),
+		expressions.KindUuid:             clickhouseRename("UUID_STRING"),
+		expressions.KindJSONValueArray:   snowflakeJSONValueArraySQL,
+		expressions.KindJSONExtractArray: snowflakeJSONQueryArraySQL,
+		expressions.KindDateAdd:          snowflakeDateDeltaSQL("DATEADD"),
+		expressions.KindDateSub:          snowflakeDateDeltaSubSQL("DATEADD"),
+		expressions.KindDateDiff:         snowflakeDateDeltaSQL("DATEDIFF"),
+		expressions.KindDatetimeAdd:      snowflakeDateDeltaSQL("TIMESTAMPADD"),
+		expressions.KindDatetimeSub:      snowflakeDateDeltaSQL("TIMESTAMPADD"),
+		expressions.KindDatetimeDiff:     snowflakeDateDeltaSQL("TIMESTAMPDIFF"),
+		expressions.KindTimeAdd:          snowflakeDateDeltaSQL("TIMEADD"),
+		expressions.KindTimeSub:          snowflakeDateDeltaSQL("TIMEADD"),
+		expressions.KindTimestampAdd:     snowflakeDateDeltaSQL("TIMESTAMPADD"),
+		expressions.KindTimestampSub:     snowflakeDateDeltaSubSQL("TIMESTAMPADD"),
+		expressions.KindTimestampDiff: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("TIMESTAMPDIFF", []any{e.Arg("unit"), e.Arg("expression"), e.This()}, "(", ")", true)
+		},
+		expressions.KindTryCast:            snowflakeTryCastSQL,
+		expressions.KindWhen:               snowflakeWhenSQL,
+		expressions.KindDot:                snowflakeDotSQL,
+		expressions.KindStrToDate:          snowflakeStrToDateSQL,
+		expressions.KindParseDatetime:      snowflakeParseDatetimeSQL,
+		expressions.KindTimestamp:          snowflakeTimestampSQL,
+		expressions.KindJSONExtractScalar:  snowflakeJSONExtractScalarSQL,
+		expressions.KindInt64:              snowflakeInt64SQL,
+		expressions.KindLowerHex:           snowflakeLowerHexSQL,
+		expressions.KindMakeInterval:       snowflakeMakeIntervalSQL,
+		expressions.KindIgnoreNulls:        snowflakeNullsModifierSQL(true),
+		expressions.KindRespectNulls:       snowflakeNullsModifierSQL(false),
+		expressions.KindArrayConcatAgg:     snowflakeArrayConcatAggSQL,
+		expressions.KindCurrentDate:        snowflakeCurrentDateSQL,
 		expressions.KindTimeDiff:           snowflakeDateDeltaSQL("DATEDIFF"),
 		expressions.KindTsOrDsAdd:          snowflakeDateDeltaSQL("DATEADD"),
 		expressions.KindTsOrDsDiff:         snowflakeDateDeltaSQL("DATEDIFF"),
@@ -325,6 +342,10 @@ func wrapBinaryExpr(expression expressions.Expression) expressions.Expression {
 // are folded into the dedicated generators (unnest_sql's alias handling covers part of
 // _qualify_unnested_columns, jsonextract_sql covers _eliminate_dot_variant_lookup).
 func snowflakeSelectSQL(g *Generator, e expressions.Expression) string {
+	snowflakeTransformGenerateDateArray(e)
+	snowflakeInlineNamedWindows(e)
+	snowflakeQualifyUnnestedColumns(e)
+	snowflakeEliminateDotVariantLookup(e)
 	explodeProjectionToUnnest(e, 0)
 	return g.selectSQL(e)
 }
@@ -697,6 +718,28 @@ func snowflakeStarSQL(g *Generator, e expressions.Expression) string {
 	return "*" + ilike + except + replace + rename
 }
 
+func snowflakeJSONPathSQL(g *Generator, path expressions.Expression) string {
+	if path != nil && path.Kind() == expressions.KindLiteral && path.IsString() {
+		text := path.Name()
+		text = strings.TrimPrefix(text, "$.")
+		text = strings.TrimPrefix(text, "$")
+		return "'" + strings.ReplaceAll(text, "'", "''") + "'"
+	}
+	if path != nil && path.Kind() == expressions.KindJSONPath {
+		parts := path.Expressions()
+		if len(parts) > 0 && parts[0].Kind() == expressions.KindJSONPathRoot {
+			parts = parts[1:]
+		}
+		path = expressions.JSONPath(expressions.Args{"expressions": parts})
+	}
+	pathSQL := g.gen(path)
+	if path != nil && (path.Kind() == expressions.KindJSONPath ||
+		(path.Kind() == expressions.KindLiteral && path.IsString())) && pathSQL != "''" {
+		pathSQL = strings.ReplaceAll(pathSQL, "''", "\\'")
+	}
+	return pathSQL
+}
+
 func snowflakeJSONExtractSQL(g *Generator, e expressions.Expression) string {
 	this := asExpression(e.Arg("this"))
 	if this != nil && this.Kind() != expressions.KindParseJSON &&
@@ -866,6 +909,25 @@ func snowflakeMinOrLeast(g *Generator, e expressions.Expression) string {
 }
 
 // snowflakeDateDeltaSQL ports date_delta_sql (dialects/dialect.py:2014-2026).
+// snowflakeDateDeltaSubSQL negates the count before DATEADD/TIMESTAMPADD (generators/
+// snowflake.py:977-1014): snowflake has no SUB form.
+func snowflakeDateDeltaSubSQL(name string) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		count := asExpression(e.Arg("expression"))
+		if count != nil {
+			count = expressions.Mul(expressions.Args{
+				"this":       count,
+				"expression": expressions.LiteralNumber("-1"),
+			})
+		}
+		return g.funcCall(name, []any{
+			snowflakeUnit(g, asExpression(e.Arg("unit"))),
+			count,
+			e.This(),
+		}, "(", ")", true)
+	}
+}
+
 func snowflakeDateDeltaSQL(name string) func(*Generator, expressions.Expression) string {
 	return func(g *Generator, e expressions.Expression) string {
 		return g.funcCall(name, []any{
@@ -944,10 +1006,6 @@ func snowflakeStrPositionSQL(g *Generator, e expressions.Expression) string {
 }
 
 // snowflakeJSONValueArraySQL renders JSON value arrays as ARRAY_AGG over GET_PATH.
-func snowflakeJSONValueArraySQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("JSON_EXTRACT_PATH_TEXT", []any{e.This(), e.Arg("expression")}, "(", ")", true)
-}
-
 // snowflakeTableSampleSQL ports tablesample_sql for the BERNOULLI default.
 func snowflakeTableSampleSQL(g *Generator, e expressions.Expression) string {
 	if e.Arg("method") == nil {
@@ -1273,4 +1331,511 @@ func snowflakeArrayAggSQL(g *Generator, e expressions.Expression) string {
 		return sql + " WITHIN GROUP (" + strings.TrimSpace(g.gen(order)) + ")"
 	}
 	return g.arrayAggSQL(e)
+}
+
+// snowflakeFormatTime converts a format literal through the inverse time mapping.
+func snowflakeFormatTime(g *Generator, e expressions.Expression) any {
+	format := asExpression(e.Arg("format"))
+	if format != nil && format.IsString() {
+		if converted, ok := dialects.FormatTime(format.Name(), g.dialect.InverseTimeMapping); ok {
+			return expressions.LiteralString(converted)
+		}
+	}
+	return format
+}
+
+func snowflakeStrToDateSQL(g *Generator, e expressions.Expression) string {
+	// generators/snowflake.py:571: StrToDate renders as DATE(value, format).
+	return g.funcCall("DATE", []any{e.This(), snowflakeFormatTime(g, e)}, "(", ")", true)
+}
+
+func snowflakeParseDatetimeSQL(g *Generator, e expressions.Expression) string {
+	// generator.py:4151-4156: PARSE_DATETIME keeps the raw format and drops default_year.
+	return g.funcCall("PARSE_DATETIME", []any{e.This(), e.Arg("format")}, "(", ")", true)
+}
+
+func snowflakeTimestampSQL(g *Generator, e expressions.Expression) string {
+	// generators/snowflake.py: exp.Timestamp: no_timestamp_sql. A zone reads the value there
+	// through CONVERT_TIMEZONE.
+	if zone := asExpression(e.Arg("zone")); zone != nil {
+		return g.gen(expressions.Anonymous(expressions.Args{
+			"this": "CONVERT_TIMEZONE",
+			"expressions": []expressions.Expression{
+				zone,
+				expressions.Cast(expressions.Args{"this": e.This(), "to": expressions.DTypeTimestamp.IntoExpr(nil)}),
+			},
+		}))
+	}
+	return g.gen(expressions.Cast(expressions.Args{
+		"this": e.This(), "to": expressions.DTypeTimestampTz.IntoExpr(nil),
+	}))
+}
+
+func snowflakeJSONExtractScalarSQL(g *Generator, e expressions.Expression) string {
+	return g.funcCall("JSON_EXTRACT_PATH_TEXT", []any{e.This(), snowflakeJSONPathSQL(g, asExpression(e.Arg("expression")))}, "(", ")", true)
+}
+
+func snowflakeJSONValueArraySQL(g *Generator, e expressions.Expression) string {
+	path := snowflakeJSONPathSQL(g, asExpression(e.Arg("expression")))
+	return "TRANSFORM(GET_PATH(PARSE_JSON(" + g.gen(e.This()) + "), " + path + "), x -> CAST(x AS VARCHAR))"
+}
+
+func snowflakeJSONQueryArraySQL(g *Generator, e expressions.Expression) string {
+	path := snowflakeJSONPathSQL(g, asExpression(e.Arg("expression")))
+	return "TRANSFORM(GET_PATH(PARSE_JSON(" + g.gen(e.This()) + "), " + path + "), x -> PARSE_JSON(TO_JSON(x)))"
+}
+
+func snowflakeInt64SQL(g *Generator, e expressions.Expression) string {
+	return g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": expressions.DTypeBigInt.IntoExpr(nil)}))
+}
+
+func snowflakeLowerHexSQL(g *Generator, e expressions.Expression) string {
+	// TO_HEX(SHA1(x)) becomes TO_CHAR(SHA1_BINARY(x)); other hex values keep HEX_ENCODE.
+	if this := asExpression(e.This()); this != nil && this.Kind() == expressions.KindSHA1Digest {
+		return g.funcCall("TO_CHAR", []any{expressions.Anonymous(expressions.Args{
+			"this": "SHA1_BINARY", "expressions": []expressions.Expression{this.This()},
+		})}, "(", ")", true)
+	}
+	return g.functionFallbackSQL(e)
+}
+
+func snowflakeMakeIntervalSQL(g *Generator, e expressions.Expression) string {
+	// no_make_interval_sql with sep=", " on Snowflake: lowercase units in source order.
+	defaultOrder := []string{"year", "month", "week", "day", "hour", "minute", "second"}
+	order := defaultOrder
+	if raw, ok := e.MetaGet("make_interval_order").([]string); ok && len(raw) > 0 {
+		order = append([]string{}, raw...)
+		for _, unit := range defaultOrder {
+			if !slices.Contains(order, unit) {
+				order = append(order, unit)
+			}
+		}
+	}
+	args := make([]string, 0, len(order))
+	for _, key := range order {
+		if value := asExpression(e.Arg(key)); value != nil {
+			if value.Kind() == expressions.KindKwarg {
+				value = asExpression(value.Arg("expression"))
+			}
+			args = append(args, g.gen(value)+" "+key)
+		}
+	}
+	return "INTERVAL '" + strings.Join(args, ", ") + "'"
+}
+
+func snowflakeNullsModifierSQL(ignore bool) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		// Snowflake ARRAY_AGG already applies its own NULL semantics; the modifier is dropped.
+		if this := asExpression(e.This()); this != nil && this.Kind() == expressions.KindArrayAgg {
+			return g.gen(this)
+		}
+		if ignore {
+			return g.ignoreNullsSQL(e)
+		}
+		return g.respectNullsSQL(e)
+	}
+}
+
+func snowflakeArrayConcatAggSQL(g *Generator, e expressions.Expression) string {
+	return g.funcCall("ARRAY_FLATTEN", []any{expressions.Anonymous(expressions.Args{
+		"this": "ARRAY_AGG", "expressions": []expressions.Expression{e.This()},
+	})}, "(", ")", true)
+}
+
+func snowflakeCurrentDateSQL(g *Generator, e expressions.Expression) string {
+	zone := asExpression(e.This())
+	if zone == nil {
+		return "CURRENT_DATE"
+	}
+	// generators/snowflake.py:1095-1100: CURRENT_DATE(zone) reads the current instant there.
+	return g.gen(expressions.Cast(expressions.Args{
+		"this": expressions.Anonymous(expressions.Args{
+			"this":        "CONVERT_TIMEZONE",
+			"expressions": []expressions.Expression{zone, expressions.Anonymous(expressions.Args{"this": "CURRENT_TIMESTAMP"})},
+		}),
+		"to": expressions.DTypeDate.IntoExpr(nil),
+	}))
+}
+
+// snowflakeTryCastSQL ports trycast_sql (generators/snowflake.py:762-776): Snowflake requires
+// TRY_CAST's value to be a string; anything else falls back to CAST.
+func snowflakeTryCastSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.This())
+	if truthy(e.Arg("requires_string")) || snowflakeIsText(this) {
+		return g.tryCastSQL(e)
+	}
+	return g.castSQL(e)
+}
+
+func snowflakeIsText(e expressions.Expression) bool {
+	if e == nil {
+		return false
+	}
+	if e.IsString() || e.Kind() == expressions.KindNational || e.Kind() == expressions.KindRawString {
+		return true
+	}
+	if dtype, ok := castResultDType(e); ok {
+		switch dtype {
+		case expressions.DTypeText, expressions.DTypeVarchar, expressions.DTypeChar,
+			expressions.DTypeNVarchar, expressions.DTypeNChar:
+			return true
+		}
+	}
+	return false
+}
+
+// snowflakeWhenSQL drops BY SOURCE, which Snowflake does not support.
+func snowflakeWhenSQL(g *Generator, e expressions.Expression) string {
+	if boolValue(e.Arg("source")) {
+		e.Set("source", false)
+	}
+	return g.whenSQL(e)
+}
+
+// snowflakeInlineNamedWindows ports eliminate_window_clause (transforms.py:1001-1029) for the
+// simple inheritance form: every OVER <name> copies the named window's parts.
+func snowflakeInlineNamedWindows(selectExpr expressions.Expression) {
+	defs, _ := selectExpr.Arg("windows").([]expressions.Expression)
+	if len(defs) == 0 {
+		return
+	}
+	byName := map[string]expressions.Expression{}
+	for _, def := range defs {
+		if def == nil {
+			continue
+		}
+		name := strings.ToLower(def.Name())
+		if inherited := byName[strings.ToLower(def.Name())]; inherited != nil {
+			def.Set("alias", nil)
+		}
+		byName[name] = def
+	}
+	for _, window := range selectExpr.FindAll(expressions.KindWindow) {
+		if window == nil {
+			continue
+		}
+		isDef := false
+		for _, def := range defs {
+			if window == def {
+				isDef = true
+				break
+			}
+		}
+		if isDef {
+			continue
+		}
+		alias := asExpression(window.Arg("alias"))
+		if alias == nil {
+			continue
+		}
+		def := byName[strings.ToLower(alias.Name())]
+		if def == nil {
+			continue
+		}
+		window.Set("alias", nil)
+		for _, key := range []string{"partition_by", "order", "spec"} {
+			if value := def.Arg(key); value != nil {
+				window.Set(key, value)
+			}
+		}
+	}
+	selectExpr.Set("windows", nil)
+}
+
+// snowflakeArraySQL renders ARRAY(SELECT AS STRUCT ...) as an ARRAY_AGG(OBJECT_CONSTRUCT(...))
+// subquery (generators/snowflake.py array/STRUCT handling).
+func snowflakeArraySQL(g *Generator, e expressions.Expression) string {
+	if truthy(e.Arg("struct_name_inheritance")) {
+		items := e.Expressions()
+		if len(items) > 0 && items[0] != nil && items[0].Kind() == expressions.KindStruct {
+			first := items[0].Expressions()
+			named := len(first) > 0
+			for _, field := range first {
+				if field == nil || field.Kind() != expressions.KindPropertyEQ {
+					named = false
+					break
+				}
+			}
+			if named {
+				for _, item := range items[1:] {
+					if item == nil || item.Kind() != expressions.KindStruct || len(item.Expressions()) != len(first) {
+						continue
+					}
+					fields := make([]expressions.Expression, len(first))
+					for i, field := range item.Expressions() {
+						if field != nil && field.Kind() == expressions.KindPropertyEQ {
+							fields[i] = field
+							continue
+						}
+						fields[i] = expressions.PropertyEQ(expressions.Args{
+							"this":       asExpression(first[i].Arg("this")).Copy(),
+							"expression": field,
+						})
+					}
+					item.Set("expressions", fields)
+				}
+			}
+		}
+	}
+	items := e.Expressions()
+	if len(items) == 1 && items[0] != nil && items[0].Kind() == expressions.KindSelect &&
+		strings.EqualFold(items[0].Text("kind"), "STRUCT") {
+		query := items[0]
+		args := make([]expressions.Expression, 0, len(query.Expressions())*2)
+		for _, item := range query.Expressions() {
+			if item == nil {
+				continue
+			}
+			if item.Kind() == expressions.KindAlias {
+				args = append(args, expressions.LiteralString(asExpression(item.Arg("alias")).Name()), item.This())
+				continue
+			}
+			if name := item.OutputName(); name != "" {
+				args = append(args, expressions.LiteralString(name), item)
+				continue
+			}
+			args = append(args, item)
+		}
+		agg := expressions.Anonymous(expressions.Args{
+			"this": "ARRAY_AGG",
+			"expressions": []expressions.Expression{expressions.Anonymous(expressions.Args{
+				"this": "OBJECT_CONSTRUCT", "expressions": args,
+			})},
+		})
+		clone := query.Copy()
+		clone.Set("kind", nil)
+		clone.Set("expressions", []expressions.Expression{agg})
+		return "(" + g.gen(clone) + ")"
+	}
+	return g.inlineArraySQL(e)
+}
+
+// snowflakeDotSQL keeps the Snowflake colon form for a field of an OBJECT cast.
+func snowflakeDotSQL(g *Generator, e expressions.Expression) string {
+	if left := asExpression(e.This()); left != nil && left.Kind() == expressions.KindCast {
+		if to := asExpression(left.Arg("to")); to != nil {
+			dtype, _ := to.Arg("this").(expressions.DType)
+			if dtype == expressions.DTypeStruct || dtype == expressions.DTypeObject {
+				return g.gen(left) + ":" + g.gen(e.Arg("expression"))
+			}
+		}
+	}
+	return g.dotSQL(e)
+}
+
+// snowflakeUnnestStructColumns returns the struct field names an UNNEST can produce.
+func snowflakeUnnestStructColumns(unnest expressions.Expression) []string {
+	for _, value := range unnest.Expressions() {
+		array := asExpression(value)
+		if array == nil || array.Kind() != expressions.KindArray {
+			continue
+		}
+		for _, item := range array.Expressions() {
+			st := asExpression(item)
+			if st == nil || st.Kind() != expressions.KindStruct || len(st.Expressions()) == 0 {
+				continue
+			}
+			names := make([]string, 0, len(st.Expressions()))
+			ok := true
+			for _, field := range st.Expressions() {
+				if field == nil || field.Kind() != expressions.KindPropertyEQ {
+					ok = false
+					break
+				}
+				names = append(names, field.Name())
+			}
+			if ok && len(names) > 0 {
+				return names
+			}
+		}
+	}
+	return nil
+}
+
+// snowflakeQualifyUnnestedColumns ports _qualify_unnested_columns (generators/snowflake.py:
+// 245-333): a struct field projected from UNNEST is qualified with the flattened value name.
+func snowflakeQualifyUnnestedColumns(selectExpr expressions.Expression) {
+	var unnests []expressions.Expression
+	for _, unnest := range selectExpr.FindAll(expressions.KindUnnest) {
+		if unnest == nil {
+			continue
+		}
+		parent := unnest.Parent()
+		if parent == nil || (parent.Kind() != expressions.KindFrom && parent.Kind() != expressions.KindJoin) {
+			continue
+		}
+		unnests = append(unnests, unnest)
+	}
+	if len(unnests) == 0 {
+		return
+	}
+	columnSource := map[string]expressions.Expression{}
+	var unnestIdentifier expressions.Expression
+	for _, unnest := range unnests {
+		alias := asExpression(unnest.Arg("alias"))
+		var identifier expressions.Expression
+		if alias != nil {
+			identifier = alias.This()
+			if identifier == nil {
+				if cols := listFromValue(alias.Arg("columns")); len(cols) > 0 {
+					identifier = asExpression(cols[0])
+				}
+			}
+		}
+		if identifier == nil {
+			identifier = expressions.ToIdentifier("value", false)
+			unnest.Set("alias", expressions.TableAlias(expressions.Args{
+				"columns": []expressions.Expression{identifier.Copy()},
+			}))
+		}
+		for _, name := range snowflakeUnnestStructColumns(unnest) {
+			columnSource[strings.ToLower(name)] = identifier.Copy()
+		}
+		unnestIdentifier = identifier
+	}
+	sourceCount := 0
+	if from := asExpression(selectExpr.Arg("from_")); from != nil && from.This() != nil {
+		sourceCount++
+	}
+	for _, join := range listFromValue(selectExpr.Arg("joins")) {
+		if asExpression(join) != nil {
+			sourceCount++
+		}
+	}
+	for _, column := range selectExpr.FindAll(expressions.KindColumn) {
+		if column == nil || asExpression(column.Arg("table")) != nil {
+			continue
+		}
+		if !snowflakeColumnInSelect(column, selectExpr) {
+			continue
+		}
+		// A column inside the UNNEST argument belongs to the outer scope, not the flattened
+		// row; only an exact struct-field match (a sibling UNNEST argument) is qualified.
+		if ancestor := column.FindAncestor(expressions.KindUnnest, expressions.KindSelect); ancestor != nil &&
+			ancestor.Kind() == expressions.KindUnnest {
+			if table := columnSource[strings.ToLower(column.Name())]; table != nil {
+				column.Set("table", table.Copy())
+			}
+			continue
+		}
+		table := columnSource[strings.ToLower(column.Name())]
+		if table == nil && unnestIdentifier != nil && sourceCount == 1 && !strings.EqualFold(column.Name(), unnestIdentifier.Name()) {
+			table = unnestIdentifier
+		}
+		if table != nil {
+			column.Set("table", table.Copy())
+		}
+	}
+}
+
+// snowflakeColumnInSelect reports whether the column's nearest SELECT ancestor is the one
+// being transformed (upstream iterates only the current scope's columns).
+func snowflakeColumnInSelect(column, selectExpr expressions.Expression) bool {
+	ancestor := column.FindAncestor(expressions.KindSelect)
+	return ancestor == selectExpr
+}
+
+// snowflakeEliminateDotVariantLookup ports _eliminate_dot_variant_lookup
+// (generators/snowflake.py:336-369): a column read off a columns-only UNNEST alias becomes a
+// bracketed object lookup, aliased when it is a top-level projection.
+func snowflakeEliminateDotVariantLookup(selectExpr expressions.Expression) {
+	aliases := map[string]bool{}
+	for _, unnest := range selectExpr.FindAll(expressions.KindUnnest) {
+		if unnest == nil {
+			continue
+		}
+		alias := asExpression(unnest.Arg("alias"))
+		if alias == nil || alias.This() != nil {
+			continue
+		}
+		cols := listFromValue(alias.Arg("columns"))
+		if len(cols) == 1 {
+			aliases[strings.ToLower(asExpression(cols[0]).Name())] = true
+		}
+	}
+	if len(aliases) == 0 {
+		return
+	}
+	for _, column := range selectExpr.FindAll(expressions.KindColumn) {
+		tableExpr := asExpression(column.Arg("table"))
+		if tableExpr == nil || !aliases[strings.ToLower(tableExpr.Name())] {
+			continue
+		}
+		if !snowflakeColumnInSelect(column, selectExpr) {
+			continue
+		}
+		bracket := expressions.Bracket(expressions.Args{
+			"this":        tableExpr.Copy(),
+			"expressions": []expressions.Expression{expressions.LiteralString(column.Name())},
+		})
+		if column.Parent() == selectExpr {
+			column.Replace(expressions.AliasExpr(bracket, asExpression(column.Arg("this")).Copy(), false))
+		} else {
+			column.Replace(bracket)
+		}
+	}
+}
+
+// snowflakeTransformGenerateDateArray ports _transform_generate_date_array and
+// _unnest_generate_date_array (generators/snowflake.py:118-199) for a step of one unit.
+func snowflakeTransformGenerateDateArray(selectExpr expressions.Expression) {
+	for _, series := range selectExpr.FindAll(expressions.KindGenerateDateArray) {
+		unnest := series.Parent()
+		if unnest == nil || unnest.Kind() != expressions.KindUnnest || len(unnest.Expressions()) != 1 {
+			continue
+		}
+		join := unnest.Parent()
+		if join == nil || join.Kind() != expressions.KindJoin {
+			continue
+		}
+		start := asExpression(series.Arg("start"))
+		end := asExpression(series.Arg("end"))
+		step := asExpression(series.Arg("step"))
+		if start == nil || end == nil || step == nil || step.Kind() != expressions.KindInterval || step.Name() != "1" {
+			continue
+		}
+		unit := asExpression(step.Arg("unit"))
+		if unit == nil {
+			continue
+		}
+		alias := asExpression(unnest.Arg("alias"))
+		var valueName expressions.Expression
+		if alias != nil {
+			if cols := listFromValue(alias.Arg("columns")); len(cols) > 0 {
+				valueName = asExpression(cols[0])
+			}
+		}
+		if valueName == nil {
+			valueName = expressions.ToIdentifier("value", false)
+		}
+		dateAdd := expressions.DateAdd(expressions.Args{
+			"this":       expressions.Cast(expressions.Args{"this": start.Copy(), "to": expressions.DTypeDate.IntoExpr(nil)}),
+			"expression": expressions.Cast(expressions.Args{"this": valueName.Copy(), "to": expressions.DTypeInt.IntoExpr(nil)}),
+			"unit":       unit.Copy(),
+		})
+		diff := expressions.DateDiff(expressions.Args{
+			"this":       end.Copy(),
+			"expression": start.Copy(),
+			"unit":       unit.Copy(),
+		})
+		count := expressions.Add(expressions.Args{"this": diff, "expression": expressions.LiteralNumber("1")})
+		unnest.Set("expressions", []expressions.Expression{expressions.GenerateSeries(expressions.Args{
+			"start":            expressions.LiteralNumber("0"),
+			"end":              count,
+			"is_end_exclusive": true,
+		})})
+		replaceName := valueName.Name()
+		for _, column := range selectExpr.FindAll(expressions.KindColumn) {
+			if column == nil || !strings.EqualFold(column.Name(), replaceName) || !snowflakeColumnInSelect(column, selectExpr) {
+				continue
+			}
+			if column.Parent() == selectExpr {
+				column.Replace(expressions.AliasExpr(dateAdd.Copy(), expressions.ToIdentifier(replaceName, false), false))
+			} else {
+				column.Replace(dateAdd.Copy())
+			}
+		}
+		join.Set("this", expressions.Lateral(expressions.Args{"this": unnest}))
+		join.Set("kind", nil)
+	}
 }
