@@ -2815,6 +2815,29 @@ func (g *Generator) unnestSQL(e expressions.Expression) string {
 	return "UNNEST(" + args + ")" + suffix
 }
 
+// bracketIndexValue reads an integer index, including the Neg literal form the parser and
+// LiteralNumber use for a negative value.
+func bracketIndexValue(index expressions.Expression) (int64, bool) {
+	if index == nil {
+		return 0, false
+	}
+	if index.Kind() == expressions.KindNeg {
+		inner := index.This()
+		if inner == nil || inner.Kind() != expressions.KindLiteral || !inner.IsInt() {
+			return 0, false
+		}
+		if n, ok := inner.ToPy().(int64); ok {
+			return -n, true
+		}
+		return 0, false
+	}
+	if index.Kind() != expressions.KindLiteral || !index.IsInt() {
+		return 0, false
+	}
+	n, ok := index.ToPy().(int64)
+	return n, ok
+}
+
 // isMapTypedExpression reports whether an expression is a cast to a MAP/OBJECT type, the case
 // apply_index_offset (expressions/builders.py:1117-1121) excludes from index shifting.
 func isMapTypedExpression(e expressions.Expression) bool {
@@ -2849,10 +2872,8 @@ func (g *Generator) bracketSQL(e expressions.Expression) string {
 			offset = 0
 		}
 		if offset != 0 && len(exprs) == 1 {
-			if idx := asExpression(exprs[0]); idx != nil && idx.Kind() == expressions.KindLiteral && idx.IsInt() {
-				if value, ok := idx.ToPy().(int64); ok {
-					exprs[0] = expressions.LiteralNumber(fmt.Sprintf("%d", value+int64(offset)))
-				}
+			if value, ok := bracketIndexValue(asExpression(exprs[0])); ok {
+				exprs[0] = expressions.LiteralNumber(fmt.Sprintf("%d", value+int64(offset)))
 			}
 		}
 	}

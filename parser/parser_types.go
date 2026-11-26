@@ -786,15 +786,34 @@ func applyBracketIndexOffset(this exp.Expression, expressions []exp.Expression, 
 	if isMapTypeCast(this) {
 		return expressions
 	}
-	index := expressions[0]
-	if index == nil || index.Kind() != exp.KindLiteral || !index.IsInt() {
-		return expressions
-	}
-	value, ok := index.ToPy().(int64)
+	value, ok := bracketIndexValue(expressions[0])
 	if !ok {
 		return expressions
 	}
 	return []exp.Expression{exp.LiteralNumber(fmt.Sprintf("%d", value+int64(offset)))}
+}
+
+// bracketIndexValue reads an integer index, including the Neg literal form LiteralNumber
+// produces for a negative value (expressions/core.go:1694-1704).
+func bracketIndexValue(index exp.Expression) (int64, bool) {
+	if index == nil {
+		return 0, false
+	}
+	if index.Kind() == exp.KindNeg {
+		inner := index.This()
+		if inner == nil || inner.Kind() != exp.KindLiteral || !inner.IsInt() {
+			return 0, false
+		}
+		if n, ok := inner.ToPy().(int64); ok {
+			return -n, true
+		}
+		return 0, false
+	}
+	if index.Kind() != exp.KindLiteral || !index.IsInt() {
+		return 0, false
+	}
+	n, ok := index.ToPy().(int64)
+	return n, ok
 }
 
 // isMapTypeCast reports whether an expression is a CAST/TRY_CAST to MAP or OBJECT.

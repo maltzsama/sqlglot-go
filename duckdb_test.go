@@ -452,4 +452,7 @@ func TestDuckDBMacroOverloads(t *testing.T) {
 func TestDuckDBMapIndexRoundTrip(t *testing.T) {
 	assertRoundTrip(t, "duckdb", "SELECT CAST(MAP() AS MAP(TEXT, INT))[0]", "SELECT CAST(MAP() AS MAP(TEXT, INT))[0]")
 	assertRoundTrip(t, "duckdb", "SELECT TRY_CAST(MAP() AS MAP(TEXT, INT))[0]", "SELECT TRY_CAST(MAP() AS MAP(TEXT, INT))[0]")
+	// A normalized negative index must still shift back to the user's written index.
+	assertRoundTrip(t, "duckdb", "SELECT a[0]", "SELECT a[0]")
+	assertRoundTrip(t, "duckdb", "SELECT a[-1]", "SELECT a[-1]")
 }

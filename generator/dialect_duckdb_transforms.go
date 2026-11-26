@@ -998,6 +998,7 @@ func duckDBSplitPartSQL(g *Generator, e expressions.Expression) string {
 	if delimiter == nil || partIndex == nil {
 		return g.functionFallbackSQL(e)
 	}
+	originalPartIndex := partIndex
 	if truthy(e.Arg("part_index_zero_as_one")) {
 		// generators/duckdb.py:4036-4044: Snowflake treats 0 and 1 as the first element.
 		partIndex = expressions.Paren(expressions.Args{"this": expressions.Case(expressions.Args{
@@ -1012,14 +1013,23 @@ func duckDBSplitPartSQL(g *Generator, e expressions.Expression) string {
 	if !truthy(e.Arg("empty_delimiter_returns_whole")) {
 		return g.gen(base)
 	}
+	emptyIfs := []expressions.Expression{}
+	if !originalPartIndex.IsInt() {
+		// A NULL index stays NULL instead of matching neither branch and returning ''.
+		emptyIfs = append(emptyIfs, expressions.If(expressions.Args{
+			"this": expressions.Is(expressions.Args{"this": partIndex.Copy(), "expression": expressions.Null()}),
+			"true": expressions.Null(),
+		}))
+	}
+	emptyIfs = append(emptyIfs, expressions.If(expressions.Args{
+		"this": duckDBConnectorExpr(expressions.KindOr, []expressions.Expression{
+			expressions.EQ(expressions.Args{"this": partIndex.Copy(), "expression": expressions.LiteralNumber("1")}),
+			expressions.EQ(expressions.Args{"this": partIndex.Copy(), "expression": expressions.LiteralNumber("-1")}),
+		}),
+		"true": e.This(),
+	}))
 	emptyCase := expressions.Paren(expressions.Args{"this": expressions.Case(expressions.Args{
-		"ifs": []expressions.Expression{expressions.If(expressions.Args{
-			"this": duckDBConnectorExpr(expressions.KindOr, []expressions.Expression{
-				expressions.EQ(expressions.Args{"this": partIndex.Copy(), "expression": expressions.LiteralNumber("1")}),
-				expressions.EQ(expressions.Args{"this": partIndex.Copy(), "expression": expressions.LiteralNumber("-1")}),
-			}),
-			"true": e.This(),
-		})},
+		"ifs":     emptyIfs,
 		"default": expressions.LiteralString(""),
 	})})
 	return g.gen(expressions.Case(expressions.Args{
@@ -1041,6 +1051,13 @@ func duckDBSplitSQL(g *Generator, e expressions.Expression) string {
 			"this": expressions.Is(expressions.Args{"this": delimiter.Copy(), "expression": expressions.Null()}),
 			"true": expressions.Null(),
 		}))
+		if input := e.This(); input != nil && !input.IsString() {
+			// SPLIT(NULL, '') must be NULL, not [NULL]; a literal input cannot be NULL.
+			ifs = append(ifs, expressions.If(expressions.Args{
+				"this": expressions.Is(expressions.Args{"this": input.Copy(), "expression": expressions.Null()}),
+				"true": expressions.Null(),
+			}))
+		}
 	}
 	if truthy(e.Arg("empty_delimiter_returns_whole")) {
 		ifs = append(ifs, expressions.If(expressions.Args{
@@ -2822,9 +2839,13 @@ func duckDBAnonymousSQL(g *Generator, e expressions.Expression) string {
 		}
 		key := asExpression(args[1])
 		value := g.gen(args[2])
-		keyName := ""
-		if key != nil {
-			keyName = key.Name()
+		if key == nil || !key.IsString() {
+			g.unsupported("OBJECT_INSERT requires a literal key")
+			return g.anonymousSQL(e)
+		}
+		keyName := key.Name()
+		if !safeIdentifierRE.MatchString(keyName) {
+			keyName = g.identifierStart + keyName + g.identifierEnd
 		}
 		pair := keyName + " := " + value
 		if inner := asExpression(args[0]); inner != nil &&
