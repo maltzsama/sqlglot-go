@@ -153,7 +153,7 @@ func sparkDateDiffSQL(g *Generator, e expressions.Expression) string {
 	end := g.sqlKey(e, "this")
 	start := g.sqlKey(e, "expression")
 	if unit := asExpression(e.Arg("unit")); unit != nil {
-		return g.funcCall("DATEDIFF", []any{unitToVarValue(unit), start, end}, "(", ")", true)
+		return g.funcCall("DATEDIFF", []any{expressions.Var(expressions.Args{"this": strings.ToUpper(unit.Name())}), start, end}, "(", ")", true)
 	}
 	return g.funcCall("DATEDIFF", []any{end, start}, "(", ")", true)
 }

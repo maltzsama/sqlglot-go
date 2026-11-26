@@ -336,11 +336,105 @@ func (g *Generator) orderedSQL(e expressions.Expression) string {
 	} else if nullsLast && ((asc && nullsAreSmall) || (desc && nullsAreLarge)) && !nullsAreLast {
 		nullsSortChange = " NULLS LAST"
 	}
+	if nullsSortChange != "" {
+		switch supported := g.dialect.NullOrderingSupported; {
+		case supported == nil:
+			if window := e.FindAncestor(expressions.KindWindow, expressions.KindSelect); window != nil && window.Kind() == expressions.KindWindow {
+				windowThis := asExpression(window.This())
+				for windowThis != nil && (windowThis.Kind() == expressions.KindIgnoreNulls || windowThis.Kind() == expressions.KindRespectNulls) {
+					windowThis = asExpression(windowThis.This())
+				}
+				if windowThis != nil && window.Arg("spec") != nil {
+					g.unsupported("'" + strings.TrimSpace(nullsSortChange) + "' translation not supported in window function " + expressions.ClassName(windowThis.Kind()))
+					nullsSortChange = ""
+				}
+			}
+			if nullsSortChange != "" {
+				orderedThis := asExpression(e.This())
+				if orderedThis != nil && orderedThis.IsInt() {
+					g.unsupported("'" + strings.TrimSpace(nullsSortChange) + "' translation not supported with positional ordering")
+					nullsSortChange = ""
+				} else if orderedThis != nil && orderedThis.Kind() != expressions.KindRand {
+					target := g.resolveOrderedForNullOrdering(e)
+					targetSQL := this
+					if target != nil {
+						targetSQL = g.gen(target)
+					}
+					nullSortOrder := ""
+					if nullsSortChange == " NULLS FIRST" {
+						nullSortOrder = " DESC"
+					}
+					this = "CASE WHEN " + targetSQL + " IS NULL THEN 1 ELSE 0 END" + nullSortOrder + ", " + targetSQL
+					nullsSortChange = ""
+				}
+			}
+		case !*supported:
+			if (asc && nullsSortChange == " NULLS LAST") || (desc && nullsSortChange == " NULLS FIRST") {
+				ancestor := e.Parent()
+				for ancestor != nil && !ancestor.Is(expressions.TraitAggFunc) &&
+					ancestor.Kind() != expressions.KindWindow && ancestor.Kind() != expressions.KindSelect {
+					ancestor = ancestor.Parent()
+				}
+				if ancestor != nil && ancestor.Kind() == expressions.KindWindow {
+					ancestor = asExpression(ancestor.This())
+				}
+				if ancestor != nil && ancestor.Is(expressions.TraitAggFunc) &&
+					!bigQueryWindowFuncWithNullOrdering(ancestor.Kind()) {
+					g.unsupported("'" + strings.TrimSpace(nullsSortChange) + "' translation not supported for aggregate function " + expressions.ClassName(ancestor.Kind()) + " with" + sortOrder + " sort order")
+					nullsSortChange = ""
+				}
+			}
+		}
+	}
 	withFill := g.sqlKey(e, "with_fill")
 	if withFill != "" {
 		withFill = " " + withFill
 	}
 	return this + sortOrder + nullsSortChange + withFill
+}
+
+// resolveOrderedForNullOrdering ports _resolve_ordered_for_null_ordering_simulation
+// (generator.py:3119-3151): substitute a bare ORDER BY name with its unique projection.
+func (g *Generator) resolveOrderedForNullOrdering(e expressions.Expression) expressions.Expression {
+	this := asExpression(e.This())
+	if this == nil || this.Kind() != expressions.KindColumn || this.Arg("table") != nil {
+		return nil
+	}
+	ancestor := e.FindAncestor(expressions.KindSelect, expressions.KindWindow)
+	if ancestor == nil || ancestor.Kind() != expressions.KindSelect {
+		return nil
+	}
+	name := this.Name()
+	var matches []expressions.Expression
+	for _, projection := range ancestor.Expressions() {
+		if projection.OutputName() != name {
+			continue
+		}
+		if projection.Kind() == expressions.KindAlias {
+			projection = asExpression(projection.This())
+		}
+		matches = append(matches, projection)
+	}
+	if len(matches) != 1 {
+		return nil
+	}
+	match := matches[0]
+	if match != nil && match.Kind() == expressions.KindColumn && match.Arg("table") == nil && match.Name() == name {
+		return nil
+	}
+	return match
+}
+
+// bigQueryWindowFuncWithNullOrdering lists generators/bigquery.py:281-295.
+func bigQueryWindowFuncWithNullOrdering(k expressions.Kind) bool {
+	switch k {
+	case expressions.KindCumeDist, expressions.KindDenseRank, expressions.KindFirstValue,
+		expressions.KindLag, expressions.KindLastValue, expressions.KindLead,
+		expressions.KindNthValue, expressions.KindNtile, expressions.KindPercentRank,
+		expressions.KindRank, expressions.KindRowNumber:
+		return true
+	}
+	return false
 }
 
 func (g *Generator) limitSQL(e expressions.Expression) string {

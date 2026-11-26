@@ -418,3 +418,28 @@ func strPositionTranspileSQL(name string, supportsPosition, supportsOccurrence b
 		return g.gen(build())
 	}
 }
+
+// structExtractSQL ports struct_extract_sql (dialects/dialect.py:1364-1367): a field
+// access rendered as `<this>.<field>`.
+func structExtractSQL(g *Generator, e expressions.Expression) string {
+	field := asExpression(e.Arg("expression"))
+	name := ""
+	if field != nil {
+		name = field.Name()
+	}
+	return g.sqlKey(e, "this") + "." + g.gen(expressions.ToIdentifier(name))
+}
+
+// percentileOrderedSQL renders DuckDB's PERCENTILE_CONT(x, q) as the ordered-set form
+// `PERCENTILE_CONT(q) WITHIN GROUP (ORDER BY x)`; inside an existing WITHIN GROUP the
+// upstream node shape already carries the quantile in "this".
+func percentileOrderedSQL(name string) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		if parent := e.Parent(); parent != nil && parent.Kind() == expressions.KindWithinGroup {
+			return name + "(" + g.sqlKey(e, "this") + ")"
+		}
+		quantile := asExpression(e.Arg("expression"))
+		this := asExpression(e.This())
+		return name + "(" + g.gen(quantile) + ") WITHIN GROUP (ORDER BY " + g.gen(this) + ")"
+	}
+}

@@ -37,6 +37,15 @@ func init() {
 			tokens.SESSION_USER:    func(exp.Args) exp.Expression { return exp.SessionUser(exp.Args{}) },
 		},
 		// parsers/duckdb.py:241-250 NO_PAREN_FUNCTION_PARSERS.
+		// parsers/duckdb.py:205-208 FUNCTIONS_WITH_ALIASED_ARGS entry parsing GROUP_CONCAT/
+		// LISTAGG/STRINGAGG through _parse_string_agg.
+		FunctionParsers: map[string]parserOverrideFunc{
+			"APPROX_QUANTILE": func(p *Parser) exp.Expression { return p.parseDistinctArgFunction(exp.KindApproxQuantile, 0) },
+			"QUANTILE":        func(p *Parser) exp.Expression { return p.parseDistinctArgFunction(exp.KindQuantile, 0) },
+			"GROUP_CONCAT":    (*Parser).parseStringAgg,
+			"LISTAGG":         (*Parser).parseStringAgg,
+			"STRINGAGG":       (*Parser).parseStringAgg,
+		},
 		NoParenFunctionParsers: map[string]parserOverrideFunc{
 			"MAP": (*Parser).parseDuckDBMap,
 			"@": func(p *Parser) exp.Expression {

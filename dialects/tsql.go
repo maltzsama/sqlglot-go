@@ -13,6 +13,8 @@ func TSQL() *Dialect {
 	// dialects/tsql.py CONCAT_WS_COALESCE = True.
 	d.ConcatWsCoalesce = true
 	d.Name = "tsql"
+	// generators/mysql.py:124 / generators/tsql.py:138 NULL_ORDERING_SUPPORTED = None.
+	d.NullOrderingSupported = nil
 	// generators/tsql.py TRANSFORMS: eliminate_distinct_on.
 	d.EliminateDistinctOn = true
 	// generators/tsql.py TRANSFORMS: eliminate_semi_and_anti_joins.

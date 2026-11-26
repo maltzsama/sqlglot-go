@@ -12,6 +12,9 @@ import (
 // .reference/sqlglot-v30.17.0/sqlglot/generators/tsql.py:121-655.
 func init() {
 	registerDialectDispatch("tsql", map[exp.Kind]func(*Generator, exp.Expression) string{
+		exp.KindArrayToString: func(g *Generator, e exp.Expression) string {
+			return g.funcCall("STRING_AGG", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+		},
 		exp.KindAnyValue: func(g *Generator, e exp.Expression) string { return g.funcCall("MAX", []any{e.This()}, "(", ")", true) },
 		exp.KindAtan2: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("ATN2", g.fallbackArgs(e), "(", ")", true)
@@ -899,7 +902,11 @@ func (g *Generator) tsqlPartitionSQL(e exp.Expression) string {
 func (g *Generator) tsqlAlterSQL(e exp.Expression) string {
 	actions, _ := e.Arg("actions").([]exp.Expression)
 	if len(actions) > 0 && actions[0] != nil && actions[0].Kind() == exp.KindAlterRename {
-		return "EXEC sp_rename '" + g.sqlKey(e, "this") + "', '" + actions[0].Name() + "'"
+		newName := actions[0].Name()
+		if target := asExpression(actions[0].This()); target != nil && target.Kind() == exp.KindTable {
+			newName = target.Name()
+		}
+		return "EXEC sp_rename '" + g.sqlKey(e, "this") + "', '" + newName + "'"
 	}
 	return g.alterSQL(e)
 }

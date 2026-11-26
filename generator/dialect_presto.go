@@ -10,9 +10,10 @@ import (
 // generators/presto.py:303; cross-dialect Select preprocessing is intentionally omitted.
 func init() {
 	table := map[exp.Kind]func(*Generator, exp.Expression) string{
-		exp.KindTimeToStr: (*Generator).prestoTimeToStrSQL,
-		exp.KindStrToTime: (*Generator).prestoStrToTimeSQL,
-		exp.KindStrToDate: func(g *Generator, e exp.Expression) string { return "CAST(" + g.prestoStrToTimeSQL(e) + " AS DATE)" },
+		exp.KindStructExtract: structExtractSQL,
+		exp.KindTimeToStr:     (*Generator).prestoTimeToStrSQL,
+		exp.KindStrToTime:     (*Generator).prestoStrToTimeSQL,
+		exp.KindStrToDate:     func(g *Generator, e exp.Expression) string { return "CAST(" + g.prestoStrToTimeSQL(e) + " AS DATE)" },
 		exp.KindTimestampTrunc: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("DATE_TRUNC", []any{prestoUnit(e), e.Arg("this")}, "(", ")", true)
 		},
@@ -25,7 +26,11 @@ func init() {
 		},
 		exp.KindDecode:         prestoCall("FROM_UTF8", "this", "replace"),
 		exp.KindEncode:         prestoCall("TO_UTF8", "this", "replace"),
-		exp.KindUnixToTime:     prestoCall("FROM_UNIXTIME", "this", "zone", "hours", "minutes"),
+		exp.KindUnixToTime:     prestoUnixToTimeSQL,
+		exp.KindSortArray:      prestoSortArraySQL,
+		exp.KindArrayToString:  prestoCall("ARRAY_JOIN", "this", "expression"),
+		exp.KindQuantile:       prestoCall("APPROX_PERCENTILE", "this", "quantile"),
+		exp.KindLastDay:        prestoCall("LAST_DAY_OF_MONTH", "this"),
 		exp.KindGenerateSeries: prestoCall("SEQUENCE", "start", "end", "step"),
 		// generators/presto.py:393 exp.StrPosition: strposition_sql(supports_occurrence=True).
 		exp.KindStrPosition: strPositionTranspileSQL("STRPOS", false, true),
@@ -407,4 +412,34 @@ func init() {
 		exp.KindArgMax: renameFunc("MAX_BY"),
 		exp.KindArgMin: renameFunc("MIN_BY"),
 	})
+}
+
+// prestoUnixToTimeSQL ports the Presto FROM_UNIXTIME transform for a scaled epoch.
+func prestoUnixToTimeSQL(g *Generator, e exp.Expression) string {
+	if scale := asExpression(e.Arg("scale")); scale != nil {
+		ts := exp.Div(exp.Args{
+			"this":       exp.Cast(exp.Args{"this": e.This(), "to": exp.DTypeDouble.IntoExpr(nil)}),
+			"expression": exp.Anonymous(exp.Args{"this": "POW", "expressions": []exp.Expression{exp.LiteralNumber("10"), scale}}),
+		})
+		return g.funcCall("FROM_UNIXTIME", []any{ts}, "(", ")", true)
+	}
+	return prestoCall("FROM_UNIXTIME", "this", "zone", "hours", "minutes")(g, e)
+}
+
+// prestoSortArraySQL ports the Presto ARRAY_SORT transform for SortArray.
+func prestoSortArraySQL(g *Generator, e exp.Expression) string {
+	asc := asExpression(e.Arg("asc"))
+	if asc == nil {
+		return g.funcCall("ARRAY_SORT", []any{e.This()}, "(", ")", true)
+	}
+	if !truthy(asc.Arg("this")) {
+		a, b := exp.ToIdentifier("a"), exp.ToIdentifier("b")
+		cond := exp.Case(exp.Args{"ifs": []exp.Expression{
+			exp.If(exp.Args{"this": exp.LT(exp.Args{"this": a.Copy(), "expression": b.Copy()}), "true": exp.LiteralNumber("1")}),
+			exp.If(exp.Args{"this": exp.GT(exp.Args{"this": a.Copy(), "expression": b.Copy()}), "true": exp.LiteralNumber("-1")}),
+		}, "default": exp.LiteralNumber("0")})
+		lambda := exp.Lambda(exp.Args{"this": cond, "expressions": []exp.Expression{a, b}})
+		return g.funcCall("ARRAY_SORT", []any{e.This(), lambda}, "(", ")", true)
+	}
+	return g.funcCall("ARRAY_SORT", []any{e.This()}, "(", ")", true)
 }

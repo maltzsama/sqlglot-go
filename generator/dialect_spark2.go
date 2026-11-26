@@ -49,8 +49,14 @@ func init() {
 		expressions.KindStrToTime:      spark2StrToTimeSQL,
 		expressions.KindTimestampTrunc: spark2TimestampTruncSQL,
 		expressions.KindUnixToTime:     spark2UnixToTimeSQL,
-		expressions.KindVariancePop:    clickhouseRename("VAR_POP"),
-		expressions.KindWithinGroup:    spark2WithinGroupSQL,
+		expressions.KindTableSample: func(g *Generator, e expressions.Expression) string {
+			if e.Arg("size") != nil {
+				e.Set("method", nil)
+			}
+			return g.tablesampleSQL(e)
+		},
+		expressions.KindVariancePop: clickhouseRename("VAR_POP"),
+		expressions.KindWithinGroup: spark2WithinGroupSQL,
 		// generators/spark2.py:216-263 method overrides.
 		expressions.KindStruct:             (*Generator).structSQL,
 		expressions.KindCast:               spark2CastSQL,

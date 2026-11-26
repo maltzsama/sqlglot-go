@@ -35,6 +35,8 @@ func DuckDB() *Dialect {
 	d.LimitFetch = "LIMIT"
 	// generators/duckdb.py NVL2_SUPPORTED = False.
 	d.Nvl2Supported = false
+	// generators/duckdb.py:1588 SET_ASSIGNMENT_REQUIRES_VARIABLE_KEYWORD = True.
+	d.SetAssignmentRequiresVariableKeyword = true
 	// generators/duckdb.py:1580 SUPPORTS_WINDOW_EXCLUDE = True.
 	d.SupportsWindowExclude = true
 
@@ -169,6 +171,13 @@ func DuckDB() *Dialect {
 func duckDBFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expression {
 	out := map[string]func([]exp.Expression) exp.Expression{}
 
+	out["JSON_ARRAY"] = exp.FromArgListFunc(exp.KindJSONArray)
+	out["EPOCH_MS"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindUnixToTime, exp.Args{"this": seqGet(args, 0), "scale": exp.LiteralNumber("3")})
+	}
+	out["STRING_TO_ARRAY"] = exp.FromArgListFunc(exp.KindSplit)
+	out["STR_SPLIT"] = exp.FromArgListFunc(exp.KindSplit)
+	out["STR_SPLIT_REGEX"] = exp.FromArgListFunc(exp.KindRegexpSplit)
 	out["ANY_VALUE"] = func(args []exp.Expression) exp.Expression {
 		return exp.IgnoreNulls(exp.Args{"this": exp.FromArgList(exp.KindAnyValue, args)})
 	}
@@ -329,7 +338,7 @@ func duckDBBuildMakeTimestamp(args []exp.Expression) exp.Expression {
 
 // duckDBBuildDateTrunc ports date_trunc_to_time (dialects/dialect.py:1682-1688).
 func duckDBBuildDateTrunc(args []exp.Expression) exp.Expression {
-	unit := seqGet(args, 0)
+	unit := exp.TimeUnitVar(seqGet(args, 0))
 	this := seqGet(args, 1)
 	if this != nil && this.Kind() == exp.KindCast && exp.IsType(asExpression(this.Arg("to")), exp.DTypeDate) {
 		return exp.DateTrunc(exp.Args{"unit": unit, "this": this})

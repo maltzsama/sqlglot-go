@@ -102,6 +102,11 @@ func init() {
 		expressions.KindRegexpExtractAll:       duckDBRegexpExtractSQL,
 		expressions.KindRegexpInstr:            duckDBRegexpInstrSQL,
 		expressions.KindArrayRemoveAt:          duckDBArrayRemoveAtSQL,
+		expressions.KindToDouble:               duckDBToDoubleSQL,
+		expressions.KindUnicode:                duckDBUnicodeSQL,
+		expressions.KindTimestampDiff:          duckDBDateDiffImpl,
+		expressions.KindYearOfWeek:             duckDBYearOfWeekSQL,
+		expressions.KindYearOfWeekIso:          duckDBYearOfWeekSQL,
 		expressions.KindPosexplode:             duckDBPosexplodeSQL,
 		expressions.KindDecodeCase:             duckDBDecodeCaseSQL,
 		expressions.KindSeq1:                   duckDBSeqSQL(1),
@@ -221,7 +226,9 @@ func duckDBBoolnotSQL(g *Generator, e expressions.Expression) string {
 // duckDBBoolSQL ports _booland_sql/_boolor_sql (generators/duckdb.py:1470-1482).
 func duckDBBoolSQL(op string) func(*Generator, expressions.Expression) string {
 	return func(g *Generator, e expressions.Expression) string {
-		return "(" + g.gen(duckDBRoundInput(e.This(), e)) + " " + op + " " + g.gen(duckDBRoundInput(asExpression(e.Arg("expression")), e)) + ")"
+		left := g.gen(duckDBRoundInput(e.This(), e))
+		right := g.gen(duckDBRoundInput(asExpression(e.Arg("expression")), e))
+		return "((" + left + ") " + op + " (" + right + "))"
 	}
 }
 
@@ -259,7 +266,7 @@ func duckDBCorrSQL(g *Generator, e expressions.Expression) string {
 func duckDBCountIfSQL(g *Generator, e expressions.Expression) string {
 	cond := e.This()
 	if truthy(e.Arg("zero_on_all_null")) && cond != nil {
-		cond = expressions.Is(expressions.Args{"this": cond, "expression": expressions.True_()})
+		cond = expressions.Is(expressions.Args{"this": expressions.Paren(expressions.Args{"this": cond}), "expression": expressions.True_()})
 	}
 	return g.funcCall("COUNT_IF", []any{cond}, "(", ")", true)
 }
@@ -1841,7 +1848,19 @@ func duckDBSeqSQL(byteWidth int) func(*Generator, expressions.Expression) string
 			}),
 			"expression": expressions.LiteralNumber("1"),
 		})})
-		return g.gen(expressions.Mod(expressions.Args{"this": base, "expression": maxVal}))
+		mod := expressions.Mod(expressions.Args{"this": base, "expression": maxVal})
+		if e.This() != nil && e.This().Name() == "1" {
+			halfVals := map[int]string{1: "128", 2: "32768", 4: "2147483648", 8: "9223372036854775808"}
+			half := expressions.LiteralNumber(halfVals[byteWidth])
+			return g.gen(expressions.Case(expressions.Args{
+				"ifs": []expressions.Expression{expressions.If(expressions.Args{
+					"this": expressions.GTE(expressions.Args{"this": mod.Copy(), "expression": half}),
+					"true": expressions.Sub(expressions.Args{"this": mod.Copy(), "expression": maxVal}),
+				})},
+				"default": mod,
+			}))
+		}
+		return g.gen(mod)
 	}
 }
 
@@ -1873,6 +1892,9 @@ func duckDBInGeneratorSelect(e expressions.Expression) bool {
 // duckDBToArraySQL ports the ToArray lambda (generators/duckdb.py:1739).
 func duckDBToArraySQL(g *Generator, e expressions.Expression) string {
 	this := e.This()
+	if this != nil && this.Kind() == expressions.KindArray {
+		return g.gen(this)
+	}
 	return g.gen(expressions.Case(expressions.Args{
 		"ifs": []expressions.Expression{expressions.If(expressions.Args{
 			"this": expressions.Is(expressions.Args{"this": this, "expression": expressions.Null()}),
@@ -2356,4 +2378,27 @@ func duckDBRegexpInstrSQL(g *Generator, e expressions.Expression) string {
 		"default": basePos,
 	})
 	return g.gen(caseExpr)
+}
+
+// duckDBToDoubleSQL renders TO_DOUBLE/TRY_TO_DOUBLE as a cast to DOUBLE.
+func duckDBToDoubleSQL(g *Generator, e expressions.Expression) string {
+	name := "CAST"
+	if truthy(e.Arg("safe")) {
+		name = "TRY_CAST"
+	}
+	return name + "(" + g.sqlKey(e, "this") + " AS DOUBLE)"
+}
+
+// duckDBUnicodeSQL ports unicode_sql (generators/duckdb.py:2850-2858).
+func duckDBUnicodeSQL(g *Generator, e expressions.Expression) string {
+	if truthy(e.Arg("empty_is_zero")) {
+		this := g.sqlKey(e, "this")
+		return "CASE WHEN " + this + " = '' THEN 0 ELSE UNICODE(" + this + ") END"
+	}
+	return g.funcCall("UNICODE", []any{e.This()}, "(", ")", true)
+}
+
+// duckDBYearOfWeekSQL ports the YearOfWeek/YearOfWeekIso lambdas.
+func duckDBYearOfWeekSQL(g *Generator, e expressions.Expression) string {
+	return g.gen(duckDBExtract("ISOYEAR", e.This()))
 }

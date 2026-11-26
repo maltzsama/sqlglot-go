@@ -18,6 +18,17 @@ func init() {
 // MySQL function renames (generators/mysql.py TRANSFORMS), shared with the MySQL subclasses.
 func init() {
 	registerDialectDispatch("mysql", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindUnixToTime: func(g *Generator, e expressions.Expression) string {
+			scale := asExpression(e.Arg("scale"))
+			if scale != nil {
+				ts := expressions.Div(expressions.Args{
+					"this":       e.This(),
+					"expression": expressions.Anonymous(expressions.Args{"this": "POWER", "expressions": []expressions.Expression{expressions.LiteralNumber("10"), scale}}),
+				})
+				return g.funcCall("FROM_UNIXTIME", []any{ts}, "(", ")", true)
+			}
+			return g.funcCall("FROM_UNIXTIME", []any{e.This()}, "(", ")", true)
+		},
 		expressions.KindBitwiseAndAgg: renameFunc("BIT_AND"),
 		expressions.KindBitwiseOrAgg:  renameFunc("BIT_OR"),
 		expressions.KindBitwiseXorAgg: renameFunc("BIT_XOR"),
