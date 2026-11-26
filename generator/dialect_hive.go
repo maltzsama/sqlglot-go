@@ -128,12 +128,36 @@ func init() {
 		},
 		expressions.KindArrayFilter: renameFunc("FILTER"),
 		expressions.KindAnonymous: func(g *Generator, e expressions.Expression) string {
-			if strings.EqualFold(e.Text("this"), "VAR_MAP") {
-				return g.funcCall("MAP", listToAny(e.Expressions()), "(", ")", true)
+			name := strings.ToUpper(e.Text("this"))
+			args := e.Expressions()
+			switch name {
+			case "VAR_MAP":
+				return g.funcCall("MAP", listToAny(args), "(", ")", true)
+			case "MAP":
+				if len(args) == 2 && args[0] != nil && args[1] != nil &&
+					args[0].Kind() == expressions.KindArray && args[1].Kind() == expressions.KindArray {
+					keys := args[0].Expressions()
+					values := args[1].Expressions()
+					flat := make([]any, 0, len(keys)+len(values))
+					for i := range keys {
+						if i < len(values) {
+							flat = append(flat, keys[i], values[i])
+						}
+					}
+					return g.funcCall("MAP", flat, "(", ")", true)
+				}
+			case "ARRAY_SORT":
+				if len(args) > 0 {
+					return g.funcCall("SORT_ARRAY", []any{args[0]}, "(", ")", true)
+				}
 			}
 			return g.anonymousSQL(e)
 		},
-		expressions.KindIndex: hiveIndexSQL,
+		expressions.KindArrayToString: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("CONCAT_WS", []any{e.Arg("expression"), e.This()}, "(", ")", true)
+		},
+		expressions.KindDateDiff: (*Generator).hiveDateDiffUnits,
+		expressions.KindIndex:    hiveIndexSQL,
 		expressions.KindILike: func(g *Generator, e expressions.Expression) string {
 			if g.dialect.Name != "hive" {
 				return g.ilikeSQL(e)
@@ -718,4 +742,27 @@ func hiveIndexSQL(g *Generator, e expressions.Expression) string {
 		index = "INDEX "
 	}
 	return unique + primary + index + name + table + g.sqlKey(e, "params")
+}
+
+// hiveDateDiffUnits maps sub-day DATE_DIFF units to the UNIX_TIMESTAMP arithmetic Hive uses.
+func (g *Generator) hiveDateDiffUnits(e expressions.Expression) string {
+	unit := asExpression(e.Arg("unit"))
+	unitName := ""
+	if unit != nil {
+		unitName = strings.ToLower(unit.Name())
+	}
+	y := g.sqlKey(e, "this")
+	x := g.sqlKey(e, "expression")
+	diff := "UNIX_TIMESTAMP(" + y + ") - UNIX_TIMESTAMP(" + x + ")"
+	switch unitName {
+	case "hour":
+		return "(" + diff + ") / 3600"
+	case "minute":
+		return "(" + diff + ") / 60"
+	case "second":
+		return diff
+	case "millisecond":
+		return "(" + diff + ") * 1000"
+	}
+	return g.functionFallbackSQL(e)
 }
