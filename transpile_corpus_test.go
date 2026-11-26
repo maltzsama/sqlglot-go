@@ -278,11 +278,11 @@ const (
 	minPassTranspileDuckDB      = 1428
 	minPassTranspileHive        = 481
 	minPassTranspileMaterialize = 32
-	minPassTranspileMySQL       = 290
+	minPassTranspileMySQL       = 292
 	minPassTranspileOracle      = 176
-	minPassTranspilePostgres    = 369
+	minPassTranspilePostgres    = 417
 	minPassTranspilePresto      = 566
-	minPassTranspileRedshift    = 181
+	minPassTranspileRedshift    = 183
 	minPassTranspileRisingWave  = 6
 	minPassTranspileSnowflake   = 938
 	minPassTranspileSpark       = 772
