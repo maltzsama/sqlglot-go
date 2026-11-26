@@ -71,6 +71,12 @@ func init() {
 			}
 			return "LOWER(" + g.sqlKey(e, "this") + ") " + op + " LOWER(" + g.sqlKey(e, "expression") + ")"
 		},
+		expressions.KindSelect: func(g *Generator, e expressions.Expression) string {
+			if asExpression(e.Arg("qualify")) != nil {
+				e = eliminateQualify(e)
+			}
+			return g.selectSQL(e)
+		},
 		expressions.KindNullSafeEQ: func(g *Generator, e expressions.Expression) string {
 			return g.binary(e, "<=>")
 		},
