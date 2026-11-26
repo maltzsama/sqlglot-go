@@ -378,7 +378,7 @@ func (g *Generator) likePropertySQL(e expressions.Expression) string {
 		optionsSQL = " " + strings.Join(options, " ")
 	}
 	like := "LIKE " + g.sqlKey(e, "this") + optionsSQL
-	if g.isDialect("postgres") && (e.Parent() == nil || e.Parent().Kind() != expressions.KindSchema) {
+	if g.dialect.LikePropertyInsideSchema && (e.Parent() == nil || e.Parent().Kind() != expressions.KindSchema) {
 		like = "(" + like + ")"
 	}
 	return like

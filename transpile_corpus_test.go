@@ -272,26 +272,26 @@ const (
 	minPassTranspileAthena      = 9
 	minPassTranspileBigQuery    = 667
 	minPassTranspileClickhouse  = 225
-	minPassTranspileDatabricks  = 229
-	minPassTranspileDoris       = 91
+	minPassTranspileDatabricks  = 236
+	minPassTranspileDoris       = 97
 	minPassTranspileDremio      = 31
 	minPassTranspileDuckDB      = 1428
-	minPassTranspileHive        = 445
+	minPassTranspileHive        = 467
 	minPassTranspileMaterialize = 32
-	minPassTranspileMySQL       = 267
-	minPassTranspileOracle      = 175
+	minPassTranspileMySQL       = 290
+	minPassTranspileOracle      = 176
 	minPassTranspilePostgres    = 369
-	minPassTranspilePresto      = 492
+	minPassTranspilePresto      = 530
 	minPassTranspileRedshift    = 181
 	minPassTranspileRisingWave  = 6
 	minPassTranspileSnowflake   = 938
-	minPassTranspileSpark       = 747
+	minPassTranspileSpark       = 761
 	minPassTranspileSpark2      = 69
-	minPassTranspileSQLite      = 145
-	minPassTranspileStarrocks   = 90
+	minPassTranspileSQLite      = 146
+	minPassTranspileStarrocks   = 97
 	minPassTranspileTeradata    = 74
-	minPassTranspileTrino       = 109
-	minPassTranspileTSQL        = 354
+	minPassTranspileTrino       = 116
+	minPassTranspileTSQL        = 355
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.

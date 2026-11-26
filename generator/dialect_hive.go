@@ -98,7 +98,54 @@ func init() {
 		expressions.KindStrToTime: func(g *Generator, e expressions.Expression) string {
 			return "CAST(" + hiveStrToTimeInner(g, e) + " AS TIMESTAMP)"
 		},
-		expressions.KindDateAdd:      (*Generator).hiveAddDateSQL,
+		expressions.KindDateAdd: (*Generator).hiveAddDateSQL,
+		expressions.KindDateStrToDate: func(g *Generator, e expressions.Expression) string {
+			return "CAST(" + g.sqlKey(e, "this") + " AS DATE)"
+		},
+		expressions.KindDateToDateStr: func(g *Generator, e expressions.Expression) string {
+			return "CAST(" + g.sqlKey(e, "this") + " AS STRING)"
+		},
+		expressions.KindDateToDi: func(g *Generator, e expressions.Expression) string {
+			return "CAST(DATE_FORMAT(" + g.sqlKey(e, "this") + ", 'yyyyMMdd') AS INT)"
+		},
+		expressions.KindDiToDate: func(g *Generator, e expressions.Expression) string {
+			return "TO_DATE(CAST(" + g.sqlKey(e, "this") + " AS STRING), 'yyyyMMdd')"
+		},
+		expressions.KindTimeStrToTime: func(g *Generator, e expressions.Expression) string {
+			return "CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP)"
+		},
+		expressions.KindTimeToTimeStr: func(g *Generator, e expressions.Expression) string {
+			return "CAST(" + g.sqlKey(e, "this") + " AS STRING)"
+		},
+		expressions.KindTsOrDiToDi: func(g *Generator, e expressions.Expression) string {
+			return "CAST(SUBSTR(REPLACE(CAST(" + g.sqlKey(e, "this") + " AS STRING), '-', ''), 1, 8) AS INT)"
+		},
+		expressions.KindTsOrDsToDateStr: func(g *Generator, e expressions.Expression) string {
+			return "SUBSTRING(CAST(" + g.sqlKey(e, "this") + " AS STRING), 1, 10)"
+		},
+		expressions.KindUnixToTimeStr: func(g *Generator, e expressions.Expression) string {
+			return "FROM_UNIXTIME(" + g.sqlKey(e, "this") + ")"
+		},
+		expressions.KindArrayFilter: renameFunc("FILTER"),
+		expressions.KindAnonymous: func(g *Generator, e expressions.Expression) string {
+			if strings.EqualFold(e.Text("this"), "VAR_MAP") {
+				return g.funcCall("MAP", listToAny(e.Expressions()), "(", ")", true)
+			}
+			return g.anonymousSQL(e)
+		},
+		expressions.KindIndex: hiveIndexSQL,
+		expressions.KindILike: func(g *Generator, e expressions.Expression) string {
+			if g.dialect.Name != "hive" {
+				return g.ilikeSQL(e)
+			}
+			op := "LIKE"
+			if boolValue(e.Arg("negate")) {
+				op = "NOT LIKE"
+			}
+			return "LOWER(" + g.sqlKey(e, "this") + ") " + op + " LOWER(" + g.sqlKey(e, "expression") + ")"
+		},
+		expressions.KindDateSub:      hiveDateSubSQL,
+		expressions.KindConcatWs:     hiveConcatWsSQL,
 		expressions.KindTsOrDsAdd:    (*Generator).hiveAddDateSQL,
 		expressions.KindTsOrDsToDate: (*Generator).hiveToDateSQL,
 		expressions.KindTimeToStr: func(g *Generator, e expressions.Expression) string {
@@ -604,4 +651,71 @@ func hiveUnixToTimeSQL(g *Generator, e expressions.Expression) string {
 		return g.funcCall("FROM_UNIXTIME", []any{ts}, "(", ")", true)
 	}
 	return g.funcCall("FROM_UNIXTIME", []any{e.This()}, "(", ")", true)
+}
+
+// hiveDateSubSQL ports the Hive DATE_SUB forms: DATE_ADD(x, -n), or ADD_MONTHS(x, -n).
+func hiveDateSubSQL(g *Generator, e expressions.Expression) string {
+	count := asExpression(e.Arg("expression"))
+	if count != nil {
+		if count.IsInt() {
+			count = expressions.LiteralNumber("-" + count.Name())
+		} else {
+			count = expressions.Mul(expressions.Args{
+				"this": count, "expression": expressions.LiteralNumber("-1"),
+			})
+		}
+	}
+	unit := asExpression(e.Arg("unit"))
+	if unit != nil && strings.EqualFold(unit.Name(), "MONTH") {
+		return g.funcCall("ADD_MONTHS", []any{e.This(), count}, "(", ")", true)
+	}
+	return g.funcCall("DATE_ADD", []any{e.This(), count}, "(", ")", true)
+}
+
+// hiveConcatWsSQL ports the CONCAT_WS null-propagating form (CONCAT_WS_COALESCE=False).
+func hiveConcatWsSQL(g *Generator, e expressions.Expression) string {
+	if g.dialect.Name != "hive" {
+		return g.functionFallbackSQL(e)
+	}
+	args := e.Expressions()
+	base := g.funcCall("CONCAT_WS", listToAny(args), "(", ")", true)
+	if truthy(e.Arg("coalesce")) {
+		return base
+	}
+	conds := make([]expressions.Expression, 0, len(args))
+	for _, arg := range args {
+		if arg != nil {
+			conds = append(conds, expressions.Is(expressions.Args{"this": arg.Copy(), "expression": expressions.Null()}))
+		}
+	}
+	cond := duckDBConnectorExpr(expressions.KindOr, conds)
+	if cond == nil {
+		return base
+	}
+	return "CASE WHEN " + g.gen(cond) + " THEN NULL ELSE " + base + " END"
+}
+
+// hiveIndexSQL ports Hive's index rendering: ON TABLE <name>.
+func hiveIndexSQL(g *Generator, e expressions.Expression) string {
+	unique := ""
+	if boolValue(e.Arg("unique")) {
+		unique = "UNIQUE "
+	}
+	primary := ""
+	if boolValue(e.Arg("primary")) {
+		primary = "PRIMARY "
+	}
+	name := g.sqlKey(e, "this")
+	if name != "" {
+		name += " "
+	}
+	table := g.sqlKey(e, "table")
+	if table != "" {
+		table = "ON TABLE " + table
+	}
+	index := ""
+	if table == "" {
+		index = "INDEX "
+	}
+	return unique + primary + index + name + table + g.sqlKey(e, "params")
 }

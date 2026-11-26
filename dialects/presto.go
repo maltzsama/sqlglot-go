@@ -85,6 +85,7 @@ func Presto() *Dialect {
 	// declares no Tokenizer QUOTES/IDENTIFIERS override), so QuoteStart/IdentifierStart stay as
 	// Base() set them; DPipeIsStringConcat likewise stays at the base True (no override).
 	d.IndexOffset = 1
+	d.LikePropertyInsideSchema = true
 	d.NullOrdering = "nulls_are_last"
 	d.StrictStringConcat = true
 	d.TypedDivision = true

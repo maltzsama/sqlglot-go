@@ -724,7 +724,9 @@ func (g *Generator) similarToSQL(e expressions.Expression) string { return g.bin
 
 // varMapSQL ports varmap_sql: MAP(keys, values).
 func (g *Generator) varMapSQL(e expressions.Expression) string {
-	return g.funcCall("MAP", []any{e.Arg("keys"), e.Arg("values")}, "(", ")", true)
+	args := []any{e.Arg("keys")}
+	args = append(args, listFromValue(e.Arg("values"))...)
+	return g.funcCall("MAP", args, "(", ")", true)
 }
 
 // decodeCaseSQL is generator.py:6143 decodecase_sql with SUPPORTS_DECODE_CASE=true.
