@@ -2670,6 +2670,28 @@ func (g *Generator) pivotSQL(e expressions.Expression) string {
 		}
 		return g.prependCtes(e, sql)
 	}
+	// Snowflake's IDENTIFY_PIVOT_STRINGS names the output after the quoted IN value. DuckDB
+	// names it after the bare value, so alias each literal explicitly.
+	if g.isDialect("duckdb") && truthy(e.Arg("identify_pivot_strings")) {
+		for _, fieldValue := range listFromValue(e.Arg("fields")) {
+			in := asExpression(fieldValue)
+			if in == nil || in.Kind() != expressions.KindIn {
+				continue
+			}
+			items := in.Expressions()
+			for i, item := range items {
+				lit := asExpression(item)
+				if lit == nil || lit.Kind() != expressions.KindLiteral || !lit.IsString() {
+					continue
+				}
+				items[i] = expressions.PivotAlias(expressions.Args{
+					"this":  lit,
+					"alias": expressions.ToIdentifier("'"+strings.ReplaceAll(lit.Name(), "'", "''")+"'", true),
+				})
+			}
+			in.Set("expressions", items)
+		}
+	}
 	alias := g.sqlKey(e, "alias")
 	if alias != "" {
 		if g.dialect.PivotAliasWithAs {

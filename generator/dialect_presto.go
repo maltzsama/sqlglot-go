@@ -12,6 +12,10 @@ import (
 func init() {
 	table := map[exp.Kind]func(*Generator, exp.Expression) string{
 		exp.KindStructExtract: structExtractSQL,
+		exp.KindSelect: func(g *Generator, e exp.Expression) string {
+			explodeProjectionToUnnest(e, 1)
+			return g.selectSQL(e)
+		},
 		exp.KindFromISO8601Date: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("FROM_ISO8601_DATE", []any{e.This()}, "(", ")", true)
 		},

@@ -42,6 +42,8 @@ func DuckDB() *Dialect {
 	// generators/duckdb.py:1571 SUPPORTS_CREATE_TABLE_LIKE = False: CREATE TABLE ... LIKE is
 	// rewritten to a zero-row CTAS.
 	d.SupportsCreateTableLike = false
+	// generators/duckdb.py:1575 SELECT_KINDS = (): SELECT AS STRUCT becomes a struct literal.
+	d.SelectKinds = []string{}
 	// generators/duckdb.py:1570 JSON_PATH_BRACKETED_KEY_SUPPORTED = False: an unsafe JSON
 	// path key renders as `."key"`, not `["key"]`.
 	d.JSONPathBracketedKeySupported = false

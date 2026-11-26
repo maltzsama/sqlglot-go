@@ -3816,6 +3816,11 @@ func (p *Parser) parseFunctionCall(functions map[string]func([]exp.Expression) e
 				validateArgs = exprArgs(args)
 			}
 			result = p.normalizeJSONPathArg(p.validateExpression(function(args), validateArgs), upper)
+			// parsers/postgres.py:21-31: Postgres GENERATE_SERIES is set-returning, which the
+			// DuckDB generator renders as UNNEST in a projection (never for a table source).
+			if result != nil && p.dialectFamily("postgres") && result.Kind() == exp.KindGenerateSeries {
+				result.Set("exploding", true)
+			}
 		} else {
 			var name any = this
 			if tokenType == tokens.IDENTIFIER {

@@ -266,6 +266,10 @@ type Dialect struct {
 	// LimitOnlyLiterals ports LIMIT_ONLY_LITERALS (generator.py:531, base False; dremio True):
 	// a non-literal LIMIT/OFFSET argument is simplified to a literal before rendering.
 	LimitOnlyLiterals bool
+	// SelectKinds ports SELECT_KINDS (generator.py:397, base STRUCT/VALUE; DuckDB none):
+	// the SELECT AS <kind> forms a dialect can render. Other kinds fall back to a struct
+	// literal (STRUCT) or are dropped (VALUE).
+	SelectKinds []string
 	// MultiArgDistinct ports MULTI_ARG_DISTINCT (generator.py:536, base True; dremio False):
 	// a multi-argument DISTINCT is rewritten through a CASE WHEN ... IS NULL guard.
 	MultiArgDistinct bool
@@ -791,6 +795,7 @@ func Base() *Dialect {
 		SupportsTableAliasColumns: true,
 		TrySupported:              true,
 		Nvl2Supported:             true,
+		SelectKinds:               []string{"STRUCT", "VALUE"},
 		MultiArgDistinct:          true,
 		SupportsNamedCTEColumns:   true,
 		// dialects/dialect.py LEAST_GREATEST_IGNORES_NULLS = True (base).
