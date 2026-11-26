@@ -280,7 +280,7 @@ const (
 	minPassTranspileMaterialize = 32
 	minPassTranspileMySQL       = 292
 	minPassTranspileOracle      = 176
-	minPassTranspilePostgres    = 417
+	minPassTranspilePostgres    = 423
 	minPassTranspilePresto      = 566
 	minPassTranspileRedshift    = 183
 	minPassTranspileRisingWave  = 6

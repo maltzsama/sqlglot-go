@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/maltzsama/sqlglot-go/dialects"
@@ -47,7 +48,11 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		},
 		exp.KindTimeToUnix: func(g *Generator, e exp.Expression) string {
 			value := g.sqlKey(e, "this")
-			if dtype, ok := castResultDType(asExpression(e.This())); !ok || dtype != exp.DTypeTimestamp {
+			dtype, ok := castResultDType(asExpression(e.This()))
+			if ok && (dtype == exp.DTypeTimestampTz || dtype == exp.DTypeTimestampLtz || dtype == exp.DTypeTimestampNtz) {
+				return "DATE_PART('epoch', " + value + ")"
+			}
+			if !ok || dtype != exp.DTypeTimestamp {
 				value = "CAST(" + value + " AS TIMESTAMP)"
 			}
 			return "DATE_PART('epoch', " + value + ")"
@@ -82,7 +87,14 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindBitwiseXorAgg: clickhouseRename("BIT_XOR"),
 		exp.KindRound:         postgresRoundSQL,
 		exp.KindXor: func(g *Generator, e exp.Expression) string {
-			a, b := g.sqlKey(e, "this"), g.sqlKey(e, "expression")
+			group := func(v exp.Expression) string {
+				sql := g.gen(v)
+				if v != nil && (v.Is(exp.TraitConnector) || v.Is(exp.TraitBinary)) {
+					return "(" + sql + ")"
+				}
+				return sql
+			}
+			a, b := group(e.This()), group(asExpression(e.Arg("expression")))
 			return "(" + a + " AND (NOT " + b + ")) OR ((NOT " + a + ") AND " + b + ")"
 		},
 		exp.KindDateStrToDate: func(g *Generator, e exp.Expression) string {
@@ -462,33 +474,24 @@ func eliminateQualify(selectExpr exp.Expression) exp.Expression {
 	for _, name := range selectExpr.NamedSelects() {
 		taken[name] = true
 	}
-	projections := selectExpr.Expressions()
-	for i, projection := range projections {
-		if projection == nil || projection.Kind() == exp.KindAlias || projection.Kind() == exp.KindStar {
-			continue
-		}
-		if projection.OutputName() == "" {
-			name := findNewName(taken, "_c")
-			taken[name] = true
-			projections[i] = exp.AliasExpr(projection, exp.ToIdentifier(name, false), false)
-		}
+	type outerProjection struct {
+		inner   string
+		visible string
+		quoted  bool
+		star    bool
 	}
-	selectExpr.Set("expressions", projections)
-
-	outer := make([]exp.Expression, 0, len(projections))
-	for _, projection := range selectExpr.Expressions() {
+	plan := make([]outerProjection, 0)
+	projections := selectExpr.Expressions()
+	seen := map[string]bool{}
+	for i, projection := range projections {
 		if projection == nil {
 			continue
 		}
 		if projection.Kind() == exp.KindStar {
-			outer = append(outer, exp.Star(exp.Args{}))
+			plan = append(plan, outerProjection{star: true})
 			continue
 		}
-		name := projection.OutputName()
-		if name == "" {
-			outer = append(outer, projection)
-			continue
-		}
+		visible := projection.OutputName()
 		quoted := false
 		if projection.Kind() == exp.KindAlias {
 			if ident := asExpression(projection.Arg("alias")); ident != nil {
@@ -497,12 +500,49 @@ func eliminateQualify(selectExpr exp.Expression) exp.Expression {
 		} else if ident := asExpression(projection.Arg("this")); ident != nil && ident.Kind() == exp.KindIdentifier {
 			quoted = boolValue(ident.Arg("quoted"))
 		}
-		outer = append(outer, exp.Column(exp.Args{"this": exp.ToIdentifier(name, quoted)}))
+		inner := visible
+		needsAlias := projection.Kind() != exp.KindAlias && projection.Kind() != exp.KindColumn
+		if inner == "" || seen[inner] {
+			needsAlias = true
+		}
+		if needsAlias {
+			inner = findNewName(taken, "_c")
+			taken[inner] = true
+			projections[i] = exp.AliasExpr(projection, exp.ToIdentifier(inner, false), false)
+		}
+		seen[inner] = true
+		plan = append(plan, outerProjection{inner: inner, visible: visible, quoted: quoted})
 	}
+	selectExpr.Set("expressions", projections)
 
 	filter := qualify.This()
 	if filter == nil {
 		filter = qualify
+	}
+	innerNames := map[string]bool{}
+	for _, projection := range selectExpr.Expressions() {
+		if name := projection.OutputName(); name != "" {
+			innerNames[name] = true
+		}
+	}
+	visibleToInner := map[string]string{}
+	for _, item := range plan {
+		if !item.star && item.visible != "" {
+			visibleToInner[item.visible] = item.inner
+		}
+	}
+	for _, column := range filter.FindAll(exp.KindColumn) {
+		column.Set("table", nil)
+		column.Set("schema", nil)
+		column.Set("catalog", nil)
+		if inner, ok := visibleToInner[column.Name()]; ok && inner != column.Name() {
+			column.Set("this", exp.ToIdentifier(inner, false))
+			continue
+		}
+		if !innerNames[column.Name()] {
+			selectExpr.Set("expressions", append(selectExpr.Expressions(), column.Copy()))
+			innerNames[column.Name()] = true
+		}
 	}
 	for _, window := range filter.FindAll(exp.KindWindow) {
 		alias := findNewName(taken, "_w")
@@ -510,22 +550,43 @@ func eliminateQualify(selectExpr exp.Expression) exp.Expression {
 		selectExpr.Set("expressions", append(selectExpr.Expressions(), exp.AliasExpr(window.Copy(), exp.ToIdentifier(alias, false), false)))
 		window.Replace(exp.Column(exp.Args{"this": exp.ToIdentifier(alias, false)}))
 	}
-	subquery := exp.Subquery(exp.Args{
-		"this":  selectExpr,
-		"alias": exp.TableAlias(exp.Args{"this": exp.ToIdentifier("_t", false)}),
-	})
-	return exp.Select(exp.Args{
+
+	outer := make([]exp.Expression, 0, len(plan))
+	for _, item := range plan {
+		if item.star {
+			outer = append(outer, exp.Star(exp.Args{}))
+			continue
+		}
+		column := exp.Column(exp.Args{"this": exp.ToIdentifier(item.inner, item.quoted && item.inner == item.visible)})
+		if item.visible != "" && item.visible != item.inner {
+			outer = append(outer, exp.AliasExpr(column, exp.ToIdentifier(item.visible, item.quoted), false))
+		} else {
+			outer = append(outer, column)
+		}
+	}
+
+	outerArgs := exp.Args{
 		"expressions": outer,
-		"from_":       exp.From(exp.Args{"this": subquery}),
-		"where":       exp.Where(exp.Args{"this": filter}),
-	})
+		"from_": exp.From(exp.Args{"this": exp.Subquery(exp.Args{
+			"this":  selectExpr,
+			"alias": exp.TableAlias(exp.Args{"this": exp.ToIdentifier("_t", false)}),
+		})}),
+		"where": exp.Where(exp.Args{"this": filter}),
+	}
+	for _, key := range []string{"distinct", "order", "limit", "offset"} {
+		if value := selectExpr.Arg(key); value != nil {
+			outerArgs[key] = value
+			selectExpr.Set(key, nil)
+		}
+	}
+	return exp.Select(outerArgs)
 }
 
 // postgresJoinSQL appends ON TRUE to a LATERAL join, which Postgres requires.
 func postgresJoinSQL(g *Generator, e exp.Expression) string {
 	this := asExpression(e.This())
 	kind := strings.ToUpper(e.Text("kind"))
-	applied := this != nil && (truthy(this.Arg("cross_apply")) || truthy(this.Arg("outer_apply")))
+	applied := this != nil && (this.Arg("cross_apply") != nil || this.Arg("outer_apply") != nil)
 	sql := g.joinSQL(e)
 	if this != nil && this.Kind() == exp.KindLateral && e.Arg("on") == nil && len(listFromValue(e.Arg("using"))) == 0 &&
 		(applied || (kind != "" && kind != "CROSS")) {
@@ -586,7 +647,11 @@ func postgresLastDaySQL(g *Generator, e exp.Expression) string {
 			unitName = strings.ToUpper(unit.Name())
 		}
 		if amount != nil {
-			offset = " + INTERVAL '" + g.gen(amount) + " " + unitName + "'"
+			if value, ok := numericLiteralName(amount); ok {
+				offset = " + INTERVAL '" + value + " " + unitName + "'"
+			} else {
+				offset = " + (" + g.gen(amount) + ") * INTERVAL '1 " + unitName + "'"
+			}
 		}
 	}
 	return "CAST(DATE_TRUNC('MONTH', " + g.gen(base) + offset + ") + INTERVAL '1 MONTH' - INTERVAL '1 DAY' AS DATE)"
@@ -629,15 +694,23 @@ func postgresIntervalAddSQL(add bool) func(*Generator, exp.Expression) string {
 		case "MILLISECOND":
 			unitName = "MILLISECOND"
 		}
-		countSQL := ""
-		if count != nil {
-			if count.IsString() {
-				countSQL = count.Name()
-			} else {
-				countSQL = g.gen(count)
-			}
+		if count == nil {
+			return g.sqlKey(e, "this")
 		}
-		return g.sqlKey(e, "this") + " " + op + " INTERVAL '" + multiplier + countSQL + " " + unitName + "'"
+		if value, ok := numericLiteralName(count); ok {
+			if multiplier != "" {
+				if parsed, err := strconv.ParseFloat(value, 64); err == nil {
+					value = strconv.FormatFloat(parsed*3, 'f', -1, 64)
+				}
+			}
+			return g.sqlKey(e, "this") + " " + op + " INTERVAL '" + value + " " + unitName + "'"
+		}
+		expr := g.gen(count)
+		if multiplier != "" {
+			expr = multiplier + expr
+			unitName = "MONTH"
+		}
+		return g.sqlKey(e, "this") + " " + op + " (" + expr + ") * INTERVAL '1 " + unitName + "'"
 	}
 }
 
@@ -660,7 +733,7 @@ func postgresRegexpReplaceSQL(g *Generator, e exp.Expression) string {
 	}
 	if parameters != nil {
 		args = append(args, parameters)
-	} else if len(args) == 3 && !truthy(e.Arg("single_replace")) {
+	} else if !truthy(e.Arg("single_replace")) && occurrence == nil {
 		args = append(args, exp.LiteralString("g"))
 	}
 	return g.funcCall("REGEXP_REPLACE", args, "(", ")", true)
@@ -671,7 +744,15 @@ func postgresGenerateSeriesSQL(g *Generator, e exp.Expression) string {
 	end := asExpression(e.Arg("end"))
 	endArg := any(end)
 	if truthy(e.Arg("is_end_exclusive")) {
-		endArg = exp.Sub(exp.Args{"this": end, "expression": exp.LiteralNumber("1")})
+		adjust := exp.Sub(exp.Args{"this": end, "expression": exp.LiteralNumber("1")})
+		if step := asExpression(e.Arg("step")); step != nil {
+			if value, ok := numericLiteralName(step); ok {
+				if parsed, err := strconv.ParseFloat(value, 64); err == nil && parsed < 0 {
+					adjust = exp.Add(exp.Args{"this": end, "expression": exp.LiteralNumber("1")})
+				}
+			}
+		}
+		endArg = adjust
 	}
 	args := []any{start, endArg}
 	if step := asExpression(e.Arg("step")); step != nil {
@@ -691,7 +772,7 @@ func postgresGenerateSeriesSQL(g *Generator, e exp.Expression) string {
 func postgresIntervalExpr(text string) exp.Expression {
 	trimmed := strings.TrimSpace(text)
 	digits := ""
-	for len(trimmed) > 0 && (trimmed[0] == '-' || trimmed[0] == '+' || (trimmed[0] >= '0' && trimmed[0] <= '9')) {
+	for len(trimmed) > 0 && (trimmed[0] == '-' || trimmed[0] == '+' || trimmed[0] == '.' || (trimmed[0] >= '0' && trimmed[0] <= '9')) {
 		digits += string(trimmed[0])
 		trimmed = trimmed[1:]
 	}
@@ -704,3 +785,19 @@ func postgresIntervalExpr(text string) exp.Expression {
 }
 
 // postgresIntervalFromString converts '  2   days  ' or '1day' into INTERVAL '2 DAY'.
+
+// numericLiteralName returns the signed numeric text of a Literal or Neg(Literal).
+func numericLiteralName(e exp.Expression) (string, bool) {
+	if e == nil {
+		return "", false
+	}
+	if e.Kind() == exp.KindLiteral {
+		return e.Name(), true
+	}
+	if e.Kind() == exp.KindNeg {
+		if inner := e.This(); inner != nil && inner.Kind() == exp.KindLiteral {
+			return "-" + inner.Name(), true
+		}
+	}
+	return "", false
+}

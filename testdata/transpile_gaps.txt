@@ -403,7 +403,6 @@
 {"read":"snowflake","write":"oracle","category":"gen: transpile mismatch","sql":"SELECT BOOLAND_AGG(c1), BOOLAND_AGG(c2) FROM test"}
 {"read":"snowflake","write":"postgres","category":"gen: ddl/properties","sql":"CREATE OR REPLACE TRANSIENT TABLE a (id INT)"}
 {"read":"snowflake","write":"postgres","category":"gen: transpile mismatch","sql":"REGEXP_REPLACE(subject, pattern, replacement, 1, 0, 'c')"}
-{"read":"snowflake","write":"postgres","category":"gen: transpile mismatch","sql":"REGEXP_REPLACE(subject, pattern, replacement, position)"}
 {"read":"snowflake","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT * FROM test AS _tmp TABLESAMPLE (5)"}
 {"read":"snowflake","write":"presto","category":"gen: cast/type","sql":"SELECT DATE_PART(epoch_milliseconds, foo) as ddate from table_name"}
 {"read":"snowflake","write":"presto","category":"gen: cast/type","sql":"SELECT DATE_PART(epoch_second, foo) as ddate from table_name"}
@@ -510,11 +509,6 @@
 {"read":"tsql","write":"mysql","category":"gen: ddl/properties","sql":"ALTER TABLE a ALTER COLUMN b INTEGER NULL"}
 {"read":"tsql","write":"mysql","category":"gen: transpile mismatch","sql":"EOMONTH(GETDATE(), -1)"}
 {"read":"tsql","write":"postgres","category":"gen: transpile mismatch","sql":"JSON_ARRAYAGG(c1 ORDER BY c1)"}
-{"read":"tsql","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT DATEADD(QUARTER, -1, GETDATE())"}
-{"read":"tsql","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT t.x, y.z FROM x OUTER APPLY a.b.tvfTest(t.x)y(z)"}
-{"read":"tsql","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT t.x, y.z FROM x OUTER APPLY tvfTest(t.x)y(z)"}
-{"read":"tsql","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT x.a, x.b, t.v, t.y FROM x OUTER APPLY (SELECT v, y FROM t) t(v, y)"}
-{"read":"tsql","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT x.a, x.b, t.v, t.y, s.v, s.y FROM x OUTER APPLY (SELECT v, y FROM t) t(v, y) OUTER APPLY (SELECT v, y FROM t) s(v, y) LEFT JOIN z ON z.id = s.id"}
 {"read":"tsql","write":"snowflake","category":"gen: transpile mismatch","sql":"EOMONTH(GETDATE(), -1)"}
 {"read":"tsql","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT DATETIMEFROMPARTS(2013, 4, 5, 12, 00, 00, 0)"}
 {"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CAST(x as MONEY)"}
