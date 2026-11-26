@@ -106,6 +106,7 @@ func init() {
 		exp.KindTrim:          (*Generator).tsqlTrimSQL,
 		exp.KindTsOrDsToDate:  (*Generator).tsqlTsOrDsToDateSQL,
 		exp.KindCreate:        (*Generator).tsqlCreateSQL,
+		exp.KindSelect:        (*Generator).tsqlSelectSQL,
 		exp.KindInsert:        (*Generator).tsqlInsertSQL,
 		exp.KindCTE:           (*Generator).tsqlCTESQL,
 		exp.KindSubquery:      (*Generator).tsqlSubquerySQL,
@@ -243,8 +244,19 @@ func tsqlFormatSQL(g *Generator, e exp.Expression) string {
 	format := e.Arg("format")
 	formatSQL := g.gen(format)
 	if e.Kind() != exp.KindNumberToStr && format != nil {
-		if fe, ok := format.(*exp.Node); ok && fe.IsString() {
-			formatSQL = g.gen(exp.LiteralString(dialects.TSQLFormatTime(fe.Name())))
+		if fe, ok := format.(*exp.Node); ok {
+			if fe.IsString() {
+				formatSQL = g.gen(exp.LiteralString(dialects.TSQLFormatTime(fe.Name())))
+			} else if fe.Kind() == exp.KindConcat {
+				parts := make([]any, 0, len(fe.Expressions()))
+				for _, part := range fe.Expressions() {
+					if part.IsString() {
+						part = exp.LiteralString(dialects.TSQLFormatTime(part.Name()))
+					}
+					parts = append(parts, part)
+				}
+				formatSQL = g.funcCall("CONCAT", parts, "(", ")", true)
+			}
 		}
 	}
 	return g.funcCall("FORMAT", []any{e.This(), formatSQL, e.Arg("culture")}, "(", ")", true)
@@ -362,6 +374,39 @@ func (g *Generator) tsqlTrimSQL(e exp.Expression) string {
 
 // tsqlCreateSQL ports the CREATE OR ALTER rewrite (generators/tsql.py:475-478).
 func (g *Generator) tsqlCreateSQL(e exp.Expression) string {
+	// generators/tsql.py:420-435: VIEW queries and table-valued functions require their
+	// CTEs to stay inside the body, so undo the generic hoist for those two forms.
+	if with := asExpression(e.Arg("with_")); with != nil {
+		expression := asExpression(e.Arg("expression"))
+		if strings.EqualFold(e.Text("kind"), "VIEW") && expression != nil {
+			expression.Set("with_", with)
+			e.Set("with_", nil)
+		} else if expression != nil && expression.Kind() == exp.KindReturn {
+			body := asExpression(expression.This())
+			for body != nil && (body.Kind() == exp.KindParen || body.Kind() == exp.KindSubquery) {
+				body = asExpression(body.This())
+			}
+			if body != nil && body.Is(exp.TraitQuery) {
+				body.Set("with_", with)
+				e.Set("with_", nil)
+			}
+		}
+	}
+	if properties := asExpression(e.Arg("properties")); properties != nil {
+		kept := make([]exp.Expression, 0, len(properties.Expressions()))
+		for _, property := range properties.Expressions() {
+			if property.Kind() == exp.KindTemporaryProperty {
+				if table := e.Find(exp.KindTable); table != nil {
+					if ident := asExpression(table.This()); ident != nil && ident.Kind() == exp.KindIdentifier {
+						ident.Set("temporary", true)
+					}
+				}
+				continue
+			}
+			kept = append(kept, property)
+		}
+		properties.Set("expressions", kept)
+	}
 	// generators/tsql.py:420-421: CREATE VIEW drops the catalog qualifier.
 	if strings.EqualFold(e.Text("kind"), "VIEW") {
 		if table := e.Find(exp.KindTable); table != nil {
@@ -372,7 +417,7 @@ func (g *Generator) tsqlCreateSQL(e exp.Expression) string {
 	if strings.EqualFold(e.Text("kind"), "TABLE") {
 		if ctas := asExpression(e.Arg("expression")); ctas != nil {
 			if sql, ok := g.tsqlCTAS(e, ctas); ok {
-				return sql
+				return g.prependCtes(e, sql)
 			}
 		}
 	}
@@ -898,6 +943,31 @@ func (g *Generator) tsqlUncastText(e exp.Expression, name string) string {
 
 func (g *Generator) tsqlPartitionSQL(e exp.Expression) string {
 	return "WITH (PARTITIONS(" + g.expressions(exprsOptions{expression: e, flat: true}) + "))"
+}
+
+// tsqlSelectSQL ports T-SQL's select_sql OFFSET/FETCH requirements.
+func (g *Generator) tsqlSelectSQL(e exp.Expression) string {
+	limit := asExpression(e.Arg("limit"))
+	offset := asExpression(e.Arg("offset"))
+	if offset != nil {
+		if e.Arg("order") == nil {
+			if e.Arg("distinct") != nil {
+				// SQL Server rejects ORDER BY (SELECT NULL) under DISTINCT because the key is
+				// not in the projection; an ordinal reference to the first select item is valid.
+				e.Set("order", exp.Order(exp.Args{"expressions": []exp.Expression{
+					exp.Ordered(exp.Args{"this": exp.LiteralNumber("1"), "nulls_first": true}),
+				}}))
+			} else {
+				nullSelect := exp.Select(exp.Args{"expressions": []exp.Expression{exp.Null()}})
+				e.Set("order", exp.Order(exp.Args{"expressions": []exp.Expression{exp.Subquery(exp.Args{"this": nullSelect})}}))
+			}
+		}
+		if limit != nil && limit.Kind() == exp.KindLimit {
+			fetch := exp.Fetch(exp.Args{"direction": "FIRST", "count": limit.Arg("expression")})
+			e.Set("limit", fetch)
+		}
+	}
+	return g.selectSQL(e)
 }
 
 func (g *Generator) tsqlAlterSQL(e exp.Expression) string {

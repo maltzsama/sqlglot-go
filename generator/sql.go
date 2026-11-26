@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/maltzsama/sqlglot-go/dialects"
 	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
@@ -630,7 +631,7 @@ func (g *Generator) ilikeSQL(e expressions.Expression) string { return g.likeSQL
 
 func (g *Generator) likeSQLWithOp(e expressions.Expression, op string) string {
 	if g.isDialect("duckdb") {
-		if sql, ok := g.likeQuantifierSQL(e, nil); ok {
+		if sql, ok := g.likeQuantifierSQL(e, nil, e.Parent()); ok {
 			return sql
 		}
 	}
@@ -643,7 +644,7 @@ func (g *Generator) likeSQLWithOp(e expressions.Expression, op string) string {
 // likeQuantifierSQL ports generator.py:4539-4566 _like_sql's quantifier expansion
 // (SUPPORTS_LIKE_QUANTIFIERS=false, i.e. DuckDB): LIKE ANY/ALL over a tuple becomes a
 // disjunction/conjunction of individual LIKE predicates.
-func (g *Generator) likeQuantifierSQL(e expressions.Expression, escape expressions.Expression) (string, bool) {
+func (g *Generator) likeQuantifierSQL(e expressions.Expression, escape expressions.Expression, parent expressions.Expression) (string, bool) {
 	rhs := asExpression(e.Arg("expression"))
 	if rhs == nil || (rhs.Kind() != expressions.KindAny && rhs.Kind() != expressions.KindAll) {
 		return "", false
@@ -680,12 +681,26 @@ func (g *Generator) likeQuantifierSQL(e expressions.Expression, escape expressio
 		})
 	}
 	sql := g.gen(result)
-	if len(exprs) > 1 && e.Parent() != nil && e.Parent().Is(expressions.TraitConnector) {
-		// Group the expansion when it is an operand of AND/OR so SQL precedence cannot
-		// re-associate it; a top-level expansion needs no extra parentheses.
+	// generator.py:4560-4565: group the expansion unless the parent is the same connective or
+	// already a Paren. Every other condition parent (WHERE, HAVING, JOIN ON, ...) needs the
+	// parentheses so SQL precedence cannot re-associate the expansion.
+	if len(exprs) > 1 && parent != nil && parent.Kind() != connective && parent.Kind() != expressions.KindParen && isConditionParent(parent) {
 		sql = "(" + sql + ")"
 	}
 	return sql, true
+}
+
+// isConditionParent reports whether a node is an upstream exp.Condition, the gate for wrapping
+// a LIKE quantifier expansion (generator.py:4562). Connectors/functions carry TraitCondition;
+// the clause nodes that hold a predicate are listed explicitly (our traits table leaves them
+// as plain Expressions).
+func isConditionParent(e expressions.Expression) bool {
+	switch e.Kind() {
+	case expressions.KindWhere, expressions.KindHaving, expressions.KindJoin, expressions.KindIf,
+		expressions.KindFilter, expressions.KindWhen, expressions.KindCase:
+		return true
+	}
+	return e.Is(expressions.TraitCondition)
 }
 
 // unnestLikeQuantifier unwraps nested Paren/Tuple nodes into the operand list.
@@ -748,7 +763,7 @@ func (g *Generator) escapeSQL(e expressions.Expression) string {
 				rhs := asExpression(like.Arg("expression"))
 				return rhs != nil && (rhs.Kind() == expressions.KindAny || rhs.Kind() == expressions.KindAll)
 			}() {
-			if sql, ok := g.likeQuantifierSQL(like, e); ok {
+			if sql, ok := g.likeQuantifierSQL(like, e, e.Parent()); ok {
 				return sql
 			}
 		}
@@ -933,6 +948,69 @@ func (g *Generator) caseSQL(e expressions.Expression) string {
 		return g.indent(strings.Join(statements, "\n"), 0, nil, true, true)
 	}
 	return strings.Join(statements, " ")
+}
+
+// convertSQL ports convert_sql (generator.py:5308-5353): T-SQL's CONVERT(type, value, style)
+// becomes a formatted parse when the style maps to a known pattern, else a CAST/TRY_CAST.
+func (g *Generator) convertSQL(e expressions.Expression) string {
+	to := asExpression(e.Arg("this"))
+	value := asExpression(e.Arg("expression"))
+	style := asExpression(e.Arg("style"))
+	safe := truthy(e.Arg("safe"))
+	if to == nil || value == nil {
+		return ""
+	}
+	// A NULL style makes SQL Server return NULL.
+	if style != nil && style.Kind() == expressions.KindNull {
+		return "NULL"
+	}
+	dtypeForStyle, _ := to.Arg("this").(expressions.DType)
+	if len(to.Expressions()) == 0 {
+		switch dtypeForStyle {
+		case expressions.DTypeVarchar, expressions.DTypeNVarchar, expressions.DTypeChar, expressions.DTypeNChar:
+			to = expressions.DataType(expressions.Args{
+				"this":        dtypeForStyle,
+				"expressions": []expressions.Expression{expressions.LiteralNumber("30")},
+			})
+		}
+	}
+	var transformed expressions.Expression
+	if style != nil && style.IsInt() {
+		if converted, ok := dialects.TSQLConvertFormatMapping[style.Name()]; ok {
+			fmt := expressions.LiteralString(converted)
+			dtype, _ := to.Arg("this").(expressions.DType)
+			switch dtype {
+			case expressions.DTypeDate:
+				transformed = expressions.StrToDate(expressions.Args{"this": value, "format": fmt, "safe": safe})
+			case expressions.DTypeDatetime, expressions.DTypeDatetime2:
+				transformed = expressions.StrToTime(expressions.Args{"this": value, "format": fmt, "safe": safe})
+			case expressions.DTypeVarchar, expressions.DTypeNVarchar, expressions.DTypeChar, expressions.DTypeNChar:
+				transformed = expressions.Cast(expressions.Args{
+					"this": expressions.New(expressions.KindTimeToStr, expressions.Args{"this": value, "format": fmt}),
+					"to":   to, "safe": safe,
+				})
+			case expressions.DTypeText:
+				transformed = expressions.New(expressions.KindTimeToStr, expressions.Args{"this": value, "format": fmt})
+			}
+		} else {
+			g.unsupported("Unsupported T-SQL 'style' value: " + style.Name())
+		}
+	}
+	if transformed == nil {
+		kind := expressions.KindCast
+		if safe {
+			kind = expressions.KindTryCast
+		}
+		transformed = expressions.New(kind, expressions.Args{"this": value, "to": to})
+	}
+	return g.gen(transformed)
+}
+
+// fromTimeZoneSQL ports fromtimezone_sql (generator.py:4056-4059).
+func (g *Generator) fromTimeZoneSQL(e expressions.Expression) string {
+	this := g.sqlKey(e, "this")
+	zone := g.sqlKey(e, "zone")
+	return this + " AT TIME ZONE " + zone + " AT TIME ZONE 'UTC'"
 }
 
 func (g *Generator) ifSQL(e expressions.Expression) string {
@@ -2737,9 +2815,68 @@ func (g *Generator) unnestSQL(e expressions.Expression) string {
 	return "UNNEST(" + args + ")" + suffix
 }
 
+// bracketIndexValue reads an integer index, including the Neg literal form the parser and
+// LiteralNumber use for a negative value.
+func bracketIndexValue(index expressions.Expression) (int64, bool) {
+	if index == nil {
+		return 0, false
+	}
+	if index.Kind() == expressions.KindNeg {
+		inner := index.This()
+		if inner == nil || inner.Kind() != expressions.KindLiteral || !inner.IsInt() {
+			return 0, false
+		}
+		if n, ok := inner.ToPy().(int64); ok {
+			return -n, true
+		}
+		return 0, false
+	}
+	if index.Kind() != expressions.KindLiteral || !index.IsInt() {
+		return 0, false
+	}
+	n, ok := index.ToPy().(int64)
+	return n, ok
+}
+
+// isMapTypedExpression reports whether an expression is a cast to a MAP/OBJECT type, the case
+// apply_index_offset (expressions/builders.py:1117-1121) excludes from index shifting.
+func isMapTypedExpression(e expressions.Expression) bool {
+	if e == nil || (e.Kind() != expressions.KindCast && e.Kind() != expressions.KindTryCast) {
+		return false
+	}
+	to := asExpression(e.Arg("to"))
+	if to == nil {
+		return false
+	}
+	dtype, _ := to.Arg("this").(expressions.DType)
+	return dtype == expressions.DTypeMap || dtype == expressions.DTypeObject
+}
+
 func (g *Generator) bracketSQL(e expressions.Expression) string {
-	// Base IndexOffset is 0, so apply_index_offset is unnecessary for slice 2.
 	exprs := listFromValue(e.Arg("expressions"))
+	// generator.py:3583-3599 bracket_offset_expressions: re-apply the write dialect's index
+	// offset on top of the parser's normalized zero-based index.
+	if !truthy(e.Arg("json_access")) {
+		offset := g.dialect.IndexOffset
+		switch v := e.Arg("offset").(type) {
+		case int:
+			offset -= v
+		case int64:
+			offset -= int(v)
+		case float64:
+			offset -= int(v)
+		}
+		// apply_index_offset only shifts arrays and unknown-typed values; a map access is keyed
+		// by the map's own key space and must keep its literal (builders.py:1117-1121).
+		if isMapTypedExpression(asExpression(e.This())) {
+			offset = 0
+		}
+		if offset != 0 && len(exprs) == 1 {
+			if value, ok := bracketIndexValue(asExpression(exprs[0])); ok {
+				exprs[0] = expressions.LiteralNumber(fmt.Sprintf("%d", value+int64(offset)))
+			}
+		}
+	}
 	sqls := make([]string, 0, len(exprs))
 	for _, expr := range exprs {
 		sqls = append(sqls, g.gen(expr))
@@ -2815,6 +2952,9 @@ func (g *Generator) intervalSQL(e expressions.Expression) string {
 	if this != "" {
 		thisExpr := asExpression(e.Arg("this"))
 		unwrapped := thisExpr != nil && (thisExpr.Kind() == expressions.KindColumn || thisExpr.Kind() == expressions.KindLiteral || thisExpr.Kind() == expressions.KindNeg || thisExpr.Kind() == expressions.KindParen)
+		if g.dialect.IntervalUnwrappedLiteralsOnly && thisExpr != nil {
+			unwrapped = thisExpr.Kind() == expressions.KindLiteral || thisExpr.Kind() == expressions.KindParen
+		}
 		if unwrapped {
 			this = " " + this
 		} else {
@@ -2904,15 +3044,17 @@ func (g *Generator) tableSQLSep(e expressions.Expression, sep string) string {
 	}
 	when := g.sqlKey(e, "when")
 	if when != "" {
+		// generators/duckdb.py:1587 HISTORICAL_DATA_POST_ALIAS = True: the AT/VERSION clause
+		// follows the table alias.
 		if g.isDialect("duckdb") {
+			// A duckdb-source AT (VERSION => n) parses to PropertyEQ; Snowflake's form is a
+			// HistoricalData node. Both move after the alias.
 			if historical := asExpression(e.Arg("when")); historical != nil &&
 				historical.Kind() == expressions.KindPropertyEQ {
 				when = "AT (" + g.sqlKey(historical, "this") + " => " +
 					g.sqlKey(historical, "expression") + ")"
-				postAlias += " " + when
-			} else {
-				table = table + " " + when
 			}
+			postAlias += " " + when
 		} else {
 			table = table + " " + when
 		}

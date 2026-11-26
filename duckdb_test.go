@@ -446,3 +446,13 @@ func TestDuckDBMacroOverloads(t *testing.T) {
 		}
 	}
 }
+
+// TestDuckDBMapIndexRoundTrip pins the map subscript key space: a CAST to MAP keeps its key
+// verbatim instead of taking the array index offset (DEVIATIONS 1.34).
+func TestDuckDBMapIndexRoundTrip(t *testing.T) {
+	assertRoundTrip(t, "duckdb", "SELECT CAST(MAP() AS MAP(TEXT, INT))[0]", "SELECT CAST(MAP() AS MAP(TEXT, INT))[0]")
+	assertRoundTrip(t, "duckdb", "SELECT TRY_CAST(MAP() AS MAP(TEXT, INT))[0]", "SELECT TRY_CAST(MAP() AS MAP(TEXT, INT))[0]")
+	// A normalized negative index must still shift back to the user's written index.
+	assertRoundTrip(t, "duckdb", "SELECT a[0]", "SELECT a[0]")
+	assertRoundTrip(t, "duckdb", "SELECT a[-1]", "SELECT a[-1]")
+}

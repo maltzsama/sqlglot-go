@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/tokens"
 )
@@ -36,6 +38,7 @@ func init() {
 		NoParenFunctionParsers: map[string]parserOverrideFunc{
 			"NEXT": (*Parser).parseTSQLNextValueFor,
 		},
+		TableParts: tsqlTableParts,
 		PropertyParsers: map[string]propertyParserFunc{
 			"SYSTEM_VERSIONING": func(p *Parser, _ bool) exp.Expression {
 				return p.parseSystemVersioningProperty(false)
@@ -45,6 +48,31 @@ func init() {
 			},
 		},
 	})
+}
+
+// tsqlTableParts ports the _parse_table_parts override (parsers/tsql.py:720-747): a quoted
+// `[#temp]` / `[##global]` table name keeps the hash inside the identifier text, so strip it
+// and record the temporary/global flag there instead.
+func tsqlTableParts(p *Parser, table exp.Expression) exp.Expression {
+	if table == nil || table.Kind() != exp.KindTable {
+		return table
+	}
+	ident := asExpr(table.Arg("this"))
+	if ident == nil || ident.Kind() != exp.KindIdentifier {
+		return table
+	}
+	name := ident.Name()
+	if !strings.HasPrefix(name, "#") {
+		return table
+	}
+	if strings.HasPrefix(name, "##") {
+		ident.Set("this", name[2:])
+		ident.Set("global_", true)
+	} else {
+		ident.Set("this", name[1:])
+		ident.Set("temporary", true)
+	}
+	return table
 }
 
 // parseTSQLExecute ports _parse_execute (parsers/tsql.py:468-489).

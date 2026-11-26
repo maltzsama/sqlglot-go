@@ -17,6 +17,9 @@ func (p *Parser) parseCreate() exp.Expression {
 		if p.dialectIs("starrocks") {
 			return p.moveStarRocksPrimaryKey(structured)
 		}
+		if p.dialectIs("tsql") {
+			return p.tsqlCreateTemporary(structured)
+		}
 		return structured
 	}
 	// Grammar extension: MySQL CREATE {USER|ROLE} — structure as a Create root carrying the object
@@ -1293,4 +1296,35 @@ func (p *Parser) parseReturnsProperty() exp.Expression {
 		value = p.parseTypes(false, false, true, false)
 	}
 	return p.expression(exp.ReturnsProperty(exp.Args{"this": value, "is_table": isTable, "null": null, "setof": setof}), nil, nil)
+}
+
+// tsqlCreateTemporary ports the _parse_create override (parsers/tsql.py:750-762): a CREATE
+// whose table identifier carries temporary=true also gets an explicit TemporaryProperty, which
+// is what the generator reads for `CREATE TEMPORARY TABLE`.
+func (p *Parser) tsqlCreateTemporary(create exp.Expression) exp.Expression {
+	if create == nil || create.Kind() != exp.KindCreate {
+		return create
+	}
+	table := asExpr(create.Arg("this"))
+	if table != nil && table.Kind() == exp.KindSchema {
+		table = asExpr(table.Arg("this"))
+	}
+	if table == nil || table.Kind() != exp.KindTable {
+		return create
+	}
+	ident := asExpr(table.Arg("this"))
+	if ident == nil {
+		return create
+	}
+	temporary, _ := ident.Arg("temporary").(bool)
+	if !temporary {
+		return create
+	}
+	properties := asExpr(create.Arg("properties"))
+	if properties == nil || properties.Kind() != exp.KindProperties {
+		properties = exp.New(exp.KindProperties, exp.Args{"expressions": []exp.Expression{}})
+		create.Set("properties", properties)
+	}
+	properties.Set("expressions", append(properties.Expressions(), exp.TemporaryProperty(nil)))
+	return create
 }

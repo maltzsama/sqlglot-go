@@ -20,6 +20,15 @@ func init() {
 func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 	return map[exp.Kind]func(*Generator, exp.Expression) string{
 		exp.KindStructExtract: structExtractSQL,
+		// generators/postgres.py:524-527: a DECIMAL cast around DIV is superfluous.
+		exp.KindCast: func(g *Generator, e exp.Expression) string {
+			this := asExpression(e.This())
+			to := asExpression(e.Arg("to"))
+			if this != nil && this.Kind() == exp.KindIntDiv && to != nil && exp.IsType(to, exp.DTypeDecimal) && len(to.Expressions()) == 0 {
+				return g.gen(this)
+			}
+			return g.castSQL(e)
+		},
 		exp.KindIntDiv: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("DIV", []any{e.This(), e.Arg("expression")}, "(", ")", true)
 		},
@@ -55,6 +64,9 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindTimeToStr: postgresTimeToStr,
 		// generators/postgres.py:392 exp.StrToTime: TO_TIMESTAMP(this, format_time(e)).
 		exp.KindStrToTime: postgresStrToTime,
+		exp.KindStrToDate: func(g *Generator, e exp.Expression) string {
+			return postgresFormattedTime(g, e, "TO_DATE", e.This())
+		},
 		// generators/postgres.py:407/415 exp.UnixToTime — the TRANSFORMS dict lists the key
 		// twice and Python keeps the last entry, so the scale-aware _unix_to_time_sql
 		// (generators/postgres.py:201-212) is the effective transform, not the plain

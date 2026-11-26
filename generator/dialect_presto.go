@@ -12,9 +12,18 @@ import (
 func init() {
 	table := map[exp.Kind]func(*Generator, exp.Expression) string{
 		exp.KindStructExtract: structExtractSQL,
-		exp.KindTimeToStr:     (*Generator).prestoTimeToStrSQL,
-		exp.KindStrToTime:     (*Generator).prestoStrToTimeSQL,
-		exp.KindStrToDate:     func(g *Generator, e exp.Expression) string { return "CAST(" + g.prestoStrToTimeSQL(e) + " AS DATE)" },
+		exp.KindFromISO8601Date: func(g *Generator, e exp.Expression) string {
+			return g.funcCall("FROM_ISO8601_DATE", []any{e.This()}, "(", ")", true)
+		},
+		exp.KindFromISO8601Timestamp: func(g *Generator, e exp.Expression) string {
+			return g.funcCall("FROM_ISO8601_TIMESTAMP", []any{e.This()}, "(", ")", true)
+		},
+		exp.KindFromISO8601TimestampNanos: func(g *Generator, e exp.Expression) string {
+			return g.funcCall("FROM_ISO8601_TIMESTAMP_NANOS", []any{e.This()}, "(", ")", true)
+		},
+		exp.KindTimeToStr: (*Generator).prestoTimeToStrSQL,
+		exp.KindStrToTime: (*Generator).prestoStrToTimeSQL,
+		exp.KindStrToDate: func(g *Generator, e exp.Expression) string { return "CAST(" + g.prestoStrToTimeSQL(e) + " AS DATE)" },
 		exp.KindTimestampTrunc: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("DATE_TRUNC", []any{prestoUnit(e), e.Arg("this")}, "(", ")", true)
 		},

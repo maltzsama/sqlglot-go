@@ -335,6 +335,22 @@ func BigQuery() *Dialect {
 func bigQueryFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expression {
 	out := map[string]func([]exp.Expression) exp.Expression{}
 
+	// dialects/bigquery.py LEAST_GREATEST_IGNORES_NULLS=False: BIGQUERY GREATEST/LEAST return
+	// NULL when any argument is NULL, so record ignore_nulls=false.
+	buildGreatestLeast := func(kind exp.Kind) func([]exp.Expression) exp.Expression {
+		return func(args []exp.Expression) exp.Expression {
+			m := exp.Args{"ignore_nulls": d.LeastGreatestIgnoresNulls}
+			if len(args) > 0 {
+				m["this"] = args[0]
+			}
+			if len(args) > 1 {
+				m["expressions"] = args[1:]
+			}
+			return exp.New(kind, m)
+		}
+	}
+	out["GREATEST"] = buildGreatestLeast(exp.KindGreatest)
+	out["LEAST"] = buildGreatestLeast(exp.KindLeast)
 	out["APPROX_TOP_COUNT"] = exp.FromArgListFunc(exp.KindApproxTopK)
 	out["BIT_AND"] = exp.FromArgListFunc(exp.KindBitwiseAndAgg)
 	out["BIT_OR"] = exp.FromArgListFunc(exp.KindBitwiseOrAgg)
@@ -346,6 +362,11 @@ func bigQueryFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Express
 	out["DATE_ADD"] = bigQueryBuildDateDeltaWithInterval(exp.KindDateAdd)
 	out["DATE_DIFF"] = bigQueryBuildDateDiff(exp.KindDateDiff)
 	out["DATE_SUB"] = bigQueryBuildDateDeltaWithInterval(exp.KindDateSub)
+	out["GENERATE_UUID"] = func([]exp.Expression) exp.Expression {
+		u := exp.New(exp.KindUuid, exp.Args{})
+		u.Set("is_string", true)
+		return u
+	}
 	out["DATE_TRUNC"] = bigQueryBuildDateTrunc
 	// parsers/bigquery.py:105-120: PARSE_DATE/PARSE_DATETIME/PARSE_TIMESTAMP reverse their
 	// (format, value) arguments and default the year to 1970.

@@ -114,6 +114,8 @@ func Postgres() *Dialect {
 		// entry, but upstream builds the structured nodes (the redshift TO_TIMESTAMP
 		// annotation in tests/dialects/test_redshift.py depends on StrToTime).
 		"TO_TIMESTAMP": postgresBuildToTimestamp(d),
+		// parsers/postgres.py:123 "TO_DATE": build_formatted_time(exp.StrToDate).
+		"TO_DATE": postgresBuildFormattedTimeClass(d, exp.KindStrToDate),
 		// parsers/postgres.py:112 "GET_BIT": builds Getbit with zero_is_msb=True (Postgres
 		// indexes the most significant bit 0), which the postgres getbit_sql generator
 		// renders back as GET_BIT(...). Redshift drops this entry (parsers/redshift.py:35).
@@ -132,6 +134,11 @@ func Postgres() *Dialect {
 		// (parsers/postgres.py:44-67). Postgres replaces only the first match unless a
 		// "g" flag is passed, which single_replace carries to the DuckDB generator.
 		"REGEXP_REPLACE": postgresBuildRegexpReplace,
+		// parsers/postgres.py:110 DIV: IntDiv cast to DECIMAL.
+		"DIV": func(args []exp.Expression) exp.Expression {
+			return exp.Cast(exp.Args{"this": exp.IntDiv(exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1)}), "to": exp.DataType(exp.Args{"this": exp.DTypeDecimal})})
+		},
+		"ARRAY_CAT": exp.FromArgListFunc(exp.KindArrayConcat),
 	}
 
 	cfg := tokens.BaseConfig()

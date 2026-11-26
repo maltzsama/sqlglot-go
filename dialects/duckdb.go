@@ -39,6 +39,14 @@ func DuckDB() *Dialect {
 	d.SetAssignmentRequiresVariableKeyword = true
 	// generators/duckdb.py:1580 SUPPORTS_WINDOW_EXCLUDE = True.
 	d.SupportsWindowExclude = true
+	// generators/duckdb.py:1570 JSON_PATH_BRACKETED_KEY_SUPPORTED = False: an unsafe JSON
+	// path key renders as `."key"`, not `["key"]`.
+	d.JSONPathBracketedKeySupported = false
+	// generators/duckdb.py:1852-1935 RESERVED_KEYWORDS: DuckDB quotes these as identifiers.
+	d.ReservedKeywords = duckDBReservedKeywords()
+	// generators/duckdb.py UNWRAPPED_INTERVAL_VALUES = (Literal, Paren), narrower than the
+	// base set: a column or unary-minus interval value is parenthesized.
+	d.IntervalUnwrappedLiteralsOnly = true
 
 	// dialects/duckdb.py:20-39 class attributes.
 	d.NullOrdering = "nulls_are_last"
@@ -387,4 +395,27 @@ func duckDBBuildArrayConcat(d *Dialect) func([]exp.Expression) exp.Expression {
 			"null_propagation": d.ArrayFuncsPropagatesNulls,
 		})
 	}
+}
+
+// duckDBReservedKeywords ports RESERVED_KEYWORDS (generators/duckdb.py:1853-1935), taken from
+// DuckDB's libpg_query reserved_keywords.list. The odd "_p" entries are upstream's internal
+// token names and are ported verbatim.
+func duckDBReservedKeywords() map[string]bool {
+	words := []string{
+		"array", "analyse", "union", "all", "when", "in_p", "default", "create_p", "window", //nolint:misspell // upstream spelling
+		"asymmetric", "to", "else", "localtime", "from", "end_p", "select", "current_date",
+		"foreign", "with", "grant", "session_user", "or", "except", "references", "fetch",
+		"limit", "group_p", "leading", "into", "collate", "offset", "do", "then",
+		"localtimestamp", "check_p", "lateral_p", "current_role", "where", "asc_p", "placing",
+		"desc_p", "user", "unique", "initially", "column", "both", "some", "as", "any", "only",
+		"deferrable", "null_p", "current_time", "true_p", "table", "case", "trailing",
+		"variadic", "for", "on", "distinct", "false_p", "not", "constraint", "current_timestamp",
+		"returning", "primary", "intersect", "having", "analyze", "current_user", "and", "cast",
+		"symmetric", "using", "order", "current_catalog",
+	}
+	out := make(map[string]bool, len(words))
+	for _, w := range words {
+		out[w] = true
+	}
+	return out
 }

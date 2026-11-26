@@ -66,6 +66,9 @@ func Hive() *Dialect {
 
 	// parsers/hive.py:70-120 FUNCTIONS overlay. The callbacks build the canonical expression
 	// Kinds directly because this port keeps the base registry and dialect overlays separate.
+	// dialects/hive.py:24 ARRAY_AGG_INCLUDES_NULLS = None: Hive/Spark ARRAY_AGG excludes NULLs.
+	noNulls := false
+	d.ArrayAggIncludesNulls = &noNulls
 	d.Functions = map[string]func([]exp.Expression) exp.Expression{
 		"BASE64":          exp.FromArgListFunc(exp.KindToBase64),
 		"COLLECT_LIST":    hiveBuildCollectList,

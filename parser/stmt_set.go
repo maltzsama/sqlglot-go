@@ -146,11 +146,21 @@ func (p *Parser) parseSet() exp.Expression {
 		p.retreat(index)
 		return p.parseAsCommand(start)
 	}
-	return p.expression(exp.Set(exp.Args{
+	set := p.expression(exp.Set(exp.Args{
 		"expressions": items,
 		"unset":       false,
 		"tag":         false,
 	}), nil, nil)
+	// parsers/snowflake.py:1372-1380: every Snowflake SET item assigns a session variable, so
+	// its kind is VARIABLE (rendered by DuckDB as `SET VARIABLE ...`).
+	if p.dialectIs("snowflake") && set != nil {
+		for _, item := range set.Expressions() {
+			if item.Kind() == exp.KindSetItem {
+				item.Set("kind", "VARIABLE")
+			}
+		}
+	}
+	return set
 }
 
 // parseSetItem ports _parse_set_item (parser.py:9261-9263): dispatch through SET_PARSERS/
@@ -294,9 +304,9 @@ func (p *Parser) parseSetItemAssignment(kind any) exp.Expression {
 	}
 	assignmentDelimiter := p.matchTexts(setAssignmentDelimiters)
 
-	// SET_REQUIRES_ASSIGNMENT_DELIMITER (parser.py:1774) defaults true and isn't overridden
-	// by mysql/postgres in this port's dialect scope, so it's inlined as a constant.
-	const setRequiresAssignmentDelimiter = true
+	// SET_REQUIRES_ASSIGNMENT_DELIMITER (parser.py:1774) defaults true; T-SQL sets it false
+	// (parsers/tsql.py:322), so `SET KEY VALUE` is an assignment without a delimiter.
+	setRequiresAssignmentDelimiter := !p.dialectIs("tsql")
 	if left == nil || (setRequiresAssignmentDelimiter && !assignmentDelimiter) {
 		p.retreat(index)
 		return nil

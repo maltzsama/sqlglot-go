@@ -32,7 +32,7 @@ func redshiftBuildDateDelta(kind exp.Kind) func([]exp.Expression) exp.Expression
 		e := exp.New(kind, exp.Args{
 			"this":       seqGet(args, 2),
 			"expression": seqGet(args, 1),
-			"unit":       mapDatePart(seqGet(args, 0)),
+			"unit":       exp.TimeUnitVar(mapDatePart(seqGet(args, 0))),
 		})
 		if kind == exp.KindTsOrDsAdd {
 			e.Set("return_type", exp.DTypeTimestamp.IntoExpr(nil))

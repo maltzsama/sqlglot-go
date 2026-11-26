@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -53,14 +54,28 @@ func init() {
 		expressions.KindSetProperty:              propertyLocationUnsupported,
 		expressions.KindVolatileProperty:         propertyLocationUnsupported,
 		expressions.KindWithJournalTableProperty: propertyLocationUnsupported,
+		// generators/duckdb.py PROPERTIES_LOCATION blanket-drops every other property.
+		expressions.KindLocationProperty:      propertyLocationUnsupported,
+		expressions.KindClusteredByProperty:   propertyLocationUnsupported,
+		expressions.KindEngineProperty:        propertyLocationUnsupported,
+		expressions.KindAutoIncrementProperty: propertyLocationUnsupported,
+		expressions.KindCharacterSetProperty:  propertyLocationUnsupported,
+		expressions.KindCollateProperty:       propertyLocationUnsupported,
+		expressions.KindRowFormatProperty:     propertyLocationUnsupported,
+		expressions.KindExternalProperty:      propertyLocationUnsupported,
+		expressions.KindProperty:              propertyLocationUnsupported,
+		expressions.KindSchemaCommentProperty: propertyLocationUnsupported,
 	})
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
 		expressions.KindAnyValue: duckDBAnyValueSQL,
+		expressions.KindAlter: func(g *Generator, e expressions.Expression) string {
+			e.Set("iceberg", false)
+			return g.alterSQL(e)
+		},
 		expressions.KindCommentColumnConstraint: func(g *Generator, _ expressions.Expression) string {
 			return ""
 		},
-		expressions.KindApproxDistinct:    clickhouseRename("APPROX_COUNT_DISTINCT"),
 		expressions.KindBitwiseCount:      clickhouseRename("BIT_COUNT"),
 		expressions.KindCosineDistance:    clickhouseRename("LIST_COSINE_DISTANCE"),
 		expressions.KindCurrentVersion:    clickhouseRename("version"),
@@ -177,11 +192,8 @@ func init() {
 			return "SHOW " + g.sqlKey(e, "this") + from
 		},
 		expressions.KindWithinGroup: duckDBWithinGroupSQL,
-		expressions.KindLength: func(g *Generator, e expressions.Expression) string {
-			return g.funcCall("LENGTH", []any{e.This()}, "(", ")", true)
-		},
-		expressions.KindSHA2: duckDBShA2SQL,
-		expressions.KindStar: duckDBStarSQL,
+		expressions.KindSHA2:        duckDBShA2SQL,
+		expressions.KindStar:        duckDBStarSQL,
 		expressions.KindRegexpFullMatch: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("REGEXP_FULL_MATCH", []any{e.This(), e.Arg("expression"), e.Arg("options")}, "(", ")", true)
 		},
@@ -459,14 +471,25 @@ func duckDBArrayConcatSQL(g *Generator, e expressions.Expression) string {
 // duckDBArrayContainsSQL ports _array_contains_sql (generators/duckdb.py:549-562): with
 // check_null, a NULL needle is handled by comparing the array's full and non-NULL counts.
 func duckDBArrayContainsSQL(g *Generator, e expressions.Expression) string {
-	this := g.sqlKey(e, "this")
-	expr := g.sqlKey(e, "expression")
-	funcSQL := "ARRAY_CONTAINS(" + this + ", " + expr + ")"
+	this := asExpression(e.Arg("this"))
+	expr := asExpression(e.Arg("expression"))
+	funcSQL := "ARRAY_CONTAINS(" + g.gen(this) + ", " + g.gen(expr) + ")"
 	if !truthy(e.Arg("check_null")) {
 		return funcSQL
 	}
-	return "IF(" + expr + " IS NULL, NULLIF(ARRAY_LENGTH(" + this + ") <> LIST_COUNT(" + this +
-		"), FALSE), " + funcSQL + ")"
+	// generators/duckdb.py:547-558: exp.If renders through case_sql as CASE WHEN.
+	checkNull := expressions.Nullif(expressions.Args{
+		"this": expressions.NEQ(expressions.Args{
+			"this":       expressions.ArraySize(expressions.Args{"this": this}),
+			"expression": expressions.Anonymous(expressions.Args{"this": "LIST_COUNT", "expressions": []expressions.Expression{this}}),
+		}),
+		"expression": expressions.Boolean(expressions.Args{"this": false}),
+	})
+	return g.gen(expressions.If(expressions.Args{
+		"this":  expressions.Is(expressions.Args{"this": expr, "expression": expressions.Null()}),
+		"true":  checkNull,
+		"false": expressions.Anonymous(expressions.Args{"this": "ARRAY_CONTAINS", "expressions": []expressions.Expression{this, expr}}),
+	}))
 }
 
 // duckDBArrayOverlapsSQL ports _array_overlaps_sql (generators/duckdb.py:565-606). The
@@ -749,6 +772,17 @@ func duckDBEncodeDecodeSQL(name string) func(*Generator, expressions.Expression)
 // duckDBUnixToTimeSQL ports _unix_to_time_sql (generators/duckdb.py:848-879) for the common
 // epoch forms.
 func duckDBUnixToTimeSQL(g *Generator, e expressions.Expression) string {
+	result := duckDBUnixToTimeBaseSQL(g, e)
+	// generators/duckdb.py:848-877: only a naive timestamp target gets the UTC zone tag.
+	if target := asExpression(e.Arg("target_type")); target != nil {
+		if dtype, ok := target.Arg("this").(expressions.DType); ok && (dtype == expressions.DTypeTimestamp || dtype == expressions.DTypeTimestampNtz) {
+			return result + " AT TIME ZONE 'UTC'"
+		}
+	}
+	return result
+}
+
+func duckDBUnixToTimeBaseSQL(g *Generator, e expressions.Expression) string {
 	scale := asExpression(e.Arg("scale"))
 	if scale == nil || (scale.IsInt() && scale.Name() == "0") {
 		return g.funcCall("TO_TIMESTAMP", []any{e.This()}, "(", ")", true)
@@ -776,7 +810,8 @@ func duckDBUnixToTimeSQL(g *Generator, e expressions.Expression) string {
 
 // duckDBUnixSecondsSQL ports the UnixSeconds lambda (generators/duckdb.py:1768).
 func duckDBUnixSecondsSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("EPOCH", []any{e.This()}, "(", ")", true)
+	// BigQuery truncates toward negative infinity; a plain CAST rounds half away from zero.
+	return "CAST(FLOOR(" + g.funcCall("EPOCH", []any{implicitDatetimeCast(e.This())}, "(", ")", true) + ") AS BIGINT)"
 }
 
 // duckDBDateDiffSQL ports _date_diff_sql (generators/duckdb.py:953-980) for the non-boundary
@@ -833,7 +868,7 @@ func duckDBDateDiffImpl(g *Generator, e expressions.Expression) string {
 	return g.funcCall("DATE_DIFF", []any{duckDBDiffUnit(unit), expr, this}, "(", ")", true)
 }
 
-var duckDBTimezonePattern = regexp.MustCompile(`[+-]\d{2}:?\d{2}$|Z$`)
+var duckDBTimezonePattern = regexp.MustCompile(`[+-]\d{2}(?::?\d{2})?$|Z$`)
 
 // implicitDatetimeCast ports _implicit_datetime_cast (generators/duckdb.py:890-905): a string
 // literal becomes a DATE, promoted to TIMESTAMP/TIMESTAMPTZ when it carries a time (and a
@@ -902,6 +937,26 @@ func duckDBSortArraySQL(g *Generator, e expressions.Expression) string {
 
 // duckDBTimestampFromPartsSQL renders TimestampFromParts as MAKE_TIMESTAMP.
 func duckDBTimestampFromPartsSQL(g *Generator, e expressions.Expression) string {
+	if e.This() != nil && e.Arg("expression") != nil {
+		return g.gen(expressions.Add(expressions.Args{"this": e.This(), "expression": e.Arg("expression")}))
+	}
+	sec := asExpression(e.Arg("sec"))
+	if sec != nil {
+		if milli := asExpression(e.Arg("milli")); milli != nil {
+			sec = expressions.Add(expressions.Args{"this": sec, "expression": expressions.Paren(expressions.Args{
+				"this": expressions.Div(expressions.Args{"this": milli, "expression": expressions.LiteralNumber("1000.0")}),
+			})})
+		}
+		if nano := asExpression(e.Arg("nano")); nano != nil {
+			sec = expressions.Add(expressions.Args{"this": sec, "expression": expressions.Paren(expressions.Args{
+				"this": expressions.Div(expressions.Args{"this": nano, "expression": expressions.LiteralNumber("1000000000.0")}),
+			})})
+		}
+		e.Set("sec", sec)
+	}
+	// Upstream pops milli/nano into sec, so they no longer appear as positional arguments.
+	e.Set("milli", nil)
+	e.Set("nano", nil)
 	return g.funcCall("MAKE_TIMESTAMP", g.fallbackArgs(e), "(", ")", true)
 }
 
@@ -917,12 +972,18 @@ func duckDBDateFromPartsSQL(g *Generator, e expressions.Expression) string {
 	// generators/duckdb.py:1428-1456: allow_overflow normalizes month/day through
 	// MAKE_DATE(year, 1, 1) plus month/day-offset intervals.
 	base := duckDBAnon("MAKE_DATE", year, expressions.LiteralNumber("1"), expressions.LiteralNumber("1"))
+	wrapBinary := func(v expressions.Expression) expressions.Expression {
+		if v != nil && v.Is(expressions.TraitBinary) {
+			return expressions.Paren(expressions.Args{"this": v})
+		}
+		return v
+	}
 	monthInterval := expressions.Interval(expressions.Args{
-		"this": expressions.Sub(expressions.Args{"this": month, "expression": expressions.LiteralNumber("1")}),
+		"this": expressions.Sub(expressions.Args{"this": wrapBinary(month), "expression": expressions.LiteralNumber("1")}),
 		"unit": expressions.Var(expressions.Args{"this": "MONTH"}),
 	})
 	dayInterval := expressions.Interval(expressions.Args{
-		"this": expressions.Sub(expressions.Args{"this": day, "expression": expressions.LiteralNumber("1")}),
+		"this": expressions.Sub(expressions.Args{"this": wrapBinary(day), "expression": expressions.LiteralNumber("1")}),
 		"unit": expressions.Var(expressions.Args{"this": "DAY"}),
 	})
 	result := expressions.Add(expressions.Args{"this": base, "expression": monthInterval})
@@ -1076,6 +1137,14 @@ func duckDBNumberExceeds(text, bound string) bool {
 func duckDBCompareDecimal(a, b string) int {
 	ai, aerr := strconv.ParseFloat(a, 64)
 	bi, berr := strconv.ParseFloat(b, 64)
+	// A decimal literal too large for float64 (e.g. BIGDECIMAL(1e1000000)) parses to +Inf
+	// with ErrRange; it still exceeds every bound DuckDB accepts.
+	if math.IsInf(ai, 1) {
+		return 1
+	}
+	if math.IsInf(ai, -1) {
+		return -1
+	}
 	if aerr != nil || berr != nil {
 		return 0
 	}

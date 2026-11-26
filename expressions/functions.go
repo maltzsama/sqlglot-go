@@ -99,6 +99,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"ARRAY_MAX":       genericFunction(KindArrayMax),
 	"ARRAY_MIN":       genericFunction(KindArrayMin),
 	"ARRAY_TO_STRING": genericFunction(KindArrayToString),
+	"ARRAY_JOIN":      genericFunction(KindArrayToString),
 	"ARRAY_REMOVE":    genericFunction(KindArrayRemove),
 	"ARRAY_APPEND":    genericFunction(KindArrayAppend),
 	"ARRAY_PREPEND":   genericFunction(KindArrayPrepend),
@@ -212,6 +213,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"DATE":            genericFunction(KindDate),
 	"ADD_MONTHS":      genericFunction(KindAddMonths),
 	"DATE_ADD":        genericFunction(KindDateAdd),
+	"DATE_BIN":        genericFunction(KindDateBin),
 	"DATEADD":         genericFunction(KindDateAdd),
 	"DATE_TRUNC": func(args []Expression) Expression {
 		dateTruncArgs := Args{"unit": seqGetExpr(args, 0), "this": seqGetExpr(args, 1)}
@@ -540,6 +542,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"FROM_BASE64":          genericFunction(KindFromBase64),
 	"IF":                   genericFunction(KindIf),
 	"LAST_DAY":             genericFunction(KindLastDay),
+	"LAST_DAY_OF_MONTH":    genericFunction(KindLastDay),
 	"LEFT":                 genericFunction(KindLeft),
 	"LENGTH":               genericFunction(KindLength),
 	"MEDIAN":               genericFunction(KindMedian),

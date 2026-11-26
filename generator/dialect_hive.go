@@ -197,15 +197,31 @@ func hiveFileFormatPropertySQL(g *Generator, e expressions.Expression) string {
 // hiveFormatTimeLiteral is Generator.format_time under Hive's INVERSE_TIME_MAPPING.
 func hiveFormatTimeLiteral(e expressions.Expression) any {
 	format := asExpression(e.Arg("format"))
-	if format == nil || !format.IsString() {
+	if format == nil {
 		return format
 	}
-	name := format.Name()
-	switch e.Kind() {
-	case expressions.KindStrToTime, expressions.KindStrToDate, expressions.KindStrToUnix, expressions.KindTsOrDsToDate:
-		name = hiveLenientParseFormat(name)
+	convert := func(part expressions.Expression) expressions.Expression {
+		if part == nil || !part.IsString() {
+			return part
+		}
+		name := part.Name()
+		switch e.Kind() {
+		case expressions.KindStrToTime, expressions.KindStrToDate, expressions.KindStrToUnix, expressions.KindTsOrDsToDate:
+			name = hiveLenientParseFormat(name)
+		}
+		return expressions.LiteralString(dialects.HiveFormatTime(name))
 	}
-	return expressions.LiteralString(dialects.HiveFormatTime(name))
+	if format.Kind() == expressions.KindConcat {
+		parts := make([]expressions.Expression, 0, len(format.Expressions()))
+		for _, part := range format.Expressions() {
+			parts = append(parts, convert(part))
+		}
+		return expressions.Concat(expressions.Args{"expressions": parts})
+	}
+	if !format.IsString() {
+		return format
+	}
+	return convert(format)
 }
 
 // hiveNonDefaultTimeFormat ports dialect.py:1622-1633 time_format("hive"): nil for TIME_FORMAT.
