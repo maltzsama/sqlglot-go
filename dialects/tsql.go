@@ -3,6 +3,8 @@ package dialects
 import (
 	"maps"
 
+	exp "github.com/maltzsama/sqlglot-go/expressions"
+
 	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
@@ -13,6 +15,12 @@ func TSQL() *Dialect {
 	// dialects/tsql.py CONCAT_WS_COALESCE = True.
 	d.ConcatWsCoalesce = true
 	d.Name = "tsql"
+	// generators/tsql.py:152-163 EXPRESSIONS_WITHOUT_NESTED_CTES.
+	d.MoveCTEsToTopLevel = map[exp.Kind]bool{
+		exp.KindCreate: true, exp.KindDelete: true, exp.KindInsert: true,
+		exp.KindIntersect: true, exp.KindExcept: true, exp.KindMerge: true,
+		exp.KindSelect: true, exp.KindSubquery: true, exp.KindUnion: true, exp.KindUpdate: true,
+	}
 	// generators/mysql.py:124 / generators/tsql.py:138 NULL_ORDERING_SUPPORTED = None.
 	d.NullOrderingSupported = nil
 	// generators/tsql.py TRANSFORMS: eliminate_distinct_on.

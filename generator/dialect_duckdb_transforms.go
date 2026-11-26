@@ -107,6 +107,12 @@ func init() {
 		expressions.KindTimestampDiff:          duckDBTimestampDiffSQL,
 		expressions.KindYearOfWeek:             duckDBYearOfWeekSQL,
 		expressions.KindYearOfWeekIso:          duckDBYearOfWeekSQL,
+		expressions.KindUnixDate:               duckDBUnixDateSQL,
+		expressions.KindTimeDiff:               duckDBTimeDiffSQL,
+		expressions.KindUuid:                   duckDBUuidSQL,
+		expressions.KindSHA1Digest:             duckDBSHA1DigestSQL,
+		expressions.KindSHA2Digest:             duckDBSHA2DigestSQL,
+		expressions.KindXor:                    duckDBXorSQL,
 		expressions.KindPosexplode:             duckDBPosexplodeSQL,
 		expressions.KindDecodeCase:             duckDBDecodeCaseSQL,
 		expressions.KindSeq1:                   duckDBSeqSQL(1),
@@ -1352,6 +1358,9 @@ func duckDBWeekUnitStart(unit expressions.Expression) int {
 		}
 		return 0
 	}
+	if unit.Kind() == expressions.KindColumn && strings.EqualFold(unit.Name(), "WEEK") {
+		return 7
+	}
 	if unit.Kind() == expressions.KindWeekStart {
 		return duckDBWeekStartDow(unit, "")
 	}
@@ -2447,4 +2456,62 @@ func duckDBTimestampDiffSQL(g *Generator, e expressions.Expression) string {
 		return g.gen(expressions.IntDiv(expressions.Args{"this": hours, "expression": expressions.LiteralNumber("24")}))
 	}
 	return g.funcCall("DATE_SUB", []any{unitStr, expr, this}, "(", ")", true)
+}
+
+// duckDBUnixDateSQL ports the UnixDate lambda: days since 1970-01-01.
+func duckDBUnixDateSQL(g *Generator, e expressions.Expression) string {
+	dateExpr := e.This()
+	if dtype, ok := castResultDType(dateExpr); !ok || dtype != expressions.DTypeDate {
+		dateExpr = expressions.Cast(expressions.Args{"this": dateExpr, "to": expressions.DTypeDate.IntoExpr(nil)})
+	}
+	return g.gen(expressions.Anonymous(expressions.Args{"this": "DATE_DIFF", "expressions": []expressions.Expression{
+		expressions.LiteralString("DAY"),
+		expressions.Cast(expressions.Args{"this": expressions.LiteralString("1970-01-01"), "to": expressions.DTypeDate.IntoExpr(nil)}),
+		dateExpr,
+	}}))
+}
+
+// duckDBTimeDiffSQL ports _timediff_sql (generators/duckdb.py:306-318).
+func duckDBTimeDiffSQL(g *Generator, e expressions.Expression) string {
+	unitExpr := asExpression(e.Arg("unit"))
+	unit := duckDBDiffUnit(unitExpr)
+	if unitExpr != nil && unitExpr.Kind() == expressions.KindColumn {
+		unit = expressions.LiteralString(strings.ToUpper(unitExpr.Name()))
+	}
+	this := expressions.Cast(expressions.Args{"this": e.This(), "to": expressions.DTypeTime.IntoExpr(nil)})
+	expr := expressions.Cast(expressions.Args{"this": e.Arg("expression"), "to": expressions.DTypeTime.IntoExpr(nil)})
+	return g.funcCall("DATE_DIFF", []any{unit, expr, this}, "(", ")", true)
+}
+
+// duckDBUuidSQL renders GENERATE_UUID as a text UUID.
+func duckDBUuidSQL(g *Generator, e expressions.Expression) string {
+	if truthy(e.Arg("is_string")) {
+		return "CAST(UUID() AS TEXT)"
+	}
+	return "UUID()"
+}
+
+// duckDBSHA1DigestSQL/DuckDBSHA2DigestSQL render binary digests as UNHEX(SHA...).
+func duckDBSHA1DigestSQL(g *Generator, e expressions.Expression) string {
+	return "UNHEX(" + g.funcCall("SHA1", []any{e.This()}, "(", ")", true) + ")"
+}
+
+func duckDBSHA2DigestSQL(g *Generator, e expressions.Expression) string {
+	if length := asExpression(e.Arg("length")); length != nil && length.Name() != "" && length.Name() != "256" {
+		return g.functionFallbackSQL(e)
+	}
+	return "UNHEX(" + g.funcCall("SHA256", []any{e.This()}, "(", ")", true) + ")"
+}
+
+// duckDBXorSQL ports _xor_sql (generators/duckdb.py:1484-1495) for the boolean XOR form.
+func duckDBXorSQL(g *Generator, e expressions.Expression) string {
+	this := e.This()
+	expr := asExpression(e.Arg("expression"))
+	if truthy(e.Arg("round_input")) {
+		this = expressions.Round(expressions.Args{"this": this, "decimals": expressions.LiteralNumber("0")})
+		expr = expressions.Round(expressions.Args{"this": expr, "decimals": expressions.LiteralNumber("0")})
+	}
+	a := g.gen(this)
+	b := g.gen(expr)
+	return "(" + a + " AND (NOT " + b + ")) OR ((NOT " + a + ") AND " + b + ")"
 }

@@ -776,7 +776,7 @@ func duckDBUnixToTimeSQL(g *Generator, e expressions.Expression) string {
 
 // duckDBUnixSecondsSQL ports the UnixSeconds lambda (generators/duckdb.py:1768).
 func duckDBUnixSecondsSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("EPOCH", []any{e.This()}, "(", ")", true)
+	return "CAST(" + g.funcCall("EPOCH", []any{implicitDatetimeCast(e.This())}, "(", ")", true) + " AS BIGINT)"
 }
 
 // duckDBDateDiffSQL ports _date_diff_sql (generators/duckdb.py:953-980) for the non-boundary
@@ -833,7 +833,7 @@ func duckDBDateDiffImpl(g *Generator, e expressions.Expression) string {
 	return g.funcCall("DATE_DIFF", []any{duckDBDiffUnit(unit), expr, this}, "(", ")", true)
 }
 
-var duckDBTimezonePattern = regexp.MustCompile(`[+-]\d{2}:?\d{2}$|Z$`)
+var duckDBTimezonePattern = regexp.MustCompile(`[+-]\d{2}(?::?\d{2})?$|Z$`)
 
 // implicitDatetimeCast ports _implicit_datetime_cast (generators/duckdb.py:890-905): a string
 // literal becomes a DATE, promoted to TIMESTAMP/TIMESTAMPTZ when it carries a time (and a

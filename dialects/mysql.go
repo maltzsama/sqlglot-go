@@ -165,6 +165,8 @@ func MySQL() *Dialect {
 	// the last base-scope name kept mysql-local (deferred: no fixture exercises the base
 	// rendering it would change).
 	d.Functions = map[string]func([]exp.Expression) exp.Expression{
+		"CHAR_LENGTH":      exp.FromArgListFunc(exp.KindLength),
+		"CHARACTER_LENGTH": exp.FromArgListFunc(exp.KindLength),
 		"CURDATE":          exp.FromArgListFunc(exp.KindCurrentDate),
 		"CURTIME":          exp.FromArgListFunc(exp.KindCurrentTime),
 		"DATABASE":         exp.FromArgListFunc(exp.KindCurrentSchema),

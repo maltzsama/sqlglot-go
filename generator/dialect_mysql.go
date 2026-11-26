@@ -18,6 +18,7 @@ func init() {
 // MySQL function renames (generators/mysql.py TRANSFORMS), shared with the MySQL subclasses.
 func init() {
 	registerDialectDispatch("mysql", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindLength: clickhouseRename("CHAR_LENGTH"),
 		expressions.KindUnixToTime: func(g *Generator, e expressions.Expression) string {
 			scale := asExpression(e.Arg("scale"))
 			if scale != nil {
