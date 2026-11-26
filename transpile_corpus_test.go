@@ -275,7 +275,7 @@ const (
 	minPassTranspileDatabricks  = 227
 	minPassTranspileDoris       = 91
 	minPassTranspileDremio      = 31
-	minPassTranspileDuckDB      = 1275
+	minPassTranspileDuckDB      = 1277
 	minPassTranspileHive        = 441
 	minPassTranspileMaterialize = 32
 	minPassTranspileMySQL       = 264

@@ -206,6 +206,11 @@ func init() {
 		expressions.KindPercentileDisc: percentileOrderedSQL("PERCENTILE_DISC"),
 		expressions.KindWithinGroup:    snowflakeWithinGroupSQL,
 		expressions.KindAtTimeZone: func(g *Generator, e expressions.Expression) string {
+			if dtype, ok := castResultDType(e.This()); ok && dtype == expressions.DTypeTimestamp {
+				// A naive timestamp must be read in the supplied zone; Snowflake's two-argument
+				// CONVERT_TIMEZONE would read it in the session zone instead.
+				return g.funcCall("CONVERT_TIMEZONE", []any{e.Arg("zone"), expressions.LiteralString("UTC"), e.This()}, "(", ")", true)
+			}
 			return g.funcCall("CONVERT_TIMEZONE", []any{e.Arg("zone"), e.This()}, "(", ")", true)
 		},
 		expressions.KindCurrentSchemas: func(g *Generator, e expressions.Expression) string {
@@ -227,6 +232,9 @@ func init() {
 		expressions.KindJSONArray: func(g *Generator, e expressions.Expression) string {
 			args := make([]any, 0, len(e.Expressions()))
 			for _, arg := range e.Expressions() {
+				if arg != nil && arg.Kind() == expressions.KindNull {
+					arg = expressions.ParseJSON(expressions.Args{"this": expressions.LiteralString("null")})
+				}
 				args = append(args, arg)
 			}
 			return g.funcCall("TO_VARIANT", []any{g.funcCall("ARRAY_CONSTRUCT", args, "(", ")", true)}, "(", ")", true)
@@ -1191,14 +1199,30 @@ func snowflakeFilterSQL(g *Generator, e expressions.Expression) string {
 		}
 	}
 	if agg.Kind() == expressions.KindCount && aggArg != nil && aggArg.IsStar() {
-		return g.funcCall("COUNT_IF", []any{cond}, "(", ")", true)
+		// COUNT_IF returns NULL on an empty input; COUNT(IFF(cond, 1, NULL)) returns 0.
+		iff := g.funcCall("IFF", []any{cond, expressions.LiteralNumber("1"), expressions.Null()}, "(", ")", true)
+		return g.funcCall("COUNT", []any{iff}, "(", ")", true)
 	}
+	var orderNode expressions.Expression
 	if aggArg != nil && aggArg.Kind() == expressions.KindOrder {
+		orderNode = aggArg
 		aggArg = asExpression(aggArg.This())
 	}
 	var targets []expressions.Expression
 	if aggArg != nil && aggArg.Kind() == expressions.KindDistinct {
 		targets = aggArg.Expressions()
+		if orderNode != nil {
+			// Snowflake requires the DISTINCT expression and the order key to match.
+			for _, ordered := range orderNode.Expressions() {
+				key := asExpression(ordered.This())
+				for _, target := range targets {
+					if key != nil && target != nil && key.Kind() == target.Kind() && key.Name() == target.Name() {
+						ordered.Set("this", expressions.If(expressions.Args{"this": cond.Copy(), "true": key.Copy()}))
+						break
+					}
+				}
+			}
+		}
 	} else {
 		targets = []expressions.Expression{aggArg}
 	}

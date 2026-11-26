@@ -456,6 +456,27 @@ in `testdata/transpile_corrections.jsonl` rather than editing the upstream-gener
 Guarding tests: `TestDuckDBEngineCorrections`; corpus expectations in
 `testdata/transpile_corrections.jsonl` (loaded by `TestTranspileCorpus`).
 
+### 1.33 Cross-dialect transpile follows the real engines (review follow-ups)
+
+Further real-engine corrections exercised by `testdata/transpile_corrections.jsonl`
+(upstream v30.17.0 disagrees; upstream v30.35.0 has already adopted several):
+
+- `TIMESTAMP_DIFF` uses complete-interval `DATE_SUB` arithmetic instead of boundary-counting
+  `DATE_DIFF` (also upstream v30.35.0), so a half-hour difference is not one hour.
+- MySQL/TSQL NULL-ordering simulation uses the resolved expression only for the rank key and
+  keeps the original key second, and groups connector operands in the `IS NULL` test.
+- Postgres `ARRAY_CONTAINS` returns NULL for a NULL input array.
+- Presto `ARRAY_SORT` comparators handle NULL elements explicitly; `ARRAY_JOIN` forwards the
+  null-replacement argument.
+- Snowflake filtered `COUNT` uses `COUNT(IFF(cond, 1, NULL))` (0 on empty input),
+  `JSON_ARRAY(NULL)` emits a JSON null, ordered DISTINCT aggregates rewrite matching order
+  keys, and naive `AT TIME ZONE` reads the input in the supplied zone.
+- Hive/Spark exclusive-end `RANGE` converts the bound to the last term inside the range.
+- T-SQL `ARRAY_TO_STRING` has no row-preserving form, so it is reported unsupported and left
+  as the source call.
+
+Guarding test: `TestTranspileCorrectionsMatch`.
+
 ## Beyond-upstream dialects
 
 A dialect upstream does not ship at all. There is no Python oracle for these — pinned v30.17.0

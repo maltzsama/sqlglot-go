@@ -13,7 +13,8 @@ import (
 func init() {
 	registerDialectDispatch("tsql", map[exp.Kind]func(*Generator, exp.Expression) string{
 		exp.KindArrayToString: func(g *Generator, e exp.Expression) string {
-			return g.funcCall("STRING_AGG", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+			g.unsupported("ARRAY_TO_STRING has no row-preserving T-SQL form")
+			return g.functionFallbackSQL(e)
 		},
 		exp.KindAnyValue: func(g *Generator, e exp.Expression) string { return g.funcCall("MAX", []any{e.This()}, "(", ")", true) },
 		exp.KindAtan2: func(g *Generator, e exp.Expression) string {
@@ -906,7 +907,7 @@ func (g *Generator) tsqlAlterSQL(e exp.Expression) string {
 		if target := asExpression(actions[0].This()); target != nil && target.Kind() == exp.KindTable {
 			newName = target.Name()
 		}
-		return "EXEC sp_rename '" + g.sqlKey(e, "this") + "', '" + newName + "'"
+		return "EXEC sp_rename " + g.gen(exp.LiteralString(g.sqlKey(e, "this"))) + ", " + g.gen(exp.LiteralString(newName))
 	}
 	return g.alterSQL(e)
 }

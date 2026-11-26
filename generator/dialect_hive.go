@@ -474,61 +474,71 @@ func hiveSequenceSQL(g *Generator, e expressions.Expression) string {
 	start := asExpression(e.Arg("start"))
 	end := asExpression(e.Arg("end"))
 	step := asExpression(e.Arg("step"))
+	if start == nil || end == nil || !truthy(e.Arg("is_end_exclusive")) {
+		return g.funcCall("SEQUENCE", []any{start, end, step}, "(", ")", true)
+	}
 	stepValue := step
 	if stepValue == nil {
 		stepValue = expressions.LiteralNumber("1")
 	}
-	adjustedEnd := expressions.Paren(expressions.Args{"this": expressions.Sub(expressions.Args{"this": end, "expression": stepValue})})
 	sequence := func(endExpr expressions.Expression) expressions.Expression {
 		if step == nil {
 			return expressions.Anonymous(expressions.Args{"this": "SEQUENCE", "expressions": []expressions.Expression{start, endExpr}})
 		}
 		return expressions.Anonymous(expressions.Args{"this": "SEQUENCE", "expressions": []expressions.Expression{start, endExpr, step}})
 	}
-	if !truthy(e.Arg("is_end_exclusive")) || start == nil || end == nil {
-		return g.funcCall("SEQUENCE", []any{start, end, step}, "(", ")", true)
+	st, hasLiteralStep := hiveIntLiteral(stepValue)
+	s, hasStart := hiveIntLiteral(start)
+	en, hasEnd := hiveIntLiteral(end)
+	if hasLiteralStep && st == 0 {
+		return g.gen(expressions.Array(expressions.Args{}))
 	}
-	s, okStart := hiveIntLiteral(start)
-	en, okEnd := hiveIntLiteral(end)
-	st, okStep := hiveIntLiteral(stepValue)
-	if okStart && okEnd && okStep {
-		adjusted := en - st
-		empty := st == 0 || (st > 0 && s > adjusted) || (st < 0 && s < adjusted)
+	if hasLiteralStep && hasStart && hasEnd {
+		// SEQUENCE's stop is inclusive: convert the exclusive bound to the last term
+		// inside the range (end-1 for ascending, end+1 for descending).
+		last := en - 1
+		empty := s >= en
+		if st < 0 {
+			last = en + 1
+			empty = s <= en
+		}
 		if empty {
 			return g.gen(expressions.Array(expressions.Args{}))
 		}
-		return g.gen(sequence(expressions.LiteralNumber(strconv.Itoa(adjusted))))
+		return g.gen(sequence(expressions.LiteralNumber(strconv.Itoa(last))))
 	}
-	var shouldReturnEmpty expressions.Expression
-	if stLiteral, ok := hiveIntLiteral(stepValue); ok {
-		switch {
-		case stLiteral == 0:
-			return g.gen(expressions.Array(expressions.Args{}))
-		case stLiteral > 0:
-			shouldReturnEmpty = expressions.LT(expressions.Args{"this": adjustedEnd.Copy(), "expression": start.Copy()})
-		default:
-			shouldReturnEmpty = expressions.GT(expressions.Args{"this": adjustedEnd.Copy(), "expression": start.Copy()})
+	if hasLiteralStep {
+		var adjusted, cond expressions.Expression
+		if st > 0 {
+			adjusted = expressions.Paren(expressions.Args{"this": expressions.Sub(expressions.Args{"this": end, "expression": expressions.LiteralNumber("1")})})
+			cond = expressions.LT(expressions.Args{"this": adjusted.Copy(), "expression": start.Copy()})
+		} else {
+			adjusted = expressions.Paren(expressions.Args{"this": expressions.Add(expressions.Args{"this": end, "expression": expressions.LiteralNumber("1")})})
+			cond = expressions.GT(expressions.Args{"this": adjusted.Copy(), "expression": start.Copy()})
 		}
-	} else {
-		zero := expressions.LiteralNumber("0")
-		shouldReturnEmpty = expressions.Or(expressions.Args{
-			"this": expressions.EQ(expressions.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
-			"expression": expressions.Or(expressions.Args{
-				"this": expressions.And(expressions.Args{
-					"this":       expressions.GT(expressions.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
-					"expression": expressions.LT(expressions.Args{"this": adjustedEnd.Copy(), "expression": start.Copy()}),
-				}),
-				"expression": expressions.And(expressions.Args{
-					"this":       expressions.LT(expressions.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
-					"expression": expressions.GT(expressions.Args{"this": adjustedEnd.Copy(), "expression": start.Copy()}),
-				}),
-			}),
-		})
+		return g.gen(expressions.If(expressions.Args{
+			"this": cond, "true": expressions.Array(expressions.Args{}), "false": sequence(adjusted),
+		}))
 	}
+	// Dynamic step: SEQUENCE cannot know the last term, so keep the upstream
+	// end-step form and its emptiness guard.
+	adjustedEnd := expressions.Paren(expressions.Args{"this": expressions.Sub(expressions.Args{"this": end, "expression": stepValue})})
+	zero := expressions.LiteralNumber("0")
+	shouldReturnEmpty := expressions.Or(expressions.Args{
+		"this": expressions.EQ(expressions.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
+		"expression": expressions.Or(expressions.Args{
+			"this": expressions.And(expressions.Args{
+				"this":       expressions.GT(expressions.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
+				"expression": expressions.LT(expressions.Args{"this": adjustedEnd.Copy(), "expression": start.Copy()}),
+			}),
+			"expression": expressions.And(expressions.Args{
+				"this":       expressions.LT(expressions.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
+				"expression": expressions.GT(expressions.Args{"this": adjustedEnd.Copy(), "expression": start.Copy()}),
+			}),
+		}),
+	})
 	return g.gen(expressions.If(expressions.Args{
-		"this":  shouldReturnEmpty,
-		"true":  expressions.Array(expressions.Args{}),
-		"false": sequence(adjustedEnd),
+		"this": shouldReturnEmpty, "true": expressions.Array(expressions.Args{}), "false": sequence(adjustedEnd),
 	}))
 }
 
@@ -554,13 +564,28 @@ func hiveSplitSQL(g *Generator, e expressions.Expression) string {
 }
 
 func hiveQuotedRegex(arg any) expressions.Expression {
-	escaped := expressions.Concat(expressions.Args{"expressions": []expressions.Expression{
-		expressions.LiteralString(`\Q`), asExpression(arg), expressions.LiteralString(`\E`),
+	inner := asExpression(arg)
+	if inner != nil && inner.Kind() == expressions.KindLiteral && inner.IsString() {
+		// Java's Pattern.quote handles an embedded \E by closing, escaping and reopening the
+		// quote: \E -> \E\\E\Q.
+		text := strings.ReplaceAll(inner.Name(), `\E`, `\E\\E\Q`)
+		inner = expressions.LiteralString(text)
+	}
+	return expressions.Concat(expressions.Args{"expressions": []expressions.Expression{
+		expressions.LiteralString(`\Q`), inner, expressions.LiteralString(`\E`),
 	}})
-	return escaped
 }
 
 // hiveUnixToTimeSQL ports the Hive UNIX_TIMESTAMP/FROM_UNIXTIME transform for UnixToTime.
 func hiveUnixToTimeSQL(g *Generator, e expressions.Expression) string {
+	if scale := asExpression(e.Arg("scale")); scale != nil {
+		ts := expressions.Div(expressions.Args{
+			"this": e.This(),
+			"expression": expressions.Anonymous(expressions.Args{"this": "POWER", "expressions": []expressions.Expression{
+				expressions.LiteralNumber("10"), scale,
+			}}),
+		})
+		return g.funcCall("FROM_UNIXTIME", []any{ts}, "(", ")", true)
+	}
 	return g.funcCall("FROM_UNIXTIME", []any{e.This()}, "(", ")", true)
 }

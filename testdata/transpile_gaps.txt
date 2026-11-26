@@ -799,8 +799,6 @@
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT DATE_FROM_PARTS(2024 + 2, 1 + 2, 2 + 3)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT MAP_CAT(CAST(OBJECT_CONSTRUCT() AS MAP(VARCHAR, INT)), CAST(OBJECT_CONSTRUCT('a', 1) AS MAP(VARCHAR, INT)))"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT MAP_CAT(CAST(m1 AS MAP(VARCHAR, INT)), CAST(m2 AS MAP(VARCHAR, INT)))"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT NEXT_DAY(CAST('2024-01-01' AS DATE), day_column)"}
-{"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT PREVIOUS_DAY(DATE '2024-01-15', day_column)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT REGR_VALX(y, x)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT REGR_VALY(y, x)"}
 {"read":"snowflake","write":"duckdb","category":"gen: cast/type","sql":"SELECT TIMESTAMP_FROM_PARTS(TO_DATE('2023-06-15'), TO_TIME('14:30:45'))"}

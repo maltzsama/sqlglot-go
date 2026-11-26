@@ -2,6 +2,7 @@ package generator
 
 import (
 	"github.com/maltzsama/sqlglot-go/dialects"
+	"strconv"
 	"strings"
 
 	exp "github.com/maltzsama/sqlglot-go/expressions"
@@ -28,7 +29,7 @@ func init() {
 		exp.KindEncode:         prestoCall("TO_UTF8", "this", "replace"),
 		exp.KindUnixToTime:     prestoUnixToTimeSQL,
 		exp.KindSortArray:      prestoSortArraySQL,
-		exp.KindArrayToString:  prestoCall("ARRAY_JOIN", "this", "expression"),
+		exp.KindArrayToString:  prestoArrayToStringSQL,
 		exp.KindQuantile:       prestoCall("APPROX_PERCENTILE", "this", "quantile"),
 		exp.KindLastDay:        prestoCall("LAST_DAY_OF_MONTH", "this"),
 		exp.KindGenerateSeries: prestoCall("SEQUENCE", "start", "end", "step"),
@@ -429,17 +430,52 @@ func prestoUnixToTimeSQL(g *Generator, e exp.Expression) string {
 // prestoSortArraySQL ports the Presto ARRAY_SORT transform for SortArray.
 func prestoSortArraySQL(g *Generator, e exp.Expression) string {
 	asc := asExpression(e.Arg("asc"))
-	if asc == nil {
+	nullsFirst := asExpression(e.Arg("nulls_first"))
+	descending := asc != nil && !truthy(asc.Arg("this"))
+	if asc == nil && nullsFirst == nil {
 		return g.funcCall("ARRAY_SORT", []any{e.This()}, "(", ")", true)
 	}
-	if !truthy(asc.Arg("this")) {
-		a, b := exp.ToIdentifier("a"), exp.ToIdentifier("b")
-		cond := exp.Case(exp.Args{"ifs": []exp.Expression{
-			exp.If(exp.Args{"this": exp.LT(exp.Args{"this": a.Copy(), "expression": b.Copy()}), "true": exp.LiteralNumber("1")}),
-			exp.If(exp.Args{"this": exp.GT(exp.Args{"this": a.Copy(), "expression": b.Copy()}), "true": exp.LiteralNumber("-1")}),
-		}, "default": exp.LiteralNumber("0")})
-		lambda := exp.Lambda(exp.Args{"this": cond, "expressions": []exp.Expression{a, b}})
-		return g.funcCall("ARRAY_SORT", []any{e.This(), lambda}, "(", ")", true)
+	if asc != nil && truthy(asc.Arg("this")) && nullsFirst == nil {
+		return g.funcCall("ARRAY_SORT", []any{e.This()}, "(", ")", true)
 	}
-	return g.funcCall("ARRAY_SORT", []any{e.This()}, "(", ")", true)
+	a, b := exp.ToIdentifier("a"), exp.ToIdentifier("b")
+	nullRank := func(whenLeftNull, whenRightNull int) []exp.Expression {
+		return []exp.Expression{
+			exp.If(exp.Args{
+				"this": exp.And(exp.Args{
+					"this":       exp.Is(exp.Args{"this": a.Copy(), "expression": exp.Null()}),
+					"expression": exp.Is(exp.Args{"this": b.Copy(), "expression": exp.Null()}),
+				}),
+				"true": exp.LiteralNumber("0"),
+			}),
+			exp.If(exp.Args{"this": exp.Is(exp.Args{"this": a.Copy(), "expression": exp.Null()}), "true": exp.LiteralNumber(strconv.Itoa(whenLeftNull))}),
+			exp.If(exp.Args{"this": exp.Is(exp.Args{"this": b.Copy(), "expression": exp.Null()}), "true": exp.LiteralNumber(strconv.Itoa(whenRightNull))}),
+		}
+	}
+	leftNull, rightNull := 1, -1 // nulls last
+	if nullsFirst != nil && truthy(nullsFirst.Arg("this")) {
+		leftNull, rightNull = -1, 1 // nulls first
+	}
+	ifs := nullRank(leftNull, rightNull)
+	less, greater := -1, 1
+	if descending {
+		less, greater = 1, -1
+	}
+	ifs = append(ifs,
+		exp.If(exp.Args{"this": exp.LT(exp.Args{"this": a.Copy(), "expression": b.Copy()}), "true": exp.LiteralNumber(strconv.Itoa(less))}),
+		exp.If(exp.Args{"this": exp.GT(exp.Args{"this": a.Copy(), "expression": b.Copy()}), "true": exp.LiteralNumber(strconv.Itoa(greater))}),
+	)
+	cond := exp.Case(exp.Args{"ifs": ifs, "default": exp.LiteralNumber("0")})
+	lambda := exp.Lambda(exp.Args{"this": cond, "expressions": []exp.Expression{a, b}})
+	return g.funcCall("ARRAY_SORT", []any{e.This(), lambda}, "(", ")", true)
+}
+
+// prestoArrayToStringSQL ports the Presto ARRAY_JOIN transform, forwarding the optional
+// null-replacement argument.
+func prestoArrayToStringSQL(g *Generator, e exp.Expression) string {
+	args := []any{e.This(), e.Arg("expression")}
+	if nullArg := asExpression(e.Arg("null")); nullArg != nil {
+		args = append(args, nullArg)
+	}
+	return g.funcCall("ARRAY_JOIN", args, "(", ")", true)
 }

@@ -360,11 +360,17 @@ func (g *Generator) orderedSQL(e expressions.Expression) string {
 					if target != nil {
 						targetSQL = g.gen(target)
 					}
+					testSQL := targetSQL
+					if target != nil && target.Is(expressions.TraitConnector) {
+						testSQL = "(" + targetSQL + ")"
+					}
 					nullSortOrder := ""
 					if nullsSortChange == " NULLS FIRST" {
 						nullSortOrder = " DESC"
 					}
-					this = "CASE WHEN " + targetSQL + " IS NULL THEN 1 ELSE 0 END" + nullSortOrder + ", " + targetSQL
+					// Use the resolved expression only for the null-rank key; the second key keeps
+					// the original text so an integer projection cannot turn into a column position.
+					this = "CASE WHEN " + testSQL + " IS NULL THEN 1 ELSE 0 END" + nullSortOrder + ", " + this
 					nullsSortChange = ""
 				}
 			}
