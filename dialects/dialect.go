@@ -506,6 +506,9 @@ type Dialect struct {
 	// delimiters used to render a UnicodeString (base empty, i.e. no U& support).
 	UnicodeStart string
 	UnicodeEnd   string
+	// NoQueryHints ports QUERY_HINTS = False (bigquery, redshift, clickhouse, postgres, hive,
+	// duckdb): the generator drops a Select's optimizer hint comment.
+	NoQueryHints bool
 	// StrictJSONPathSyntax ports STRICT_JSON_PATH_SYNTAX (base True; duckdb and starrocks
 	// False): an invalid JSON path logs a warning and the literal is kept.
 	StrictJSONPathSyntax bool

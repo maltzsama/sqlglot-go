@@ -60,6 +60,11 @@ func init() {
 	dispatch[expressions.KindFromTimeZone] = (*Generator).fromTimeZoneSQL
 	dispatch[expressions.KindConvert] = (*Generator).convertSQL
 	dispatch[expressions.KindToNumber] = (*Generator).toNumberSQL
+	dispatch[expressions.KindSpace] = (*Generator).spaceSQL
+	dispatch[expressions.KindAnyValue] = (*Generator).anyValueSQL
+	dispatch[expressions.KindFromISO8601Date] = fromISO8601Cast(expressions.DTypeDate)
+	dispatch[expressions.KindFromISO8601Timestamp] = fromISO8601Cast(expressions.DTypeTimestampTz)
+	dispatch[expressions.KindFromISO8601TimestampNanos] = fromISO8601Cast(expressions.DTypeTimestampTz)
 	dispatch[expressions.KindForClause] = (*Generator).forClauseSQL
 	dispatch[expressions.KindUnixSeconds] = (*Generator).unixSecondsSQL
 	dispatch[expressions.KindTsOrDsToTimestamp] = (*Generator).tsOrDsToTimestampSQL

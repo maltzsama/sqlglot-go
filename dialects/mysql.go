@@ -180,6 +180,8 @@ func MySQL() *Dialect {
 				"source_tz": hiveSeqGet(args, 1), "target_tz": hiveSeqGet(args, 2), "timestamp": hiveSeqGet(args, 0),
 			})
 		},
+		// parsers/mysql.py:134: TIMESTAMPDIFF(unit, expression, this).
+		"TIMESTAMPDIFF": sparkBuildDateDelta(exp.KindTimestampDiff),
 		// parsers/mysql.py:108-110 (v30.17.0): MySQL DATEDIFF counts date-part boundaries.
 		"DATEDIFF": func(args []exp.Expression) exp.Expression {
 			return exp.New(exp.KindDateDiff, exp.Args{

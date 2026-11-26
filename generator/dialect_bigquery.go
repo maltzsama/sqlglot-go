@@ -44,40 +44,46 @@ func init() {
 	})
 
 	registerDialectDispatch("bigquery", map[expressions.Kind]func(*Generator, expressions.Expression) string{
-		expressions.KindAIEmbed:               clickhouseRename("EMBED"),
-		expressions.KindAIGenerate:            clickhouseRename("GENERATE"),
-		expressions.KindAISimilarity:          clickhouseRename("SIMILARITY"),
-		expressions.KindApproxTopK:            clickhouseRename("APPROX_TOP_COUNT"),
-		expressions.KindApproxDistinct:        clickhouseRename("APPROX_COUNT_DISTINCT"),
-		expressions.KindArgMax:                bigQueryArgMaxMin("MAX_BY"),
-		expressions.KindArgMin:                bigQueryArgMaxMin("MIN_BY"),
-		expressions.KindArray:                 bigQueryArraySQL,
-		expressions.KindArrayContains:         bigQueryArrayContainsSQL,
-		expressions.KindArrayFilter:           bigQueryFilterArrayUsingUnnest,
-		expressions.KindArrayRemove:           bigQueryFilterArrayUsingUnnest,
-		expressions.KindBitwiseAndAgg:         clickhouseRename("BIT_AND"),
-		expressions.KindBitwiseOrAgg:          clickhouseRename("BIT_OR"),
-		expressions.KindBitwiseXorAgg:         clickhouseRename("BIT_XOR"),
-		expressions.KindBitwiseCount:          clickhouseRename("BIT_COUNT"),
-		expressions.KindByteLength:            clickhouseRename("BYTE_LENGTH"),
-		expressions.KindCast:                  bigQueryCastSQL,
-		expressions.KindCollateProperty:       bigQueryCollatePropertySQL,
-		expressions.KindCommit:                func(*Generator, expressions.Expression) string { return "COMMIT TRANSACTION" },
-		expressions.KindCountIf:               clickhouseRename("COUNTIF"),
-		expressions.KindCreate:                bigQueryCreateSQL,
-		expressions.KindCTE:                   bigQueryCTESQL,
-		expressions.KindDateAdd:               bigQueryDateAddIntervalSQL("DATE", "ADD"),
-		expressions.KindDateDiff:              bigQueryDateDiffSQL,
-		expressions.KindDateFromParts:         clickhouseRename("DATE"),
-		expressions.KindDateStrToDate:         bigQueryDateStrToDateSQL,
-		expressions.KindDateSub:               bigQueryDateAddIntervalSQL("DATE", "SUB"),
-		expressions.KindDatetimeAdd:           bigQueryDateAddIntervalSQL("DATETIME", "ADD"),
-		expressions.KindDatetimeSub:           bigQueryDateAddIntervalSQL("DATETIME", "SUB"),
-		expressions.KindDateFromUnixDate:      clickhouseRename("DATE_FROM_UNIX_DATE"),
-		expressions.KindFromTimeZone:          bigQueryFromTimeZoneSQL,
-		expressions.KindGenerateSeries:        bigQueryGenerateSeriesSQL("GENERATE_ARRAY"),
-		expressions.KindGroupConcat:           bigQueryGroupConcatSQL,
-		expressions.KindHex:                   bigQueryHexSQL,
+		expressions.KindAIEmbed:          clickhouseRename("EMBED"),
+		expressions.KindAIGenerate:       clickhouseRename("GENERATE"),
+		expressions.KindAISimilarity:     clickhouseRename("SIMILARITY"),
+		expressions.KindApproxTopK:       clickhouseRename("APPROX_TOP_COUNT"),
+		expressions.KindApproxDistinct:   clickhouseRename("APPROX_COUNT_DISTINCT"),
+		expressions.KindArgMax:           bigQueryArgMaxMin("MAX_BY"),
+		expressions.KindArgMin:           bigQueryArgMaxMin("MIN_BY"),
+		expressions.KindArray:            bigQueryArraySQL,
+		expressions.KindArrayContains:    bigQueryArrayContainsSQL,
+		expressions.KindArrayFilter:      bigQueryFilterArrayUsingUnnest,
+		expressions.KindArrayRemove:      bigQueryFilterArrayUsingUnnest,
+		expressions.KindBitwiseAndAgg:    clickhouseRename("BIT_AND"),
+		expressions.KindBitwiseOrAgg:     clickhouseRename("BIT_OR"),
+		expressions.KindBitwiseXorAgg:    clickhouseRename("BIT_XOR"),
+		expressions.KindBitwiseCount:     clickhouseRename("BIT_COUNT"),
+		expressions.KindByteLength:       clickhouseRename("BYTE_LENGTH"),
+		expressions.KindCast:             bigQueryCastSQL,
+		expressions.KindCollateProperty:  bigQueryCollatePropertySQL,
+		expressions.KindCommit:           func(*Generator, expressions.Expression) string { return "COMMIT TRANSACTION" },
+		expressions.KindCountIf:          clickhouseRename("COUNTIF"),
+		expressions.KindCreate:           bigQueryCreateSQL,
+		expressions.KindCTE:              bigQueryCTESQL,
+		expressions.KindDateAdd:          bigQueryDateAddIntervalSQL("DATE", "ADD"),
+		expressions.KindDateDiff:         bigQueryDateDiffSQL,
+		expressions.KindDateFromParts:    clickhouseRename("DATE"),
+		expressions.KindDateStrToDate:    bigQueryDateStrToDateSQL,
+		expressions.KindDateSub:          bigQueryDateAddIntervalSQL("DATE", "SUB"),
+		expressions.KindDatetimeAdd:      bigQueryDateAddIntervalSQL("DATETIME", "ADD"),
+		expressions.KindDatetimeSub:      bigQueryDateAddIntervalSQL("DATETIME", "SUB"),
+		expressions.KindDateFromUnixDate: clickhouseRename("DATE_FROM_UNIX_DATE"),
+		expressions.KindFromTimeZone:     bigQueryFromTimeZoneSQL,
+		expressions.KindGenerateSeries:   bigQueryGenerateSeriesSQL("GENERATE_ARRAY"),
+		expressions.KindGroupConcat:      bigQueryGroupConcatSQL,
+		expressions.KindHex:              bigQueryHexSQL,
+		expressions.KindHexString: func(g *Generator, e expressions.Expression) string {
+			if truthy(e.Arg("is_integer")) {
+				return g.dialect.HexStart + e.Name() + g.dialect.HexEnd
+			}
+			return g.funcCall("FROM_HEX", []any{expressions.LiteralString(e.Name())}, "(", ")", true)
+		},
 		expressions.KindIf:                    bigQueryIfSQL,
 		expressions.KindILike:                 bigQueryNoILikeSQL,
 		expressions.KindIntDiv:                clickhouseRename("DIV"),
@@ -100,7 +106,7 @@ func init() {
 		expressions.KindParseDatetime:         bigQueryParseDatetimeSQL,
 		expressions.KindRegexpExtract:         bigQueryRegexpExtractSQL,
 		expressions.KindRegexpExtractAll:      bigQueryRegexpExtractAllSQL,
-		expressions.KindRegexpReplace:         (*Generator).regexpReplaceSQL,
+		expressions.KindRegexpReplace:         bigQueryRegexpReplaceSQL,
 		expressions.KindRegexpLike:            clickhouseRename("REGEXP_CONTAINS"),
 		expressions.KindReturnsProperty:       bigQueryReturnsPropertySQL,
 		expressions.KindRollback:              func(*Generator, expressions.Expression) string { return "ROLLBACK TRANSACTION" },
@@ -141,6 +147,8 @@ func init() {
 		expressions.KindDateTrunc:  bigQueryDateTruncSQL,
 		expressions.KindMod:        (*Generator).bigQueryModSQL,
 		expressions.KindTimeToStr:  bigQueryTimeToStrSQL,
+		expressions.KindTable:      bigQueryTableSQL,
+		expressions.KindAnonymous:  bigQueryAnonymousSQL,
 		expressions.KindEQ:         (*Generator).bigQueryEQSQL,
 		expressions.KindAtTimeZone: (*Generator).bigQueryAtTimeZoneSQL,
 		expressions.KindTryCast:    bigQueryTryCastSQL,
@@ -286,9 +294,14 @@ func bigQueryCreateSQL(g *Generator, e expressions.Expression) string {
 		for _, returns := range e.FindAll(expressions.KindReturnsProperty) {
 			if truthy(returns.Arg("is_table")) {
 				e.Set("kind", "TABLE FUNCTION")
-				if body := asExpression(e.Arg("expression")); body != nil &&
-					(body.Kind() == expressions.KindSubquery || body.Kind() == expressions.KindLiteral) {
-					e.Set("expression", body.This())
+				if body := asExpression(e.Arg("expression")); body != nil {
+					switch body.Kind() {
+					case expressions.KindSubquery:
+						e.Set("expression", body.This())
+					case expressions.KindLiteral:
+						// generators/bigquery.py:80-81: the literal's text is the raw body.
+						e.Set("expression", body.Name())
+					}
 				}
 				break
 			}
@@ -306,6 +319,12 @@ func bigQueryCTESQL(g *Generator, e expressions.Expression) string {
 	if alias != nil && query != nil {
 		names := exprList(alias.Arg("columns"))
 		selects := query.Selects()
+		for _, projection := range selects {
+			if projection.IsStar() {
+				// generators/bigquery.py:118-123: a star query keeps its CTE columns.
+				return g.cteSQL(e)
+			}
+		}
 		if len(names) > 0 && len(selects) > 0 {
 			alias.Set("columns", nil)
 			for i, proj := range selects {
@@ -316,7 +335,7 @@ func bigQueryCTESQL(g *Generator, e expressions.Expression) string {
 				if proj.Kind() == expressions.KindAlias {
 					inner = asExpression(proj.This())
 				}
-				proj.Replace(expressions.AliasExpr(inner, names[i].Name(), false))
+				proj.Replace(expressions.AliasExpr(inner.Copy(), names[i].Name(), false))
 			}
 		}
 	}
@@ -854,10 +873,16 @@ func (g *Generator) bigQueryFormatTime(e expressions.Expression, inverse bool) s
 	if inverse {
 		mapping = g.dialect.InverseFormatMapping
 	}
-	if converted, ok := dialects.FormatTime(format.Name(), mapping); ok {
-		return g.gen(expressions.LiteralString(converted))
+	name := format.Name()
+	if inverse {
+		// The SAFE_CAST FORMAT branch maps BigQuery tokens, so the port's internal
+		// "strict" markers must be removed before the lookup.
+		name = stripStrictTimeFormat(name)
 	}
-	return g.gen(format)
+	if converted, ok := dialects.FormatTime(name, mapping); ok {
+		return g.gen(expressions.LiteralString(stripStrictTimeFormat(converted)))
+	}
+	return g.gen(expressions.LiteralString(stripStrictTimeFormat(name)))
 }
 
 // exprList narrows an arg value (slice or single) to its non-nil Expressions.
@@ -876,7 +901,15 @@ func exprList(value any) []expressions.Expression {
 // for the transforms this port has: unqualify_unnest strips the synthetic UNNEST table
 // qualifier, and _alias_ordered_group rewrites a GROUP BY expression that exactly matches a
 // projection alias into a reference to that alias.
+func bigQueryAnonymousSQL(g *Generator, e expressions.Expression) string {
+	if strings.EqualFold(e.Text("this"), "MAKE_TIME") {
+		return g.funcCall("TIME", listToAny(e.Expressions()), "(", ")", true)
+	}
+	return g.anonymousSQL(e)
+}
+
 func bigQuerySelectSQL(g *Generator, e expressions.Expression) string {
+	unnestExplodingGenerateSeries(e)
 	explodeProjectionToUnnest(e, 0)
 	e = unqualifyUnnest(e)
 	group := asExpression(e.Arg("group"))
@@ -910,4 +943,63 @@ func init() {
 			return g.funcCall("COLLATE", []any{e.This(), e.Arg("expression")}, "(", ")", true)
 		},
 	})
+}
+
+// unnestExplodingGenerateSeries ports _unnest_explode_generate_series
+// (generators/bigquery.py:140-166): an exploding GENERATE_SERIES projection moves to the
+// FROM clause as a table reference, which bigQueryTableSQL later renders as UNNEST.
+func unnestExplodingGenerateSeries(e expressions.Expression) {
+	if e.Kind() != expressions.KindSelect {
+		return
+	}
+	for _, projection := range e.Selects() {
+		series := projection
+		if projection.Kind() == expressions.KindAlias {
+			series = asExpression(projection.This())
+		}
+		if series == nil || series.Kind() != expressions.KindGenerateSeries || !truthy(series.Arg("exploding")) {
+			continue
+		}
+		columnName := projection.OutputName()
+		if columnName == "" {
+			columnName = "_gen_series_value"
+		}
+		projection.Replace(expressions.Column(expressions.Args{"this": expressions.ToIdentifier(columnName, false)}))
+		table := expressions.Table(expressions.Args{
+			"this":  series,
+			"alias": expressions.TableAlias(expressions.Args{"this": expressions.ToIdentifier(columnName, false)}),
+		})
+		if e.Arg("from_") != nil {
+			joins := listFromValue(e.Arg("joins"))
+			e.Set("joins", append(joins, expressions.Join(expressions.Args{"this": table, "kind": "CROSS"})))
+		} else {
+			e.Set("from_", expressions.From(expressions.Args{"this": table}))
+		}
+	}
+}
+
+// bigQueryRegexpReplaceSQL ports regexp_replace_sql (dialects/dialect.py:1868-1871):
+// BigQuery takes no position/occurrence/modifier arguments.
+func bigQueryRegexpReplaceSQL(g *Generator, e expressions.Expression) string {
+	return g.funcCall("REGEXP_REPLACE", []any{e.This(), e.Arg("expression"), e.Arg("replacement")}, "(", ")", true)
+}
+
+// bigQueryTableSQL ports the Table preprocess chain (generators/bigquery.py:411): a
+// GENERATE_SERIES table reference becomes an UNNEST so it renders inside GENERATE_ARRAY.
+func bigQueryTableSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.This())
+	if this == nil || this.Kind() != expressions.KindGenerateSeries {
+		return g.tableSQL(e)
+	}
+	args := expressions.Args{"expressions": []expressions.Expression{this}}
+	if alias := asExpression(e.Arg("alias")); alias != nil {
+		columnAlias := alias.Copy()
+		if columns := listFromValue(alias.Arg("columns")); len(columns) == 0 && alias.This() != nil {
+			// BigQuery's UNNEST_COLUMN_ONLY renders the column list as the bare alias.
+			columnAlias.Set("columns", []any{alias.This().Copy()})
+			columnAlias.Set("this", nil)
+		}
+		args["alias"] = columnAlias
+	}
+	return g.gen(expressions.Unnest(args))
 }

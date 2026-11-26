@@ -120,6 +120,7 @@ func Presto() *Dialect {
 		"DATE_FORMAT":          prestoBuildFormattedTime(exp.KindTimeToStr, false),
 		"DATE_PARSE":           prestoBuildFormattedTime(exp.KindStrToTime, false),
 		"TO_CHAR":              prestoBuildFormattedTime(exp.KindTimeToStr, true),
+		"TO_HEX":               exp.FromArgListFunc(exp.KindHex),
 		"DATE_TRUNC":           prestoBuildDateTrunc,
 		"REGEXP_EXTRACT":       prestoBuildRegexpExtract(exp.KindRegexpExtract),
 		"REGEXP_EXTRACT_ALL":   prestoBuildRegexpExtract(exp.KindRegexpExtractAll),

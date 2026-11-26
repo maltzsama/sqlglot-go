@@ -10,6 +10,8 @@ import (
 func Redshift() *Dialect {
 	d := Postgres()
 	d.Name = "redshift"
+	// generators/redshift.py: QUERY_HINTS = False.
+	d.NoQueryHints = true
 	// generators/redshift.py TRANSFORMS: eliminate_distinct_on.
 	d.EliminateDistinctOn = true
 	// generators/redshift.py NVL2_SUPPORTED = True.

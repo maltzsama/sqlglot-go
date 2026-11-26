@@ -779,7 +779,7 @@ func (g *Generator) duckDBFormatTimeExpr(e expressions.Expression) expressions.E
 		return format
 	}
 	if converted, ok := dialects.FormatTime(format.Name(), g.dialect.InverseTimeMapping); ok {
-		return expressions.LiteralString(duckDBStripStrict(converted))
+		return expressions.LiteralString(stripStrictTimeFormat(converted))
 	}
 	return format
 }
@@ -791,14 +791,14 @@ func (g *Generator) duckDBFormatTime(e expressions.Expression) string {
 		return g.gen(format)
 	}
 	if converted, ok := dialects.FormatTime(format.Name(), g.dialect.InverseTimeMapping); ok {
-		return g.gen(expressions.LiteralString(duckDBStripStrict(converted)))
+		return g.gen(expressions.LiteralString(stripStrictTimeFormat(converted)))
 	}
 	return g.gen(format)
 }
 
-// duckDBStripStrict removes the port's internal "strict" marker from a converted format
+// stripStrictTimeFormat removes the port's internal "strict" marker from a converted format
 // (e.g. "%mstrict" -> "%m"), which only the Hive/Snowflake inverse maps understand.
-func duckDBStripStrict(format string) string {
+func stripStrictTimeFormat(format string) string {
 	for _, marker := range []string{"%mstrict", "%dstrict", "%Hstrict", "%Istrict", "%Mstrict", "%Sstrict"} {
 		format = strings.ReplaceAll(format, marker, strings.TrimSuffix(marker, "strict"))
 	}
