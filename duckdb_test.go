@@ -492,6 +492,8 @@ func TestDuckDBTailTranspileFixes(t *testing.T) {
 		{"bigquery", "SELECT ts + MAKE_INTERVAL(1, 2, minute => 5, day => 3)", "SELECT ts + INTERVAL '1 year 2 month 5 minute 3 day'"},
 		{"postgres", "WITH dates AS (SELECT GENERATE_SERIES('2020-01-01'::DATE, '2024-01-01'::DATE, '1 day'::INTERVAL) AS date) SELECT * FROM dates", "WITH dates AS (SELECT UNNEST(GENERATE_SERIES(CAST('2020-01-01' AS DATE), CAST('2024-01-01' AS DATE), CAST('1 day' AS INTERVAL))) AS date) SELECT * FROM dates"},
 		{"snowflake", "SELECT * FROM produce PIVOT(SUM(produce.sales) FOR produce.quarter IN ('Q1', 'Q2'))", "SELECT * FROM produce PIVOT(SUM(sales) FOR quarter IN ('Q1' AS \"'Q1'\", 'Q2' AS \"'Q2'\"))"},
+		{"snowflake", "SELECT * FROM produce PIVOT(SUM(sales) FOR quarter IN ('O''Brien'))", "SELECT * FROM produce PIVOT(SUM(sales) FOR quarter IN ('O''Brien' AS \"'O''Brien'\"))"},
+		{"postgres", "SELECT * FROM LATERAL GENERATE_SERIES(1, 3) AS g", "SELECT * FROM LATERAL GENERATE_SERIES(1, 3) AS g"},
 	} {
 		out, err := sqlglot.Transpile(tc.sql, tc.read, "duckdb", generator.Options{})
 		if err != nil || len(out) != 1 || out[0] != tc.want {
@@ -508,6 +510,17 @@ func TestDuckDBTailTranspileFixes(t *testing.T) {
 		if err != nil || len(out) != 1 || !strings.Contains(out[0], tc.contains) {
 			t.Fatalf("%s -> %s: %v %v", tc.sql, tc.write, out, err)
 		}
+	}
+
+	// A unit added after parsing is still rendered, after the recorded source order.
+	expr, err := sqlglot.ParseOne("SELECT MAKE_INTERVAL(1, 2, minute => 5, day => 3)", "bigquery")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expr.Expressions()[0].Set("hour", exp.LiteralNumber("4"))
+	got, err := sqlglot.Generate(expr, "duckdb", generator.Options{})
+	if err != nil || !strings.Contains(got, "3 day 4 hour") {
+		t.Fatalf("appended MAKE_INTERVAL unit: %q %v", got, err)
 	}
 
 	// Longer sketch templates: assert the shape rather than repeat the whole literal.

@@ -496,6 +496,16 @@ entry; the rest are exercised by unit tests or reachable only through untested a
 Guarding tests: `TestTranspileCorrectionsMatch`, `TestTSQLReviewFixes`, and
 `TestDuckDBReviewRegressions`.
 
+### 1.35 Postgres `LATERAL GENERATE_SERIES` keeps its source column name
+
+Pinned upstream wraps a set-returning `GENERATE_SERIES` in `LATERAL` with `UNNEST`, so the
+DuckDB relation's column is named `unnest` and a projection that references the original
+`generate_series` name no longer binds. This port keeps the bare call for a `LATERAL` table
+source (projections still get `UNNEST`), which preserves the column name and matches DuckDB's
+own lateral table-source behavior.
+
+Guarding test: `TestDuckDBTailTranspileFixes`.
+
 ## Beyond-upstream dialects
 
 A dialect upstream does not ship at all. There is no Python oracle for these — pinned v30.17.0

@@ -3,6 +3,7 @@ package generator
 import (
 	"math"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -523,9 +524,15 @@ func duckDBArrayOverlapsSQL(g *Generator, e expressions.Expression) string {
 // duckDBMakeIntervalSQL ports no_make_interval_sql (dialects/dialect.py:2523-2531) with
 // sep=" ": each value is paired with its unit inside an INTERVAL literal.
 func duckDBMakeIntervalSQL(g *Generator, e expressions.Expression) string {
-	order := []string{"year", "month", "week", "day", "hour", "minute", "second"}
+	defaultOrder := []string{"year", "month", "week", "day", "hour", "minute", "second"}
+	order := defaultOrder
 	if raw, ok := e.MetaGet("make_interval_order").([]string); ok && len(raw) > 0 {
-		order = raw
+		order = append([]string{}, raw...)
+		for _, unit := range defaultOrder {
+			if !slices.Contains(order, unit) {
+				order = append(order, unit)
+			}
+		}
 	}
 	args := make([]string, 0, len(order))
 	for _, key := range order {
@@ -589,7 +596,7 @@ func duckDBGenerateSeriesSQL(g *Generator, e expressions.Expression) string {
 		if parent != nil && (parent.Kind() == expressions.KindAlias || parent.Kind() == expressions.KindTableAlias) {
 			parent = parent.Parent()
 		}
-		if parent == nil || (parent.Kind() != expressions.KindTable && parent.Kind() != expressions.KindUnnest) {
+		if parent == nil || (parent.Kind() != expressions.KindTable && parent.Kind() != expressions.KindUnnest && parent.Kind() != expressions.KindLateral) {
 			return "UNNEST(" + series + ")"
 		}
 	}

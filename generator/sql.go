@@ -2686,7 +2686,7 @@ func (g *Generator) pivotSQL(e expressions.Expression) string {
 				}
 				items[i] = expressions.PivotAlias(expressions.Args{
 					"this":  lit,
-					"alias": expressions.ToIdentifier("'"+lit.Name()+"'", true),
+					"alias": expressions.ToIdentifier("'"+strings.ReplaceAll(lit.Name(), "'", "''")+"'", true),
 				})
 			}
 			in.Set("expressions", items)
