@@ -767,7 +767,7 @@ func (p *Parser) parseBracketBase(this exp.Expression) exp.Expression {
 	} else {
 		// parser.py:7994-7996: normalize the index to the base (zero-based) offset so the
 		// generator can re-apply the write dialect's own offset.
-		expressions = applyBracketIndexOffset(expressions, -p.dialect.IndexOffset)
+		expressions = applyBracketIndexOffset(this, expressions, -p.dialect.IndexOffset)
 		this = p.expression(exp.Bracket(exp.Args{"this": this, "expressions": expressions}), nil, this.PopComments())
 	}
 	p.addComments(this)
@@ -776,8 +776,14 @@ func (p *Parser) parseBracketBase(this exp.Expression) exp.Expression {
 
 // applyBracketIndexOffset mirrors apply_index_offset (expressions/builders.py:1100-1131): a
 // single integer-literal index is shifted by offset; a slice or expression is left alone.
-func applyBracketIndexOffset(expressions []exp.Expression, offset int) []exp.Expression {
+func applyBracketIndexOffset(this exp.Expression, expressions []exp.Expression, offset int) []exp.Expression {
 	if offset == 0 || len(expressions) != 1 {
+		return expressions
+	}
+	// A map subscript is keyed by the map's own key space, so it must not be shifted
+	// (expressions/builders.py:1117-1121). The type is not annotated here, so a syntactic
+	// cast to MAP/OBJECT is the detectable form.
+	if isMapTypeCast(this) {
 		return expressions
 	}
 	index := expressions[0]
@@ -789,6 +795,19 @@ func applyBracketIndexOffset(expressions []exp.Expression, offset int) []exp.Exp
 		return expressions
 	}
 	return []exp.Expression{exp.LiteralNumber(fmt.Sprintf("%d", value+int64(offset)))}
+}
+
+// isMapTypeCast reports whether an expression is a CAST/TRY_CAST to MAP or OBJECT.
+func isMapTypeCast(this exp.Expression) bool {
+	if this == nil || (this.Kind() != exp.KindCast && this.Kind() != exp.KindTryCast) {
+		return false
+	}
+	to := asExpr(this.Arg("to"))
+	if to == nil {
+		return false
+	}
+	dtype, _ := to.Arg("this").(exp.DType)
+	return dtype == exp.DTypeMap || dtype == exp.DTypeObject
 }
 
 // kvToPropEQ ports _kv_to_prop_eq (parser.py:7308-7333) with parse_map=False.

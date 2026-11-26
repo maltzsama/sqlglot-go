@@ -525,6 +525,7 @@ func TestTSQLReviewFixes(t *testing.T) {
 		{"SELECT CONVERT(DATE, '2024-01-02', NULL)", "duckdb", "SELECT NULL"},
 		{"SELECT CONVERT(VARCHAR(10), CAST('2024-01-02' AS DATE), 101)", "duckdb", "SELECT CAST(STRFTIME(CAST('2024-01-02' AS DATE), '%m/%d/%Y') AS TEXT(10))"},
 		{"SELECT DISTINCT x FROM t OFFSET 1 ROWS", "tsql", "SELECT DISTINCT x FROM t ORDER BY 1 OFFSET 1 ROWS"},
+		{"SELECT TRY_CONVERT(DATE, 'garbage', 101)", "duckdb", "SELECT CAST(TRY_STRPTIME('garbage', '%m/%d/%Y') AS DATE)"},
 	}
 	for _, tc := range cases {
 		out, err := sqlglot.Transpile(tc.sql, "tsql", tc.write, generator.Options{})
