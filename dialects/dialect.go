@@ -269,6 +269,9 @@ type Dialect struct {
 	// SupportsUnixSeconds ports SUPPORTS_UNIX_SECONDS (generator.py:579, base false):
 	// dialects with a native UNIX_SECONDS render the call; others build a TimestampDiff.
 	SupportsUnixSeconds bool
+	// LikePropertyInsideSchema ports LIKE_PROPERTY_INSIDE_SCHEMA (base false; postgres and
+	// presto true): a LIKE property outside a schema is parenthesized.
+	LikePropertyInsideSchema bool
 	// SelectKinds ports SELECT_KINDS (generator.py:397, base STRUCT/VALUE; DuckDB none):
 	// the SELECT AS <kind> forms a dialect can render. Other kinds fall back to a struct
 	// literal (STRUCT) or are dropped (VALUE).

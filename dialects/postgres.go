@@ -33,6 +33,7 @@ func Postgres() *Dialect {
 	// generator.py:466 SUPPORTS_SELECT_INTO is overridden True for postgres: `SELECT ... INTO x`
 	// stays inline instead of being rewritten to `CREATE TABLE x AS SELECT ...`.
 	d.SupportsSelectInto = true
+	d.LikePropertyInsideSchema = true
 	// Real PostgreSQL 17.6 rejects a bare string as a table name (`FROM 'foo'`) or table alias
 	// (`FROM t 'x'`); see the field doc.
 	d.StringTableIdentifiers = false

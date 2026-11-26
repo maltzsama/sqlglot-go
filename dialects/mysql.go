@@ -229,6 +229,17 @@ func MySQL() *Dialect {
 	// [("x'","'"),("X'","'"),("0x","")]; BIT_START/HEX_START take the FIRST tuple.
 	d.BitStart, d.BitEnd = "b'", "'"
 	d.HexStart, d.HexEnd = "x'", "'"
+	// generators/mysql.py JSON_PATH_BRACKETED_KEY_SUPPORTED = False.
+	d.JSONPathBracketedKeySupported = false
+	// dialects/mysql.py:37-48 TIME_MAPPING and its inverse.
+	d.TimeMapping = map[string]string{
+		"%M": "%B", "%c": "%-m", "%e": "%-d", "%h": "%I", "%i": "%M", "%s": "%S",
+		"%u": "%W", "%k": "%-H", "%l": "%-I", "%T": "%H:%M:%S", "%W": "%A",
+	}
+	d.InverseTimeMapping = map[string]string{
+		"%B": "%M", "%-m": "%c", "%-d": "%e", "%I": "%h", "%M": "%i", "%S": "%s",
+		"%W": "%u", "%-H": "%k", "%-I": "%l", "%H:%M:%S": "%T", "%A": "%W",
+	}
 	cfg.NestedComments = false
 	cfg.IdentifiersCanStartWithDigit = true
 

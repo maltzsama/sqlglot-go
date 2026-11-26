@@ -72,8 +72,53 @@ func init() {
 		exp.KindFirst:              (*Generator).prestoFirstLastSQL,
 		exp.KindLast:               (*Generator).prestoFirstLastSQL,
 		exp.KindConcat:             (*Generator).prestoConcatSQL,
-		exp.KindCreate:             (*Generator).prestoCreateSQL,
-		exp.KindJSONFormat:         prestoCall("JSON_FORMAT", "this", "options"),
+		exp.KindDateStrToDate:      prestoCast("DATE"),
+		exp.KindDateToDateStr:      prestoCast("VARCHAR"),
+		exp.KindDateToDi: func(g *Generator, e exp.Expression) string {
+			return "CAST(DATE_FORMAT(" + g.sqlKey(e, "this") + ", '%Y%m%d') AS INT)"
+		},
+		exp.KindDiToDate: func(g *Generator, e exp.Expression) string {
+			return "CAST(DATE_PARSE(CAST(" + g.sqlKey(e, "this") + " AS VARCHAR), '%Y%m%d') AS DATE)"
+		},
+		exp.KindTimeStrToTime: prestoTimeStrToTimeSQL,
+		exp.KindTimeToTimeStr: prestoCast("VARCHAR"),
+		exp.KindTimeStrToUnix: func(g *Generator, e exp.Expression) string {
+			return "TO_UNIXTIME(DATE_PARSE(" + g.sqlKey(e, "this") + ", '%Y-%m-%d %T'))"
+		},
+		exp.KindTsOrDsToDate: func(g *Generator, e exp.Expression) string {
+			if asExpression(e.Arg("format")) != nil {
+				return g.tsOrDsToDateSQL(e)
+			}
+			return "CAST(CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP) AS DATE)"
+		},
+		exp.KindTsOrDiToDi: func(g *Generator, e exp.Expression) string {
+			return "CAST(SUBSTR(REPLACE(CAST(" + g.sqlKey(e, "this") + " AS VARCHAR), '-', ''), 1, 8) AS INT)"
+		},
+		exp.KindTsOrDsAdd: func(g *Generator, e exp.Expression) string {
+			unit := asExpression(e.Arg("unit"))
+			unitSQL := ""
+			if unit != nil {
+				unitSQL = "'" + strings.ToUpper(unit.Name()) + "'"
+			}
+			value := "CAST(CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP) AS DATE)"
+			return "DATE_ADD(" + unitSQL + ", " + g.sqlKey(e, "expression") + ", " + value + ")"
+		},
+		exp.KindUnixToStr: func(g *Generator, e exp.Expression) string {
+			return "DATE_FORMAT(FROM_UNIXTIME(" + g.sqlKey(e, "this") + "), " + g.sqlKey(e, "format") + ")"
+		},
+		exp.KindUnixToTimeStr: func(g *Generator, e exp.Expression) string {
+			return "CAST(FROM_UNIXTIME(" + g.sqlKey(e, "this") + ") AS VARCHAR)"
+		},
+		exp.KindTsOrDsToDateStr: func(g *Generator, e exp.Expression) string {
+			return "SUBSTR(CAST(" + g.sqlKey(e, "this") + " AS VARCHAR), 1, 10)"
+		},
+		exp.KindTimeStrToDate: func(g *Generator, e exp.Expression) string {
+			return "CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP)"
+		},
+		exp.KindArrayFilter: renameFunc("FILTER"),
+		exp.KindArrayAny:    renameFunc("ANY_MATCH"),
+		exp.KindCreate:      (*Generator).prestoCreateSQL,
+		exp.KindJSONFormat:  prestoCall("JSON_FORMAT", "this", "options"),
 		exp.KindJSONExtract: func(g *Generator, e exp.Expression) string {
 			args := []any{e.Arg("this"), e.Arg("expression")}
 			for _, x := range e.Expressions() {
@@ -82,7 +127,11 @@ func init() {
 			return g.funcCall("JSON_EXTRACT", args, "(", ")", true)
 		},
 		exp.KindILike: func(g *Generator, e exp.Expression) string {
-			return "LOWER(" + g.sqlKey(e, "this") + ") LIKE LOWER(" + g.sqlKey(e, "expression") + ")"
+			op := "LIKE"
+			if boolValue(e.Arg("negate")) {
+				op = "NOT LIKE"
+			}
+			return "LOWER(" + g.sqlKey(e, "this") + ") " + op + " LOWER(" + g.sqlKey(e, "expression") + ")"
 		},
 		exp.KindInitcap: func(g *Generator, e exp.Expression) string {
 			// presto.py:50-58.
@@ -197,7 +246,7 @@ func prestoLiteralType(e exp.Expression) string {
 // generator.py:3678-3680 with SUPPORTS_SINGLE_ARG_CONCAT = False (presto.py:271).
 func (g *Generator) prestoConcatSQL(e exp.Expression) string {
 	if args := e.Expressions(); len(args) == 1 {
-		return g.gen(args[0])
+		return "CAST(" + g.gen(args[0]) + " AS VARCHAR)"
 	}
 	return g.concatSQL(e)
 }
@@ -491,4 +540,18 @@ func prestoArrayToStringSQL(g *Generator, e exp.Expression) string {
 		args = append(args, nullArg)
 	}
 	return g.funcCall("ARRAY_JOIN", args, "(", ")", true)
+}
+
+func prestoCast(name string) func(*Generator, exp.Expression) string {
+	return func(g *Generator, e exp.Expression) string {
+		return "CAST(" + g.sqlKey(e, "this") + " AS " + name + ")"
+	}
+}
+
+func prestoTimeStrToTimeSQL(g *Generator, e exp.Expression) string {
+	target := "TIMESTAMP"
+	if asExpression(e.Arg("zone")) != nil {
+		target = "TIMESTAMP WITH TIME ZONE"
+	}
+	return "CAST(" + g.sqlKey(e, "this") + " AS " + target + ")"
 }
