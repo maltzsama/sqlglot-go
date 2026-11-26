@@ -134,6 +134,8 @@ func MySQL() *Dialect {
 	d.VarcharRequiresSize = true
 	// generators/mysql.py:132 INTERVAL_ALLOWS_PLURAL_FORM = False.
 	d.IntervalAllowsPluralForm = false
+	// generators/mysql.py:276 LIMIT_ONLY_LITERALS = True.
+	d.LimitOnlyLiterals = true
 	// generators/mysql.py:133 LOCKING_READS_SUPPORTED = True.
 	d.LockingReadsSupported = true
 	// generators/mysql.py:142 JSON_TYPE_REQUIRED_FOR_EXTRACTION = True.
@@ -180,8 +182,34 @@ func MySQL() *Dialect {
 				"source_tz": hiveSeqGet(args, 1), "target_tz": hiveSeqGet(args, 2), "timestamp": hiveSeqGet(args, 0),
 			})
 		},
+		// parsers/mysql.py:123: ISNULL becomes a parenthesized IS NULL.
+		"ISNULL": func(args []exp.Expression) exp.Expression {
+			return exp.Paren(exp.Args{"this": exp.Is(exp.Args{
+				"this":       hiveSeqGet(args, 0),
+				"expression": exp.Null(),
+			})})
+		},
+		// parsers/mysql.py:127-130: MONTHNAME is DATE_FORMAT(x, '%M').
+		"MONTHNAME": func(args []exp.Expression) exp.Expression {
+			return exp.TimeToStr(exp.Args{
+				"this":   exp.TsOrDsToDate(exp.Args{"this": hiveSeqGet(args, 0)}),
+				"format": exp.LiteralString("%B"),
+			})
+		},
 		// parsers/mysql.py:134: TIMESTAMPDIFF(unit, expression, this).
 		"TIMESTAMPDIFF": sparkBuildDateDelta(exp.KindTimestampDiff),
+		// parsers/mysql.py:135-141: TO_DAYS counts from year zero.
+		"TO_DAYS": func(args []exp.Expression) exp.Expression {
+			diff := exp.DateDiff(exp.Args{
+				"this":       exp.TsOrDsToDate(exp.Args{"this": hiveSeqGet(args, 0)}),
+				"expression": exp.TsOrDsToDate(exp.Args{"this": exp.LiteralString("0000-01-01")}),
+				"unit":       exp.Var(exp.Args{"this": "DAY"}),
+			})
+			return exp.Paren(exp.Args{"this": exp.Add(exp.Args{
+				"this":       diff,
+				"expression": exp.LiteralNumber("1"),
+			})})
+		},
 		// parsers/mysql.py:108-110 (v30.17.0): MySQL DATEDIFF counts date-part boundaries.
 		"DATEDIFF": func(args []exp.Expression) exp.Expression {
 			return exp.New(exp.KindDateDiff, exp.Args{
