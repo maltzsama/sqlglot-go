@@ -506,6 +506,17 @@ own lateral table-source behavior.
 
 Guarding test: `TestDuckDBTailTranspileFixes`.
 
+### 1.36 Snowflake zone and MySQL epoch readings
+
+- BigQuery `TIMESTAMP(value, zone)` with a naive value uses Snowflake's three-argument
+  `CONVERT_TIMEZONE(zone, 'UTC', CAST(value AS TIMESTAMP))`. Pinned upstream emits the
+  two-argument form, which Snowflake reads in the session zone instead of the supplied one.
+- MySQL `UNIX_SECONDS(x)` renders `UNIX_TIMESTAMP(x)`. The base TimestampDiff fallback orders
+  its arguments for the generic `TIMESTAMPDIFF(unit, start, end)` shape, which MySQL does not
+  accept, and the native function is the correct mapping.
+
+Guarding tests: `TestTranspileCorrectionsMatch` and `TestBigQuerySnowflakeTail`.
+
 ## Beyond-upstream dialects
 
 A dialect upstream does not ship at all. There is no Python oracle for these — pinned v30.17.0

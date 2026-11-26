@@ -212,7 +212,7 @@ func (g *Generator) columnParts(e expressions.Expression) string {
 	}
 	// generator.py column_parts override (bigquery): a `dataset.table`.name reference keeps its
 	// quoted table path.
-	if truthy(e.MetaGet("quoted_column")) {
+	if g.isDialect("bigquery") && truthy(e.MetaGet("quoted_column")) {
 		parts := e.Parts()
 		if len(parts) > 1 {
 			names := make([]string, 0, len(parts)-1)
@@ -954,7 +954,8 @@ func (g *Generator) caseSQL(e expressions.Expression) string {
 func (g *Generator) tsOrDsToTimestampSQL(e expressions.Expression) string {
 	this := asExpression(e.This())
 	if this != nil && (this.Kind() == expressions.KindTsOrDsToTimestamp ||
-		expressions.DataTypeIsType(this, false, expressions.DTypeTimestamp)) {
+		expressions.DataTypeIsType(this, false, expressions.DTypeTimestamp) ||
+		expressions.IsType(this, expressions.DTypeTimestamp)) {
 		return g.gen(this)
 	}
 	return g.gen(expressions.Cast(expressions.Args{"this": this, "to": expressions.DTypeTimestamp.IntoExpr(nil)}))

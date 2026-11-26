@@ -738,11 +738,18 @@ func TestBigQuerySnowflakeTail(t *testing.T) {
 			t.Fatalf("%s\n got: %v %v\nwant: %s", tc.sql, out, err, tc.want)
 		}
 	}
+	mysqlOut, err := sqlglot.Transpile("SELECT UNIX_SECONDS(x)", "bigquery", "mysql", generator.Options{})
+	if err != nil || len(mysqlOut) != 1 || mysqlOut[0] != "SELECT UNIX_TIMESTAMP(x)" {
+		t.Fatalf("mysql UNIX_SECONDS: %v %v", mysqlOut, err)
+	}
 	for _, tc := range []struct{ sql, contains string }{
 		{"SELECT JSON_EXTRACT_ARRAY('{\"fruits\": [1]}', '$.fruits')", "TRANSFORM(GET_PATH(PARSE_JSON('{\"fruits\": [1]}'), 'fruits'), x -> PARSE_JSON(TO_JSON(x)))"},
 		{"SELECT ARRAY(SELECT AS STRUCT 1 AS a, 2 AS b)", "(SELECT ARRAY_AGG(OBJECT_CONSTRUCT('a', 1, 'b', 2)))"},
 		{"SELECT purchases, LAST_VALUE(item) OVER item_window AS p FROM Produce WINDOW item_window AS (PARTITION BY purchases)", "LAST_VALUE(item) OVER (PARTITION BY purchases) AS p"},
 		{"SELECT x FROM UNNEST([STRUCT('x' AS x)])", "value['x'] AS x"},
+		{"SELECT LAST_VALUE(x) OVER b FROM t WINDOW a AS (PARTITION BY y), b AS (a ORDER BY z)", "OVER (PARTITION BY y ORDER BY z NULLS FIRST)"},
+		{"WITH t AS (SELECT v AS id FROM UNNEST([1, 2]) AS v) SELECT id FROM t", "SELECT id FROM t"},
+		{"SELECT JSON_EXTRACT_ARRAY(PARSE_JSON(s), '$.a')", "GET_PATH(PARSE_JSON(s), 'a')"},
 	} {
 		out, err := sqlglot.Transpile(tc.sql, "bigquery", "snowflake", generator.Options{})
 		if err != nil || len(out) != 1 || !strings.Contains(out[0], tc.contains) {

@@ -165,10 +165,10 @@ func init() {
 		expressions.KindDateSub:          snowflakeDateDeltaSubSQL("DATEADD"),
 		expressions.KindDateDiff:         snowflakeDateDeltaSQL("DATEDIFF"),
 		expressions.KindDatetimeAdd:      snowflakeDateDeltaSQL("TIMESTAMPADD"),
-		expressions.KindDatetimeSub:      snowflakeDateDeltaSQL("TIMESTAMPADD"),
+		expressions.KindDatetimeSub:      snowflakeDateDeltaSubSQL("TIMESTAMPADD"),
 		expressions.KindDatetimeDiff:     snowflakeDateDeltaSQL("TIMESTAMPDIFF"),
 		expressions.KindTimeAdd:          snowflakeDateDeltaSQL("TIMEADD"),
-		expressions.KindTimeSub:          snowflakeDateDeltaSQL("TIMEADD"),
+		expressions.KindTimeSub:          snowflakeDateDeltaSubSQL("TIMEADD"),
 		expressions.KindTimestampAdd:     snowflakeDateDeltaSQL("TIMESTAMPADD"),
 		expressions.KindTimestampSub:     snowflakeDateDeltaSubSQL("TIMESTAMPADD"),
 		expressions.KindTimestampDiff: func(g *Generator, e expressions.Expression) string {
@@ -223,7 +223,15 @@ func init() {
 		expressions.KindPercentileDisc: percentileOrderedSQL("PERCENTILE_DISC"),
 		expressions.KindWithinGroup:    snowflakeWithinGroupSQL,
 		expressions.KindAtTimeZone: func(g *Generator, e expressions.Expression) string {
-			if dtype, ok := castResultDType(e.This()); ok && dtype == expressions.DTypeTimestamp {
+			naive := false
+			if this := asExpression(e.This()); this != nil {
+				if this.IsString() {
+					naive = true
+				} else if dtype, ok := castResultDType(this); ok && dtype == expressions.DTypeTimestamp {
+					naive = true
+				}
+			}
+			if naive {
 				// A naive timestamp must be read in the supplied zone; Snowflake's two-argument
 				// CONVERT_TIMEZONE would read it in the session zone instead.
 				return g.funcCall("CONVERT_TIMEZONE", []any{e.Arg("zone"), expressions.LiteralString("UTC"), e.This()}, "(", ")", true)
@@ -1358,6 +1366,26 @@ func snowflakeTimestampSQL(g *Generator, e expressions.Expression) string {
 	// generators/snowflake.py: exp.Timestamp: no_timestamp_sql. A zone reads the value there
 	// through CONVERT_TIMEZONE.
 	if zone := asExpression(e.Arg("zone")); zone != nil {
+		// A naive timestamp is read in the supplied zone: Snowflake's two-argument form would
+		// read it in the session zone.
+		naive := false
+		if this := asExpression(e.This()); this != nil {
+			if this.IsString() {
+				naive = true
+			} else if dtype, ok := castResultDType(this); ok && dtype == expressions.DTypeTimestamp {
+				naive = true
+			}
+		}
+		if naive {
+			value := e.This()
+			if dtype, ok := castResultDType(asExpression(value)); !ok || dtype != expressions.DTypeTimestamp {
+				value = expressions.Cast(expressions.Args{"this": value, "to": expressions.DTypeTimestamp.IntoExpr(nil)})
+			}
+			return g.gen(expressions.Anonymous(expressions.Args{
+				"this":        "CONVERT_TIMEZONE",
+				"expressions": []expressions.Expression{zone, expressions.LiteralString("UTC"), value},
+			}))
+		}
 		return g.gen(expressions.Anonymous(expressions.Args{
 			"this": "CONVERT_TIMEZONE",
 			"expressions": []expressions.Expression{
@@ -1375,14 +1403,22 @@ func snowflakeJSONExtractScalarSQL(g *Generator, e expressions.Expression) strin
 	return g.funcCall("JSON_EXTRACT_PATH_TEXT", []any{e.This(), snowflakeJSONPathSQL(g, asExpression(e.Arg("expression")))}, "(", ")", true)
 }
 
+func snowflakeJSONArrayInput(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.This())
+	if this != nil && (this.Kind() == expressions.KindParseJSON || this.Kind() == expressions.KindJSONExtract) {
+		return g.gen(this)
+	}
+	return "PARSE_JSON(" + g.gen(e.This()) + ")"
+}
+
 func snowflakeJSONValueArraySQL(g *Generator, e expressions.Expression) string {
 	path := snowflakeJSONPathSQL(g, asExpression(e.Arg("expression")))
-	return "TRANSFORM(GET_PATH(PARSE_JSON(" + g.gen(e.This()) + "), " + path + "), x -> CAST(x AS VARCHAR))"
+	return "TRANSFORM(GET_PATH(" + snowflakeJSONArrayInput(g, e) + ", " + path + "), x -> CAST(x AS VARCHAR))"
 }
 
 func snowflakeJSONQueryArraySQL(g *Generator, e expressions.Expression) string {
 	path := snowflakeJSONPathSQL(g, asExpression(e.Arg("expression")))
-	return "TRANSFORM(GET_PATH(PARSE_JSON(" + g.gen(e.This()) + "), " + path + "), x -> PARSE_JSON(TO_JSON(x)))"
+	return "TRANSFORM(GET_PATH(" + snowflakeJSONArrayInput(g, e) + ", " + path + "), x -> PARSE_JSON(TO_JSON(x)))"
 }
 
 func snowflakeInt64SQL(g *Generator, e expressions.Expression) string {
@@ -1505,8 +1541,15 @@ func snowflakeInlineNamedWindows(selectExpr expressions.Expression) {
 			continue
 		}
 		name := strings.ToLower(def.Name())
-		if inherited := byName[strings.ToLower(def.Name())]; inherited != nil {
-			def.Set("alias", nil)
+		if base := asExpression(def.Arg("alias")); base != nil {
+			if inherited := byName[strings.ToLower(base.Name())]; inherited != nil {
+				def.Set("alias", nil)
+				for _, key := range []string{"partition_by", "order", "spec"} {
+					if value := inherited.Arg(key); value != nil {
+						def.Set(key, value)
+					}
+				}
+			}
 		}
 		byName[name] = def
 	}
@@ -1522,6 +1565,9 @@ func snowflakeInlineNamedWindows(selectExpr expressions.Expression) {
 			}
 		}
 		if isDef {
+			continue
+		}
+		if ancestor := window.FindAncestor(expressions.KindSelect); ancestor != selectExpr {
 			continue
 		}
 		alias := asExpression(window.Arg("alias"))
@@ -1664,6 +1710,9 @@ func snowflakeQualifyUnnestedColumns(selectExpr expressions.Expression) {
 		if parent == nil || (parent.Kind() != expressions.KindFrom && parent.Kind() != expressions.KindJoin) {
 			continue
 		}
+		if ancestor := unnest.FindAncestor(expressions.KindSelect); ancestor != selectExpr {
+			continue
+		}
 		unnests = append(unnests, unnest)
 	}
 	if len(unnests) == 0 {
@@ -1742,6 +1791,9 @@ func snowflakeEliminateDotVariantLookup(selectExpr expressions.Expression) {
 	aliases := map[string]bool{}
 	for _, unnest := range selectExpr.FindAll(expressions.KindUnnest) {
 		if unnest == nil {
+			continue
+		}
+		if ancestor := unnest.FindAncestor(expressions.KindSelect); ancestor != selectExpr {
 			continue
 		}
 		alias := asExpression(unnest.Arg("alias"))

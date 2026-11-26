@@ -19,6 +19,9 @@ func init() {
 func init() {
 	registerDialectDispatch("mysql", map[expressions.Kind]func(*Generator, expressions.Expression) string{
 		expressions.KindLength: clickhouseRename("CHAR_LENGTH"),
+		expressions.KindUnixSeconds: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("UNIX_TIMESTAMP", []any{e.This()}, "(", ")", true)
+		},
 		expressions.KindUnixToTime: func(g *Generator, e expressions.Expression) string {
 			scale := asExpression(e.Arg("scale"))
 			if scale != nil {
