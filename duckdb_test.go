@@ -1,6 +1,7 @@
 package sqlglot_test
 
 import (
+	"strings"
 	"testing"
 
 	sqlglot "github.com/maltzsama/sqlglot-go"
@@ -455,4 +456,48 @@ func TestDuckDBMapIndexRoundTrip(t *testing.T) {
 	// A normalized negative index must still shift back to the user's written index.
 	assertRoundTrip(t, "duckdb", "SELECT a[0]", "SELECT a[0]")
 	assertRoundTrip(t, "duckdb", "SELECT a[-1]", "SELECT a[-1]")
+}
+
+// TestDuckDBTailTranspileFixes pins the tail drain: EXCLUDE, CREATE LIKE, TIMESERIES,
+// INLINE/POSEXPLODE, STRTOK, UUID v5 and the sketch templates.
+func TestDuckDBTailTranspileFixes(t *testing.T) {
+	cases := []struct {
+		read, write, sql, want string
+	}{
+		{"redshift", "duckdb", "SELECT *, 4 AS col4 EXCLUDE (col2, col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)", "SELECT * EXCLUDE (col2, col3) FROM (SELECT *, 4 AS col4 FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3))"},
+		{"", "duckdb", "CREATE TABLE a LIKE b", "CREATE TABLE a AS SELECT * FROM b LIMIT 0"},
+		{"databricks", "duckdb", "CREATE TABLE t (a INT, b TIMESTAMP, PRIMARY KEY (a, b TIMESERIES))", "CREATE TABLE t (a INT, b TIMESTAMPTZ, PRIMARY KEY (a, b))"},
+		{"duckdb", "tsql", "WITH t1(c) AS (SELECT 1), t2 AS (SELECT CAST(c AS INTEGER) FROM t1) SELECT * FROM t2", "WITH t1(c) AS (SELECT 1), t2 AS (SELECT CAST(c AS INTEGER) AS c FROM t1) SELECT * FROM t2"},
+		{"spark", "duckdb", "SELECT h.id, amount FROM hourlycostagg h LATERAL VIEW inline(h.costs) c", "SELECT h.id, amount FROM hourlycostagg AS h CROSS JOIN LATERAL (SELECT UNNEST(h.costs, max_depth => 2)) AS c"},
+		{"spark", "duckdb", "SELECT POSEXPLODE(x) AS (a, b)", "SELECT GENERATE_SUBSCRIPTS(x, 1) - 1 AS a, UNNEST(x) AS b"},
+		{"snowflake", "duckdb", "SELECT STRTOK('ab')", `SELECT CASE WHEN ' ' = '' AND 'ab' = '' THEN NULL WHEN ' ' = '' AND 1 = 1 THEN 'ab' WHEN ' ' = '' THEN NULL WHEN 1 < 0 THEN NULL WHEN 'ab' IS NULL OR ' ' IS NULL OR 1 IS NULL THEN NULL ELSE LIST_FILTER(REGEXP_SPLIT_TO_ARRAY('ab', CASE WHEN ' ' = '' THEN '' ELSE '[' || REGEXP_REPLACE(' ', '([\[\]^.\-*+?(){}|$\\])', '\\\1', 'g') || ']' END), x -> NOT x = '')[1] END`},
+	}
+	for _, tc := range cases {
+		out, err := sqlglot.Transpile(tc.sql, tc.read, tc.write, generator.Options{})
+		if err != nil {
+			t.Fatalf("%s: %v", tc.sql, err)
+		}
+		if len(out) != 1 || out[0] != tc.want {
+			t.Fatalf("%s\n got: %v\nwant: %s", tc.sql, out, tc.want)
+		}
+	}
+
+	// Longer sketch templates: assert the shape rather than repeat the whole literal.
+	uuidOut, err := sqlglot.Transpile("SELECT UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')", "snowflake", "duckdb", generator.Options{})
+	if err != nil || len(uuidOut) != 1 || !strings.Contains(uuidOut[0], "SUBSTRING(SHA1(UNHEX(REPLACE(") {
+		t.Fatalf("uuid v5: %v %v", uuidOut, err)
+	}
+	for _, tc := range []struct{ sql, contains string }{
+		{"MINHASH(4, col1)", "LIST_MIN(LIST_TRANSFORM(vals"},
+		{"MINHASH_COMBINE(sig_col)", "WITH ORDINALITY AS t(val, pos)"},
+		{"APPROXIMATE_SIMILARITY(sig_col)", "COUNT(DISTINCT h) AS num_distinct"},
+		{"ZIPF(1, 10, 1234)", "ABS(HASH(1234)) % 1000000"},
+		{"ZIPF(2, 100, RANDOM())", "SELECT RANDOM() AS r"},
+		{"SELECT BITMAP_CONSTRUCT_AGG(v) FROM t", "UNHEX('08000000000000000000'"},
+	} {
+		out, err := sqlglot.Transpile(tc.sql, "snowflake", "duckdb", generator.Options{})
+		if err != nil || len(out) != 1 || !strings.Contains(out[0], tc.contains) {
+			t.Fatalf("%s: %v %v", tc.sql, out, err)
+		}
+	}
 }

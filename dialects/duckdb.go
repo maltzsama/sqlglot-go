@@ -39,6 +39,9 @@ func DuckDB() *Dialect {
 	d.SetAssignmentRequiresVariableKeyword = true
 	// generators/duckdb.py:1580 SUPPORTS_WINDOW_EXCLUDE = True.
 	d.SupportsWindowExclude = true
+	// generators/duckdb.py:1571 SUPPORTS_CREATE_TABLE_LIKE = False: CREATE TABLE ... LIKE is
+	// rewritten to a zero-row CTAS.
+	d.SupportsCreateTableLike = false
 	// generators/duckdb.py:1570 JSON_PATH_BRACKETED_KEY_SUPPORTED = False: an unsafe JSON
 	// path key renders as `."key"`, not `["key"]`.
 	d.JSONPathBracketedKeySupported = false

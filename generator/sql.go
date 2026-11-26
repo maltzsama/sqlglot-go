@@ -1006,6 +1006,27 @@ func (g *Generator) convertSQL(e expressions.Expression) string {
 	return g.gen(transformed)
 }
 
+// forClauseSQL ports forclause_sql (generator.py:3310-3321): a FOR clause with no renderable
+// query option is dropped.
+func (g *Generator) forClauseSQL(e expressions.Expression) string {
+	kind := e.Text("kind")
+	if kind == "BROWSE" {
+		return g.sep() + "FOR BROWSE"
+	}
+	options := g.expressions(exprsOptions{expression: e, key: "expressions"})
+	if options == "" {
+		return ""
+	}
+	return g.sep() + "FOR " + kind + g.seg(options)
+}
+
+// queryOptionSQL ports queryoption_sql (generator.py:3323-3325): base dialects cannot render
+// a T-SQL query option.
+func (g *Generator) queryOptionSQL(expressions.Expression) string {
+	g.unsupported("Unsupported query option.")
+	return ""
+}
+
 // fromTimeZoneSQL ports fromtimezone_sql (generator.py:4056-4059).
 func (g *Generator) fromTimeZoneSQL(e expressions.Expression) string {
 	this := g.sqlKey(e, "this")
@@ -2359,7 +2380,7 @@ func (g *Generator) arrayAggSQL(e expressions.Expression) string {
 				// Keep the original predicate grouped so a disjunction still evaluates as a
 				// whole before the null check is AND-ed in.
 				original := inner.Copy()
-				if original.Is(expressions.TraitConnector) || original.Is(expressions.TraitBinary) {
+				if original.Is(expressions.TraitConnector) {
 					original = expressions.Paren(expressions.Args{"this": original})
 				}
 				nullExpr := nullCheck.Copy()

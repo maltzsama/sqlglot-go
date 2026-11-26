@@ -354,6 +354,18 @@ func (g *Generator) handlerPropertySQL(e expressions.Expression) string {
 // likePropertySQL ports likeproperty_sql (generator.py:2097-2112). All in-scope dialects
 // support CREATE TABLE LIKE; Postgres requires a LIKE property outside Schema to be wrapped.
 func (g *Generator) likePropertySQL(e expressions.Expression) string {
+	// generator.py:2120-2136: a dialect without CREATE TABLE LIKE gets a zero-row CTAS.
+	if !g.dialect.SupportsCreateTableLike {
+		if len(e.Expressions()) > 0 {
+			g.unsupported("Transpilation of LIKE property options is unsupported")
+		}
+		selectNode := expressions.New(expressions.KindSelect, expressions.Args{
+			"expressions": []expressions.Expression{expressions.Star(expressions.Args{})},
+			"from_":       expressions.From(expressions.Args{"this": e.This()}),
+			"limit":       expressions.Limit(expressions.Args{"expression": expressions.LiteralNumber("0")}),
+		})
+		return "AS " + g.gen(selectNode)
+	}
 	options := make([]string, 0, len(e.Expressions()))
 	for _, option := range e.Expressions() {
 		optionSQL := strings.TrimSpace(option.Name() + " " + g.sqlKey(option, "value"))

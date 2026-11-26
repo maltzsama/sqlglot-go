@@ -189,10 +189,21 @@ func (g *Generator) selectSQL(e expressions.Expression) string {
 		}
 		sql = "CREATE" + tableKind + " TABLE " + g.sqlKey(into, "this") + " AS " + sql
 	}
-	// Not ported: with STAR_EXCLUDE_REQUIRES_DERIVED_TABLE (the base default), upstream
-	// (generator.py:3405-3409) rewrites a select-level `exclude` arg into a derived table
-	// `SELECT * EXCLUDE (...) FROM (<subquery>)`. Only Redshift's parser produces that arg, and
-	// Redshift renders it inline (above), so the rewrite is unreachable for same-dialect output.
+	// generator.py:3405-3409: with STAR_EXCLUDE_REQUIRES_DERIVED_TABLE (the base default), a
+	// select-level `exclude` arg becomes a derived table: the projection moves into a subquery
+	// and the outer SELECT stars everything except the excluded columns.
+	if g.dialect.StarExcludeRequiresDerivedTable {
+		if exclude := listFromValue(e.Arg("exclude")); len(exclude) > 0 {
+			e.Set("exclude", nil)
+			subquery := expressions.Subquery(expressions.Args{"this": e})
+			star := expressions.Star(expressions.Args{"except_": exclude})
+			outer := expressions.New(expressions.KindSelect, expressions.Args{
+				"expressions": []expressions.Expression{star},
+				"from_":       expressions.From(expressions.Args{"this": subquery}),
+			})
+			return g.gen(outer)
+		}
+	}
 	return sql
 }
 

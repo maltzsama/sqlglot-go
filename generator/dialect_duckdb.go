@@ -69,6 +69,22 @@ func init() {
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
 		expressions.KindAnyValue: duckDBAnyValueSQL,
+		// A TIMESERIES marker is metadata Databricks attaches to a primary-key column; DuckDB
+		// keeps only the column reference.
+		expressions.KindTimeseriesKey: func(g *Generator, e expressions.Expression) string {
+			return g.sqlKey(e, "this")
+		},
+		// generators/duckdb.py:1748-1749 and 2020: CREATE FUNCTION drops a scalar RETURNS and
+		// keeps only TABLE, and a RETURN body renders as its expression.
+		expressions.KindReturnsProperty: func(g *Generator, e expressions.Expression) string {
+			if this := asExpression(e.This()); this != nil && this.Kind() == expressions.KindSchema {
+				return "TABLE"
+			}
+			return ""
+		},
+		expressions.KindReturn: func(g *Generator, e expressions.Expression) string {
+			return g.sqlKey(e, "this")
+		},
 		expressions.KindAlter: func(g *Generator, e expressions.Expression) string {
 			e.Set("iceberg", false)
 			return g.alterSQL(e)

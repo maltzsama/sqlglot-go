@@ -631,7 +631,7 @@ func tsqlQualifyDerivedOutputs(e exp.Expression) {
 		if projection == nil || projection.Kind() == exp.KindAlias {
 			continue
 		}
-		if projection.Kind() != exp.KindColumn && projection.Kind() != exp.KindLiteral {
+		if projection.Kind() == exp.KindStar {
 			continue
 		}
 		name := projection.Name()
