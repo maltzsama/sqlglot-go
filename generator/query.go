@@ -610,7 +610,8 @@ func (g *Generator) offsetSQL(e expressions.Expression) string {
 	if exprs != "" {
 		exprs = " BY " + exprs
 	}
-	return this + g.seg("OFFSET") + " " + g.sqlKey(e, "expression") + exprs
+	value := g.gen(g.limitArg(e.Arg("expression")))
+	return this + g.seg("OFFSET") + " " + value + exprs
 }
 
 func (g *Generator) fetchSQL(e expressions.Expression) string {

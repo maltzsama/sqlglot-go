@@ -3039,6 +3039,9 @@ func (g *Generator) intervalSQL(e expressions.Expression) string {
 			unit = g.gen(unitExpression)
 		}
 	}
+	if isSimpleWord(unit) {
+		unit = strings.ToUpper(unit)
+	}
 	if !g.intervalAllowsPluralForm {
 		if singular, ok := timePartSingulars[unit]; ok {
 			unit = singular
@@ -3263,6 +3266,10 @@ func (g *Generator) whileBlockSQL(e expressions.Expression) string {
 }
 
 func (g *Generator) hintSQL(e expressions.Expression) string {
+	if g.dialect.NoQueryHints {
+		g.unsupported("Hints are not supported")
+		return ""
+	}
 	// QUERY_HINT_SEP: mysql joins hint items with a space (generators/mysql.py:138),
 	// base/postgres with ", " (generator.py:368).
 	sep := ", "
@@ -3399,4 +3406,50 @@ func (g *Generator) toNumberSQL(e expressions.Expression) string {
 		}))
 	}
 	return g.funcCall("TO_NUMBER", []any{e.This(), e.Arg("format")}, "(", ")", true)
+}
+
+// isSimpleWord reports whether text is a plain identifier-like word, so an interval unit can
+// be uppercased the way the parser normalizes it upstream.
+func isSimpleWord(text string) bool {
+	if text == "" {
+		return false
+	}
+	for _, r := range text {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && r != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+// spaceSQL ports space_sql (generator.py:6210-6211): REPEAT(' ', n).
+func (g *Generator) spaceSQL(e expressions.Expression) string {
+	return g.gen(expressions.Repeat(expressions.Args{
+		"this":  expressions.LiteralString(" "),
+		"times": e.This(),
+	}))
+}
+
+// anyValueSQL ports anyvalue_sql (generator.py:4950-4957).
+func (g *Generator) anyValueSQL(e expressions.Expression) string {
+	this := g.sqlKey(e, "this")
+	if having := g.sqlKey(e, "having"); having != "" {
+		kind := "MIN"
+		if truthy(e.Arg("max")) {
+			kind = "MAX"
+		}
+		this += " HAVING " + kind + " " + having
+	}
+	return "ANY_VALUE(" + this + ")"
+}
+
+// fromISO8601SQL ports fromiso8601date_sql/fromiso8601timestamp_sql
+// (generator.py:4061-4068): a cast of the literal to DATE or TIMESTAMPTZ.
+func fromISO8601Cast(dtype expressions.DType) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		return g.gen(expressions.Cast(expressions.Args{
+			"this": e.This(),
+			"to":   expressions.DataType(expressions.Args{"this": dtype}),
+		}))
+	}
 }

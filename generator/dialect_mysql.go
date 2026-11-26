@@ -55,6 +55,12 @@ func init() {
 
 func init() {
 	registerDialectDispatch("mysql", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindTimestampDiff: func(g *Generator, e expressions.Expression) string {
+			// generators/mysql.py:199 TIMESTAMPDIFF(unit, expression, this).
+			return g.funcCall("TIMESTAMPDIFF", []any{
+				unitToVarValue(asExpression(e.Arg("unit"))), e.Arg("expression"), e.This(),
+			}, "(", ")", true)
+		},
 		expressions.KindDateAdd:      mysqlDateAddSQL,
 		expressions.KindTsOrDsAdd:    mysqlDateAddSQL,
 		expressions.KindDateTrunc:    mysqlDateTruncSQL,

@@ -15,6 +15,8 @@ func Hive() *Dialect {
 	// dialects/hive.py CONCAT_WS_COALESCE = True.
 	d.ConcatWsCoalesce = true
 	d.Name = "hive"
+	// generators/hive.py: QUERY_HINTS = False.
+	d.NoQueryHints = true
 	// generators/hive.py PAD_FILL_PATTERN_IS_REQUIRED = True.
 	d.PadFillPatternIsRequired = true
 	// generators/hive.py TRANSFORMS: eliminate_distinct_on.

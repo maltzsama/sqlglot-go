@@ -118,6 +118,12 @@ func (g *Generator) jsonPathKeySQL(e expressions.Expression) string {
 
 // jsonPathSubscriptSQL ports _jsonpathsubscript_sql (generator.py:5376-5378).
 func (g *Generator) jsonPathSubscriptSQL(e expressions.Expression) string {
+	if g.isDialect("bigquery") {
+		if inner := asExpression(e.Arg("this")); inner != nil && inner.Kind() == expressions.KindJSONPathWildcard {
+			// generators/bigquery.py:435-439 omits JSONPathWildcard from its supported parts.
+			return ""
+		}
+	}
 	part := g.jsonPathPartValue(e.Arg("this"))
 	if part == "" {
 		return ""
