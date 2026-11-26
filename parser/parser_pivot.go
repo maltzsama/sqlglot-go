@@ -417,7 +417,15 @@ func bigQueryNestedArray(arg exp.Expression) bool {
 			return false
 		}
 		t, _ := to.Arg("this").(exp.DType)
-		return t == exp.DTypeArray
+		if t != exp.DTypeArray {
+			return false
+		}
+		// Only an ARRAY<STRUCT<...>> explodes a level; scalar arrays stay ordinary.
+		for _, elem := range to.Expressions() {
+			elemType, _ := elem.Arg("this").(exp.DType)
+			return elemType == exp.DTypeStruct
+		}
+		return false
 	}
 	if arg.Kind() != exp.KindArray {
 		return false

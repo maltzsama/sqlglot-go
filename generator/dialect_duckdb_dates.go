@@ -93,10 +93,17 @@ func duckDBApproxQuantilesSQL(g *Generator, e expressions.Expression) string {
 	}
 	n := 0
 	if text != "" && !strings.Contains(text, ".") {
-		n, _ = strconv.Atoi(text)
+		parsed, err := strconv.Atoi(text)
+		if err != nil {
+			g.unsupported("APPROX_QUANTILES bucket count must be a positive integer")
+			return g.functionFallbackSQL(e)
+		}
+		n = parsed
 	}
-	if n <= 0 {
-		g.unsupported("APPROX_QUANTILES bucket count must be a positive integer")
+	// Bound the expansion so a hostile bucket count cannot allocate unboundedly.
+	const maxApproxQuantilesBuckets = 10000
+	if n <= 0 || n > maxApproxQuantilesBuckets {
+		g.unsupported("APPROX_QUANTILES bucket count must be a positive integer (max 10000)")
 		return g.functionFallbackSQL(e)
 	}
 
@@ -126,8 +133,10 @@ func quantileLiteral(i, n int) string {
 // ARRAY_REMOVE(a, x) becomes LIST_FILTER(a, _u -> _u <> x), with a NULL guard when the
 // source dialect propagates NULL removal values and DuckDB does not.
 func duckDBArrayRemoveSQL(g *Generator, e expressions.Expression) string {
-	lambdaID := expressions.ToIdentifier("_u")
-	cond := expressions.NEQ(expressions.Args{"this": lambdaID, "expression": e.Arg("expression")})
+	removal := asExpression(e.Arg("expression"))
+	lambdaName := duckDBCollisionFreeName("_u", removal)
+	lambdaID := expressions.ToIdentifier(lambdaName)
+	cond := expressions.NEQ(expressions.Args{"this": lambdaID, "expression": removal})
 	filter := expressions.ArrayFilter(expressions.Args{
 		"this":       e.This(),
 		"expression": expressions.Lambda(expressions.Args{"this": cond, "expressions": []expressions.Expression{lambdaID}}),
@@ -136,7 +145,6 @@ func duckDBArrayRemoveSQL(g *Generator, e expressions.Expression) string {
 	if !truthy(e.Arg("null_propagation")) {
 		return filterSQL
 	}
-	removal := asExpression(e.Arg("expression"))
 	if removal != nil && (removal.Kind() == expressions.KindArray ||
 		(removal.Kind() == expressions.KindLiteral)) {
 		return filterSQL
@@ -209,12 +217,6 @@ func duckDBArrayInsertSQL(g *Generator, e expressions.Expression) string {
 		posValue += offset
 	}
 
-	slice := func(bounds ...int) expressions.Expression {
-		return expressions.Bracket(expressions.Args{"this": this, "expressions": []expressions.Expression{
-			expressions.Slice(expressions.Args{"this": expressions.LiteralNumber(strconv.Itoa(bounds[0])), "expression": expressions.LiteralNumber(strconv.Itoa(bounds[1]))}),
-		}})
-	}
-
 	var concat []expressions.Expression
 	switch {
 	case posValue == 0:
@@ -223,7 +225,26 @@ func duckDBArrayInsertSQL(g *Generator, e expressions.Expression) string {
 		right := expressions.Bracket(expressions.Args{"this": this, "expressions": []expressions.Expression{
 			expressions.Slice(expressions.Args{"this": expressions.LiteralNumber(strconv.Itoa(posValue + 1))}),
 		}})
-		concat = []expressions.Expression{slice(1, posValue), elementArray, right}
+		leftBase := this
+		if this != nil && this.Kind() == expressions.KindArray && len(this.Expressions()) < posValue {
+			// DuckDB clamps [1:pos] to the array length; pad a literal short array.
+			leftBase = duckDBAnon("LIST_RESIZE", this, expressions.LiteralNumber(strconv.Itoa(posValue)), expressions.Null())
+		} else if this == nil || this.Kind() != expressions.KindArray {
+			leftBase = expressions.Case(expressions.Args{
+				"ifs": []expressions.Expression{expressions.If(expressions.Args{
+					"this": expressions.GT(expressions.Args{
+						"this":       expressions.LiteralNumber(strconv.Itoa(posValue)),
+						"expression": expressions.Length(expressions.Args{"this": this}),
+					}),
+					"true": duckDBAnon("LIST_RESIZE", this, expressions.LiteralNumber(strconv.Itoa(posValue)), expressions.Null()),
+				})},
+				"default": this,
+			})
+		}
+		left := expressions.Bracket(expressions.Args{"this": leftBase, "expressions": []expressions.Expression{
+			expressions.Slice(expressions.Args{"this": expressions.LiteralNumber("1"), "expression": expressions.LiteralNumber(strconv.Itoa(posValue))}),
+		}})
+		concat = []expressions.Expression{left, elementArray, right}
 	default:
 		arrLen := expressions.Length(expressions.Args{"this": this})
 		sliceEndPos := expressions.Add(expressions.Args{"this": arrLen, "expression": expressions.LiteralNumber(strconv.Itoa(posValue))})

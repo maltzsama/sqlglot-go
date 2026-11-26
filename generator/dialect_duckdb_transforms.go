@@ -535,12 +535,13 @@ func duckDBArrayToStringSQL(g *Generator, e expressions.Expression) string {
 		return base
 	}
 	if nullText := asExpression(e.Arg("null")); nullText != nil {
+		param := duckDBCollisionFreeName("x", nullText)
 		transform := g.funcCall("LIST_TRANSFORM", []any{this, expressions.Lambda(expressions.Args{
 			"this": expressions.Coalesce(expressions.Args{
-				"this":        expressions.ToIdentifier("x"),
+				"this":        expressions.ToIdentifier(param),
 				"expressions": []expressions.Expression{nullText},
 			}),
-			"expressions": []expressions.Expression{expressions.ToIdentifier("x")},
+			"expressions": []expressions.Expression{expressions.ToIdentifier(param)},
 		})}, "(", ")", true)
 		return g.funcCall("ARRAY_TO_STRING", []any{transform, delim}, "(", ")", true)
 	}
@@ -661,7 +662,7 @@ func duckDBAddMonthsSQL(g *Generator, e expressions.Expression) string {
 		})
 	}
 	dateAdd := expressions.Add(expressions.Args{"this": this, "expression": interval})
-	var result expressions.Expression = dateAdd
+	result := dateAdd
 	if truthy(e.Arg("preserve_end_of_month")) {
 		lastDay := duckDBAnon("LAST_DAY", this)
 		result = expressions.Case(expressions.Args{
@@ -812,7 +813,7 @@ func duckDBBase64EncodeSQL(g *Generator, e expressions.Expression) string {
 	if chars := asExpression(e.Arg("alphabet")); chars != nil && chars.IsString() {
 		base = duckDBReplaceAlphabet(g, base, chars.Name(), false)
 	}
-	if maxLine := asExpression(e.Arg("max_line_length")); maxLine != nil && maxLine.IsInt() {
+	if maxLine := asExpression(e.Arg("max_line_length")); maxLine != nil && maxLine.IsInt() && maxLine.Name() != "0" {
 		pattern := expressions.LiteralString("(.{" + maxLine.Name() + "})")
 		replacement := expressions.DPipe(expressions.Args{
 			"this":       expressions.LiteralString(`\1`),
@@ -826,28 +827,22 @@ func duckDBBase64EncodeSQL(g *Generator, e expressions.Expression) string {
 	return base
 }
 
-// duckDBReplaceAlphabet applies the base64 alphabet replacements, returning SQL text.
+// duckDBReplaceAlphabet applies the upstream base64 alphabet replacement chain.
 func duckDBReplaceAlphabet(g *Generator, base, alphabet string, reverse bool) string {
+	defaults := []string{"+", "/", "="}
 	for i, r := range alphabet {
-		var def string
-		switch i {
-		case 0:
-			def = "+"
-		case 1:
-			def = "/"
-		case 2:
-			def = "="
-		default:
-			continue
+		if i >= len(defaults) {
+			break
 		}
+		def := defaults[i]
 		if string(r) == def {
 			continue
 		}
-		find, replace := def, string(r)
+		src, dst := def, string(r)
 		if reverse {
-			find, replace = string(r), def
+			src, dst = string(r), def
 		}
-		base = g.funcCall("REPLACE", []any{base, expressions.LiteralString(find), expressions.LiteralString(replace)}, "(", ")", true)
+		base = g.funcCall("REPLACE", []any{base, expressions.LiteralString(src), expressions.LiteralString(dst)}, "(", ")", true)
 	}
 	return base
 }
@@ -869,22 +864,20 @@ func duckDBBase64DecodeSQL(toText bool) func(*Generator, expressions.Expression)
 
 // duckDBConcatWsSQL ports concatws_sql (generators/duckdb.py:4142-4155).
 func duckDBConcatWsSQL(g *Generator, e expressions.Expression) string {
-	sep := asExpression(e.Arg("separator"))
-	args := append([]expressions.Expression{sep}, e.Expressions()...)
-	var conds []expressions.Expression
+	args := e.Expressions()
+	var condParts []string
 	for _, arg := range args {
-		conds = append(conds, expressions.Is(expressions.Args{"this": arg, "expression": expressions.Null()}))
+		condParts = append(condParts, g.gen(expressions.Is(expressions.Args{"this": arg, "expression": expressions.Null()})))
 	}
-	callArgs := []any{sep}
-	for _, expr := range e.Expressions() {
+	callArgs := make([]any, 0, len(args))
+	for _, expr := range args {
 		callArgs = append(callArgs, expr)
 	}
 	base := g.funcCall("CONCAT_WS", callArgs, "(", ")", true)
 	if truthy(e.Arg("coalesce")) {
 		return base
 	}
-	cond := g.gen(expressions.Or(expressions.Args{"this": conds[0], "expressions": conds[1:]}))
-	return "CASE WHEN " + cond + " THEN NULL ELSE " + base + " END"
+	return "CASE WHEN " + strings.Join(condParts, " OR ") + " THEN NULL ELSE " + base + " END"
 }
 
 // duckDBSplitPartSQL ports splitpart_sql (generators/duckdb.py:4031-4089) for the
@@ -903,20 +896,40 @@ func duckDBSplitSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall("STR_SPLIT", []any{e.This(), e.Arg("expression")}, "(", ")", true)
 }
 
-// duckDBStrtokToArraySQL ports strtoktoarray_sql (generators/duckdb.py:4658-4675) for the
-// simple delimiter form.
+// duckDBStrtokToArraySQL ports strtoktoarray_sql (generators/duckdb.py:4658-4675).
 func duckDBStrtokToArraySQL(g *Generator, e expressions.Expression) string {
 	delim := asExpression(e.Arg("expression"))
 	if delim == nil {
 		delim = expressions.LiteralString(" ")
 	}
-	pattern := duckDBAnon("REGEXP_REPLACE",
+	escaped := duckDBAnon("REGEXP_REPLACE",
 		delim,
 		expressions.LiteralString(`([\[\]^.\-*+?(){}|$\\])`),
 		expressions.LiteralString(`\\\1`),
 		expressions.LiteralString("g"),
 	)
-	return g.funcCall("STR_SPLIT_REGEX", []any{e.This(), pattern}, "(", ")", true)
+	pattern := expressions.Case(expressions.Args{
+		"ifs": []expressions.Expression{expressions.If(expressions.Args{
+			"this": expressions.EQ(expressions.Args{"this": delim.Copy(), "expression": expressions.LiteralString("")}),
+			"true": expressions.LiteralString(".^"),
+		})},
+		"default": duckDBAnon("CONCAT", expressions.LiteralString("["), escaped, expressions.LiteralString("]")),
+	})
+	split := duckDBAnon("REGEXP_SPLIT_TO_ARRAY", e.This(), pattern)
+	x := expressions.ToIdentifier("x")
+	filtered := duckDBAnon("LIST_FILTER", split, expressions.Lambda(expressions.Args{
+		"this": expressions.Not(expressions.Args{"this": expressions.EQ(expressions.Args{
+			"this": x.Copy(), "expression": expressions.LiteralString(""),
+		})}),
+		"expressions": []expressions.Expression{x.Copy()},
+	}))
+	return g.gen(expressions.Case(expressions.Args{
+		"ifs": []expressions.Expression{expressions.If(expressions.Args{
+			"this": expressions.Is(expressions.Args{"this": delim.Copy(), "expression": expressions.Null()}),
+			"true": expressions.Null(),
+		})},
+		"default": filtered,
+	}))
 }
 
 // duckDBTruncSQL ports trunc_sql (generators/duckdb.py:2867-2876).
@@ -1359,8 +1372,11 @@ func duckDBGenerateTimestampArraySQL(g *Generator, e expressions.Expression) str
 // duckDBJSONExtractScalarSQL ports jsonextractscalar_sql (generators/duckdb.py:4721-4726).
 func duckDBJSONExtractScalarSQL(g *Generator, e expressions.Expression) string {
 	if truthy(e.Arg("scalar_only")) {
-		inner := g.funcCall("JSON_VALUE", []any{e.This(), e.Arg("expression")}, "(", ")", true)
-		return inner + " ->> '$'"
+		inner := duckDBAnon("JSON_VALUE", e.This(), asExpression(e.Arg("expression")))
+		node := expressions.New(expressions.KindJSONExtractScalar, expressions.Args{
+			"this": inner, "expression": expressions.LiteralString("$"),
+		})
+		return duckDBArrowJSONExtract(g, node)
 	}
 	return duckDBArrowJSONExtract(g, e)
 }
@@ -1386,6 +1402,24 @@ func duckDBDateToDiSQL(g *Generator, e expressions.Expression) string {
 // duckDBTimeToTimeStrSQL ports the TimeToTimeStr lambda (generators/duckdb.py:1750-1752).
 func duckDBTimeToTimeStrSQL(g *Generator, e expressions.Expression) string {
 	return "CAST(" + g.sqlKey(e, "this") + " AS TEXT)"
+}
+
+// duckDBCollisionFreeName returns base unless a column in exprs already binds it.
+func duckDBCollisionFreeName(base string, exprs ...expressions.Expression) string {
+	used := map[string]bool{}
+	for _, expr := range exprs {
+		if expr == nil {
+			continue
+		}
+		for _, col := range expr.FindAll(expressions.KindColumn) {
+			used[col.Name()] = true
+		}
+	}
+	name := base
+	for used[name] {
+		name = "_" + name
+	}
+	return name
 }
 
 // duckDBConnectorExpr folds a slice into And/Or nodes, returning the single node
@@ -1501,7 +1535,7 @@ func duckDBExtractSQL(g *Generator, e expressions.Expression) string {
 		if isNanoTime {
 			if dtype, ok := castResultDType(datetimeExpr); ok && (dtype == expressions.DTypeTime || dtype == expressions.DTypeTimeTz) {
 				g.unsupported("Parameter NANOSECOND is not supported with TIME type in DuckDB")
-				inner := duckDBAnon("EXTRACT", expressions.Var(expressions.Args{"this": "MICROSECOND"}), datetimeExpr)
+				inner := duckDBExtract("MICROSECOND", datetimeExpr)
 				mul := expressions.Mul(expressions.Args{"this": inner, "expression": expressions.LiteralNumber("1000")})
 				return "CAST(" + g.gen(mul) + " AS " + castType + ")"
 			}
@@ -1654,6 +1688,20 @@ func duckDBArrayRemoveAtSQL(g *Generator, e expressions.Expression) string {
 			"expressions": []expressions.Expression{expressions.Slice(expressions.Args{"this": sliceStart})},
 		})
 		result = g.funcCall("LIST_CONCAT", []any{left, right}, "(", ")", true)
+	}
+	if pos < 0 {
+		// A negative position past the start keeps the source array unchanged instead of
+		// producing two overlapping slices. A literal array's length is known here, so
+		// in-range literals keep the plain slice output.
+		abs := -pos
+		needsGuard := true
+		if this != nil && this.Kind() == expressions.KindArray {
+			needsGuard = len(this.Expressions()) < abs
+		}
+		if needsGuard {
+			result = "CASE WHEN " + g.gen(expressions.Length(expressions.Args{"this": this})) + " < " +
+				duckDBIntStr(abs) + " THEN " + g.gen(this) + " ELSE " + result + " END"
+		}
 	}
 	return "CASE WHEN " + g.gen(expressions.Is(expressions.Args{"this": this, "expression": expressions.Null()})) + " THEN NULL ELSE " + result + " END"
 }
@@ -1896,7 +1944,7 @@ func duckDBDayNavigationSQL(g *Generator, e expressions.Expression) string {
 		var ifs []expressions.Expression
 		for day, dow := range weekDays {
 			ifs = append(ifs, expressions.If(expressions.Args{
-				"this": duckDBAnon("STARTS_WITH", upper.Copy(), expressions.LiteralString(strings.ToLower(day[:2]))),
+				"this": duckDBAnon("STARTS_WITH", upper.Copy(), expressions.LiteralString(day[:2])),
 				"true": expressions.LiteralNumber(strconv.Itoa(dow)),
 			}))
 		}
@@ -2021,10 +2069,6 @@ func duckDBWindowSQL(g *Generator, e expressions.Expression) string {
 		return base
 	}
 	return "CASE WHEN ISNAN(" + base + ") THEN NULL ELSE " + base + " END"
-}
-
-func duckDBCorrInExpr(e expressions.Expression) bool {
-	return e != nil && e.Kind() == expressions.KindCorr
 }
 
 // duckDBNormalSQL ports normal_sql (generators/duckdb.py:2878-2901).

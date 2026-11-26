@@ -1031,7 +1031,11 @@ func snowflakeIsDateUnit(unit exp.Expression) bool {
 	if unit == nil {
 		return false
 	}
-	switch strings.ToUpper(unit.Name()) {
+	name := strings.ToUpper(unit.Name())
+	if canonical, ok := datePartMapping[name]; ok {
+		name = canonical
+	}
+	switch name {
 	case "YEAR", "QUARTER", "MONTH", "WEEK", "DAY":
 		return true
 	}

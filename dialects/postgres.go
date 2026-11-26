@@ -399,9 +399,19 @@ func postgresBuildRegexpReplace(args []exp.Expression) exp.Expression {
 	if len(args) > 3 {
 		built.Set("position", seqGet(args, 3))
 	}
+	singleReplace := true
+	if len(args) > 4 {
+		occurrence := seqGet(args, 4)
+		built.Set("occurrence", occurrence)
+		// PostgreSQL's N=0 means "replace every match"; the DuckDB generator keys its
+		// global flag off single_replace, so an explicit zero must clear it.
+		if occurrence != nil && occurrence.IsInt() && occurrence.Name() == "0" {
+			singleReplace = false
+		}
+	}
 	if modifiers != nil {
 		built.Set("modifiers", modifiers)
 	}
-	built.Set("single_replace", true)
+	built.Set("single_replace", singleReplace)
 	return built
 }

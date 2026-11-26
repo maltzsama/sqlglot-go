@@ -394,7 +394,6 @@
 {"read":"databricks","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT SPACE(2)"}
 {"read":"databricks","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a BIGINT, b BIGINT) RETURNS BIGINT RETURN a"}
 {"read":"databricks","write":"duckdb","category":"gen: ddl/properties","sql":"CREATE OR REPLACE FUNCTION func(a BIGINT, b BIGINT) RETURNS TABLE (a INT) RETURN SELECT a"}
-{"read":"databricks","write":"duckdb","category":"gen: transpile mismatch","sql":"c LIKE ANY ('a', 'b') AND other_cond"}
 {"read":"databricks","write":"duckdb","category":"generate: error","sql":"CREATE TABLE t (a INT, b TIMESTAMP, PRIMARY KEY (a, b TIMESERIES))"}
 {"read":"databricks","write":"hive","category":"gen: transpile mismatch","sql":"x DIV y"}
 {"read":"databricks","write":"mysql","category":"gen: transpile mismatch","sql":"DATE_TRUNC(DAY, TIMESTAMP '2001-02-16 20:38:40')"}
@@ -1060,7 +1059,6 @@
 {"read":"spark","write":"duckdb","category":"gen: transpile mismatch","sql":"\n            WITH hourlycostagg AS (\n                SELECT\n                    101 AS id,\n                    ARRAY(\n                        STRUCT(10.0 AS amount, 'USD' AS currency),\n                        STRUCT(20.0 AS amount, 'EUR' AS currency)\n                    ) AS costs,\n                    ARRAY(\n                        STRUCT('tax' AS type, 0.15 AS val, 'EUR' AS currency),\n                        STRUCT('fee' AS type, 5.00 AS val, 'EUR' AS currency)\n                    ) AS adjustments,\n                    ARRAY(\n                        STRUCT(\n                            12.0 AS length,\n                            STRUCT('A' AS tag, 98.5 AS score) AS details\n                        ),\n                        STRUCT(\n                            23.0 AS length,\n                            STRUCT('B' AS tag, 99.5 AS score) AS details\n                        )\n                    ) AS info\n            )\n            SELECT\n                h.id,\n                amount,\n                currency,\n                type,\n                val,\n                leng\n            FROM hourlycostagg h\n            LATERAL VIEW inline(h.costs) c\n            LATERAL VIEW inline(h.adjustments) as type, val, curr\n            LATERAL VIEW inline(h.info) exploded as leng, det\n            "}
 {"read":"spark","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_JOIN(arr, delim)"}
 {"read":"spark","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_SORT(x, (left, right) -> -1)"}
-{"read":"spark","write":"duckdb","category":"gen: transpile mismatch","sql":"DECODE(x, 'utf-8')"}
 {"read":"spark","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT ARRAY_AGG(x) FILTER (WHERE x = 5) FROM (SELECT 1 UNION ALL SELECT NULL) AS t(x)"}
 {"read":"spark","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT POSEXPLODE(x) AS (a, b)"}
 {"read":"spark","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT h.id, amount FROM hourlycostagg h LATERAL VIEW inline(h.adjustments) as type, val, curr"}
@@ -1090,7 +1088,6 @@
 {"read":"spark","write":"presto","category":"gen: cast/type","sql":"TIMESTAMPADD(MINUTE, FLOOR(EXTRACT(MINUTE FROM CURRENT_TIMESTAMP)/30)*30, col)"}
 {"read":"spark","write":"presto","category":"gen: cast/type","sql":"TO_DATE(x, 'yyyy-MM-dd')"}
 {"read":"spark","write":"presto","category":"gen: cast/type","sql":"YEAR('2021-03-01')"}
-{"read":"spark","write":"presto","category":"gen: transpile mismatch","sql":"DECODE(x, 'utf-8')"}
 {"read":"spark","write":"presto","category":"gen: transpile mismatch","sql":"SELECT DATE_ADD(MONTH, 20, col)"}
 {"read":"spark","write":"presto","category":"gen: transpile mismatch","sql":"SELECT EXPLODE(ARRAY(1, 2))"}
 {"read":"spark","write":"presto","category":"gen: transpile mismatch","sql":"SELECT EXPLODE(col) AS exploded FROM schema.tbl"}

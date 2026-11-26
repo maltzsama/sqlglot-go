@@ -720,7 +720,10 @@ func (g *Generator) duckDBFormatTime(e expressions.Expression) string {
 // duckDBStripStrict removes the port's internal "strict" marker from a converted format
 // (e.g. "%mstrict" -> "%m"), which only the Hive/Snowflake inverse maps understand.
 func duckDBStripStrict(format string) string {
-	return strings.ReplaceAll(format, "strict", "")
+	for _, marker := range []string{"%mstrict", "%dstrict", "%Hstrict", "%Istrict", "%Mstrict", "%Sstrict"} {
+		format = strings.ReplaceAll(format, marker, strings.TrimSuffix(marker, "strict"))
+	}
+	return format
 }
 
 // duckDBEncodeDecodeSQL ports encode_decode_sql with replace=False.
@@ -838,13 +841,6 @@ func implicitDatetimeCast(arg expressions.Expression) expressions.Expression {
 		"this": arg,
 		"to":   expressions.DataType(expressions.Args{"this": dtype}),
 	})
-}
-
-// duckDBTimestampTruncSQL ports timestamptrunc_sql (generators/duckdb.py:4462-...): DuckDB
-// renders DATE_TRUNC(<unit string>, <this>).
-func duckDBTimestampTruncSQL(g *Generator, e expressions.Expression) string {
-	unit := duckDBDiffUnit(asExpression(e.Arg("unit")))
-	return g.funcCall("DATE_TRUNC", []any{unit, e.This()}, "(", ")", true)
 }
 
 // duckDBSortArraySQL ports _array_sort_sql (generators/duckdb.py:545-548): a descending sort
@@ -1282,8 +1278,11 @@ func duckDBDateDeltaSQL(op string) func(*Generator, expressions.Expression) stri
 			}
 		} else if this := asExpression(e.This()); this != nil && this.Kind() == expressions.KindLiteral && truthy(this.Arg("is_string")) {
 			dtype := expressions.DTypeDate
-			if e.Kind() == expressions.KindDatetimeAdd || e.Kind() == expressions.KindDatetimeSub {
+			switch e.Kind() {
+			case expressions.KindDatetimeAdd, expressions.KindDatetimeSub:
 				dtype = expressions.DTypeDatetime
+			case expressions.KindTimestampAdd, expressions.KindTimestampSub:
+				dtype = expressions.DTypeTimestamp
 			}
 			toType = expressions.DataType(expressions.Args{"this": dtype})
 		}
@@ -1363,8 +1362,14 @@ func duckDBDiffUnit(unit expressions.Expression) any {
 func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
 	// DuckDB renders SEMI/ANTI joins without the LEFT/RIGHT side keyword.
 	if kind := strings.ToUpper(e.Text("kind")); kind == "SEMI" || kind == "ANTI" {
-		if side := strings.ToUpper(e.Text("side")); side == "LEFT" || side == "RIGHT" {
+		switch side := strings.ToUpper(e.Text("side")); side {
+		case "LEFT":
+			// DuckDB's SEMI/ANTI joins are left-sided by default.
 			e.Set("side", nil)
+		case "RIGHT":
+			// Dropping RIGHT would change which rows survive; DuckDB has no right-sided
+			// SEMI/ANTI join, so report it instead of silently rewriting it.
+			g.unsupported("RIGHT " + kind + " JOIN is not supported in DuckDB")
 		}
 	}
 	if !truthy(e.Arg("using")) && !truthy(e.Arg("on")) && strings.ToUpper(e.Text("method")) == "" {

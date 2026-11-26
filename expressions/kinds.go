@@ -1858,7 +1858,7 @@ var argTypes = map[Kind][]argSpec{
 	KindTags:                             {{"expressions", true}},
 	KindRowAccessProperty:                {{"this", false}, {"expressions", false}},
 	KindDayOfWeekIso:                     defaultArgTypes,                                                                                                             // temporal.py:217 (pass)
-	KindDecode:                           {{"this", true}, {"charset", true}, {"replace", false}},                                                                     // string.py:285
+	KindDecode:                           {{"this", true}, {"charset", false}, {"replace", false}},                                                                    // string.py:285
 	KindEncode:                           {{"this", true}, {"charset", true}},                                                                                         // string.py:289
 	KindJSONFormat:                       {{"this", false}, {"options", false}, {"is_json", false}, {"to_json", false}},                                               // json.py:145
 	KindLevenshtein:                      {{"this", true}, {"expression", false}, {"ins_cost", false}, {"del_cost", false}, {"sub_cost", false}, {"max_dist", false}}, // string.py:74

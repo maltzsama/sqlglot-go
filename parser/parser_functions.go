@@ -265,6 +265,23 @@ func (p *Parser) parseConcat() exp.Expression {
 
 // parseConcatWs ports the FUNCTIONS "CONCAT_WS" builder (parser.py:396-401): the same
 // dialect-dependent safe/coalesce flags as CONCAT.
+// parseDecode ports _parse_decode (parser.py:8308-8314): two arguments are the binary
+// decode(string, charset) form; three or more are the Oracle-style conditional DECODE.
+func (p *Parser) parseDecode() exp.Expression {
+	args := p.parseFunctionArgs(false)
+	if len(args) < 3 {
+		charset := seqGet(args, 1)
+		if charset == nil && p.dialectIs("duckdb") {
+			// parsers/duckdb.py:134-137 defaults DECODE/ENCODE to utf-8.
+			charset = exp.LiteralString("utf-8")
+		}
+		return p.validateExpression(exp.Decode(exp.Args{
+			"this": seqGet(args, 0), "charset": charset,
+		}), exprArgs(args))
+	}
+	return p.validateExpression(exp.New(exp.KindDecodeCase, exp.Args{"expressions": args}), exprArgs(args))
+}
+
 func (p *Parser) parseConcatWs() exp.Expression {
 	args := p.parseFunctionArgs(false)
 	return p.validateExpression(exp.ConcatWs(exp.Args{
@@ -532,6 +549,7 @@ func init() {
 	// FUNCTION_PARSERS map instead. CONCAT_WS is left Anonymous - see parseConcat's note.
 	functionParsers["CONCAT"] = (*Parser).parseConcat
 	functionParsers["CONCAT_WS"] = (*Parser).parseConcatWs
+	functionParsers["DECODE"] = (*Parser).parseDecode
 
 	// VARIADIC is postgres-only (parsers/postgres.py:142 NO_PAREN_FUNCTION_PARSERS). The base
 	// singleton retains this pre-existing entry for zero behavior change;

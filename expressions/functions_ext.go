@@ -324,7 +324,6 @@ func init() {
 	className[KindDecodeCase] = "DecodeCase"
 	kindByClassName["DecodeCase"] = KindDecodeCase
 	varLenArgs[KindDecodeCase] = true
-	FunctionByName["DECODE"] = genericFunction(KindDecodeCase)
 	argTypes[KindDecompressBinary] = []argSpec{{"this", true}, {"method", true}}
 	traitsOf[KindDecompressBinary] = TraitCondition | TraitFunc
 	className[KindDecompressBinary] = "DecompressBinary"

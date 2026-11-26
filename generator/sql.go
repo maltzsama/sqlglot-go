@@ -665,7 +665,7 @@ func (g *Generator) likeQuantifierSQL(e expressions.Expression, escape expressio
 		}
 		return like
 	}
-	var result expressions.Expression = makeLike(exprs[0])
+	result := makeLike(exprs[0])
 	connective := expressions.KindOr
 	if rhs.Kind() == expressions.KindAll {
 		connective = expressions.KindAnd
@@ -679,7 +679,13 @@ func (g *Generator) likeQuantifierSQL(e expressions.Expression, escape expressio
 			"this": prev, "expression": makeLike(value),
 		})
 	}
-	return g.gen(result), true
+	sql := g.gen(result)
+	if len(exprs) > 1 && e.Parent() != nil && e.Parent().Is(expressions.TraitConnector) {
+		// Group the expansion when it is an operand of AND/OR so SQL precedence cannot
+		// re-associate it; a top-level expansion needs no extra parentheses.
+		sql = "(" + sql + ")"
+	}
+	return sql, true
 }
 
 // unnestLikeQuantifier unwraps nested Paren/Tuple nodes into the operand list.

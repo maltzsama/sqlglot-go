@@ -209,7 +209,11 @@ func init() {
 			if truthy(e.Arg("safe")) {
 				name = "TRY_" + name
 			}
-			return g.funcCall(name, []any{e.This()}, "(", ")", true)
+			args := []any{e.This()}
+			if mode := asExpression(e.Arg("expression")); mode != nil {
+				args = append(args, mode)
+			}
+			return g.funcCall(name, args, "(", ")", true)
 		},
 		expressions.KindFlatten:       renameFunc("ARRAY_FLATTEN"),
 		expressions.KindGenerator:     snowflakeGeneratorSQL,
@@ -1055,6 +1059,11 @@ func snowflakeSortArraySQL(g *Generator, e expressions.Expression) string {
 	nullsFirst := asExpression(e.Arg("nulls_first"))
 	if isFalseExpr(asc) && isTrueExpr(nullsFirst) {
 		nullsFirst = nil
+	}
+	// The third positional argument is null placement, so a nulls_first without asc
+	// needs an explicit ascending TRUE to occupy the direction slot.
+	if asc == nil && nullsFirst != nil {
+		asc = expressions.Boolean(expressions.Args{"this": true})
 	}
 	return g.funcCall("ARRAY_SORT", []any{e.This(), asc, nullsFirst}, "(", ")", true)
 }
