@@ -160,8 +160,8 @@ func TSQL() *Dialect {
 var TSQLConvertFormatMapping = map[string]string{
 	"0": "%b %d %Y %-I:%M%p", "1": "%m/%d/%y", "2": "%y.%m.%d", "3": "%d/%m/%y",
 	"4": "%d.%m.%y", "5": "%d-%m-%y", "6": "%d %b %y", "7": "%b %d, %y",
-	"8": "%H:%M:%S", "9": "%b %d %Y %-I:%M:%S:%f%p", "10": "mm-dd-yy",
-	"11": "yy/mm/dd", "12": "yymmdd", "13": "%d %b %Y %H:%M:ss:%f", "14": "%H:%M:%S:%f",
+	"8": "%H:%M:%S", "9": "%b %d %Y %-I:%M:%S:%f%p", "10": "%m-%d-%y",
+	"11": "%y/%m/%d", "12": "%y%m%d", "13": "%d %b %Y %H:%M:%S:%f", "14": "%H:%M:%S:%f",
 	"20": "%Y-%m-%d %H:%M:%S", "21": "%Y-%m-%d %H:%M:%S.%f",
 	"22": "%m/%d/%y %-I:%M:%S %p", "23": "%Y-%m-%d", "24": "%H:%M:%S",
 	"25": "%Y-%m-%d %H:%M:%S.%f", "100": "%b %d %Y %-I:%M%p", "101": "%m/%d/%Y",

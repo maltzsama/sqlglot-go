@@ -960,6 +960,20 @@ func (g *Generator) convertSQL(e expressions.Expression) string {
 	if to == nil || value == nil {
 		return ""
 	}
+	// A NULL style makes SQL Server return NULL.
+	if style != nil && style.Kind() == expressions.KindNull {
+		return "NULL"
+	}
+	dtypeForStyle, _ := to.Arg("this").(expressions.DType)
+	if len(to.Expressions()) == 0 {
+		switch dtypeForStyle {
+		case expressions.DTypeVarchar, expressions.DTypeNVarchar, expressions.DTypeChar, expressions.DTypeNChar:
+			to = expressions.DataType(expressions.Args{
+				"this":        dtypeForStyle,
+				"expressions": []expressions.Expression{expressions.LiteralNumber("30")},
+			})
+		}
+	}
 	var transformed expressions.Expression
 	if style != nil && style.IsInt() {
 		if converted, ok := dialects.TSQLConvertFormatMapping[style.Name()]; ok {
@@ -970,6 +984,13 @@ func (g *Generator) convertSQL(e expressions.Expression) string {
 				transformed = expressions.StrToDate(expressions.Args{"this": value, "format": fmt, "safe": safe})
 			case expressions.DTypeDatetime, expressions.DTypeDatetime2:
 				transformed = expressions.StrToTime(expressions.Args{"this": value, "format": fmt, "safe": safe})
+			case expressions.DTypeVarchar, expressions.DTypeNVarchar, expressions.DTypeChar, expressions.DTypeNChar:
+				transformed = expressions.Cast(expressions.Args{
+					"this": expressions.New(expressions.KindTimeToStr, expressions.Args{"this": value, "format": fmt}),
+					"to":   to, "safe": safe,
+				})
+			case expressions.DTypeText:
+				transformed = expressions.New(expressions.KindTimeToStr, expressions.Args{"this": value, "format": fmt})
 			}
 		} else {
 			g.unsupported("Unsupported T-SQL 'style' value: " + style.Name())
@@ -2797,7 +2818,7 @@ func (g *Generator) unnestSQL(e expressions.Expression) string {
 // isMapTypedExpression reports whether an expression is a cast to a MAP/OBJECT type, the case
 // apply_index_offset (expressions/builders.py:1117-1121) excludes from index shifting.
 func isMapTypedExpression(e expressions.Expression) bool {
-	if e == nil || e.Kind() != expressions.KindCast {
+	if e == nil || (e.Kind() != expressions.KindCast && e.Kind() != expressions.KindTryCast) {
 		return false
 	}
 	to := asExpression(e.Arg("to"))

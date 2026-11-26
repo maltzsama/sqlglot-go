@@ -951,8 +951,16 @@ func (g *Generator) tsqlSelectSQL(e exp.Expression) string {
 	offset := asExpression(e.Arg("offset"))
 	if offset != nil {
 		if e.Arg("order") == nil {
-			nullSelect := exp.Select(exp.Args{"expressions": []exp.Expression{exp.Null()}})
-			e.Set("order", exp.Order(exp.Args{"expressions": []exp.Expression{exp.Subquery(exp.Args{"this": nullSelect})}}))
+			if e.Arg("distinct") != nil {
+				// SQL Server rejects ORDER BY (SELECT NULL) under DISTINCT because the key is
+				// not in the projection; an ordinal reference to the first select item is valid.
+				e.Set("order", exp.Order(exp.Args{"expressions": []exp.Expression{
+					exp.Ordered(exp.Args{"this": exp.LiteralNumber("1"), "nulls_first": true}),
+				}}))
+			} else {
+				nullSelect := exp.Select(exp.Args{"expressions": []exp.Expression{exp.Null()}})
+				e.Set("order", exp.Order(exp.Args{"expressions": []exp.Expression{exp.Subquery(exp.Args{"this": nullSelect})}}))
+			}
 		}
 		if limit != nil && limit.Kind() == exp.KindLimit {
 			fetch := exp.Fetch(exp.Args{"direction": "FIRST", "count": limit.Arg("expression")})

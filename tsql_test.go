@@ -516,3 +516,27 @@ func TestTSQLGoEndsRoutineBody(t *testing.T) {
 	assertScriptStatements(t, "CREATE PROCEDURE p AS SELECT 1; SELECT 2", "tsql",
 		[]scriptStatement{{exp.KindCreate, "CREATE PROCEDURE p AS SELECT 1; SELECT 2"}})
 }
+
+// TestTSQLReviewFixes pins the real-engine corrections recorded in DEVIATIONS 1.34.
+func TestTSQLReviewFixes(t *testing.T) {
+	cases := []struct{ sql, write, want string }{
+		{"SELECT CONVERT(DATE, '12-31-24', 10)", "duckdb", "SELECT CAST(STRPTIME('12-31-24', '%m-%d-%y') AS DATE)"},
+		{"SELECT CONVERT(DATE, '12-31-24', 110)", "duckdb", "SELECT CAST(STRPTIME('12-31-24', '%m-%d-%Y') AS DATE)"},
+		{"SELECT CONVERT(DATE, '2024-01-02', NULL)", "duckdb", "SELECT NULL"},
+		{"SELECT CONVERT(VARCHAR(10), CAST('2024-01-02' AS DATE), 101)", "duckdb", "SELECT CAST(STRFTIME(CAST('2024-01-02' AS DATE), '%m/%d/%Y') AS TEXT(10))"},
+		{"SELECT DISTINCT x FROM t OFFSET 1 ROWS", "tsql", "SELECT DISTINCT x FROM t ORDER BY 1 OFFSET 1 ROWS"},
+	}
+	for _, tc := range cases {
+		out, err := sqlglot.Transpile(tc.sql, "tsql", tc.write, generator.Options{})
+		if err != nil {
+			t.Fatalf("%s: %v", tc.sql, err)
+		}
+		got := ""
+		if len(out) == 1 {
+			got = out[0]
+		}
+		if got != tc.want {
+			t.Fatalf("%s\n got: %s\nwant: %s", tc.sql, got, tc.want)
+		}
+	}
+}

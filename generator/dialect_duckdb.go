@@ -810,7 +810,8 @@ func duckDBUnixToTimeBaseSQL(g *Generator, e expressions.Expression) string {
 
 // duckDBUnixSecondsSQL ports the UnixSeconds lambda (generators/duckdb.py:1768).
 func duckDBUnixSecondsSQL(g *Generator, e expressions.Expression) string {
-	return "CAST(" + g.funcCall("EPOCH", []any{implicitDatetimeCast(e.This())}, "(", ")", true) + " AS BIGINT)"
+	// BigQuery truncates toward negative infinity; a plain CAST rounds half away from zero.
+	return "CAST(FLOOR(" + g.funcCall("EPOCH", []any{implicitDatetimeCast(e.This())}, "(", ")", true) + ") AS BIGINT)"
 }
 
 // duckDBDateDiffSQL ports _date_diff_sql (generators/duckdb.py:953-980) for the non-boundary

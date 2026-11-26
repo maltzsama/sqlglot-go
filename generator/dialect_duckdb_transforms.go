@@ -2219,10 +2219,15 @@ func duckDBGetExtractSQL(g *Generator, e expressions.Expression) string {
 		}
 	}
 	if this != nil && this.Kind() == expressions.KindArray {
-		// The Bracket renderer applies DuckDB's 1-based offset; keep the source index as-is.
+		// The Bracket renderer only shifts literal offsets; a dynamic Snowflake index is
+		// zero-based, so add one explicitly.
+		index := expr
+		if expr != nil && !expr.IsInt() {
+			index = expressions.Add(expressions.Args{"this": expr, "expression": expressions.LiteralNumber("1")})
+		}
 		return g.gen(expressions.Bracket(expressions.Args{
 			"this":        this,
-			"expressions": []expressions.Expression{expr},
+			"expressions": []expressions.Expression{index},
 		}))
 	}
 	// generator.py:6187-6200: a non-container argument extracts through a JSON path built
@@ -2479,6 +2484,8 @@ func duckDBRegexpInstrSQL(g *Generator, e expressions.Expression) string {
 		matchAtOcc := expressions.Bracket(expressions.Args{
 			"this":        duckDBAnon("REGEXP_EXTRACT_ALL", this.Copy(), pattern.Copy()),
 			"expressions": []expressions.Expression{occurrence},
+			// The occurrence is already one-based; suppress the bracket renderer's shift.
+			"offset": 1,
 		})
 		basePos = expressions.Add(expressions.Args{
 			"this": basePos,
@@ -2632,8 +2639,15 @@ func duckDBXorSQL(g *Generator, e expressions.Expression) string {
 		this = expressions.Round(expressions.Args{"this": this, "decimals": expressions.LiteralNumber("0")})
 		expr = expressions.Round(expressions.Args{"this": expr, "decimals": expressions.LiteralNumber("0")})
 	}
-	a := g.gen(this)
-	b := g.gen(expr)
+	grouped := func(v expressions.Expression) string {
+		sql := g.gen(v)
+		if v != nil && (v.Is(expressions.TraitConnector) || v.Is(expressions.TraitBinary)) {
+			return "(" + sql + ")"
+		}
+		return sql
+	}
+	a := grouped(this)
+	b := grouped(expr)
 	return "(" + a + " AND (NOT " + b + ")) OR ((NOT " + a + ") AND " + b + ")"
 }
 
@@ -2775,11 +2789,13 @@ func duckDBAnonymousSQL(g *Generator, e expressions.Expression) string {
 	args := e.Expressions()
 	switch name {
 	case "ARRAY_SORT":
-		// generators/duckdb.py:544-546: DuckDB's ARRAY_SORT has no comparator argument.
-		if len(args) == 0 {
-			return g.anonymousSQL(e)
+		// generators/duckdb.py:544-546: DuckDB's ARRAY_SORT has no comparator argument, but a
+		// two-argument Anonymous call can also be an opaque sort order; only a lambda is the
+		// comparator the transform knows how to drop.
+		if len(args) == 2 && asExpression(args[1]) != nil && asExpression(args[1]).Kind() == expressions.KindLambda {
+			return g.funcCall("ARRAY_SORT", []any{args[0]}, "(", ")", true)
 		}
-		return g.funcCall("ARRAY_SORT", []any{args[0]}, "(", ")", true)
+		return g.anonymousSQL(e)
 	case "ARRAY_ANY":
 		if len(args) != 2 {
 			return g.anonymousSQL(e)

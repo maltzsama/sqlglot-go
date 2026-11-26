@@ -477,6 +477,25 @@ Further real-engine corrections exercised by `testdata/transpile_corrections.jso
 
 Guarding test: `TestTranspileCorrectionsMatch`.
 
+### 1.34 Real-engine correctness fixes from the DuckDB drain review
+
+Corrections where pinned upstream v30.17.0 emits SQL with different semantics than the real
+engine. Only the `UNIX_SECONDS` case appears in the validated corpus, so it carries an overlay
+entry; the rest are exercised by unit tests or reachable only through untested argument forms.
+
+- BigQuery `UNIX_SECONDS` floors fractional seconds (`FLOOR(EPOCH(...))`); a plain `CAST`
+  rounds half away from zero, so `…:01.8` became 2 instead of 1.
+- T-SQL `CONVERT` styles 10–13 use real `%` directives. Upstream's table contains literal
+  `mm-dd-yy` / `yy/mm/dd` / `yymmdd` / `…ss…`, which DuckDB's `STRPTIME` cannot read as fields.
+- `CONVERT(..., NULL)` returns NULL (SQL Server semantics) rather than falling back to a cast.
+- T-SQL `OFFSET` under `DISTINCT` orders by the first projected expression; SQL Server rejects
+  `ORDER BY (SELECT NULL)` there because the key is not in the DISTINCT projection.
+- DuckDB `XOR` expansion parenthesizes connector operands, so a nested AND/OR keeps its
+  binding instead of being re-associated by SQL precedence.
+
+Guarding tests: `TestTranspileCorrectionsMatch`, `TestTSQLReviewFixes`, and
+`TestDuckDBReviewRegressions`.
+
 ## Beyond-upstream dialects
 
 A dialect upstream does not ship at all. There is no Python oracle for these — pinned v30.17.0

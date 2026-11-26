@@ -874,17 +874,6 @@
 {"read":"tsql","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT DATETIMEFROMPARTS(2013, 4, 5, 12, 00, 00, 0)"}
 {"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CAST(x as MONEY)"}
 {"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CAST(x as SMALLMONEY)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CONVERT(CHAR, x)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CONVERT(NCHAR, x)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CONVERT(NVARCHAR(40), x, 121)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CONVERT(NVARCHAR(MAX), x, 121)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CONVERT(NVARCHAR, x)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CONVERT(NVARCHAR, x, 121)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CONVERT(VARCHAR(40), x, 121)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CONVERT(VARCHAR(MAX), x, 121)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CONVERT(VARCHAR, x)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"CONVERT(VARCHAR, x, 121)"}
-{"read":"tsql","write":"spark","category":"gen: cast/type","sql":"SELECT CONVERT(VARCHAR(10), testdb.dbo.test.x, 120) y FROM testdb.dbo.test"}
 {"read":"tsql","write":"spark","category":"gen: cast/type","sql":"SELECT DATEDIFF(day, 1, '2021-01-01')"}
 {"read":"tsql","write":"spark","category":"gen: cast/type","sql":"SELECT DATEDIFF(quarter, 'start', 'end')"}
 {"read":"tsql","write":"spark","category":"gen: cast/type","sql":"SELECT DATEDIFF(quarter, 0, '2021-01-01')"}
