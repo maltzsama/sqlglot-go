@@ -284,7 +284,7 @@ const (
 	minPassTranspilePresto      = 591
 	minPassTranspileRedshift    = 184
 	minPassTranspileRisingWave  = 6
-	minPassTranspileSnowflake   = 945
+	minPassTranspileSnowflake   = 947
 	minPassTranspileSpark       = 841
 	minPassTranspileSpark2      = 76
 	minPassTranspileSQLite      = 146

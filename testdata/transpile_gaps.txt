@@ -28,7 +28,6 @@
 {"read":"","write":"snowflake","category":"gen: cast/type","sql":"TIME_STR_TO_TIME('2020-01-01')"}
 {"read":"","write":"snowflake","category":"gen: cast/type","sql":"TIME_STR_TO_TIME(col, 'America/Los_Angeles')"}
 {"read":"","write":"snowflake","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$.y[*]')"}
-{"read":"","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT ARRAY_POSITION(ARRAY(1, 2, 3), 2)"}
 {"read":"","write":"sqlite","category":"gen: ddl/properties","sql":"CREATE TABLE a LIKE b"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$.y[*]')"}
 {"read":"","write":"sqlite","category":"gen: transpile mismatch","sql":"JSON_EXTRACT(x, '$[\"a b\"]')"}
@@ -199,7 +198,6 @@
 {"read":"redshift","write":"presto","category":"gen: cast/type","sql":"SELECT DATEADD(DAY, 1, CURRENT_DATE)"}
 {"read":"redshift","write":"presto","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
 {"read":"redshift","write":"snowflake","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
-{"read":"redshift","write":"snowflake","category":"gen: transpile mismatch","sql":"x ~* 'pat'"}
 {"read":"redshift","write":"trino","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
 {"read":"redshift","write":"tsql","category":"gen: cast/type","sql":"SELECT ADD_MONTHS('2008-03-31', 1)"}
 {"read":"redshift","write":"tsql","category":"gen: cast/type","sql":"SELECT DATEADD(month, 18, '2008-02-28')"}
