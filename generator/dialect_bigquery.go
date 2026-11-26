@@ -877,6 +877,7 @@ func exprList(value any) []expressions.Expression {
 // qualifier, and _alias_ordered_group rewrites a GROUP BY expression that exactly matches a
 // projection alias into a reference to that alias.
 func bigQuerySelectSQL(g *Generator, e expressions.Expression) string {
+	explodeProjectionToUnnest(e, 0)
 	e = unqualifyUnnest(e)
 	group := asExpression(e.Arg("group"))
 	order := asExpression(e.Arg("order"))

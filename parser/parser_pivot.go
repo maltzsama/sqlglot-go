@@ -179,6 +179,11 @@ func (p *Parser) parsePivots() []exp.Expression {
 		if pivot == nil {
 			break
 		}
+		// parsers/snowflake.py:331 IDENTIFY_PIVOT_STRINGS = True: the output column name
+		// includes the quoted IN value, which a target like DuckDB has to alias explicitly.
+		if p.dialectIs("snowflake") {
+			pivot.Set("identify_pivot_strings", true)
+		}
 		pivots = append(pivots, pivot)
 	}
 	if len(pivots) == 0 {

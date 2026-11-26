@@ -301,7 +301,7 @@ func TestDuckDBReviewRegressions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "INTERVAL '1 YEAR 2 MONTH'"; got != want {
+	if want := "INTERVAL '1 year 2 month'"; got != want {
 		t.Fatalf("MAKE_INTERVAL = %q, want %q", got, want)
 	}
 }
@@ -483,6 +483,30 @@ func TestDuckDBTailTranspileFixes(t *testing.T) {
 		}
 		if len(out) != 1 || out[0] != tc.want {
 			t.Fatalf("%s\n got: %v\nwant: %s", tc.sql, out, tc.want)
+		}
+	}
+
+	// Cross-dialect rewrites ported in the final tail.
+	for _, tc := range []struct{ read, sql, want string }{
+		{"bigquery", "SELECT AS STRUCT ARRAY(SELECT AS STRUCT 1 AS b FROM x) AS y FROM z", "SELECT {'y': ARRAY(SELECT {'b': 1} FROM x)} FROM z"},
+		{"bigquery", "SELECT ts + MAKE_INTERVAL(1, 2, minute => 5, day => 3)", "SELECT ts + INTERVAL '1 year 2 month 5 minute 3 day'"},
+		{"postgres", "WITH dates AS (SELECT GENERATE_SERIES('2020-01-01'::DATE, '2024-01-01'::DATE, '1 day'::INTERVAL) AS date) SELECT * FROM dates", "WITH dates AS (SELECT UNNEST(GENERATE_SERIES(CAST('2020-01-01' AS DATE), CAST('2024-01-01' AS DATE), CAST('1 day' AS INTERVAL))) AS date) SELECT * FROM dates"},
+		{"snowflake", "SELECT * FROM produce PIVOT(SUM(produce.sales) FOR produce.quarter IN ('Q1', 'Q2'))", "SELECT * FROM produce PIVOT(SUM(sales) FOR quarter IN ('Q1' AS \"'Q1'\", 'Q2' AS \"'Q2'\"))"},
+	} {
+		out, err := sqlglot.Transpile(tc.sql, tc.read, "duckdb", generator.Options{})
+		if err != nil || len(out) != 1 || out[0] != tc.want {
+			t.Fatalf("%s: %v %v", tc.sql, out, err)
+		}
+	}
+	// DuckDB UNNEST projections become BigQuery/Presto set-returning joins.
+	for _, tc := range []struct{ write, sql, contains string }{
+		{"bigquery", "SELECT UNNEST(x) + 1", "AS col FROM UNNEST(GENERATE_ARRAY(0, GREATEST(ARRAY_LENGTH(x)) - 1)) AS pos"},
+		{"presto", "SELECT UNNEST(ARRAY[1, 2, 3])", "FROM UNNEST(SEQUENCE(1, GREATEST(CARDINALITY(ARRAY[1, 2, 3])))) AS _u(pos)"},
+		{"snowflake", "SELECT UNNEST([1, 2, 3])", "IFF(_u.pos = _u_2.pos_2, _u_2.col, NULL) AS col"},
+	} {
+		out, err := sqlglot.Transpile(tc.sql, "duckdb", tc.write, generator.Options{})
+		if err != nil || len(out) != 1 || !strings.Contains(out[0], tc.contains) {
+			t.Fatalf("%s -> %s: %v %v", tc.sql, tc.write, out, err)
 		}
 	}
 

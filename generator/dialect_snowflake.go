@@ -325,7 +325,7 @@ func wrapBinaryExpr(expression expressions.Expression) expressions.Expression {
 // are folded into the dedicated generators (unnest_sql's alias handling covers part of
 // _qualify_unnested_columns, jsonextract_sql covers _eliminate_dot_variant_lookup).
 func snowflakeSelectSQL(g *Generator, e expressions.Expression) string {
-	snowflakeExplodeProjectionToUnnest(e)
+	explodeProjectionToUnnest(e, 0)
 	return g.selectSQL(e)
 }
 
@@ -374,13 +374,12 @@ func snowflakeSelectSourceNames(selectExpr expressions.Expression) map[string]bo
 	return names
 }
 
-// snowflakeExplodeProjectionToUnnest ports explode_projection_to_unnest (transforms.py:402-
-// 552) with the default index_offset=0. A projection whose subtree contains an Explode (even
+// explodeProjectionToUnnest ports explode_projection_to_unnest (transforms.py:402-552). A projection whose subtree contains an Explode (even
 // inside a nested subquery, which is why the outer SELECT is rewritten for the correlated
 // FLATTEN case) becomes a positional IFF over two FLATTEN sources plus a generated series.
 // The Posexplode/Aliases branches are not ported: this port has no Posexplode node, so they
 // are unreachable here.
-func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
+func explodeProjectionToUnnest(selectExpr expressions.Expression, indexOffset int) {
 	takenSelectNames := map[string]bool{}
 	for _, name := range selectExpr.NamedSelects() {
 		takenSelectNames[name] = true
@@ -393,7 +392,6 @@ func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
 		return name
 	}
 
-	const indexOffset = 0
 	var arrays []expressions.Expression
 	seriesAlias := newName(takenSelectNames, "pos")
 	series := expressions.Unnest(expressions.Args{
@@ -427,8 +425,10 @@ func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
 			}
 		} else {
 			// exp.alias_(select, ""): keep the projection but give it an (empty) alias slot.
+			// Wrapping reparents the item, so Replace cannot reach the SELECT list; swap the
+			// slot by identity instead.
 			renamed := expressions.AliasExpr(selectItem, "", false)
-			selectItem.Replace(renamed)
+			replaceSelectItem(selectExpr, selectItem, renamed)
 			alias = renamed
 			explode = renamed.Find(expressions.KindExplode)
 		}
@@ -500,10 +500,13 @@ func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
 		}), expressions.JoinOptions{JoinType: "CROSS"})
 
 		// index_offset != 1, so the positional bound is the (zero-based) last array index.
-		sizeBound := expressions.Sub(expressions.Args{
-			"this":       size.Copy(),
-			"expression": expressions.LiteralNumber("1"),
-		})
+		sizeBound := size.Copy()
+		if indexOffset != 1 {
+			sizeBound = expressions.Sub(expressions.Args{
+				"this":       sizeBound,
+				"expression": expressions.LiteralNumber("1"),
+			})
+		}
 		selectExpr.Where(true, false, expressions.Or_(
 			expressions.EQ(expressions.Args{
 				"this":       seriesColumn(),
@@ -525,9 +528,23 @@ func snowflakeExplodeProjectionToUnnest(selectExpr expressions.Expression) {
 	if len(arrays) > 0 {
 		end := expressions.Greatest(expressions.Args{"this": arrays[0], "expressions": arrays[1:]})
 		// index_offset != 1: end = end - (1 - index_offset).
-		end = expressions.Sub(expressions.Args{"this": end, "expression": expressions.LiteralNumber("1")})
+		if indexOffset != 1 {
+			end = expressions.Sub(expressions.Args{"this": end, "expression": expressions.LiteralNumber("1")})
+		}
 		if elements := series.Expressions(); len(elements) > 0 {
 			elements[0].Set("end", end)
+		}
+	}
+}
+
+// replaceSelectItem swaps one SELECT projection for another by node identity.
+func replaceSelectItem(selectExpr, old, replacement expressions.Expression) {
+	items := selectExpr.Expressions()
+	for i, item := range items {
+		if item == old {
+			items[i] = replacement
+			selectExpr.Set("expressions", items)
+			return
 		}
 	}
 }

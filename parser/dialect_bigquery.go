@@ -83,6 +83,7 @@ var bigQueryMakeIntervalKwargs = []string{"year", "month", "week", "day", "hour"
 // arguments can appear in any order after the positional ones.
 func (p *Parser) parseBigQueryMakeInterval() exp.Expression {
 	args := exp.Args{}
+	order := make([]string, 0, len(bigQueryMakeIntervalKwargs))
 	for _, argKey := range bigQueryMakeIntervalKwargs {
 		value := p.parseLambda(false)
 		if value == nil {
@@ -92,9 +93,15 @@ func (p *Parser) parseBigQueryMakeInterval() exp.Expression {
 			argKey = value.This().Name()
 		}
 		args[argKey] = value
+		order = append(order, argKey)
 		p.match(tokens.COMMA)
 	}
-	return p.expression(exp.MakeInterval(args), nil, nil)
+	// Keep the source order: upstream renders MAKE_INTERVAL args in expression.args order.
+	built := p.expression(exp.MakeInterval(args), nil, nil)
+	if built != nil {
+		built.Meta()["make_interval_order"] = order
+	}
+	return built
 }
 
 // parseBigQueryML ports _parse_ml (parsers/bigquery.py:645-663):

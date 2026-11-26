@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -149,8 +150,24 @@ func (g *Generator) selectSQL(e expressions.Expression) string {
 	}
 	expressionsSQL := g.expressions(exprsOptions{expression: e})
 	if kind != "" {
-		if kind == "STRUCT" || kind == "VALUE" {
+		if slices.Contains(g.dialect.SelectKinds, kind) {
 			kind = " AS " + kind
+		} else if kind == "STRUCT" {
+			// generator.py:3358-3372: SELECT AS STRUCT becomes a single struct literal whose
+			// fields are the projection aliases.
+			fields := make([]expressions.Expression, 0, len(e.Expressions()))
+			for _, item := range e.Expressions() {
+				if item != nil && item.Kind() == expressions.KindAlias {
+					fields = append(fields, expressions.PropertyEQ(expressions.Args{
+						"this":       asExpression(item.Arg("alias")),
+						"expression": item.This(),
+					}))
+					continue
+				}
+				fields = append(fields, item)
+			}
+			expressionsSQL = g.gen(expressions.Struct(expressions.Args{"expressions": fields}))
+			kind = ""
 		} else {
 			kind = ""
 		}
