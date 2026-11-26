@@ -465,6 +465,10 @@ func TestDuckDBTailTranspileFixes(t *testing.T) {
 		read, write, sql, want string
 	}{
 		{"redshift", "duckdb", "SELECT *, 4 AS col4 EXCLUDE (col2, col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)", "SELECT * EXCLUDE (col2, col3) FROM (SELECT *, 4 AS col4 FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3))"},
+		{"postgres", "duckdb", "CREATE TABLE a (LIKE b)", "CREATE TABLE a AS SELECT * FROM b LIMIT 0"},
+		{"redshift", "duckdb", "SELECT DISTINCT a, b EXCLUDE (b) FROM t LIMIT 1", "SELECT DISTINCT * EXCLUDE (b) FROM (SELECT a, b FROM t) LIMIT 1"},
+		{"redshift", "duckdb", "SELECT a, b EXCLUDE (b) INTO dst FROM src", "CREATE TABLE dst AS SELECT * EXCLUDE (b) FROM (SELECT a, b FROM src)"},
+		{"spark", "duckdb", "SELECT * FROM x LATERAL VIEW OUTER inline(y) t AS a", "SELECT * FROM x LEFT JOIN LATERAL (SELECT UNNEST(y, max_depth => 2)) AS t(a) ON TRUE"},
 		{"", "duckdb", "CREATE TABLE a LIKE b", "CREATE TABLE a AS SELECT * FROM b LIMIT 0"},
 		{"databricks", "duckdb", "CREATE TABLE t (a INT, b TIMESTAMP, PRIMARY KEY (a, b TIMESERIES))", "CREATE TABLE t (a INT, b TIMESTAMPTZ, PRIMARY KEY (a, b))"},
 		{"duckdb", "tsql", "WITH t1(c) AS (SELECT 1), t2 AS (SELECT CAST(c AS INTEGER) FROM t1) SELECT * FROM t2", "WITH t1(c) AS (SELECT 1), t2 AS (SELECT CAST(c AS INTEGER) AS c FROM t1) SELECT * FROM t2"},

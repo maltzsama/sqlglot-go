@@ -2238,10 +2238,7 @@ func duckDBLateralSQL(g *Generator, e expressions.Expression) string {
 			}
 			alias.Set("this", expressions.ToIdentifier(fmt.Sprintf("_u_%d", idx)))
 		}
-		return g.gen(expressions.Join(expressions.Args{
-			"this": expressions.Lateral(expressions.Args{"this": subquery, "alias": alias}),
-			"kind": "CROSS",
-		}))
+		return g.gen(duckDBLateralJoin(expressions.Lateral(expressions.Args{"this": subquery, "alias": alias}), truthy(e.Arg("outer"))))
 	}
 	// LATERAL VIEW POSEXPLODE(y) t AS pos, col: WITH ORDINALITY is 1-based and the alias
 	// columns are [pos, ...values]; the projection subtracts 1 (dialect.py:2481-2516).
@@ -2271,10 +2268,7 @@ func duckDBLateralSQL(g *Generator, e expressions.Expression) string {
 				"expressions": projections,
 				"from_":       expressions.From(expressions.Args{"this": unnest}),
 			})})
-			return g.gen(expressions.Join(expressions.Args{
-				"this": expressions.Lateral(expressions.Args{"this": subquery}),
-				"kind": "CROSS",
-			}))
+			return g.gen(duckDBLateralJoin(expressions.Lateral(expressions.Args{"this": subquery}), truthy(e.Arg("outer"))))
 		}
 	}
 	if this.Kind() != expressions.KindExplode {
@@ -3101,4 +3095,17 @@ func duckDBApproximateSimilaritySQL(g *Generator, e expressions.Expression) stri
 func duckDBBitmapConstructAggSQL(g *Generator, e expressions.Expression) string {
 	arg := g.gen(e.This())
 	return "(SELECT CASE WHEN l IS NULL OR LENGTH(l) = 0 THEN NULL WHEN LENGTH(l) <> LENGTH(LIST_FILTER(l, __v -> __v BETWEEN 0 AND 32767)) THEN NULL WHEN LENGTH(l) < 5 THEN UNHEX(PRINTF('%04X', LENGTH(l)) || h || REPEAT('00', GREATEST(0, 4 - LENGTH(l)) * 2)) ELSE UNHEX('08000000000000000000' || h) END FROM (SELECT l, COALESCE(LIST_REDUCE(LIST_TRANSFORM(l, __x -> PRINTF('%02X%02X', CAST(__x AS INT) & 255, (CAST(__x AS INT) >> 8) & 255)), (__a, __b) -> __a || __b, ''), '') AS h FROM (SELECT LIST_SORT(LIST_DISTINCT(LIST(" + arg + ") FILTER(WHERE NOT " + arg + " IS NULL))) AS l)))"
+}
+
+// duckDBLateralJoin renders a lateral source as CROSS JOIN, or LEFT JOIN LATERAL ... ON TRUE
+// for LATERAL VIEW OUTER so rows with an empty generator are kept.
+func duckDBLateralJoin(lateral expressions.Expression, outer bool) expressions.Expression {
+	if outer {
+		return expressions.Join(expressions.Args{
+			"this": lateral,
+			"kind": "LEFT",
+			"on":   expressions.Boolean(expressions.Args{"this": true}),
+		})
+	}
+	return expressions.Join(expressions.Args{"this": lateral, "kind": "CROSS"})
 }

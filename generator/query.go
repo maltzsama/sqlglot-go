@@ -104,6 +104,25 @@ func (g *Generator) optionsModifier(e expressions.Expression) string {
 }
 
 func (g *Generator) selectSQL(e expressions.Expression) string {
+	// generator.py:3405-3409: with STAR_EXCLUDE_REQUIRES_DERIVED_TABLE (the base default), a
+	// select-level `exclude` arg becomes a derived table. Do this before any rendering so
+	// mutating handlers run once and DISTINCT/ORDER/LIMIT/INTO apply after the exclusion.
+	if g.dialect.StarExcludeRequiresDerivedTable {
+		if exclude := listFromValue(e.Arg("exclude")); len(exclude) > 0 {
+			e.Set("exclude", nil)
+			outerArgs := expressions.Args{
+				"expressions": []expressions.Expression{expressions.Star(expressions.Args{"except_": exclude})},
+				"from_":       expressions.From(expressions.Args{"this": expressions.Subquery(expressions.Args{"this": e})}),
+			}
+			for _, key := range []string{"into", "distinct", "limit", "offset", "order"} {
+				if value := e.Arg(key); value != nil {
+					outerArgs[key] = value
+					e.Set(key, nil)
+				}
+			}
+			return g.gen(expressions.New(expressions.KindSelect, outerArgs))
+		}
+	}
 	// transforms.py:616-631: dialects that lack native SEMI/ANTI joins rewrite them into
 	// correlated [NOT] EXISTS predicates before rendering the query.
 	if g.dialect.EliminateDistinctOn {
@@ -188,21 +207,6 @@ func (g *Generator) selectSQL(e expressions.Expression) string {
 			tableKind = " TEMPORARY"
 		}
 		sql = "CREATE" + tableKind + " TABLE " + g.sqlKey(into, "this") + " AS " + sql
-	}
-	// generator.py:3405-3409: with STAR_EXCLUDE_REQUIRES_DERIVED_TABLE (the base default), a
-	// select-level `exclude` arg becomes a derived table: the projection moves into a subquery
-	// and the outer SELECT stars everything except the excluded columns.
-	if g.dialect.StarExcludeRequiresDerivedTable {
-		if exclude := listFromValue(e.Arg("exclude")); len(exclude) > 0 {
-			e.Set("exclude", nil)
-			subquery := expressions.Subquery(expressions.Args{"this": e})
-			star := expressions.Star(expressions.Args{"except_": exclude})
-			outer := expressions.New(expressions.KindSelect, expressions.Args{
-				"expressions": []expressions.Expression{star},
-				"from_":       expressions.From(expressions.Args{"this": subquery}),
-			})
-			return g.gen(outer)
-		}
 	}
 	return sql
 }

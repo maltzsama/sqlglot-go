@@ -1601,6 +1601,25 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 	if properties != nil {
 		propertyLocations = g.locateProperties(properties)
 	}
+	// CREATE TABLE a (LIKE b): with no CREATE TABLE LIKE support the zero-row CTAS must live
+	// outside the column list, so lift the property out of the schema before rendering it.
+	schemaLikeSQL := ""
+	if !g.dialect.SupportsCreateTableLike {
+		if schema := asExpression(e.Arg("this")); schema != nil && schema.Kind() == expressions.KindSchema {
+			entries := schema.Expressions()
+			kept := make([]expressions.Expression, 0, len(entries))
+			for _, entry := range entries {
+				if entry != nil && entry.Kind() == expressions.KindLikeProperty {
+					schemaLikeSQL = g.likePropertySQL(entry)
+					continue
+				}
+				kept = append(kept, entry)
+			}
+			if schemaLikeSQL != "" {
+				schema.Set("expressions", kept)
+			}
+		}
+	}
 	this := g.sqlKey(e, "this")
 	// createable_sql override (generators/clickhouse.py:607-623): ClickHouse places
 	// ON CLUSTER / UUID / REFRESH right after the object name, before the schema columns.
@@ -1734,6 +1753,9 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 	bodyAndProperties := propertiesSQL + expressionSQL
 	if g.dialect.ExpressionPrecedesPropertiesCreatables[kind] {
 		bodyAndProperties = expressionSQL + propertiesSQL
+	}
+	if schemaLikeSQL != "" {
+		bodyAndProperties = " " + schemaLikeSQL + bodyAndProperties
 	}
 	sql := "CREATE" + modifiers + " " + kind + concurrently + exists + " " + this + bodyAndProperties + postExpressionSQL + indexSQL + noSchemaBinding + clone
 	return g.prependCtes(e, sql)
