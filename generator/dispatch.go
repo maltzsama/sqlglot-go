@@ -38,6 +38,9 @@ func init() {
 	dispatch[expressions.KindEQ] = (*Generator).eqSQL
 	dispatch[expressions.KindNEQ] = (*Generator).neqSQL
 	dispatch[expressions.KindNullSafeEQ] = (*Generator).nullSafeEQSQL
+	dispatch[expressions.KindSafeDivide] = (*Generator).safeDivideSQL
+	dispatch[expressions.KindDecodeCase] = (*Generator).decodeCaseSQL
+	dispatch[expressions.KindVarMap] = (*Generator).varMapSQL
 	dispatch[expressions.KindGT] = (*Generator).gtSQL
 	dispatch[expressions.KindGTE] = (*Generator).gteSQL
 	dispatch[expressions.KindLT] = (*Generator).ltSQL

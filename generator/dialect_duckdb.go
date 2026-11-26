@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/maltzsama/sqlglot-go/dialects"
@@ -77,7 +79,6 @@ func init() {
 		expressions.KindArrayMax:          clickhouseRename("LIST_MAX"),
 		expressions.KindArrayMin:          clickhouseRename("LIST_MIN"),
 		expressions.KindArrayFilter:       clickhouseRename("LIST_FILTER"),
-		expressions.KindTimeToUnix:        clickhouseRename("EPOCH"),
 		expressions.KindWeekOfYear:        clickhouseRename("WEEKOFYEAR"),
 		expressions.KindVariancePop:       clickhouseRename("VAR_POP"),
 		expressions.KindJSONObjectAgg:     clickhouseRename("JSON_GROUP_OBJECT"),
@@ -88,21 +89,20 @@ func init() {
 		// generators/duckdb.py:3145-3160: DuckDB rejects `JOIN UNNEST(...)` without an ON
 		// clause, so a synthetic UNNEST join gets a dummy ON TRUE and a plain comma join
 		// loses its synthetic side/kind.
-		expressions.KindJoin:              duckDBJoinSQL,
-		expressions.KindRand:              duckDBRandSQL,
-		expressions.KindJSONExtract:       duckDBArrowJSONExtract,
-		expressions.KindJSONExtractScalar: duckDBArrowJSONExtract,
-		expressions.KindJSONExtractArray:  duckDBArrowJSONExtractArray,
-		expressions.KindJSONValueArray:    duckDBArrowJSONExtractArray,
-		expressions.KindArrayAppend:       duckDBArrayAppendSQL("LIST_APPEND", false),
-		expressions.KindArrayPrepend:      duckDBArrayAppendSQL("LIST_PREPEND", true),
-		expressions.KindArrayConcat:       duckDBArrayConcatSQL,
-		expressions.KindArrayContains:     duckDBArrayContainsSQL,
-		expressions.KindArrayOverlaps:     duckDBArrayOverlapsSQL,
-		expressions.KindBitwiseAnd:        func(g *Generator, e expressions.Expression) string { return g.binary(e, "&") },
-		expressions.KindBitwiseOr:         func(g *Generator, e expressions.Expression) string { return g.binary(e, "|") },
-		expressions.KindIntDiv:            func(g *Generator, e expressions.Expression) string { return g.binary(e, "//") },
-		expressions.KindCurrentTime:       func(*Generator, expressions.Expression) string { return "CURRENT_TIME" },
+		expressions.KindJoin:             duckDBJoinSQL,
+		expressions.KindRand:             duckDBRandSQL,
+		expressions.KindJSONExtract:      duckDBArrowJSONExtract,
+		expressions.KindJSONExtractArray: duckDBArrowJSONExtractArray,
+		expressions.KindJSONValueArray:   duckDBArrowJSONExtractArray,
+		expressions.KindArrayAppend:      duckDBArrayAppendSQL("LIST_APPEND", false),
+		expressions.KindArrayPrepend:     duckDBArrayAppendSQL("LIST_PREPEND", true),
+		expressions.KindArrayConcat:      duckDBArrayConcatSQL,
+		expressions.KindArrayContains:    duckDBArrayContainsSQL,
+		expressions.KindArrayOverlaps:    duckDBArrayOverlapsSQL,
+		expressions.KindBitwiseAnd:       func(g *Generator, e expressions.Expression) string { return g.binary(e, "&") },
+		expressions.KindBitwiseOr:        func(g *Generator, e expressions.Expression) string { return g.binary(e, "|") },
+		expressions.KindIntDiv:           func(g *Generator, e expressions.Expression) string { return g.binary(e, "//") },
+		expressions.KindCurrentTime:      func(*Generator, expressions.Expression) string { return "CURRENT_TIME" },
 		expressions.KindCurrentTimestamp: func(g *Generator, e expressions.Expression) string {
 			return "CURRENT_TIMESTAMP"
 		},
@@ -112,23 +112,20 @@ func init() {
 		expressions.KindGroupConcat:           duckDBGroupConcatSQL,
 		expressions.KindGenerateSeries:        duckDBGenerateSeriesSQL,
 		expressions.KindLastDay:               duckDBLastDaySQL,
+		expressions.KindGenerateDateArray:     duckDBGenerateDateArraySQL,
+		expressions.KindArrayInsert:           duckDBArrayInsertSQL,
 		expressions.KindTimeToStr:             duckDBTimeToStrSQL,
 		expressions.KindStrToTime:             duckDBStrToTimeSQL,
-		expressions.KindStrToDate:             duckDBStrToTimeSQL,
+		expressions.KindStrToDate:             duckDBStrToDateSQL,
 		expressions.KindDecode:                duckDBEncodeDecodeSQL("DECODE"),
 		expressions.KindEncode:                duckDBEncodeDecodeSQL("ENCODE"),
 		expressions.KindUnixToTime:            duckDBUnixToTimeSQL,
-		expressions.KindUnixSeconds:           duckDBUnixSecondsSQL,
 		expressions.KindDateDiff:              duckDBDateDiffSQL,
 		expressions.KindDatetimeDiff:          duckDBDateDiffSQL,
 		expressions.KindTsOrDsDiff:            duckDBTsOrDsDiffSQL,
-		expressions.KindTimestampTrunc:        duckDBTimestampTruncSQL,
-		expressions.KindDateTrunc:             duckDBTimestampTruncSQL,
 		expressions.KindSortArray:             duckDBSortArraySQL,
 		expressions.KindTimestampFromParts:    duckDBTimestampFromPartsSQL,
 		expressions.KindDateFromParts:         duckDBDateFromPartsSQL,
-		expressions.KindJarowinklerSimilarity: clickhouseRename("JARO_WINKLER_SIMILARITY"),
-		expressions.KindRegexpLike:            clickhouseRename("REGEXP_MATCHES"),
 		expressions.KindArrayCompact:          duckDBArrayCompactSQL,
 		expressions.KindArrayConstructCompact: duckDBArrayConstructCompactSQL,
 		expressions.KindAttach:                duckDBAttachSQL,
@@ -140,7 +137,6 @@ func init() {
 		expressions.KindBitwiseOrAgg:          duckDBBitwiseAggSQL("BIT_OR"),
 		expressions.KindBitwiseXorAgg:         duckDBBitwiseAggSQL("BIT_XOR"),
 		expressions.KindParseJSON:             duckDBParseJSONSQL,
-		expressions.KindArrayDistinct:         clickhouseRename("LIST_DISTINCT"),
 		expressions.KindIgnoreNulls:           duckDBIgnoreNullsSQL,
 		expressions.KindTableSample:           duckDBTableSampleSQL,
 		expressions.KindPivot:                 duckDBPivot,
@@ -181,11 +177,8 @@ func init() {
 		expressions.KindLength: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("LENGTH", []any{e.This()}, "(", ")", true)
 		},
-		expressions.KindSHA2:             duckDBShA2SQL,
-		expressions.KindSplit:            clickhouseRename("STR_SPLIT"),
-		expressions.KindRegexpExtract:    duckDBRegexpExtractSQL,
-		expressions.KindRegexpExtractAll: duckDBRegexpExtractSQL,
-		expressions.KindStar:             duckDBStarSQL,
+		expressions.KindSHA2: duckDBShA2SQL,
+		expressions.KindStar: duckDBStarSQL,
 		expressions.KindRegexpFullMatch: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("REGEXP_FULL_MATCH", []any{e.This(), e.Arg("expression"), e.Arg("options")}, "(", ")", true)
 		},
@@ -257,10 +250,52 @@ func duckDBItoa(i int) string {
 // inline_array_unless_query.
 func duckDBArraySQL(g *Generator, e expressions.Expression) string {
 	exprs := e.Expressions()
+	if truthy(e.Arg("struct_name_inheritance")) {
+		applyStructNameInheritance(exprs)
+	}
 	if len(exprs) > 0 && exprs[0].Find(expressions.TraitQuery) != nil {
 		return g.funcCall("ARRAY", []any{exprs[0]}, "(", ")", true)
 	}
 	return g.inlineArraySQL(e)
+}
+
+// applyStructNameInheritance ports transforms.inherit_struct_field_names
+// (transforms.py:1032-1090): later positional structs inherit the first struct's field names.
+func applyStructNameInheritance(exprs []expressions.Expression) {
+	if len(exprs) == 0 || exprs[0] == nil || exprs[0].Kind() != expressions.KindStruct {
+		return
+	}
+	first := exprs[0].Expressions()
+	names := make([]expressions.Expression, len(first))
+	for i, field := range first {
+		if field.Kind() != expressions.KindPropertyEQ {
+			return
+		}
+		names[i] = asExpression(field.This())
+	}
+	for _, structExpr := range exprs[1:] {
+		if structExpr == nil || structExpr.Kind() != expressions.KindStruct {
+			continue
+		}
+		values := structExpr.Expressions()
+		if len(values) != len(names) {
+			continue
+		}
+		converted := make([]expressions.Expression, len(values))
+		for i, value := range values {
+			if value.Kind() == expressions.KindPropertyEQ {
+				converted[i] = value
+				continue
+			}
+			name := names[i]
+			if name != nil && name.Kind() == expressions.KindIdentifier {
+				converted[i] = expressions.PropertyEQ(expressions.Args{"this": name.Copy(), "expression": value})
+			} else {
+				converted[i] = value
+			}
+		}
+		structExpr.Set("expressions", converted)
+	}
 }
 
 // duckDBStructSQL ports _struct_sql (generators/duckdb.py:607-651).
@@ -387,6 +422,14 @@ func duckDBArrowJSONExtractArray(g *Generator, e expressions.Expression) string 
 	if err != nil {
 		return g.gen(extract)
 	}
+	if e.Kind() == expressions.KindJSONValueArray {
+		// BigQuery returns SQL NULL when any element is an object or array.
+		extractSQL := g.gen(extract)
+		jsonArray := "CAST(" + extractSQL + " AS JSON[])"
+		nonScalar := "LIST_FILTER(" + jsonArray + ", x -> JSON_TYPE(x) IN ('OBJECT', 'ARRAY'))"
+		return "CASE WHEN " + extractSQL + " IS NULL THEN NULL WHEN LENGTH(" + nonScalar + ") = 0 THEN " +
+			g.gen(expressions.Cast(expressions.Args{"this": extract, "to": to})) + " ELSE NULL END"
+	}
 	return g.gen(expressions.Cast(expressions.Args{"this": extract, "to": to}))
 }
 
@@ -504,14 +547,103 @@ func duckDBGenerateSeriesSQL(g *Generator, e expressions.Expression) string {
 	return g.funcCall(name, []any{start, end, step}, "(", ")", true)
 }
 
-// duckDBLastDaySQL ports _last_day_sql (generators/duckdb.py:158-213) for the native
-// LAST_DAY forms.
+// duckDBLastDaySQL ports _last_day_sql (generators/duckdb.py:158-213): DuckDB's LAST_DAY only
+// handles the month, so YEAR/QUARTER/WEEK are emulated.
 func duckDBLastDaySQL(g *Generator, e expressions.Expression) string {
-	unit := strings.ToUpper(e.Text("unit"))
-	if unit == "" || unit == "MONTH" {
-		return g.funcCall("LAST_DAY", []any{e.This()}, "(", ")", true)
+	date := e.This()
+	unit := asExpression(e.Arg("unit"))
+	name := ""
+	if unit != nil {
+		name = strings.ToUpper(unit.Name())
 	}
+
+	if weekStart := duckDBWeekStartDow(unit, name); weekStart > 0 {
+		lastDow := weekStart - 1
+		dow := expressions.Extract(expressions.Args{
+			"this":       expressions.Var(expressions.Args{"this": "DAYOFWEEK"}),
+			"expression": date,
+		})
+		daysToLast := expressions.Mod(expressions.Args{
+			"this": expressions.Paren(expressions.Args{"this": expressions.Sub(expressions.Args{
+				"this":       expressions.LiteralNumber(duckDBIntStr(lastDow + 7)),
+				"expression": dow,
+			})}),
+			"expression": expressions.LiteralNumber("7"),
+		})
+		interval := expressions.Interval(expressions.Args{
+			"this": daysToLast,
+			"unit": expressions.Var(expressions.Args{"this": "DAY"}),
+		})
+		return g.gen(expressions.Cast(expressions.Args{
+			"this": expressions.Add(expressions.Args{"this": date, "expression": interval}),
+			"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeDate}),
+		}))
+	}
+
+	switch name {
+	case "", "MONTH":
+		return g.funcCall("LAST_DAY", []any{date}, "(", ")", true)
+	case "YEAR":
+		year := duckDBExtract("YEAR", date)
+		return g.gen(expressions.Anonymous(expressions.Args{"this": "MAKE_DATE", "expressions": []expressions.Expression{
+			year, expressions.LiteralNumber("12"), expressions.LiteralNumber("31"),
+		}}))
+	case "QUARTER":
+		year := duckDBExtract("YEAR", date)
+		quarter := duckDBExtract("QUARTER", date)
+		lastMonth := expressions.Mul(expressions.Args{"this": quarter, "expression": expressions.LiteralNumber("3")})
+		firstOfLast := expressions.Anonymous(expressions.Args{"this": "MAKE_DATE", "expressions": []expressions.Expression{
+			year, lastMonth, expressions.LiteralNumber("1"),
+		}})
+		return g.gen(expressions.Anonymous(expressions.Args{"this": "LAST_DAY", "expressions": []expressions.Expression{firstOfLast}}))
+	}
+	g.unsupported("Unsupported date part '" + name + "' in LAST_DAY function")
 	return g.functionFallbackSQL(e)
+}
+
+func duckDBExtract(part string, date expressions.Expression) expressions.Expression {
+	return expressions.Extract(expressions.Args{
+		"this":       expressions.Var(expressions.Args{"this": part}),
+		"expression": date,
+	})
+}
+
+// duckDBWeekStartDow maps a week-ish unit to its ISO 8601 day number (Monday=1..Sunday=7).
+// BigQuery's bare WEEK defaults to Sunday; ISOWEEK and WEEK(MONDAY) are Monday.
+func duckDBWeekStartDow(unit expressions.Expression, name string) int {
+	if unit == nil {
+		return 0
+	}
+	if unit.Kind() == expressions.KindWeekStart {
+		switch strings.ToUpper(unit.Name()) {
+		case "MONDAY":
+			return 1
+		case "TUESDAY":
+			return 2
+		case "WEDNESDAY":
+			return 3
+		case "THURSDAY":
+			return 4
+		case "FRIDAY":
+			return 5
+		case "SATURDAY":
+			return 6
+		case "SUNDAY":
+			return 7
+		}
+		return 0
+	}
+	switch name {
+	case "ISOWEEK":
+		return 1
+	case "WEEK":
+		return 7
+	}
+	return 0
+}
+
+func duckDBIntStr(i int) string {
+	return strconv.Itoa(i)
 }
 
 // duckDBTimeToStrSQL ports the TimeToStr lambda (generators/duckdb.py:1745-1746).
@@ -521,7 +653,64 @@ func duckDBTimeToStrSQL(g *Generator, e expressions.Expression) string {
 
 // duckDBStrToTimeSQL ports the StrToTime/StrToDate StrPTIME form.
 func duckDBStrToTimeSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("STRPTIME", []any{e.This(), g.duckDBFormatTime(e)}, "(", ")", true)
+	value, format := g.duckDBDefaultYear(e)
+	if truthy(e.Arg("safe")) {
+		castType := "TIMESTAMP"
+		if target := asExpression(e.Arg("target_type")); target != nil {
+			if dtype, ok := target.Arg("this").(expressions.DType); ok &&
+				(dtype == expressions.DTypeTimestampLtz || dtype == expressions.DTypeTimestampTz) {
+				castType = "TIMESTAMPTZ"
+			}
+		}
+		return "CAST(" + g.funcCall("TRY_STRPTIME", []any{value, format}, "(", ")", true) + " AS " + castType + ")"
+	}
+	return g.funcCall("STRPTIME", []any{value, format}, "(", ")", true)
+}
+
+// duckDBStrToDateSQL ports strtodate_sql (generators/duckdb.py:2767-2776).
+func duckDBStrToDateSQL(g *Generator, e expressions.Expression) string {
+	value, format := g.duckDBDefaultYear(e)
+	name := "STRPTIME"
+	if truthy(e.Arg("safe")) {
+		name = "TRY_STRPTIME"
+	}
+	return "CAST(" + g.funcCall(name, []any{value, format}, "(", ")", true) + " AS DATE)"
+}
+
+// duckDBParseDatetimeSQL ports parsedatetime_sql (generators/duckdb.py:2789-2791).
+func duckDBParseDatetimeSQL(g *Generator, e expressions.Expression) string {
+	value, format := g.duckDBDefaultYear(e)
+	return g.funcCall("STRPTIME", []any{value, format}, "(", ")", true)
+}
+
+// duckDBDefaultYear ports _strptime_default_year (generators/duckdb.py:2777-2787).
+func (g *Generator) duckDBDefaultYear(e expressions.Expression) (any, any) {
+	value := any(e.This())
+	var format any = g.duckDBFormatTimeExpr(e)
+	if year := asExpression(e.Arg("default_year")); year != nil {
+		value = expressions.DPipe(expressions.Args{
+			"this": expressions.LiteralString(year.Name() + " "), "expression": e.This(),
+		})
+		if formatExpr := asExpression(format); formatExpr != nil {
+			format = expressions.DPipe(expressions.Args{
+				"this": expressions.LiteralString("%Y "), "expression": formatExpr,
+			})
+		}
+	}
+	return value, format
+}
+
+// duckDBFormatTimeExpr is duckDBFormatTime returning an expression node, so the default-year
+// DPipe can wrap the converted format.
+func (g *Generator) duckDBFormatTimeExpr(e expressions.Expression) expressions.Expression {
+	format := asExpression(e.Arg("format"))
+	if format == nil || !format.IsString() {
+		return format
+	}
+	if converted, ok := dialects.FormatTime(format.Name(), g.dialect.InverseTimeMapping); ok {
+		return expressions.LiteralString(duckDBStripStrict(converted))
+	}
+	return format
 }
 
 // duckDBFormatTime ports Generator.format_time for DuckDB's INVERSE_TIME_MAPPING.
@@ -531,9 +720,18 @@ func (g *Generator) duckDBFormatTime(e expressions.Expression) string {
 		return g.gen(format)
 	}
 	if converted, ok := dialects.FormatTime(format.Name(), g.dialect.InverseTimeMapping); ok {
-		return g.gen(expressions.LiteralString(converted))
+		return g.gen(expressions.LiteralString(duckDBStripStrict(converted)))
 	}
 	return g.gen(format)
+}
+
+// duckDBStripStrict removes the port's internal "strict" marker from a converted format
+// (e.g. "%mstrict" -> "%m"), which only the Hive/Snowflake inverse maps understand.
+func duckDBStripStrict(format string) string {
+	for _, marker := range []string{"%mstrict", "%dstrict", "%Hstrict", "%Istrict", "%Mstrict", "%Sstrict"} {
+		format = strings.ReplaceAll(format, marker, strings.TrimSuffix(marker, "strict"))
+	}
+	return format
 }
 
 // duckDBEncodeDecodeSQL ports encode_decode_sql with replace=False.
@@ -579,27 +777,78 @@ func duckDBUnixSecondsSQL(g *Generator, e expressions.Expression) string {
 // duckDBDateDiffSQL ports _date_diff_sql (generators/duckdb.py:953-980) for the non-boundary
 // form.
 func duckDBDateDiffSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("DATE_DIFF", []any{
-		duckDBDiffUnit(asExpression(e.Arg("unit"))),
-		e.Arg("expression"),
-		e.This(),
-	}, "(", ")", true)
+	return duckDBDateDiffImpl(g, e)
 }
 
-// duckDBTsOrDsDiffSQL ports the TsOrDsDiff lambda (generators/duckdb.py:1748-1752).
+// duckDBTsOrDsDiffSQL ports the TsOrDsDiff lambda (generators/duckdb.py:1779-1785): unlike
+// DateDiff, it casts BOTH operands to TIMESTAMP and renders the raw unit (or DAY).
 func duckDBTsOrDsDiffSQL(g *Generator, e expressions.Expression) string {
+	unit := "DAY"
+	if u := asExpression(e.Arg("unit")); u != nil && u.Name() != "" {
+		unit = strings.ToUpper(u.Name())
+	}
+	ts := func(v expressions.Expression) expressions.Expression {
+		return expressions.Cast(expressions.Args{
+			"this": v,
+			"to":   expressions.DataType(expressions.Args{"this": expressions.DTypeTimestamp}),
+		})
+	}
 	return g.funcCall("DATE_DIFF", []any{
-		duckDBDiffUnit(asExpression(e.Arg("unit"))),
-		e.Arg("expression"),
-		e.This(),
+		expressions.LiteralString(unit),
+		ts(asExpression(e.Arg("expression"))),
+		ts(e.This()),
 	}, "(", ")", true)
 }
 
-// duckDBTimestampTruncSQL ports timestamptrunc_sql (generators/duckdb.py:4462-...): DuckDB
-// renders DATE_TRUNC(<unit string>, <this>).
-func duckDBTimestampTruncSQL(g *Generator, e expressions.Expression) string {
-	unit := duckDBDiffUnit(asExpression(e.Arg("unit")))
-	return g.funcCall("DATE_TRUNC", []any{unit, e.This()}, "(", ")", true)
+func duckDBDateDiffImpl(g *Generator, e expressions.Expression) string {
+	unit := asExpression(e.Arg("unit"))
+
+	// generators/duckdb.py:953-980: DATE_DIFF does not support NANOSECOND, so route it
+	// through EPOCH_NS on both operands cast to TIMESTAMP_NS.
+	if unit != nil && (unit.Kind() == expressions.KindVar || unit.Kind() == expressions.KindLiteral) &&
+		strings.EqualFold(unit.Name(), "NANOSECOND") {
+		toNS := func(v expressions.Expression) string {
+			return g.gen(expressions.Cast(expressions.Args{"this": v, "to": expressions.DTypeTimestampNs.IntoExpr(nil)}))
+		}
+		return "EPOCH_NS(" + toNS(asExpression(e.This())) + ") - EPOCH_NS(" + toNS(asExpression(e.Arg("expression"))) + ")"
+	}
+
+	this := implicitDatetimeCast(asExpression(e.This()))
+	expr := implicitDatetimeCast(asExpression(e.Arg("expression")))
+
+	// A date-part-boundary WEEK diff must respect week boundaries, which DuckDB's
+	// DATE_DIFF does not, so both operands are truncated to the requested week start.
+	if truthy(e.Arg("date_part_boundary")) {
+		if weekStart := duckDBWeekUnitStart(unit); weekStart > 0 && this != nil && expr != nil {
+			this = duckDBWeekTruncExpr(this, weekStart, false, true)
+			expr = duckDBWeekTruncExpr(expr, weekStart, false, true)
+			return g.funcCall("DATE_DIFF", []any{expressions.LiteralString("WEEK"), expr, this}, "(", ")", true)
+		}
+	}
+	return g.funcCall("DATE_DIFF", []any{duckDBDiffUnit(unit), expr, this}, "(", ")", true)
+}
+
+var duckDBTimezonePattern = regexp.MustCompile(`[+-]\d{2}:?\d{2}$|Z$`)
+
+// implicitDatetimeCast ports _implicit_datetime_cast (generators/duckdb.py:890-905): a string
+// literal becomes a DATE, promoted to TIMESTAMP/TIMESTAMPTZ when it carries a time (and a
+// timezone), so DATE_DIFF/DATE_TRUNC receive a typed operand.
+func implicitDatetimeCast(arg expressions.Expression) expressions.Expression {
+	if arg == nil || arg.Kind() != expressions.KindLiteral || !truthy(arg.Arg("is_string")) {
+		return arg
+	}
+	name := arg.Name()
+	dtype := expressions.DTypeDate
+	if strings.Contains(name, ":") {
+		dtype = expressions.DTypeTimestamp
+		if duckDBTimezonePattern.MatchString(name) {
+			dtype = expressions.DTypeTimestampLtz
+		}
+	}
+	return expressions.Cast(expressions.Args{
+		"this": arg,
+		"to":   expressions.DataType(expressions.Args{"this": dtype}),
+	})
 }
 
 // duckDBSortArraySQL ports _array_sort_sql (generators/duckdb.py:545-548): a descending sort
@@ -654,7 +903,26 @@ func duckDBTimestampFromPartsSQL(g *Generator, e expressions.Expression) string 
 // duckDBDateFromPartsSQL ports _date_from_parts_sql (generators/duckdb.py:1428-1456) for the
 // non-overflow form.
 func duckDBDateFromPartsSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("MAKE_DATE", []any{e.Arg("year"), e.Arg("month"), e.Arg("day")}, "(", ")", true)
+	year := asExpression(e.Arg("year"))
+	month := asExpression(e.Arg("month"))
+	day := asExpression(e.Arg("day"))
+	if !truthy(e.Arg("allow_overflow")) {
+		return g.funcCall("MAKE_DATE", []any{year, month, day}, "(", ")", true)
+	}
+	// generators/duckdb.py:1428-1456: allow_overflow normalizes month/day through
+	// MAKE_DATE(year, 1, 1) plus month/day-offset intervals.
+	base := duckDBAnon("MAKE_DATE", year, expressions.LiteralNumber("1"), expressions.LiteralNumber("1"))
+	monthInterval := expressions.Interval(expressions.Args{
+		"this": expressions.Sub(expressions.Args{"this": month, "expression": expressions.LiteralNumber("1")}),
+		"unit": expressions.Var(expressions.Args{"this": "MONTH"}),
+	})
+	dayInterval := expressions.Interval(expressions.Args{
+		"this": expressions.Sub(expressions.Args{"this": day, "expression": expressions.LiteralNumber("1")}),
+		"unit": expressions.Var(expressions.Args{"this": "DAY"}),
+	})
+	result := expressions.Add(expressions.Args{"this": base, "expression": monthInterval})
+	result = expressions.Add(expressions.Args{"this": result, "expression": dayInterval})
+	return g.gen(expressions.Cast(expressions.Args{"this": result, "to": expressions.DTypeDate.IntoExpr(nil)}))
 }
 
 // duckDBArrayCompactSQL ports array_compact_sql (dialects/dialect.py): LIST_FILTER over a
@@ -755,16 +1023,76 @@ func duckDBDataTypeSQL(g *Generator, e expressions.Expression) string {
 		values := g.expressions(exprsOptions{expression: e, key: "values", flat: true})
 		return inner + "[" + values + "]"
 	}
+	// generators/duckdb.py:658-660: modifiers are not supported for TIME,
+	// [TIME | TIMESTAMP] WITH TIME ZONE.
+	if dtype == expressions.DTypeTime || dtype == expressions.DTypeTimeTz || dtype == expressions.DTypeTimestampTz {
+		if mapped, ok := g.lookupTypeMapping(dtype); ok {
+			return mapped
+		}
+		return string(dtype)
+	}
 	params := e.Expressions()
+	if dtype == expressions.DTypeBigDecimal || dtype == expressions.DTypeDecFloat {
+		// generators/duckdb.py:1949-1952 TYPE_PARAM_SETTINGS: BIGDECIMAL/DECFLOAT
+		// default to (38, 5) and cap their parameters at (38, 38).
+		if len(params) == 0 {
+			return "DECIMAL(38, 5)"
+		}
+		capped := make([]expressions.Expression, len(params))
+		bounds := [2]string{"38", "38"}
+		for i, param := range params {
+			value := asExpression(param)
+			if param.Kind() == expressions.KindDataTypeParam {
+				value = asExpression(param.This())
+			}
+			if value != nil && value.IsNumber() && i < len(bounds) && duckDBNumberExceeds(value.Name(), bounds[i]) {
+				g.unsupported(string(dtype) + " parameter " + value.Name() + " exceeds DuckDB's maximum of " + bounds[i] + "; capping")
+				capped[i] = expressions.DataTypeParam(expressions.Args{"this": expressions.LiteralNumber(bounds[i])})
+				continue
+			}
+			capped[i] = param
+		}
+		return g.dataTypeWithParams(e, dtype, capped)
+	}
 	if len(params) == 0 {
 		switch dtype {
-		case expressions.DTypeDecimal:
-			return "DECIMAL(18, 3)"
 		case expressions.DTypeText:
 			return "TEXT"
 		}
 	}
 	return g.dataTypeSQL(e)
+}
+
+// duckDBNumberExceeds reports whether the decimal literal text exceeds bound.
+func duckDBNumberExceeds(text, bound string) bool {
+	return duckDBCompareDecimal(text, bound) > 0
+}
+
+func duckDBCompareDecimal(a, b string) int {
+	ai, aerr := strconv.ParseFloat(a, 64)
+	bi, berr := strconv.ParseFloat(b, 64)
+	if aerr != nil || berr != nil {
+		return 0
+	}
+	switch {
+	case ai > bi:
+		return 1
+	case ai < bi:
+		return -1
+	}
+	return 0
+}
+
+// dataTypeWithParams renders dtype with the given parameter nodes (the generic
+// data_type_sql render without the duckDB defaults).
+func (g *Generator) dataTypeWithParams(e expressions.Expression, dtype expressions.DType, params []expressions.Expression) string {
+	clone := expressions.DataType(expressions.Args{
+		"this":        dtype,
+		"expressions": params,
+		"nested":      e.Arg("nested"),
+		"values":      e.Arg("values"),
+	})
+	return g.dataTypeSQL(clone)
 }
 
 func isTextDataType(dtype expressions.DType) bool {
@@ -832,7 +1160,8 @@ func isRealOrTextDataType(dtype expressions.DType) bool {
 // duckDBParseJSONSQL ports parsejson_sql (generators/duckdb.py:2840-2847) for the plain form.
 func duckDBParseJSONSQL(g *Generator, e expressions.Expression) string {
 	if truthy(e.Arg("safe")) {
-		return g.functionFallbackSQL(e)
+		// One evaluation: TRY_CAST returns NULL for invalid JSON and JSON for valid input.
+		return "TRY_CAST(" + g.sqlKey(e, "this") + " AS JSON)"
 	}
 	return g.funcCall("JSON", []any{e.This()}, "(", ")", true)
 }
@@ -876,8 +1205,10 @@ func duckDBTableSampleSQL(g *Generator, e expressions.Expression) string {
 	}
 	if e.Arg("size") != nil {
 		method := asExpression(e.Arg("method"))
-		if method != nil && !strings.EqualFold(method.Name(), "RESERVOIR") {
-			g.unsupported("Sampling method " + method.Name() + " is not supported with a discrete sample count, defaulting to reservoir sampling")
+		if method == nil || !strings.EqualFold(method.Name(), "RESERVOIR") {
+			if method != nil {
+				g.unsupported("Sampling method " + method.Name() + " is not supported with a discrete sample count, defaulting to reservoir sampling")
+			}
 			e.Set("method", expressions.Var(expressions.Args{"this": "RESERVOIR"}))
 		}
 	}
@@ -934,12 +1265,39 @@ func duckDBDateDeltaSQL(op string) func(*Generator, expressions.Expression) stri
 			return "MAKE_TIMESTAMP_NS(EPOCH_NS(" + timestampNS + ") " + op + " " + delta + ")"
 		}
 		if interval == nil || interval.Kind() != expressions.KindInterval {
+			unitVar := unitToVarValue(unit)
+			if unitVar != nil && unitVar.Kind() == expressions.KindVar {
+				unitVar = expressions.Var(expressions.Args{"this": strings.ToUpper(unitVar.Name())})
+			}
 			interval = expressions.Interval(expressions.Args{
 				"this": interval,
-				"unit": unitToVarValue(unit),
+				"unit": unitVar,
 			})
 		}
-		return g.sqlKey(e, "this") + " " + op + " " + g.gen(interval)
+		// dialect.py:2029-2051: cast TsOrDsAdd to its return_type, and a string-literal delta
+		// operand to DATE (or DATETIME for the Datetime* variants), so the +/- interval works.
+		thisSQL := g.sqlKey(e, "this")
+		var toType expressions.Expression
+		if e.Kind() == expressions.KindTsOrDsAdd {
+			toType = asExpression(e.Arg("return_type"))
+			if toType == nil {
+				// temporal.py:150-152 TsOrDsAdd.return_type defaults to DATE.
+				toType = expressions.DataType(expressions.Args{"this": expressions.DTypeDate})
+			}
+		} else if this := asExpression(e.This()); this != nil && this.Kind() == expressions.KindLiteral && truthy(this.Arg("is_string")) {
+			dtype := expressions.DTypeDate
+			switch e.Kind() {
+			case expressions.KindDatetimeAdd, expressions.KindDatetimeSub:
+				dtype = expressions.DTypeDatetime
+			case expressions.KindTimestampAdd, expressions.KindTimestampSub:
+				dtype = expressions.DTypeTimestamp
+			}
+			toType = expressions.DataType(expressions.Args{"this": dtype})
+		}
+		if toType != nil {
+			thisSQL = g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": toType}))
+		}
+		return thisSQL + " " + op + " " + g.gen(interval)
 	}
 }
 
@@ -958,7 +1316,7 @@ func duckDBWithinGroupSQL(g *Generator, e expressions.Expression) string {
 			"this":        funcExpr.This().Copy(),
 			"expressions": order.Expressions(),
 		}))
-		return g.functionFallbackSQL(funcExpr)
+		return g.arrayAggSQL(funcExpr)
 	}
 	order := asExpression(e.Arg("expression"))
 	if funcExpr != nil && (funcExpr.Kind() == expressions.KindPercentileCont || funcExpr.Kind() == expressions.KindPercentileDisc) {
@@ -978,27 +1336,6 @@ func duckDBShA2SQL(g *Generator, e expressions.Expression) string {
 		return g.funcCall("SHA256", []any{e.This()}, "(", ")", true)
 	}
 	return g.functionFallbackSQL(e)
-}
-
-// duckDBRegexpExtractSQL renders REGEXP_EXTRACT/REGEXP_EXTRACT_ALL in DuckDB's argument order.
-func duckDBRegexpExtractSQL(g *Generator, e expressions.Expression) string {
-	name := "REGEXP_EXTRACT"
-	if e.Kind() == expressions.KindRegexpExtractAll {
-		name = "REGEXP_EXTRACT_ALL"
-	}
-	group := asExpression(e.Arg("group"))
-	parameters := asExpression(e.Arg("parameters"))
-	args := []any{e.This(), e.Arg("expression")}
-	isZeroGroup := group != nil && group.IsInt() && group.Name() == "0"
-	if parameters != nil {
-		if group != nil {
-			args = append(args, group)
-		}
-		args = append(args, parameters)
-	} else if group != nil && !isZeroGroup {
-		args = append(args, group)
-	}
-	return g.funcCall(name, args, "(", ")", true)
 }
 
 // duckDBStarSQL ports the Star rendering with DuckDB's EXCLUDE keyword.
@@ -1031,6 +1368,24 @@ func duckDBDiffUnit(unit expressions.Expression) any {
 // DuckDB has no ON-less `LEFT/INNER JOIN UNNEST(...)`, so a synthetic UNNEST join gets a
 // dummy ON TRUE; a plain comma join has its synthetic side/kind cleared first.
 func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
+	// DuckDB renders SEMI/ANTI joins without the LEFT/RIGHT side keyword.
+	if kind := strings.ToUpper(e.Text("kind")); kind == "SEMI" || kind == "ANTI" {
+		switch side := strings.ToUpper(e.Text("side")); side {
+		case "LEFT":
+			// DuckDB's SEMI/ANTI joins are left-sided by default.
+			e.Set("side", nil)
+		case "RIGHT":
+			// DuckDB 1.4 expresses right-sided SEMI/ANTI joins as a typed join.
+			joinOp := "RIGHT_" + kind
+			savedSide, savedKind := e.Arg("side"), e.Arg("kind")
+			e.Set("side", nil)
+			e.Set("kind", nil)
+			out := g.joinSQL(e)
+			e.Set("side", savedSide)
+			e.Set("kind", savedKind)
+			return strings.Replace(out, "JOIN ", "JOIN BY (TYPE "+joinOp+") ", 1)
+		}
+	}
 	if !truthy(e.Arg("using")) && !truthy(e.Arg("on")) && strings.ToUpper(e.Text("method")) == "" {
 		switch strings.ToUpper(e.Text("kind")) {
 		case "", "INNER", "OUTER":
@@ -1049,7 +1404,16 @@ func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
 func init() {
 	registerDialectDispatch("duckdb", map[expressions.Kind]func(*Generator, expressions.Expression) string{
 		// generators/duckdb.py:2727 exp.StrPosition: strposition_sql (STRPOS).
-		expressions.KindStrPosition: strPositionTranspileSQL("STRPOS", false, false),
-		expressions.KindSHA:         renameFunc("SHA1"),
+		expressions.KindSHA: renameFunc("SHA1"),
+		// generators/duckdb.py date-string <-> date <-> int family.
+		expressions.KindDateStrToDate:   duckDBCastSQL(expressions.DTypeDate),
+		expressions.KindTimeStrToDate:   duckDBCastSQL(expressions.DTypeDate),
+		expressions.KindDateToDateStr:   duckDBCastSQL(expressions.DTypeText),
+		expressions.KindTsOrDsToDateStr: duckDBTsOrDsToDateStr,
+		expressions.KindDiToDate:        duckDBDiToDate,
+		expressions.KindTsOrDiToDi:      duckDBTsOrDiToDi,
+		expressions.KindApproxQuantiles: duckDBApproxQuantilesSQL,
+		expressions.KindTimeStrToTime:   duckDBTimeStrToTimeSQL,
+		expressions.KindArrayRemove:     duckDBArrayRemoveSQL,
 	})
 }

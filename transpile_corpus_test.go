@@ -54,9 +54,70 @@ type transpileGapRecord struct {
 }
 
 const (
-	transpileCorpusPath = "testdata/transpile_corpus.jsonl"
-	transpileGapsPath   = "testdata/transpile_gaps.txt"
+	transpileCorpusPath      = "testdata/transpile_corpus.jsonl"
+	transpileGapsPath        = "testdata/transpile_gaps.txt"
+	transpileCorrectionsPath = "testdata/transpile_corrections.jsonl"
 )
+
+// transpileCorrection overrides the upstream-generated Want for one corpus pair. It records
+// documented real-engine fixes (DEVIATIONS.md §1.32) that intentionally differ from the
+// pinned upstream, so the corpus still asserts the corrected output without hiding gaps.
+type transpileCorrection struct {
+	Read   string `json:"read"`
+	Write  string `json:"write"`
+	Sql    string `json:"sql"`
+	Want   string `json:"want"`
+	Reason string `json:"reason"`
+}
+
+// loadTranspileCorrections reads the committed correction overlay keyed by (read, write, sql).
+func loadTranspileCorrections(t *testing.T) map[transpileGapKey]string {
+	t.Helper()
+	corrections := map[transpileGapKey]string{}
+	data, err := os.ReadFile(transpileCorrectionsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return corrections
+		}
+		t.Fatalf("read %s: %v", transpileCorrectionsPath, err)
+	}
+	for _, raw := range strings.Split(string(data), "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			continue
+		}
+		var rec transpileCorrection
+		if err := json.Unmarshal([]byte(line), &rec); err != nil {
+			t.Fatalf("parse %s line %q: %v", transpileCorrectionsPath, line, err)
+		}
+		key := transpileGapKey{Read: rec.Read, Write: rec.Write, Sql: rec.Sql}
+		if _, dup := corrections[key]; dup {
+			t.Fatalf("duplicate correction for [%s -> %s] %s", rec.Read, rec.Write, rec.Sql)
+		}
+		corrections[key] = rec.Want
+	}
+	return corrections
+}
+
+// applyTranspileCorrections replaces Want for the corrected pairs and fails closed when an
+// overlay entry no longer matches a corpus record (a stale correction must not linger).
+func applyTranspileCorrections(t *testing.T, records []transpileRecord, corrections map[transpileGapKey]string) []transpileRecord {
+	t.Helper()
+	seen := make(map[transpileGapKey]bool, len(records))
+	for i := range records {
+		key := transpileGapKey{Read: records[i].Read, Write: records[i].Write, Sql: records[i].Sql}
+		seen[key] = true
+		if want, ok := corrections[key]; ok {
+			records[i].Want = want
+		}
+	}
+	for key := range corrections {
+		if !seen[key] {
+			t.Errorf("stale transpile correction (no corpus record): [%s -> %s] %s", key.Read, key.Write, key.Sql)
+		}
+	}
+	return records
+}
 
 // parseTranspileJSONL parses one transpileRecord per non-empty line of JSONL data. It is
 // factored out of loadTranspileCorpus so the loader can be exercised directly without
@@ -207,30 +268,30 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 // Read-side parse gaps surface under their target's bucket with a "parse:" category.
 // Pass and total floors are monotonic: raise them, never lower them.
 const (
-	minPassTranspileBase        = 903
+	minPassTranspileBase        = 904
 	minPassTranspileAthena      = 9
-	minPassTranspileBigQuery    = 639
-	minPassTranspileClickhouse  = 216
+	minPassTranspileBigQuery    = 643
+	minPassTranspileClickhouse  = 217
 	minPassTranspileDatabricks  = 226
-	minPassTranspileDoris       = 84
+	minPassTranspileDoris       = 87
 	minPassTranspileDremio      = 31
-	minPassTranspileDuckDB      = 759
-	minPassTranspileHive        = 418
-	minPassTranspileMaterialize = 31
+	minPassTranspileDuckDB      = 1262
+	minPassTranspileHive        = 425
+	minPassTranspileMaterialize = 32
 	minPassTranspileMySQL       = 252
-	minPassTranspileOracle      = 172
-	minPassTranspilePostgres    = 349
-	minPassTranspilePresto      = 463
+	minPassTranspileOracle      = 173
+	minPassTranspilePostgres    = 355
+	minPassTranspilePresto      = 471
 	minPassTranspileRedshift    = 179
 	minPassTranspileRisingWave  = 6
-	minPassTranspileSnowflake   = 837
-	minPassTranspileSpark       = 699
-	minPassTranspileSpark2      = 64
-	minPassTranspileSQLite      = 143
-	minPassTranspileStarrocks   = 88
+	minPassTranspileSnowflake   = 843
+	minPassTranspileSpark       = 700
+	minPassTranspileSpark2      = 66
+	minPassTranspileSQLite      = 144
+	minPassTranspileStarrocks   = 90
 	minPassTranspileTeradata    = 74
-	minPassTranspileTrino       = 105
-	minPassTranspileTSQL        = 331
+	minPassTranspileTrino       = 109
+	minPassTranspileTSQL        = 332
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
@@ -279,6 +340,7 @@ const (
 func TestTranspileCorpus(t *testing.T) {
 	records := loadTranspileCorpus(t)
 	assertNoDuplicateTranspileRecords(t, records)
+	records = applyTranspileCorrections(t, records, loadTranspileCorrections(t))
 
 	total := map[string]int{}
 	pass := map[string]int{}

@@ -432,6 +432,30 @@ so `generator` cannot import `optimizer`). Two consequences:
 
 Guarding test: `TestTeradataDateAdd`.
 
+### 1.32 DuckDB transpile follows the real engines over upstream
+
+The DuckDB generator matches the real source/target engine where the pinned upstream v30.17.0
+disagrees, even though these are cross-dialect-only (the matching corpus expectations are kept
+in `testdata/transpile_corrections.jsonl` rather than editing the upstream-generated `want`):
+
+- **`ARRAY_REMOVE`** keeps NULL elements (`IS DISTINCT FROM`, collision-free lambda) instead of
+  upstream's `<>`. Upstream v30.35.0 adopted the same fix; the pin stays at v30.17.0.
+- **Base64 custom alphabets** use one `TRANSLATE` instead of cascading `REPLACE` calls, so
+  swapped symbols (e.g. `/+`) are not rewritten twice. Also fixed in upstream v30.35.0.
+- **`RIGHT SEMI/ANTI JOIN`** emits DuckDB's typed join (`JOIN BY (TYPE RIGHT_ANTI)`) instead of
+  silently rewriting it as a left-sided join. Also fixed in upstream v30.35.0.
+- **`MONTHS_BETWEEN`** includes the time-of-day component in the fraction, matching Snowflake.
+- **`TIMESTAMP_TRUNC`** honors an explicit zone for sub-day units, matching BigQuery.
+- **`DATE(..., zone)`** converts a `TIMESTAMPTZ` instant directly in the target zone, so the
+  result no longer depends on DuckDB's session time zone.
+- **`JSON_VALUE_ARRAY`** returns SQL NULL when any element is an object or array, matching
+  BigQuery's scalar-only contract.
+- **Safe `PARSE_JSON`** uses one `TRY_CAST(... AS JSON)` evaluation instead of `JSON_VALID` plus
+  `CAST`, which could evaluate a volatile operand twice.
+
+Guarding tests: `TestDuckDBEngineCorrections`; corpus expectations in
+`testdata/transpile_corrections.jsonl` (loaded by `TestTranspileCorpus`).
+
 ## Beyond-upstream dialects
 
 A dialect upstream does not ship at all. There is no Python oracle for these — pinned v30.17.0

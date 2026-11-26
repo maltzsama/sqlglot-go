@@ -129,6 +129,17 @@ func (p *Parser) parseUnnest(withAlias bool) exp.Expression {
 		}
 	}
 	result := p.expression(exp.Unnest(exp.Args{"expressions": expressions, "alias": alias, "offset": offset}), nil, nil)
+	// parsers/bigquery.py:605-623: unnesting a nested array (an array of structs) explodes
+	// the top-level struct fields; without full type annotation, detect the literal /
+	// cast-array-of-struct forms.
+	if p.dialectIs("bigquery") && len(expressions) > 0 {
+		if arrayArg := asExpr(expressions[0]); arrayArg != nil && bigQueryNestedArray(arrayArg) {
+			result.Set("explode_array", true)
+			if arrayArg.Kind() == exp.KindArray {
+				arrayArg.Set("struct_name_inheritance", true)
+			}
+		}
+	}
 	// parsers/starrocks.py:78-95: UNNEST defaults its table alias/column to "unnest".
 	if p.dialectIs("starrocks") {
 		unnestID := func() exp.Expression { return exp.ToIdentifier("unnest") }
@@ -392,4 +403,37 @@ func unpivotTarget(expression exp.Expression) exp.Expression {
 		expression.Set("expressions", expressions)
 	}
 	return expression
+}
+
+// bigQueryNestedArray reports whether arg is an array of structs, which BigQuery's UNNEST
+// explodes one level deeper than DuckDB's.
+func bigQueryNestedArray(arg exp.Expression) bool {
+	if arg == nil {
+		return false
+	}
+	if arg.Kind() == exp.KindCast {
+		to := asExpr(arg.Arg("to"))
+		if to == nil || to.Kind() != exp.KindDataType {
+			return false
+		}
+		t, _ := to.Arg("this").(exp.DType)
+		if t != exp.DTypeArray {
+			return false
+		}
+		// Only an ARRAY<STRUCT<...>> explodes a level; scalar arrays stay ordinary.
+		for _, elem := range to.Expressions() {
+			elemType, _ := elem.Arg("this").(exp.DType)
+			return elemType == exp.DTypeStruct
+		}
+		return false
+	}
+	if arg.Kind() != exp.KindArray {
+		return false
+	}
+	for _, elem := range arg.Expressions() {
+		if elem != nil && elem.Kind() == exp.KindStruct {
+			return true
+		}
+	}
+	return false
 }

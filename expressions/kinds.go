@@ -1393,7 +1393,7 @@ var argTypes = map[Kind][]argSpec{
 	KindApproxDistinct:        {{"this", true}, {"accuracy", false}},
 	KindApproximateSimilarity: defaultArgTypes,
 	KindHll:                   {{"this", true}, {"expressions", false}},
-	KindCountIf:               defaultArgTypes,
+	KindCountIf:               {{"this", true}, {"zero_on_all_null", false}},
 	KindQuantile:              {{"this", true}, {"quantile", true}},
 	KindCount:                 {{"this", false}, {"expressions", false}, {"big_int", false}},
 	KindCoalesce:              {{"this", true}, {"expressions", false}, {"is_nvl", false}, {"is_null", false}},
@@ -1858,7 +1858,7 @@ var argTypes = map[Kind][]argSpec{
 	KindTags:                             {{"expressions", true}},
 	KindRowAccessProperty:                {{"this", false}, {"expressions", false}},
 	KindDayOfWeekIso:                     defaultArgTypes,                                                                                                             // temporal.py:217 (pass)
-	KindDecode:                           {{"this", true}, {"charset", true}, {"replace", false}},                                                                     // string.py:285
+	KindDecode:                           {{"this", true}, {"charset", false}, {"replace", false}},                                                                    // string.py:285
 	KindEncode:                           {{"this", true}, {"charset", true}},                                                                                         // string.py:289
 	KindJSONFormat:                       {{"this", false}, {"options", false}, {"is_json", false}, {"to_json", false}},                                               // json.py:145
 	KindLevenshtein:                      {{"this", true}, {"expression", false}, {"ins_cost", false}, {"del_cost", false}, {"sub_cost", false}, {"max_dist", false}}, // string.py:74
@@ -2128,7 +2128,7 @@ var argTypes = map[Kind][]argSpec{
 	KindBitwiseOrAgg:           defaultArgTypes,
 	KindBitwiseXorAgg:          defaultArgTypes,
 	KindBitwiseCount:           defaultArgTypes,
-	KindTimestampDiff:          {{"this", true}, {"expression", true}, {"unit", false}},
+	KindTimestampDiff:          {{"this", true}, {"expression", true}, {"unit", false}, {"date_part_boundary", false}},
 	KindSafeAdd:                {{"this", true}, {"expression", true}},
 	KindSafeDivide:             {{"this", true}, {"expression", true}},
 	KindSafeMultiply:           {{"this", true}, {"expression", true}},

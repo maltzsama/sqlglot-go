@@ -192,10 +192,35 @@ func init() {
 		},
 		expressions.KindLocaltimestamp: func(*Generator, expressions.Expression) string { return "CURRENT_TIMESTAMP" },
 		expressions.KindCurrentTimestamp: func(g *Generator, e expressions.Expression) string {
+			if truthy(e.Arg("sysdate")) {
+				return g.funcCall("SYSDATE", nil, "(", ")", true)
+			}
 			if e.Arg("this") != nil {
 				return g.funcCall("CURRENT_TIMESTAMP", []any{e.Arg("this")}, "(", ")", true)
 			}
 			return "CURRENT_TIMESTAMP()"
+		},
+		expressions.KindStripNullValue: renameFunc("STRIP_NULL_VALUE"),
+		expressions.KindGetExtract: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("GET", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+		},
+		expressions.KindParseJSON: func(g *Generator, e expressions.Expression) string {
+			name := "PARSE_JSON"
+			if truthy(e.Arg("safe")) {
+				name = "TRY_" + name
+			}
+			args := []any{e.This()}
+			if mode := asExpression(e.Arg("expression")); mode != nil {
+				args = append(args, mode)
+			}
+			return g.funcCall(name, args, "(", ")", true)
+		},
+		expressions.KindFlatten:       renameFunc("ARRAY_FLATTEN"),
+		expressions.KindGenerator:     snowflakeGeneratorSQL,
+		expressions.KindTableFromRows: snowflakeTableFromRowsSQL,
+		expressions.KindSortArray:     snowflakeSortArraySQL,
+		expressions.KindCurrentSchemas: func(g *Generator, e expressions.Expression) string {
+			return g.funcCall("CURRENT_SCHEMAS", []any{e.This()}, "(", ")", true)
 		},
 		expressions.KindXor: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("BOOLXOR", []any{e.This(), e.Arg("expression")}, "(", ")", true)
@@ -1026,4 +1051,59 @@ func init() {
 			return g.funcCall("COLLATE", []any{e.This(), e.Arg("expression")}, "(", ")", true)
 		},
 	})
+}
+
+// snowflakeSortArraySQL ports sortarray_sql (generators/snowflake.py:625-631).
+func snowflakeSortArraySQL(g *Generator, e expressions.Expression) string {
+	asc := asExpression(e.Arg("asc"))
+	nullsFirst := asExpression(e.Arg("nulls_first"))
+	if isFalseExpr(asc) && isTrueExpr(nullsFirst) {
+		nullsFirst = nil
+	}
+	// The third positional argument is null placement, so a nulls_first without asc
+	// needs an explicit ascending TRUE to occupy the direction slot.
+	if asc == nil && nullsFirst != nil {
+		asc = expressions.Boolean(expressions.Args{"this": true})
+	}
+	return g.funcCall("ARRAY_SORT", []any{e.This(), asc, nullsFirst}, "(", ")", true)
+}
+
+func isTrueExpr(e expressions.Expression) bool {
+	if e == nil || e.Kind() != expressions.KindBoolean {
+		return false
+	}
+	return truthy(e.Arg("this"))
+}
+
+func isFalseExpr(e expressions.Expression) bool {
+	if e == nil || e.Kind() != expressions.KindBoolean {
+		return false
+	}
+	return !truthy(e.Arg("this"))
+}
+
+// snowflakeGeneratorSQL ports generator_sql (generators/snowflake.py:792-802).
+func snowflakeGeneratorSQL(g *Generator, e expressions.Expression) string {
+	var args []any
+	if rowcount := e.Arg("rowcount"); rowcount != nil {
+		args = append(args, expressions.Kwarg(expressions.Args{
+			"this": expressions.Var(expressions.Args{"this": "ROWCOUNT"}), "expression": rowcount,
+		}))
+	}
+	if timelimit := e.Arg("timelimit"); timelimit != nil {
+		args = append(args, expressions.Kwarg(expressions.Args{
+			"this": expressions.Var(expressions.Args{"this": "TIMELIMIT"}), "expression": timelimit,
+		}))
+	}
+	return g.funcCall("GENERATOR", args, "(", ")", true)
+}
+
+// snowflakeTableFromRowsSQL ports the inherited base tablefromrows_sql output for Snowflake:
+// TABLE(<this>) with an optional alias.
+func snowflakeTableFromRowsSQL(g *Generator, e expressions.Expression) string {
+	sql := "TABLE(" + g.sqlKey(e, "this") + ")"
+	if alias := g.sqlKey(e, "alias"); alias != "" {
+		sql += " AS " + alias
+	}
+	return sql
 }

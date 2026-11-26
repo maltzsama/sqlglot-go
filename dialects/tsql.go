@@ -10,6 +10,8 @@ import (
 // .reference/sqlglot-v30.17.0/sqlglot/dialects/tsql.py:14-194.
 func TSQL() *Dialect {
 	d := Base()
+	// dialects/tsql.py CONCAT_WS_COALESCE = True.
+	d.ConcatWsCoalesce = true
 	d.Name = "tsql"
 	// generators/tsql.py TRANSFORMS: eliminate_distinct_on.
 	d.EliminateDistinctOn = true
