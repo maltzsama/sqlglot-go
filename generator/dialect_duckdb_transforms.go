@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -116,9 +117,21 @@ func init() {
 		expressions.KindHexString:              duckDBHexStringSQL,
 		expressions.KindLength:                 duckDBLengthSQL,
 		expressions.KindCheckJson:              duckDBCheckJSONSQL,
-		expressions.KindCount:                  duckDBCountSQL,
-		expressions.KindArrayAny:               duckDBArrayAnySQL,
-		expressions.KindAnonymous:              duckDBAnonymousSQL,
+		expressions.KindAliases: func(g *Generator, e expressions.Expression) string {
+			if this := asExpression(e.This()); this != nil && this.Kind() == expressions.KindPosexplode {
+				return g.gen(this)
+			}
+			return g.aliasesSQL(e)
+		},
+		expressions.KindZipf:                  duckDBZipfSQL,
+		expressions.KindMinhash:               duckDBMinhashSQL,
+		expressions.KindMinhashCombine:        duckDBMinhashCombineSQL,
+		expressions.KindApproximateSimilarity: duckDBApproximateSimilaritySQL,
+		expressions.KindBitmapConstructAgg:    duckDBBitmapConstructAggSQL,
+		expressions.KindStrtok:                duckDBStrtokSQL,
+		expressions.KindCount:                 duckDBCountSQL,
+		expressions.KindArrayAny:              duckDBArrayAnySQL,
+		expressions.KindAnonymous:             duckDBAnonymousSQL,
 		expressions.KindInt64: func(g *Generator, e expressions.Expression) string {
 			return g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": expressions.DTypeBigInt.IntoExpr(nil)}))
 		},
@@ -807,10 +820,13 @@ func duckDBJSONFormatSQL(g *Generator, e expressions.Expression) string {
 
 // duckDBMapCatSQL ports mapcat_sql (generators/duckdb.py:3849-3855).
 func duckDBMapCatSQL(g *Generator, e expressions.Expression) string {
-	base := g.funcCall("MAP_CONCAT", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+	// generators/duckdb.py:1990-2000 MAPCAT_TEMPLATE: later keys win, NULL values drop.
 	a := g.sqlKey(e, "this")
 	b := g.sqlKey(e, "expression")
-	return "CASE WHEN " + a + " IS NULL OR " + b + " IS NULL THEN NULL ELSE " + base + " END"
+	keys := "LIST_DISTINCT(LIST_CONCAT(MAP_KEYS(" + a + "), MAP_KEYS(" + b + ")))"
+	entries := "LIST_TRANSFORM(" + keys + ", __k -> STRUCT_PACK(key := __k, value := COALESCE(" + b + "[__k], " + a + "[__k])))"
+	kept := "LIST_FILTER(" + entries + ", __x -> NOT __x.value IS NULL)"
+	return "CASE WHEN " + a + " IS NULL OR " + b + " IS NULL THEN NULL ELSE MAP_FROM_ENTRIES(" + kept + ") END"
 }
 
 // duckDBMapContainsKeySQL ports mapcontainskey_sql (generators/duckdb.py:3857-3860).
@@ -2192,10 +2208,72 @@ func duckDBDayNavigationSQL(g *Generator, e expressions.Expression) string {
 // duckDBLateralSQL ports _explode_to_unnest_sql (generators/duckdb.py:1497-1524).
 func duckDBLateralSQL(g *Generator, e expressions.Expression) string {
 	this := asExpression(e.This())
-	if this == nil || this.Kind() != expressions.KindExplode {
+	if this == nil {
 		return g.lateralSQL(e)
 	}
 	alias := asExpression(e.Arg("alias"))
+	// LATERAL VIEW INLINE(x): DuckDB explodes struct fields through UNNEST(..., max_depth => 2)
+	// inside a lateral subquery (generators/duckdb.py:1497-1523).
+	if this.Kind() == expressions.KindAnonymous && strings.EqualFold(this.Text("this"), "inline") {
+		var inlineArg expressions.Expression
+		if args := this.Expressions(); len(args) > 0 {
+			inlineArg = args[0]
+		} else {
+			inlineArg = this.This()
+		}
+		unnest := expressions.Unnest(expressions.Args{"expressions": []expressions.Expression{
+			inlineArg,
+			expressions.Kwarg(expressions.Args{
+				"this":       expressions.Var(expressions.Args{"this": "max_depth"}),
+				"expression": expressions.LiteralNumber("2"),
+			}),
+		}})
+		subquery := expressions.Subquery(expressions.Args{"this": expressions.Select(expressions.Args{
+			"expressions": []expressions.Expression{unnest},
+		})})
+		if alias != nil && alias.This() == nil {
+			idx := e.Index()
+			if idx < 0 {
+				idx = 0
+			}
+			alias.Set("this", expressions.ToIdentifier(fmt.Sprintf("_u_%d", idx)))
+		}
+		return g.gen(duckDBLateralJoin(expressions.Lateral(expressions.Args{"this": subquery, "alias": alias}), truthy(e.Arg("outer"))))
+	}
+	// LATERAL VIEW POSEXPLODE(y) t AS pos, col: WITH ORDINALITY is 1-based and the alias
+	// columns are [pos, ...values]; the projection subtracts 1 (dialect.py:2481-2516).
+	if this.Kind() == expressions.KindPosexplode && alias != nil {
+		cols, _ := alias.Arg("columns").([]expressions.Expression)
+		if len(cols) >= 2 {
+			pos, values := cols[0], cols[1:]
+			unnestAlias := expressions.TableAlias(expressions.Args{
+				"this":    alias.This(),
+				"columns": append(append([]expressions.Expression{}, values...), pos.Copy()),
+			})
+			unnest := expressions.Unnest(expressions.Args{
+				"expressions": []expressions.Expression{this.This()},
+				"offset":      true,
+				"alias":       unnestAlias,
+			})
+			projections := []expressions.Expression{
+				expressions.New(expressions.KindAlias, expressions.Args{
+					"this": expressions.Sub(expressions.Args{
+						"this": pos.Copy(), "expression": expressions.LiteralNumber("1"),
+					}),
+					"alias": pos.Copy(),
+				}),
+			}
+			projections = append(projections, values...)
+			subquery := expressions.Subquery(expressions.Args{"this": expressions.Select(expressions.Args{
+				"expressions": projections,
+				"from_":       expressions.From(expressions.Args{"this": unnest}),
+			})})
+			return g.gen(duckDBLateralJoin(expressions.Lateral(expressions.Args{"this": subquery}), truthy(e.Arg("outer"))))
+		}
+	}
+	if this.Kind() != expressions.KindExplode {
+		return g.lateralSQL(e)
+	}
 	var exprs []expressions.Expression
 	if x := this.This(); x != nil {
 		exprs = append(exprs, x)
@@ -2630,6 +2708,15 @@ func duckDBTimeDiffSQL(g *Generator, e expressions.Expression) string {
 
 // duckDBUuidSQL renders GENERATE_UUID as a text UUID.
 func duckDBUuidSQL(g *Generator, e expressions.Expression) string {
+	namespace := e.This()
+	name := asExpression(e.Arg("name"))
+	if namespace != nil && name != nil {
+		// generators/duckdb.py:4777-4790 UUID_V5_TEMPLATE: namespace + name emulate UUID v5
+		// through SHA1.
+		ns := g.gen(namespace)
+		nm := g.gen(name)
+		return "(SELECT LOWER(SUBSTRING(h, 1, 8) || '-' || SUBSTRING(h, 9, 4) || '-' || '5' || SUBSTRING(h, 14, 3) || '-' || FORMAT('{:02x}', CAST('0x' || SUBSTRING(h, 17, 2) AS INT) & 63 | 128) || SUBSTRING(h, 19, 2) || '-' || SUBSTRING(h, 21, 12)) FROM (SELECT SUBSTRING(SHA1(UNHEX(REPLACE(" + ns + ", '-', '')) || ENCODE(" + nm + ")), 1, 32) AS h))"
+	}
 	if truthy(e.Arg("is_string")) {
 		return "CAST(UUID() AS TEXT)"
 	}
@@ -2885,4 +2972,140 @@ func duckDBCountSQL(g *Generator, e expressions.Expression) string {
 		"default": expressions.Tuple(expressions.Args{"expressions": distinct.Expressions()}),
 	})
 	return "COUNT(DISTINCT " + g.gen(caseExpr) + ")"
+}
+
+// duckDBStrtokSQL ports strtok_sql (generators/duckdb.py:4595-4657) with STRTOK_TEMPLATE.
+func duckDBStrtokSQL(g *Generator, e expressions.Expression) string {
+	str := e.This()
+	delimiter := asExpression(e.Arg("delimiter"))
+	partIndex := asExpression(e.Arg("part_index"))
+	if str == nil || delimiter == nil || partIndex == nil {
+		return g.functionFallbackSQL(e)
+	}
+	escaped := duckDBAnon("REGEXP_REPLACE",
+		delimiter,
+		expressions.LiteralString(`([\[\]^.\-*+?(){}|$\\])`),
+		expressions.LiteralString(`\\\1`),
+		expressions.LiteralString("g"),
+	)
+	pattern := expressions.Case(expressions.Args{
+		"ifs": []expressions.Expression{expressions.If(expressions.Args{
+			"this": expressions.EQ(expressions.Args{"this": delimiter.Copy(), "expression": expressions.LiteralString("")}),
+			"true": expressions.LiteralString(""),
+		})},
+		"default": expressions.Concat(expressions.Args{
+			"expressions": []expressions.Expression{
+				expressions.LiteralString("["), escaped, expressions.LiteralString("]"),
+			},
+		}),
+	})
+	split := duckDBAnon("REGEXP_SPLIT_TO_ARRAY", str.Copy(), pattern)
+	x := expressions.ToIdentifier("x")
+	filtered := duckDBAnon("LIST_FILTER", split, expressions.Lambda(expressions.Args{
+		"this": expressions.Not(expressions.Args{"this": expressions.EQ(expressions.Args{
+			"this": x.Copy(), "expression": expressions.LiteralString(""),
+		})}),
+		"expressions": []expressions.Expression{x.Copy()},
+	}))
+	base := expressions.Bracket(expressions.Args{
+		"this":        filtered,
+		"expressions": []expressions.Expression{partIndex.Copy()},
+		"offset":      1,
+	})
+	delimEmpty := func() expressions.Expression {
+		return expressions.EQ(expressions.Args{"this": delimiter.Copy(), "expression": expressions.LiteralString("")})
+	}
+	strEmpty := func() expressions.Expression {
+		return expressions.EQ(expressions.Args{"this": str.Copy(), "expression": expressions.LiteralString("")})
+	}
+	one := func() expressions.Expression { return expressions.LiteralNumber("1") }
+	return g.gen(expressions.Case(expressions.Args{
+		"ifs": []expressions.Expression{
+			expressions.If(expressions.Args{
+				"this": expressions.And(expressions.Args{"this": delimEmpty(), "expression": strEmpty()}),
+				"true": expressions.Null(),
+			}),
+			expressions.If(expressions.Args{
+				"this": expressions.And(expressions.Args{
+					"this":       delimEmpty(),
+					"expression": expressions.EQ(expressions.Args{"this": partIndex.Copy(), "expression": one()}),
+				}),
+				"true": str.Copy(),
+			}),
+			expressions.If(expressions.Args{"this": delimEmpty(), "true": expressions.Null()}),
+			expressions.If(expressions.Args{
+				"this": expressions.LT(expressions.Args{"this": partIndex.Copy(), "expression": expressions.LiteralNumber("0")}),
+				"true": expressions.Null(),
+			}),
+			expressions.If(expressions.Args{
+				"this": duckDBConnectorExpr(expressions.KindOr, []expressions.Expression{
+					expressions.Is(expressions.Args{"this": str.Copy(), "expression": expressions.Null()}),
+					expressions.Is(expressions.Args{"this": delimiter.Copy(), "expression": expressions.Null()}),
+					expressions.Is(expressions.Args{"this": partIndex.Copy(), "expression": expressions.Null()}),
+				}),
+				"true": expressions.Null(),
+			}),
+		},
+		"default": base,
+	}))
+}
+
+// duckDBZipfSQL ports zipf_sql (generators/duckdb.py:2517-2542) with ZIPF_TEMPLATE.
+func duckDBZipfSQL(g *Generator, e expressions.Expression) string {
+	s := g.gen(e.This())
+	n := g.gen(asExpression(e.Arg("elementcount")))
+	gen := asExpression(e.Arg("gen"))
+	var random string
+	if gen != nil && gen.Kind() == expressions.KindRand {
+		random = "RANDOM()"
+	} else {
+		random = "(ABS(HASH(" + g.gen(gen) + ")) % 1000000) / 1000000.0"
+	}
+	return "(WITH rand AS (SELECT " + random + " AS r), weights AS (SELECT i, 1.0 / POWER(i, " + s +
+		") AS w FROM RANGE(1, " + n + " + 1) AS t(i)), cdf AS (SELECT i, SUM(w) OVER (ORDER BY i NULLS FIRST) / SUM(w) OVER () AS p FROM weights) SELECT MIN(i) FROM cdf WHERE p >= (SELECT r FROM rand))"
+}
+
+// duckDBMinhashSQL ports minhash_sql (generators/duckdb.py:3475-3487) with MINHASH_TEMPLATE.
+func duckDBMinhashSQL(g *Generator, e expressions.Expression) string {
+	exprs := e.Expressions()
+	if len(exprs) != 1 || exprs[0].Kind() == expressions.KindStar {
+		g.unsupported("MINHASH with multiple expressions or * requires manual query restructuring")
+		return g.functionFallbackSQL(e)
+	}
+	k := g.gen(e.This())
+	expr := g.gen(exprs[0])
+	return "(SELECT JSON_OBJECT('state', LIST(min_h ORDER BY seed NULLS FIRST), 'type', 'minhash', 'version', 1) FROM (SELECT seed, LIST_MIN(LIST_TRANSFORM(vals, __v -> HASH(CAST(__v AS TEXT) || CAST(seed AS TEXT)))) AS min_h FROM (SELECT LIST(" + expr + ") AS vals), RANGE(0, " + k + ") AS t(seed)))"
+}
+
+// duckDBMinhashCombineSQL ports minhashcombine_sql (generators/duckdb.py:3489-3492).
+func duckDBMinhashCombineSQL(g *Generator, e expressions.Expression) string {
+	expr := g.gen(e.This())
+	return "(SELECT JSON_OBJECT('state', LIST(min_h ORDER BY idx NULLS FIRST), 'type', 'minhash', 'version', 1) FROM (SELECT pos AS idx, MIN(val) AS min_h FROM UNNEST(LIST(" + expr + ")) AS _(sig) JOIN UNNEST(CAST(sig -> '$.state' AS UBIGINT[])) WITH ORDINALITY AS t(val, pos) ON TRUE GROUP BY pos))"
+}
+
+// duckDBApproximateSimilaritySQL ports approximatesimilarity_sql
+// (generators/duckdb.py:3494-3497) with APPROXIMATE_SIMILARITY_TEMPLATE.
+func duckDBApproximateSimilaritySQL(g *Generator, e expressions.Expression) string {
+	expr := g.gen(e.This())
+	return "(SELECT CAST(SUM(CASE WHEN num_distinct = 1 THEN 1 ELSE 0 END) AS DOUBLE) / COUNT(*) FROM (SELECT pos, COUNT(DISTINCT h) AS num_distinct FROM (SELECT h, pos FROM UNNEST(LIST(" + expr + ")) AS _(sig) JOIN UNNEST(CAST(sig -> '$.state' AS UBIGINT[])) WITH ORDINALITY AS s(h, pos) ON TRUE) GROUP BY pos))"
+}
+
+// duckDBBitmapConstructAggSQL ports bitmapconstructagg_sql with
+// BITMAP_CONSTRUCT_AGG_TEMPLATE (generators/duckdb.py:2062-2077).
+func duckDBBitmapConstructAggSQL(g *Generator, e expressions.Expression) string {
+	arg := g.gen(e.This())
+	return "(SELECT CASE WHEN l IS NULL OR LENGTH(l) = 0 THEN NULL WHEN LENGTH(l) <> LENGTH(LIST_FILTER(l, __v -> __v BETWEEN 0 AND 32767)) THEN NULL WHEN LENGTH(l) < 5 THEN UNHEX(PRINTF('%04X', LENGTH(l)) || h || REPEAT('00', GREATEST(0, 4 - LENGTH(l)) * 2)) ELSE UNHEX('08000000000000000000' || h) END FROM (SELECT l, COALESCE(LIST_REDUCE(LIST_TRANSFORM(l, __x -> PRINTF('%02X%02X', CAST(__x AS INT) & 255, (CAST(__x AS INT) >> 8) & 255)), (__a, __b) -> __a || __b, ''), '') AS h FROM (SELECT LIST_SORT(LIST_DISTINCT(LIST(" + arg + ") FILTER(WHERE NOT " + arg + " IS NULL))) AS l)))"
+}
+
+// duckDBLateralJoin renders a lateral source as CROSS JOIN, or LEFT JOIN LATERAL ... ON TRUE
+// for LATERAL VIEW OUTER so rows with an empty generator are kept.
+func duckDBLateralJoin(lateral expressions.Expression, outer bool) expressions.Expression {
+	if outer {
+		return expressions.Join(expressions.Args{
+			"this": lateral,
+			"kind": "LEFT",
+			"on":   expressions.Boolean(expressions.Args{"this": true}),
+		})
+	}
+	return expressions.Join(expressions.Args{"this": lateral, "kind": "CROSS"})
 }

@@ -1006,6 +1006,27 @@ func (g *Generator) convertSQL(e expressions.Expression) string {
 	return g.gen(transformed)
 }
 
+// forClauseSQL ports forclause_sql (generator.py:3310-3321): a FOR clause with no renderable
+// query option is dropped.
+func (g *Generator) forClauseSQL(e expressions.Expression) string {
+	kind := e.Text("kind")
+	if kind == "BROWSE" {
+		return g.sep() + "FOR BROWSE"
+	}
+	options := g.expressions(exprsOptions{expression: e, key: "expressions"})
+	if options == "" {
+		return ""
+	}
+	return g.sep() + "FOR " + kind + g.seg(options)
+}
+
+// queryOptionSQL ports queryoption_sql (generator.py:3323-3325): base dialects cannot render
+// a T-SQL query option.
+func (g *Generator) queryOptionSQL(expressions.Expression) string {
+	g.unsupported("Unsupported query option.")
+	return ""
+}
+
 // fromTimeZoneSQL ports fromtimezone_sql (generator.py:4056-4059).
 func (g *Generator) fromTimeZoneSQL(e expressions.Expression) string {
 	this := g.sqlKey(e, "this")
@@ -1580,6 +1601,25 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 	if properties != nil {
 		propertyLocations = g.locateProperties(properties)
 	}
+	// CREATE TABLE a (LIKE b): with no CREATE TABLE LIKE support the zero-row CTAS must live
+	// outside the column list, so lift the property out of the schema before rendering it.
+	schemaLikeSQL := ""
+	if !g.dialect.SupportsCreateTableLike {
+		if schema := asExpression(e.Arg("this")); schema != nil && schema.Kind() == expressions.KindSchema {
+			entries := schema.Expressions()
+			kept := make([]expressions.Expression, 0, len(entries))
+			for _, entry := range entries {
+				if entry != nil && entry.Kind() == expressions.KindLikeProperty {
+					schemaLikeSQL = g.likePropertySQL(entry)
+					continue
+				}
+				kept = append(kept, entry)
+			}
+			if schemaLikeSQL != "" {
+				schema.Set("expressions", kept)
+			}
+		}
+	}
 	this := g.sqlKey(e, "this")
 	// createable_sql override (generators/clickhouse.py:607-623): ClickHouse places
 	// ON CLUSTER / UUID / REFRESH right after the object name, before the schema columns.
@@ -1713,6 +1753,9 @@ func (g *Generator) createSQL(e expressions.Expression) string {
 	bodyAndProperties := propertiesSQL + expressionSQL
 	if g.dialect.ExpressionPrecedesPropertiesCreatables[kind] {
 		bodyAndProperties = expressionSQL + propertiesSQL
+	}
+	if schemaLikeSQL != "" {
+		bodyAndProperties = " " + schemaLikeSQL + bodyAndProperties
 	}
 	sql := "CREATE" + modifiers + " " + kind + concurrently + exists + " " + this + bodyAndProperties + postExpressionSQL + indexSQL + noSchemaBinding + clone
 	return g.prependCtes(e, sql)
@@ -2359,7 +2402,7 @@ func (g *Generator) arrayAggSQL(e expressions.Expression) string {
 				// Keep the original predicate grouped so a disjunction still evaluates as a
 				// whole before the null check is AND-ed in.
 				original := inner.Copy()
-				if original.Is(expressions.TraitConnector) || original.Is(expressions.TraitBinary) {
+				if original.Is(expressions.TraitConnector) {
 					original = expressions.Paren(expressions.Args{"this": original})
 				}
 				nullExpr := nullCheck.Copy()

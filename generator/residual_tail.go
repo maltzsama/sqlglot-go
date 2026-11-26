@@ -169,6 +169,21 @@ func (g *Generator) concatToDPipe(e expressions.Expression) string {
 // wraps every arg that isn't a statically-known string literal - which matches upstream for the
 // reachable cases (an unknown column annotates to a non-string type and is wrapped; a string
 // literal is left alone).
+// isArrayExpression reports whether an expression is an array literal or a COALESCE over
+// arrays (the annotate_types-visible ARRAY case convert_concat_args leaves unwrapped).
+func isArrayExpression(e expressions.Expression) bool {
+	if e == nil {
+		return false
+	}
+	if e.Kind() == expressions.KindArray {
+		return true
+	}
+	if e.Kind() == expressions.KindCoalesce {
+		return isArrayExpression(asExpression(e.This()))
+	}
+	return false
+}
+
 func (g *Generator) convertConcatArgs(e expressions.Expression) []any {
 	args := listFromValue(e.Arg("expressions"))
 	if g.dialect.ConcatCoalesce || !boolValue(e.Arg("coalesce")) {
@@ -177,7 +192,7 @@ func (g *Generator) convertConcatArgs(e expressions.Expression) []any {
 	wrapped := make([]any, len(args))
 	for i, a := range args {
 		arg := asExpression(a)
-		if arg == nil || arg.IsString() {
+		if arg == nil || arg.IsString() || isArrayExpression(arg) {
 			wrapped[i] = a
 			continue
 		}
