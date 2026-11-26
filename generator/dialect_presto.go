@@ -13,9 +13,13 @@ func init() {
 	table := map[exp.Kind]func(*Generator, exp.Expression) string{
 		exp.KindStructExtract: structExtractSQL,
 		exp.KindSelect: func(g *Generator, e exp.Expression) string {
+			if g.dialect.Name == "presto" {
+				snowflakeInlineNamedWindows(e)
+			}
 			explodeProjectionToUnnest(e, 1)
 			return g.selectSQL(e)
 		},
+		exp.KindTable: prestoTableSQL,
 		exp.KindFromISO8601Date: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("FROM_ISO8601_DATE", []any{e.This()}, "(", ")", true)
 		},
@@ -45,7 +49,7 @@ func init() {
 		exp.KindArrayToString:  prestoArrayToStringSQL,
 		exp.KindQuantile:       prestoCall("APPROX_PERCENTILE", "this", "quantile"),
 		exp.KindLastDay:        prestoCall("LAST_DAY_OF_MONTH", "this"),
-		exp.KindGenerateSeries: prestoCall("SEQUENCE", "start", "end", "step"),
+		exp.KindGenerateSeries: prestoGenerateSeriesSQL,
 		// generators/presto.py:393 exp.StrPosition: strposition_sql(supports_occurrence=True).
 		exp.KindStrPosition: strPositionTranspileSQL("STRPOS", false, true),
 		// generators/presto.py:321 exp.ArrayConcat: rename_func("CONCAT").
@@ -71,7 +75,6 @@ func init() {
 		exp.KindSHA2:               (*Generator).prestoSHA2SQL,
 		exp.KindFirst:              (*Generator).prestoFirstLastSQL,
 		exp.KindLast:               (*Generator).prestoFirstLastSQL,
-		exp.KindConcat:             (*Generator).prestoConcatSQL,
 		exp.KindDateStrToDate:      prestoCast("DATE"),
 		exp.KindDateToDateStr:      prestoCast("VARCHAR"),
 		exp.KindDateToDi: func(g *Generator, e exp.Expression) string {
@@ -116,9 +119,58 @@ func init() {
 			return "CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP)"
 		},
 		exp.KindArrayFilter: renameFunc("FILTER"),
-		exp.KindArrayAny:    renameFunc("ANY_MATCH"),
-		exp.KindCreate:      (*Generator).prestoCreateSQL,
-		exp.KindJSONFormat:  prestoCall("JSON_FORMAT", "this", "options"),
+		exp.KindLowerHex: func(g *Generator, e exp.Expression) string {
+			return "LOWER(TO_HEX(" + g.sqlKey(e, "this") + "))"
+		},
+		exp.KindMD5: func(g *Generator, e exp.Expression) string {
+			return "LOWER(TO_HEX(MD5(" + g.sqlKey(e, "this") + ")))"
+		},
+		exp.KindSHA1Digest: func(g *Generator, e exp.Expression) string {
+			return "SHA1(" + g.sqlKey(e, "this") + ")"
+		},
+		exp.KindSHA: func(g *Generator, e exp.Expression) string {
+			return "SHA1(" + g.sqlKey(e, "this") + ")"
+		},
+		exp.KindUuid: func(g *Generator, e exp.Expression) string {
+			if truthy(e.Arg("is_string")) {
+				return "CAST(UUID() AS VARCHAR)"
+			}
+			return "UUID()"
+		},
+		exp.KindTimestamp: prestoTimestampSQL,
+		exp.KindTimestampDiff: func(g *Generator, e exp.Expression) string {
+			return "DATE_DIFF('" + prestoUnitName(e) + "', " + g.sqlKey(e, "expression") + ", " + g.sqlKey(e, "this") + ")"
+		},
+		exp.KindDatetimeDiff: prestoDatetimeDiffSQL,
+		exp.KindArraySize: func(g *Generator, e exp.Expression) string {
+			return "CARDINALITY(" + g.sqlKey(e, "this") + ")"
+		},
+		exp.KindWithinGroup: prestoWithinGroupSQL,
+		exp.KindDelete:      prestoDeleteSQL,
+		exp.KindCast:        prestoCastSQL,
+		exp.KindConcat:      prestoConcatFunctionSQL,
+		exp.KindDPipe: func(g *Generator, e exp.Expression) string {
+			if !truthy(e.Arg("safe")) {
+				return g.binary(e, "||")
+			}
+			return "CONCAT(CAST(" + g.sqlKey(e, "this") + " AS VARCHAR), CAST(" + g.sqlKey(e, "expression") + " AS VARCHAR))"
+		},
+		exp.KindJSONFormat: func(g *Generator, e exp.Expression) string {
+			this := asExpression(e.This())
+			if this == nil {
+				return g.funcCall("JSON_FORMAT", []any{this, e.Arg("options")}, "(", ")", true)
+			}
+			if !truthy(e.Arg("is_json")) {
+				dtype, known := castResultDType(this)
+				if this.Kind() != exp.KindCast || !known || dtype != exp.DTypeJSON {
+					this = exp.Cast(exp.Args{"this": this, "to": exp.DTypeJSON.IntoExpr(nil)})
+				}
+			}
+			return g.funcCall("JSON_FORMAT", []any{this, e.Arg("options")}, "(", ")", true)
+		},
+		exp.KindArrayAny: renameFunc("ANY_MATCH"),
+		exp.KindCreate:   (*Generator).prestoCreateSQL,
+		exp.KindWith:     prestoWithSQL,
 		exp.KindJSONExtract: func(g *Generator, e exp.Expression) string {
 			args := []any{e.Arg("this"), e.Arg("expression")}
 			for _, x := range e.Expressions() {
@@ -146,7 +198,7 @@ func init() {
 		},
 	}
 	for kind, name := range map[exp.Kind]string{
-		exp.KindAnyValue: "ARBITRARY", exp.KindArrayContains: "CONTAINS", exp.KindArrayUniqueAgg: "SET_AGG", exp.KindArraySlice: "SLICE", exp.KindArraySize: "CARDINALITY",
+		exp.KindAnyValue: "ARBITRARY", exp.KindArrayContains: "CONTAINS", exp.KindArrayUniqueAgg: "SET_AGG", exp.KindArraySlice: "SLICE",
 		exp.KindBitwiseAnd: "BITWISE_AND", exp.KindBitwiseOr: "BITWISE_OR", exp.KindBitwiseXor: "BITWISE_XOR", exp.KindBitwiseNot: "BITWISE_NOT", exp.KindBitwiseLeftShift: "BITWISE_LEFT_SHIFT", exp.KindBitwiseRightShift: "BITWISE_RIGHT_SHIFT",
 		exp.KindDayOfWeekIso: "DAY_OF_WEEK", exp.KindLogicalOr: "BOOL_OR", exp.KindStrToMap: "SPLIT_TO_MAP", exp.KindTrunc: "TRUNCATE", exp.KindVariancePop: "VAR_POP", exp.KindLevenshtein: "LEVENSHTEIN_DISTANCE", exp.KindUnhex: "FROM_HEX", exp.KindTimeToUnix: "TO_UNIXTIME", exp.KindMD5Digest: "MD5", exp.KindSubstring: "SUBSTR",
 	} {
@@ -244,11 +296,235 @@ func prestoLiteralType(e exp.Expression) string {
 }
 
 // generator.py:3678-3680 with SUPPORTS_SINGLE_ARG_CONCAT = False (presto.py:271).
-func (g *Generator) prestoConcatSQL(e exp.Expression) string {
-	if args := e.Expressions(); len(args) == 1 {
+
+func prestoUnitName(e exp.Expression) string {
+	if unit := asExpression(e.Arg("unit")); unit != nil {
+		return strings.ToUpper(unit.Name())
+	}
+	return "DAY"
+}
+
+// prestoDatetimeDiffSQL ports the Presto DATETIME_DIFF form: a truncated date diff, with a
+// one-day shift so WEEK boundaries match BigQuery.
+func prestoDatetimeDiffSQL(g *Generator, e exp.Expression) string {
+	unitExpr := asExpression(e.Arg("unit"))
+	unit := prestoUnitName(e)
+	shift := unit == "WEEK"
+	if unitExpr != nil && unitExpr.Kind() == exp.KindWeekStart {
+		unit = "WEEK"
+		shift = true
+	}
+	makeArg := func(v exp.Expression) string {
+		sql := g.gen(v)
+		if dtype, ok := castResultDType(v); !ok || dtype != exp.DTypeTimestamp {
+			sql = "CAST(" + sql + " AS TIMESTAMP)"
+		}
+		if shift {
+			sql = sql + " + INTERVAL '1' DAY"
+		}
+		return "DATE_TRUNC('" + unit + "', " + sql + ")"
+	}
+	return "DATE_DIFF('" + unit + "', " + makeArg(asExpression(e.Arg("expression"))) + ", " + makeArg(asExpression(e.This())) + ")"
+}
+
+func prestoWithinGroupSQL(g *Generator, e exp.Expression) string {
+	funcExpr := asExpression(e.This())
+	order := asExpression(e.Arg("expression"))
+	if funcExpr != nil && funcExpr.Kind() == exp.KindPercentileCont && order != nil {
+		if ordered := order.Find(exp.KindOrdered); ordered != nil {
+			return g.funcCall("APPROX_PERCENTILE", []any{ordered.This(), funcExpr.This()}, "(", ")", true)
+		}
+	}
+	return g.withinGroupSQL(e)
+}
+
+// prestoDeleteSQL drops the target alias and column qualifiers, which Presto rejects.
+func prestoDeleteSQL(g *Generator, e exp.Expression) string {
+	e = e.Copy()
+	if asExpression(e.This()) == nil {
+		if tables, _ := e.Arg("tables").([]exp.Expression); len(tables) > 0 {
+			e.Set("this", tables[0])
+			e.Set("tables", nil)
+		}
+	}
+	hadAlias := false
+	if table := asExpression(e.This()); table != nil {
+		if table.Arg("alias") != nil {
+			hadAlias = true
+			table.Set("alias", nil)
+		}
+	}
+	// Presto only needs the qualifiers removed when the alias they referred to was dropped.
+	if hadAlias {
+		if where := asExpression(e.Arg("where")); where != nil {
+			for _, column := range where.FindAll(exp.KindColumn) {
+				if column != nil {
+					column.Set("table", nil)
+					column.Set("schema", nil)
+					column.Set("catalog", nil)
+				}
+			}
+		}
+	}
+	return g.deleteSQL(e)
+}
+
+// prestoCastSQL ports epoch_cast_to_ts (transforms.py:603-611) for a literal 'epoch'.
+func prestoCastSQL(g *Generator, e exp.Expression) string {
+	if this := asExpression(e.This()); this != nil && this.IsString() && strings.EqualFold(this.Name(), "epoch") {
+		if to := asExpression(e.Arg("to")); to != nil {
+			if dtype, ok := to.Arg("this").(exp.DType); ok {
+				switch dtype {
+				case exp.DTypeDate, exp.DTypeDatetime, exp.DTypeTimestamp, exp.DTypeTimestampTz, exp.DTypeTimestampNtz:
+					e = e.Copy()
+					e.Set("this", exp.LiteralString("1970-01-01 00:00:00"))
+				}
+			}
+		}
+	}
+	return g.castSQL(e)
+}
+
+func prestoConcatFunctionSQL(g *Generator, e exp.Expression) string {
+	if !truthy(e.Arg("safe")) && !truthy(e.Arg("coalesce")) {
+		return g.concatSQL(e)
+	}
+	args := e.Expressions()
+	if len(args) == 1 {
 		return "CAST(" + g.gen(args[0]) + " AS VARCHAR)"
 	}
-	return g.concatSQL(e)
+	parts := make([]string, 0, len(args))
+	for _, arg := range args {
+		parts = append(parts, "COALESCE(CAST("+g.gen(arg)+" AS VARCHAR), '')")
+	}
+	return "CONCAT(" + strings.Join(parts, ", ") + ")"
+}
+
+// prestoGenerateSeriesSQL renders SEQUENCE wrapped in UNNEST, with a normalized interval step.
+func prestoGenerateSeriesSQL(g *Generator, e exp.Expression) string {
+	start := asExpression(e.Arg("start"))
+	end := asExpression(e.Arg("end"))
+	step := asExpression(e.Arg("step"))
+	castTimestamp := false
+	for _, v := range []exp.Expression{start, end} {
+		if v == nil {
+			continue
+		}
+		if v.Kind() == exp.KindCurrentTimestamp {
+			castTimestamp = true
+		}
+		if dtype, ok := castResultDType(v); ok && (dtype == exp.DTypeTimestamp || dtype == exp.DTypeDate) {
+			castTimestamp = true
+		}
+	}
+	argSQL := func(v exp.Expression) string {
+		if v == nil {
+			return ""
+		}
+		if dtype, ok := castResultDType(v); ok && dtype == exp.DTypeTimestamp {
+			return g.gen(v)
+		}
+		if dtype, ok := castResultDType(v); ok && dtype == exp.DTypeDate {
+			return "CAST(" + g.gen(v) + " AS TIMESTAMP)"
+		}
+		if castTimestamp {
+			return "CAST(" + g.gen(v) + " AS TIMESTAMP)"
+		}
+		return g.gen(v)
+	}
+	args := []string{argSQL(start), argSQL(end)}
+	if step != nil {
+		if step.Kind() == exp.KindLiteral && step.IsString() {
+			args = append(args, prestoIntervalFromString(step.Name()))
+		} else {
+			args = append(args, g.gen(step))
+		}
+	}
+	series := "SEQUENCE(" + strings.Join(args, ", ") + ")"
+	if !truthy(e.Arg("exploding")) {
+		return series
+	}
+	if parent := e.Parent(); parent != nil && parent.Kind() == exp.KindUnnest {
+		return series
+	}
+	return "UNNEST(" + series + ")"
+}
+
+func prestoTimestampSQL(g *Generator, e exp.Expression) string {
+	zone := asExpression(e.Arg("zone"))
+	if zone == nil {
+		return "CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP WITH TIME ZONE)"
+	}
+	if duckDBIsTimezoneName(zone.Name()) {
+		return "CAST(CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP) AS TIMESTAMP) AT TIME ZONE " + g.sqlKey(e, "zone")
+	}
+	return g.funcCall("TIMESTAMP", []any{e.This(), zone}, "(", ")", true)
+}
+
+// prestoIntervalFromString converts a Postgres step such as '  2   days  ' to INTERVAL '2' DAY.
+func prestoIntervalFromString(text string) string {
+	trimmed := strings.TrimSpace(text)
+	digits := ""
+	for len(trimmed) > 0 && (trimmed[0] == '-' || trimmed[0] == '+' || (trimmed[0] >= '0' && trimmed[0] <= '9')) {
+		digits += string(trimmed[0])
+		trimmed = trimmed[1:]
+	}
+	unit := strings.ToUpper(strings.TrimSpace(trimmed))
+	unit = strings.TrimSuffix(unit, "S")
+	if digits == "" {
+		return "'" + text + "'"
+	}
+	return "INTERVAL '" + digits + "' " + unit
+}
+
+// prestoWithSQL ports the With preprocess for recursive CTE column aliases.
+func prestoWithSQL(g *Generator, e exp.Expression) string {
+	if !truthy(e.Arg("recursive")) {
+		return g.withSQL(e)
+	}
+	e = e.Copy()
+	next := 0
+	for _, cte := range e.Expressions() {
+		if cte == nil || cte.Kind() != exp.KindCTE {
+			continue
+		}
+		alias := asExpression(cte.Arg("alias"))
+		if alias == nil {
+			continue
+		}
+		if cols := listFromValue(alias.Arg("columns")); len(cols) > 0 {
+			continue
+		}
+		query := asExpression(cte.This())
+		for query != nil && query.Is(exp.TraitSetOperation) {
+			query = query.This()
+			if query != nil {
+				query = query.Unnest()
+			}
+		}
+		if query == nil || query.Kind() != exp.KindSelect {
+			continue
+		}
+		columns := make([]exp.Expression, 0, len(query.Expressions()))
+		for _, projection := range query.Expressions() {
+			name := ""
+			if projection != nil {
+				name = projection.OutputName()
+			}
+			switch projection.Kind() {
+			case exp.KindAlias, exp.KindColumn, exp.KindIdentifier, exp.KindLiteral:
+			default:
+				name = ""
+			}
+			if name == "" {
+				name = "_c_" + strconv.Itoa(next)
+				next++
+			}
+			columns = append(columns, exp.ToIdentifier(name, false))
+		}
+		alias.Set("columns", columns)
+	}
+	return g.withSQL(e)
 }
 
 // presto.py:639-648: Presto has no CREATE VIEW column list.
@@ -266,8 +542,16 @@ func (g *Generator) prestoCreateSQL(e exp.Expression) string {
 func (g *Generator) prestoBracketSQL(e exp.Expression) string {
 	if boolValue(e.Arg("safe")) {
 		args := []any{e.Arg("this")}
+		offset := g.dialect.IndexOffset
+		if v, ok := e.Arg("offset").(int); ok {
+			offset -= v
+		}
 		if xs := e.Expressions(); len(xs) > 0 {
-			args = append(args, xs[0])
+			index := xs[0]
+			if value, ok := bracketIndexValue(index); ok {
+				index = exp.LiteralNumber(strconv.FormatInt(value+int64(offset), 10))
+			}
+			args = append(args, index)
 		}
 		return g.funcCall("ELEMENT_AT", args, "(", ")", true)
 	}
@@ -554,4 +838,23 @@ func prestoTimeStrToTimeSQL(g *Generator, e exp.Expression) string {
 		target = "TIMESTAMP WITH TIME ZONE"
 	}
 	return "CAST(" + g.sqlKey(e, "this") + " AS " + target + ")"
+}
+
+// prestoTableSQL names a table-source GENERATE_SERIES through the UNNEST column alias.
+func prestoTableSQL(g *Generator, e exp.Expression) string {
+	series := asExpression(e.This())
+	if series == nil || series.Kind() != exp.KindGenerateSeries {
+		return g.tableSQL(e)
+	}
+	rendered := g.gen(series)
+	alias := asExpression(e.Arg("alias"))
+	if alias == nil {
+		return rendered
+	}
+	if cols := listFromValue(alias.Arg("columns")); len(cols) == 0 {
+		if name := asExpression(alias.This()); name != nil {
+			return rendered + " AS _u(" + g.gen(name) + ")"
+		}
+	}
+	return rendered + " " + g.sqlKey(e, "alias")
 }

@@ -187,7 +187,7 @@ func TestPrestoClassBehaviors(t *testing.T) {
 		{"SELECT ROW(a := 1, b := 'x', c := 1.5, d := TRUE)", "SELECT CAST(ROW(1, 'x', 1.5, TRUE) AS ROW(a INTEGER, b VARCHAR, c DOUBLE, d BOOLEAN))"},
 		{"SELECT ROW(1, 'x')", "SELECT ROW(1, 'x')"},
 		{"SELECT SHA256(CAST(x AS VARCHAR)), SHA256(x)", "SELECT SHA256(TO_UTF8(CAST(x AS VARCHAR))), SHA256(x)"},
-		{"SELECT CONCAT(x), CONCAT(x, y)", "SELECT CAST(x AS VARCHAR), CONCAT(x, y)"},
+		{"SELECT CONCAT(x), CONCAT(x, y)", "SELECT CONCAT(x), CONCAT(x, y)"},
 		{"CREATE VIEW v (c) AS SELECT 1", "CREATE VIEW v AS SELECT 1"},
 		{`CREATE TABLE IF NOT EXISTS x ("cola" INTEGER, "ds" TEXT) COMMENT 'comment' WITH (PARTITIONED BY=("ds"))`, `CREATE TABLE IF NOT EXISTS x ("cola" INTEGER, "ds" VARCHAR) COMMENT 'comment' WITH (PARTITIONED_BY=ARRAY['ds'])`},
 	}
