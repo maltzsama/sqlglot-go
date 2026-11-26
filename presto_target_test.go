@@ -7,27 +7,32 @@ import (
 	"github.com/maltzsama/sqlglot-go/generator"
 )
 
-// TestPrestoTargetTail pins the BigQuery/Postgres to Presto mappings.
+// TestPrestoTargetTail pins the Presto target mappings drained from the cross-dialect corpus.
 func TestPrestoTargetTail(t *testing.T) {
 	cases := []struct{ read, sql, want string }{
-		{"bigquery", "DELETE FROM db.example_table AS tb WHERE tb.x = 1", "DELETE FROM db.example_table WHERE x = 1"},
-		{"bigquery", "TO_HEX(x)", "LOWER(TO_HEX(x))"},
-		{"bigquery", "SELECT TO_HEX(MD5(some_string))", "SELECT LOWER(TO_HEX(MD5(some_string)))"},
-		{"bigquery", "SHA1(x)", "SHA1(x)"},
-		{"bigquery", "SELECT GENERATE_UUID()", "SELECT CAST(UUID() AS VARCHAR)"},
-		{"bigquery", "TIMESTAMP(x)", "CAST(x AS TIMESTAMP WITH TIME ZONE)"},
-		{"bigquery", "TIMESTAMP_DIFF(a, b, MONTH)", "DATE_DIFF('MONTH', b, a)"},
-		{"bigquery", "SELECT DATETIME_DIFF(DATETIME '2021-02-01 00:00:00', DATETIME '2021-01-31 00:00:00', MONTH)", "SELECT DATE_DIFF('MONTH', DATE_TRUNC('MONTH', CAST('2021-01-31 00:00:00' AS TIMESTAMP)), DATE_TRUNC('MONTH', CAST('2021-02-01 00:00:00' AS TIMESTAMP)))"},
-		{"bigquery", "TO_JSON_STRING(x)", "JSON_FORMAT(CAST(x AS JSON))"},
-		{"bigquery", "SELECT a[1], b[OFFSET(1)], c[ORDINAL(1)], d[SAFE_OFFSET(1)], e[SAFE_ORDINAL(1)]", "SELECT a[2], b[2], c[1], ELEMENT_AT(d, 2), ELEMENT_AT(e, 1)"},
-
-		{"postgres", "ARRAY_LENGTH(arr, 1)", "CARDINALITY(arr)"},
-		{"postgres", "CONCAT(a, b)", "CONCAT(COALESCE(CAST(a AS VARCHAR), ''), COALESCE(CAST(b AS VARCHAR), ''))"},
-		{"postgres", "a || b", "CONCAT(CAST(a AS VARCHAR), CAST(b AS VARCHAR))"},
-		{"postgres", "SELECT * FROM GENERATE_SERIES(a, b)", "SELECT * FROM UNNEST(SEQUENCE(a, b))"},
-		{"postgres", "SELECT 'epoch'::TIMESTAMP", "SELECT CAST('1970-01-01 00:00:00' AS TIMESTAMP)"},
-		{"postgres", "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount)", "SELECT APPROX_PERCENTILE(amount, 0.5)"},
-		{"postgres", "WITH RECURSIVE t AS (SELECT 1 AS n UNION ALL SELECT n + 1 AS n FROM t WHERE n < 4) SELECT SUM(n) FROM t", "WITH RECURSIVE t(n) AS (SELECT 1 AS n UNION ALL SELECT n + 1 AS n FROM t WHERE n < 4) SELECT SUM(n) FROM t"},
+		// LATERAL VIEW becomes CROSS JOIN UNNEST.
+		{"hive", "SELECT a FROM x LATERAL VIEW EXPLODE(y) t AS a", "SELECT a FROM x CROSS JOIN UNNEST(y) AS t(a)"},
+		{"hive", "SELECT a FROM x LATERAL VIEW POSEXPLODE(y) t AS pos, col", "SELECT a FROM x CROSS JOIN LATERAL (SELECT pos - 1 AS pos, col FROM UNNEST(y) WITH ORDINALITY AS t(col, pos))"},
+		{"spark", "SELECT id_column, name, age FROM test_table LATERAL VIEW INLINE(struc_column) explode_view AS name, age", "SELECT id_column, name, age FROM test_table CROSS JOIN UNNEST(struc_column) AS explode_view(name, age)"},
+		{"hive", "SELECT a, b FROM x LATERAL VIEW EXPLODE(y) t AS a LATERAL VIEW EXPLODE(z) u AS b", "SELECT a, b FROM x CROSS JOIN UNNEST(y) AS t(a) CROSS JOIN UNNEST(z) AS u(b)"},
+		// QUALIFY becomes a filtered derived table.
+		{"snowflake", "SELECT i, p, o FROM qt QUALIFY ROW_NUMBER() OVER (PARTITION BY p ORDER BY o) = 1", "SELECT i, p, o FROM (SELECT i, p, o, ROW_NUMBER() OVER (PARTITION BY p ORDER BY o) AS _w FROM qt) AS _t WHERE _w = 1"},
+		// Series and epochs.
+		{"snowflake", "ARRAY_GENERATE_RANGE(0, 3)", "SEQUENCE(0, 2)"},
+		{"snowflake", "SELECT DATE_PART(epoch_second, foo) as ddate from table_name", "SELECT TO_UNIXTIME(CAST(foo AS TIMESTAMP)) AS ddate FROM table_name"},
+		{"snowflake", "SELECT DATE_PART(epoch_milliseconds, foo) as ddate from table_name", "SELECT TO_UNIXTIME(CAST(foo AS TIMESTAMP)) * 1000 AS ddate FROM table_name"},
+		// Functions.
+		{"snowflake", "UUID_STRING('fe971b24-9572-4005-b22f-351e9c09274d', 'foo')", "CAST(UUID() AS VARCHAR)"},
+		{"spark", "DAYOFWEEK(CAST('2012-08-08 01:00:00' AS TIMESTAMP))", "((DAY_OF_WEEK(CAST(CAST(TRY_CAST('2012-08-08 01:00:00' AS TIMESTAMP WITH TIME ZONE) AS TIMESTAMP) AS DATE)) % 7) + 1)"},
+		{"spark", "SELECT DATE_ADD(MONTH, 20, col)", "SELECT DATE_ADD('MONTH', 20, col)"},
+		{"redshift", "x is false", "NOT x"},
+		{"redshift", "x is not false", "NOT NOT x"},
+		{"redshift", "x is true", "x"},
+		{"redshift", "SELECT LEFT(a, 3), RIGHT(a, 3)", "SELECT SUBSTR(a, 1, 3), SUBSTR(a, LENGTH(a) - (3 - 1))"},
+		{"redshift", "DATEDIFF('day', a, b)", "DATE_DIFF('DAY', CAST(a AS TIMESTAMP), CAST(b AS TIMESTAMP))"},
+		{"spark", "TO_DATE(x, 'yyyy-MM-dd')", "CAST(CAST(x AS TIMESTAMP) AS DATE)"},
+		{"hive", "DATE_FORMAT('2020-01-01', 'yyyy-MM-dd HH:mm:ss')", "DATE_FORMAT(CAST('2020-01-01' AS TIMESTAMP), '%Y-%m-%d %H:%i:%s')"},
+		{"hive", "from_unixtime(x, \"yyyy-MM-dd'T'HH\")", "DATE_FORMAT(FROM_UNIXTIME(x), '%Y-%m-%d''T''%H')"},
 	}
 	for _, tc := range cases {
 		out, err := sqlglot.Transpile(tc.sql, tc.read, "presto", generator.Options{})

@@ -281,7 +281,7 @@ const (
 	minPassTranspileMySQL       = 347
 	minPassTranspileOracle      = 176
 	minPassTranspilePostgres    = 424
-	minPassTranspilePresto      = 568
+	minPassTranspilePresto      = 591
 	minPassTranspileRedshift    = 184
 	minPassTranspileRisingWave  = 6
 	minPassTranspileSnowflake   = 945
@@ -290,7 +290,7 @@ const (
 	minPassTranspileSQLite      = 146
 	minPassTranspileStarrocks   = 98
 	minPassTranspileTeradata    = 74
-	minPassTranspileTrino       = 132
+	minPassTranspileTrino       = 137
 	minPassTranspileTSQL        = 355
 )
 

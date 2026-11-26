@@ -16,10 +16,14 @@ func init() {
 			if g.dialect.Name == "presto" {
 				snowflakeInlineNamedWindows(e)
 			}
+			if asExpression(e.Arg("qualify")) != nil {
+				e = eliminateQualify(e)
+			}
 			explodeProjectionToUnnest(e, 1)
 			return g.selectSQL(e)
 		},
-		exp.KindTable: prestoTableSQL,
+		exp.KindLateral: prestoLateralSQL,
+		exp.KindTable:   prestoTableSQL,
 		exp.KindFromISO8601Date: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("FROM_ISO8601_DATE", []any{e.This()}, "(", ")", true)
 		},
@@ -42,14 +46,36 @@ func init() {
 		exp.KindDateDiff: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("DATE_DIFF", []any{prestoUnit(e), e.Arg("expression"), e.Arg("this")}, "(", ")", true)
 		},
-		exp.KindDecode:         prestoCall("FROM_UTF8", "this", "replace"),
-		exp.KindEncode:         prestoCall("TO_UTF8", "this", "replace"),
-		exp.KindUnixToTime:     prestoUnixToTimeSQL,
-		exp.KindSortArray:      prestoSortArraySQL,
-		exp.KindArrayToString:  prestoArrayToStringSQL,
-		exp.KindQuantile:       prestoCall("APPROX_PERCENTILE", "this", "quantile"),
-		exp.KindLastDay:        prestoCall("LAST_DAY_OF_MONTH", "this"),
-		exp.KindGenerateSeries: prestoGenerateSeriesSQL,
+		exp.KindTsOrDsDiff: func(g *Generator, e exp.Expression) string {
+			return g.funcCall("DATE_DIFF", []any{prestoUnit(e),
+				prestoCastToTimestamp(asExpression(e.Arg("expression"))),
+				prestoCastToTimestamp(e.This())}, "(", ")", true)
+		},
+		exp.KindTimestampAdd: func(g *Generator, e exp.Expression) string {
+			return "DATE_ADD('" + strings.ToUpper(asExpression(e.Arg("unit")).Name()) + "', " +
+				g.sqlKey(e, "expression") + ", " + g.sqlKey(e, "this") + ")"
+		},
+		exp.KindDayOfWeek: func(g *Generator, e exp.Expression) string {
+			return "((DAY_OF_WEEK(" + g.sqlKey(e, "this") + ") % 7) + 1)"
+		},
+		exp.KindIs: prestoIsSQL,
+		exp.KindLeft: func(g *Generator, e exp.Expression) string {
+			return g.funcCall("SUBSTR", []any{e.This(), "1", e.Arg("expression")}, "(", ")", true)
+		},
+		exp.KindRight: func(g *Generator, e exp.Expression) string {
+			return "SUBSTR(" + g.sqlKey(e, "this") + ", LENGTH(" + g.sqlKey(e, "this") + ") - (" +
+				g.sqlKey(e, "expression") + " - 1))"
+		},
+		exp.KindExtract:           prestoExtractSQL,
+		exp.KindDecode:            prestoCall("FROM_UTF8", "this", "replace"),
+		exp.KindEncode:            prestoCall("TO_UTF8", "this", "replace"),
+		exp.KindUnixToTime:        prestoUnixToTimeSQL,
+		exp.KindSortArray:         prestoSortArraySQL,
+		exp.KindArrayToString:     prestoArrayToStringSQL,
+		exp.KindQuantile:          prestoCall("APPROX_PERCENTILE", "this", "quantile"),
+		exp.KindLastDay:           prestoCall("LAST_DAY_OF_MONTH", "this"),
+		exp.KindGenerateSeries:    prestoGenerateSeriesSQL,
+		exp.KindGenerateDateArray: prestoGenerateSeriesSQL,
 		// generators/presto.py:393 exp.StrPosition: strposition_sql(supports_occurrence=True).
 		exp.KindStrPosition: strPositionTranspileSQL("STRPOS", false, true),
 		// generators/presto.py:321 exp.ArrayConcat: rename_func("CONCAT").
@@ -89,8 +115,10 @@ func init() {
 			return "TO_UNIXTIME(DATE_PARSE(" + g.sqlKey(e, "this") + ", '%Y-%m-%d %T'))"
 		},
 		exp.KindTsOrDsToDate: func(g *Generator, e exp.Expression) string {
-			if asExpression(e.Arg("format")) != nil {
-				return g.tsOrDsToDateSQL(e)
+			if format := asExpression(e.Arg("format")); format != nil {
+				if stripStrictTimeFormat(format.Name()) != "%Y-%m-%d" {
+					return g.tsOrDsToDateSQL(e)
+				}
 			}
 			return "CAST(CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP) AS DATE)"
 		},
@@ -107,7 +135,7 @@ func init() {
 			return "DATE_ADD(" + unitSQL + ", " + g.sqlKey(e, "expression") + ", " + value + ")"
 		},
 		exp.KindUnixToStr: func(g *Generator, e exp.Expression) string {
-			return "DATE_FORMAT(FROM_UNIXTIME(" + g.sqlKey(e, "this") + "), " + g.sqlKey(e, "format") + ")"
+			return "DATE_FORMAT(FROM_UNIXTIME(" + g.sqlKey(e, "this") + "), " + g.gen(prestoFormatTime(e)) + ")"
 		},
 		exp.KindUnixToTimeStr: func(g *Generator, e exp.Expression) string {
 			return "CAST(FROM_UNIXTIME(" + g.sqlKey(e, "this") + ") AS VARCHAR)"
@@ -132,7 +160,7 @@ func init() {
 			return "SHA1(" + g.sqlKey(e, "this") + ")"
 		},
 		exp.KindUuid: func(g *Generator, e exp.Expression) string {
-			if truthy(e.Arg("is_string")) {
+			if truthy(e.Arg("is_string")) || e.Arg("name") != nil {
 				return "CAST(UUID() AS VARCHAR)"
 			}
 			return "UUID()"
@@ -432,6 +460,19 @@ func prestoGenerateSeriesSQL(g *Generator, e exp.Expression) string {
 		}
 		return g.gen(v)
 	}
+	if truthy(e.Arg("is_end_exclusive")) {
+		stepValue := asExpression(e.Arg("step"))
+		if stepValue == nil {
+			stepValue = exp.LiteralNumber("1")
+		}
+		endInt, endOK := hiveIntLiteral(end)
+		stepInt, stepOK := hiveIntLiteral(stepValue)
+		if endOK && stepOK {
+			end = exp.LiteralNumber(strconv.Itoa(endInt - stepInt))
+		} else {
+			end = exp.Paren(exp.Args{"this": exp.Sub(exp.Args{"this": end, "expression": stepValue})})
+		}
+	}
 	args := []string{argSQL(start), argSQL(end)}
 	if step != nil {
 		if step.Kind() == exp.KindLiteral && step.IsString() {
@@ -728,7 +769,11 @@ func prestoUnit(e exp.Expression) exp.Expression {
 func prestoFormatTime(e exp.Expression) any {
 	format := asExpression(e.Arg("format"))
 	if format != nil && format.IsString() {
-		return exp.LiteralString(dialects.PrestoFormatTime(format.Name()))
+		name := format.Name()
+		if strings.Contains(name, "strict") {
+			name = prestoStrictTimeFormat.Replace(name)
+		}
+		return exp.LiteralString(dialects.PrestoFormatTime(name))
 	}
 	return format
 }
@@ -858,3 +903,125 @@ func prestoTableSQL(g *Generator, e exp.Expression) string {
 	}
 	return rendered + " " + g.sqlKey(e, "alias")
 }
+
+// prestoLateralSQL ports _explode_to_unnest_sql (generators/presto.py:206-225): a LATERAL
+// VIEW EXPLODE/INLINE becomes CROSS JOIN UNNEST, and POSEXPLODE becomes a lateral subquery
+// that shifts the 0-based position.
+func prestoLateralSQL(g *Generator, e exp.Expression) string {
+	if !truthy(e.Arg("view")) {
+		return g.lateralSQL(e)
+	}
+	this := asExpression(e.This())
+	alias := asExpression(e.Arg("alias"))
+	if this == nil || alias == nil {
+		return g.lateralSQL(e)
+	}
+
+	columns := exprList(alias.Arg("columns"))
+	switch {
+	case this.Kind() == exp.KindPosexplode:
+		if len(columns) == 0 {
+			return g.lateralSQL(e)
+		}
+		pos := columns[0]
+		cols := columns[1:]
+		selectExprs := make([]exp.Expression, 0, 1+len(cols))
+		selectExprs = append(selectExprs, exp.AliasExpr(
+			exp.Sub(exp.Args{"this": pos.Copy(), "expression": exp.LiteralNumber("1")}),
+			pos.Name(), false))
+		unnestCols := make([]any, 0, len(cols)+1)
+		for _, col := range cols {
+			selectExprs = append(selectExprs, col.Copy())
+			unnestCols = append(unnestCols, col.Copy())
+		}
+		unnestCols = append(unnestCols, pos.Copy())
+		unnest := exp.Unnest(exp.Args{
+			"expressions": []exp.Expression{this.This().Copy()},
+			"offset":      true,
+			"alias": exp.TableAlias(exp.Args{
+				"this":    alias.This(),
+				"columns": unnestCols,
+			}),
+		})
+		subquery := exp.Select(exp.Args{
+			"expressions": selectExprs,
+			"from_":       exp.From(exp.Args{"this": unnest}),
+		})
+		return g.gen(exp.Join(exp.Args{
+			"this": exp.Lateral(exp.Args{"this": exp.Subquery(exp.Args{"this": subquery})}),
+			"kind": "CROSS",
+		}))
+	case this.Kind() == exp.KindExplode || isInlineUDTF(this):
+		inner := this.This()
+		if isInlineUDTF(this) {
+			inner = this.Expressions()[0]
+		}
+		return g.gen(exp.Join(exp.Args{
+			"this": exp.Unnest(exp.Args{
+				"expressions": []exp.Expression{inner.Copy()},
+				"alias":       alias.Copy(),
+			}),
+			"kind": "CROSS",
+		}))
+	}
+	return g.lateralSQL(e)
+}
+
+// isInlineUDTF reports whether the lateral's UDTF is LATERAL VIEW INLINE.
+func isInlineUDTF(e exp.Expression) bool {
+	return e != nil && e.Kind() == exp.KindAnonymous && strings.EqualFold(e.Text("this"), "INLINE") && len(e.Expressions()) == 1
+}
+
+// prestoCastToTimestamp wraps a value in CAST(... AS TIMESTAMP) unless it already is one.
+func prestoCastToTimestamp(e exp.Expression) exp.Expression {
+	if e == nil {
+		return nil
+	}
+	if dtype, ok := castResultDType(e); ok && dtype == exp.DTypeTimestamp {
+		return e
+	}
+	return exp.Cast(exp.Args{"this": e, "to": exp.DTypeTimestamp.IntoExpr(nil)})
+}
+
+// prestoIsSQL ports the IS TRUE/FALSE rewrites required by IS_BOOL_ALLOWED = False
+// (generators/presto.py:266).
+func prestoIsSQL(g *Generator, e exp.Expression) string {
+	this := asExpression(e.This())
+	test := asExpression(e.Arg("expression"))
+	if this == nil || test == nil || test.Kind() != exp.KindBoolean {
+		return g.isSQL(e)
+	}
+	truth := boolValue(test.Arg("this"))
+	if boolValue(e.Arg("negate")) {
+		truth = !truth
+	}
+	if truth {
+		return g.gen(this)
+	}
+	return "NOT " + g.gen(this)
+}
+
+// prestoExtractSQL ports extract_sql's epoch handling (generators/presto.py): an epoch
+// extraction renders through TO_UNIXTIME.
+func prestoExtractSQL(g *Generator, e exp.Expression) string {
+	unit := asExpression(e.Arg("this"))
+	name := ""
+	if unit != nil {
+		name = strings.ToUpper(unit.Name())
+	}
+	switch name {
+	case "EPOCH", "EPOCH_SECOND":
+		return "TO_UNIXTIME(" + g.gen(prestoCastToTimestamp(asExpression(e.Arg("expression")))) + ")"
+	case "EPOCH_MILLISECOND":
+		return "TO_UNIXTIME(" + g.gen(prestoCastToTimestamp(asExpression(e.Arg("expression")))) + ") * 1000"
+	}
+	return g.extractSQL(e)
+}
+
+// prestoStrictTimeFormat maps the port's internal "strict" markers straight to Presto
+// tokens, mirroring the strict entries of upstream's INVERSE_TIME_MAPPING. Mapping them
+// directly avoids collapsing %H:%M:%S into %T.
+var prestoStrictTimeFormat = strings.NewReplacer(
+	"%mstrict", "%m", "%dstrict", "%d", "%Hstrict", "%H",
+	"%Istrict", "%h", "%Mstrict", "%i", "%Sstrict", "%s",
+)
