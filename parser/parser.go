@@ -4383,6 +4383,14 @@ func (p *Parser) parseWindow(this exp.Expression, alias bool) exp.Expression {
 	}
 	p.matchRParen(this)
 	window := p.expression(exp.Window(exp.Args{"this": this, "partition_by": partition, "order": order, "spec": spec, "alias": windowAlias, "over": over, "first": first}), nil, comments)
+	// parsers/snowflake.py:1405-1423: FIRST_VALUE/LAST_VALUE/NTH_VALUE windows default to
+	// ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING when no frame is given.
+	if p.dialectIs("snowflake") && spec == nil && snowflakeRankingWindowFunc(this) {
+		window.Set("spec", exp.WindowSpec(exp.Args{
+			"kind": "ROWS", "start": "UNBOUNDED", "start_side": "PRECEDING",
+			"end": "UNBOUNDED", "end_side": "FOLLOWING",
+		}))
+	}
 	if p.matchSet(map[tokens.TokenType]bool{tokens.OVER: true}, false) {
 		return p.parseWindow(window, alias)
 	}
@@ -4827,4 +4835,20 @@ func findIgnoreRespectInScope(expression exp.Expression) exp.Expression {
 		}
 	}
 	return nil
+}
+
+// snowflakeRankingWindowFunc reports whether e is a FIRST_VALUE/LAST_VALUE/NTH_VALUE call,
+// unwrapping the trailing IGNORE/RESPECT NULLS wrapper.
+func snowflakeRankingWindowFunc(e exp.Expression) bool {
+	for e != nil {
+		switch e.Kind() {
+		case exp.KindFirstValue, exp.KindLastValue, exp.KindNthValue:
+			return true
+		case exp.KindIgnoreNulls, exp.KindRespectNulls:
+			e = asExpr(e.This())
+		default:
+			return false
+		}
+	}
+	return false
 }

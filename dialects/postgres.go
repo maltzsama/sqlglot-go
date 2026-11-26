@@ -3,10 +3,13 @@ package dialects
 import (
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/tokens"
+	"strconv"
 )
 
 func Postgres() *Dialect {
 	d := Base()
+	// dialects/postgres.py CONCAT_WS_COALESCE = True.
+	d.ConcatWsCoalesce = true
 	d.Name = "postgres"
 	// generators/postgres.py:277 ARRAY_CONCAT_IS_VAR_LEN = False: binary ARRAY_CAT nesting.
 	d.ArrayConcatIsVarLen = false
@@ -125,6 +128,10 @@ func Postgres() *Dialect {
 		// (parsers/redshift.py:34-36 drops only GET_BIT).
 		"JSON_EXTRACT_PATH":      BuildJSONExtractPath(exp.KindJSONExtract),
 		"JSON_EXTRACT_PATH_TEXT": BuildJSONExtractPath(exp.KindJSONExtractScalar),
+		// parsers/postgres.py:121 "REGEXP_REPLACE": _build_regexp_replace
+		// (parsers/postgres.py:44-67). Postgres replaces only the first match unless a
+		// "g" flag is passed, which single_replace carries to the DuckDB generator.
+		"REGEXP_REPLACE": postgresBuildRegexpReplace,
 	}
 
 	cfg := tokens.BaseConfig()
@@ -369,4 +376,32 @@ func postgresBuildGetBit(args []exp.Expression) exp.Expression {
 		m["expression"] = args[1]
 	}
 	return exp.Getbit(m)
+}
+
+// postgresBuildRegexpReplace ports _build_regexp_replace (parsers/postgres.py:44-67):
+// a trailing non-integer string argument is the flags, and every form sets
+// single_replace (Postgres replaces only the first match unless "g" is passed).
+func postgresBuildRegexpReplace(args []exp.Expression) exp.Expression {
+	var modifiers exp.Expression
+	if len(args) > 3 {
+		last := args[len(args)-1]
+		_, intErr := strconv.ParseInt(last.Name(), 10, 64)
+		if intErr != nil && last.Kind() == exp.KindLiteral && last.IsString() {
+			modifiers = last
+			args = args[:len(args)-1]
+		}
+	}
+	built := exp.New(exp.KindRegexpReplace, exp.Args{
+		"this":        seqGet(args, 0),
+		"expression":  seqGet(args, 1),
+		"replacement": seqGet(args, 2),
+	})
+	if len(args) > 3 {
+		built.Set("position", seqGet(args, 3))
+	}
+	if modifiers != nil {
+		built.Set("modifiers", modifiers)
+	}
+	built.Set("single_replace", true)
+	return built
 }

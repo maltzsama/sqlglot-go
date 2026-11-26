@@ -263,6 +263,17 @@ func (p *Parser) parseConcat() exp.Expression {
 	}), exprArgs(args))
 }
 
+// parseConcatWs ports the FUNCTIONS "CONCAT_WS" builder (parser.py:396-401): the same
+// dialect-dependent safe/coalesce flags as CONCAT.
+func (p *Parser) parseConcatWs() exp.Expression {
+	args := p.parseFunctionArgs(false)
+	return p.validateExpression(exp.ConcatWs(exp.Args{
+		"expressions": args,
+		"safe":        !p.dialect.StrictStringConcat,
+		"coalesce":    p.dialect.ConcatWsCoalesce,
+	}), exprArgs(args))
+}
+
 func (p *Parser) parseTrim() exp.Expression {
 	opaqueName := p.captureOpaqueName()
 	var position any
@@ -520,6 +531,7 @@ func init() {
 	// builders it needs the dialect (safe/coalesce), so it lives here in the dialect-aware
 	// FUNCTION_PARSERS map instead. CONCAT_WS is left Anonymous - see parseConcat's note.
 	functionParsers["CONCAT"] = (*Parser).parseConcat
+	functionParsers["CONCAT_WS"] = (*Parser).parseConcatWs
 
 	// VARIADIC is postgres-only (parsers/postgres.py:142 NO_PAREN_FUNCTION_PARSERS). The base
 	// singleton retains this pre-existing entry for zero behavior change;

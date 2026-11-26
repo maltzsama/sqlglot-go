@@ -40,6 +40,9 @@ var snowflakeTimeMapping = map[string]string{
 func Snowflake() *Dialect {
 	d := Base()
 	d.Name = "snowflake"
+	// dialects/snowflake.py:27 ARRAY_AGG_INCLUDES_NULLS = None.
+	noNulls := false
+	d.ArrayAggIncludesNulls = &noNulls
 	// generators/snowflake.py:393 ARRAY_CONCAT_IS_VAR_LEN = False: binary ARRAY_CAT nesting.
 	d.ArrayConcatIsVarLen = false
 	// generators/snowflake.py TRANSFORMS: eliminate_distinct_on.
@@ -268,25 +271,29 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return exp.New(exp.KindSearch, values)
 	}
 	out["GENERATOR"] = func(args []exp.Expression) exp.Expression {
-		names := []string{"ROWCOUNT", "TIMELIMIT"}
-		mapped := make([]exp.Expression, 0, len(args))
+		values := exp.Args{}
+		positional := []string{"rowcount", "timelimit"}
 		for i, arg := range args {
 			if arg == nil {
 				continue
 			}
 			if arg.Kind() == exp.KindKwarg {
-				mapped = append(mapped, arg)
+				switch strings.ToUpper(arg.This().Name()) {
+				case "ROWCOUNT":
+					values["rowcount"] = arg.Expr()
+				case "TIMELIMIT":
+					values["timelimit"] = arg.Expr()
+				}
 				continue
 			}
-			if i < len(names) {
-				mapped = append(mapped, exp.Kwarg(exp.Args{
-					"this": exp.ToIdentifier(names[i]), "expression": arg,
-				}))
-			} else {
-				mapped = append(mapped, arg)
+			if i < len(positional) {
+				values[positional[i]] = arg
 			}
 		}
-		return exp.Anonymous(exp.Args{"this": "GENERATOR", "expressions": mapped})
+		return exp.New(exp.KindGenerator, values)
+	}
+	out["TABLE"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindTableFromRows, exp.Args{"this": seqGet(args, 0)})
 	}
 	out["IDENTIFIER"] = func(args []exp.Expression) exp.Expression {
 		return exp.New(exp.KindDynamicIdentifier, exp.Args{"this": seqGet(args, 0)})
@@ -486,6 +493,9 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 				parsed.Set("target_type", exp.DataType(exp.Args{"this": target}))
 				return parsed
 			}
+			if target == exp.DTypeTime && len(args) == 1 {
+				return exp.New(exp.KindTsOrDsToTime, exp.Args{"this": value, "safe": safe})
+			}
 			return exp.Anonymous(exp.Args{"this": name, "expressions": args})
 		}
 	}
@@ -506,10 +516,10 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return exp.TimeAdd(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
 	}
 	out["DATEDIFF"] = func(args []exp.Expression) exp.Expression {
-		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
+		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0)), "date_part_boundary": true})
 	}
 	out["TIMESTAMPDIFF"] = func(args []exp.Expression) exp.Expression {
-		return exp.TimestampDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
+		return exp.TimestampDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0)), "date_part_boundary": true})
 	}
 	out["TIMEDIFF"] = func(args []exp.Expression) exp.Expression {
 		return exp.DateDiff(exp.Args{"this": seqGet(args, 2), "expression": seqGet(args, 1), "unit": snowflakeDateUnit(seqGet(args, 0))})
@@ -691,6 +701,7 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		}
 		return exp.StrtokToArray(exp.Args{"this": seqGet(args, 0), "expression": delimiter})
 	}
+	out["GET"] = exp.FromArgListFunc(exp.KindGetExtract)
 	out["SPLIT"] = exp.FromArgListFunc(exp.KindSplit)
 	for name, kind := range map[string]exp.Kind{"LIKE": exp.KindLike, "ILIKE": exp.KindILike} {
 		out[name] = func(args []exp.Expression) exp.Expression {
@@ -718,7 +729,229 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		out[name] = timestampFromParts
 	}
 
+	// dialects/snowflake.py:27 ARRAY_AGG_INCLUDES_NULLS = None: the Snowflake ARRAY_AGG
+	// excludes NULLs when used as a source, but a Snowflake target keeps the native call.
+	out["ARRAY_AGG"] = func(args []exp.Expression) exp.Expression {
+		return exp.ArrayAgg(exp.Args{"this": seqGet(args, 0), "nulls_excluded": true})
+	}
+
+	// parsers/snowflake.py:396-733: the remaining FUNCTIONS entries that preserve
+	// Snowflake's argument semantics/flags for transpilation.
+	out["ADD_MONTHS"] = func(args []exp.Expression) exp.Expression {
+		return exp.AddMonths(exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1), "preserve_end_of_month": true,
+		})
+	}
+	out["APPROX_PERCENTILE"] = exp.FromArgListFunc(exp.KindApproxQuantile)
+	out["CURRENT_TIME"] = func(args []exp.Expression) exp.Expression {
+		return exp.Localtime(exp.Args{"this": seqGet(args, 0)})
+	}
+	out["ARRAY_GENERATE_RANGE"] = func(args []exp.Expression) exp.Expression {
+		return exp.GenerateSeries(exp.Args{
+			"start": seqGet(args, 0), "end": seqGet(args, 1), "step": seqGet(args, 2),
+			// Snowflake has exclusive end semantics.
+			"is_end_exclusive": true,
+		})
+	}
+	out["ARRAY_EXCEPT"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindArrayExcept, exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1), "is_multiset": true,
+		})
+	}
+	out["ARRAY_SLICE"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindArraySlice, exp.Args{
+			"this": seqGet(args, 0), "start": seqGet(args, 1), "end": seqGet(args, 2),
+			"zero_based": true,
+		})
+	}
+	out["ARRAY_SORT"] = func(args []exp.Expression) exp.Expression {
+		asc := seqGet(args, 1)
+		nullsFirst := seqGet(args, 2)
+		if nullsFirst == nil && asc != nil && asc.Kind() == exp.KindBoolean {
+			ascValue, _ := asc.Arg("this").(bool)
+			nullsFirst = exp.Boolean(exp.Args{"this": !ascValue})
+		}
+		return exp.New(exp.KindSortArray, exp.Args{
+			"this": seqGet(args, 0), "asc": asc, "nulls_first": nullsFirst,
+		})
+	}
+	out["ARRAY_FLATTEN"] = exp.FromArgListFunc(exp.KindFlatten)
+	out["ARRAY_TO_STRING"] = func(args []exp.Expression) exp.Expression {
+		return exp.ArrayToString(exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1),
+			"null_is_empty": true, "null_delim_is_null": true,
+		})
+	}
+	out["CORR"] = func(args []exp.Expression) exp.Expression {
+		return exp.Corr(exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1), "null_on_zero_variance": true,
+		})
+	}
+	out["COUNT_IF"] = func(args []exp.Expression) exp.Expression {
+		return exp.CountIf(exp.Args{"this": seqGet(args, 0), "zero_on_all_null": true})
+	}
+	out["DAYNAME"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindDayname, exp.Args{"this": seqGet(args, 0), "abbreviated": true})
+	}
+	out["MONTHNAME"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindMonthname, exp.Args{"this": seqGet(args, 0), "abbreviated": true})
+	}
+	out["LAST_DAY"] = func(args []exp.Expression) exp.Expression {
+		return exp.LastDay(exp.Args{"this": seqGet(args, 0), "unit": snowflakeDateUnit(seqGet(args, 1))})
+	}
+	out["LEFT"] = func(args []exp.Expression) exp.Expression {
+		return exp.Left(exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1), "negative_length_returns_empty": true,
+		})
+	}
+	out["RIGHT"] = func(args []exp.Expression) exp.Expression {
+		return exp.Right(exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1), "negative_length_returns_empty": true,
+		})
+	}
+	for _, name := range []string{"LEN", "LENGTH"} {
+		out[name] = func(args []exp.Expression) exp.Expression {
+			return exp.Length(exp.Args{"this": seqGet(args, 0), "binary": true})
+		}
+	}
+	out["OCTET_LENGTH"] = exp.FromArgListFunc(exp.KindByteLength)
+	out["PARSE_URL"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindParseUrl, exp.Args{"this": seqGet(args, 0), "permissive": seqGet(args, 1)})
+	}
+	out["RANDOM"] = func(args []exp.Expression) exp.Expression {
+		return exp.Rand(exp.Args{
+			"this":  seqGet(args, 0),
+			"lower": exp.LiteralNumber("-9.223372036854776E+18"),
+			"upper": exp.LiteralNumber("9.223372036854776e+18"),
+		})
+	}
+	regexpExtractBuilder := func(kind exp.Kind, nullIfOverflow bool) func([]exp.Expression) exp.Expression {
+		return func(args []exp.Expression) exp.Expression {
+			group := seqGet(args, 5)
+			if group == nil {
+				group = exp.LiteralNumber("0")
+			}
+			built := exp.New(kind, exp.Args{
+				"this": seqGet(args, 0), "expression": seqGet(args, 1),
+				"position": seqGet(args, 2), "occurrence": seqGet(args, 3),
+				"parameters": seqGet(args, 4), "group": group,
+			})
+			if nullIfOverflow {
+				built.Set("null_if_pos_overflow", true)
+			}
+			return built
+		}
+	}
+	out["REGEXP_EXTRACT_ALL"] = regexpExtractBuilder(exp.KindRegexpExtractAll, false)
+	regexpLikeBuilder := func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindRegexpLike, exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1), "flag": seqGet(args, 2),
+			"full_match": true,
+		})
+	}
+	out["REGEXP_LIKE"] = regexpLikeBuilder
+	out["RLIKE"] = regexpLikeBuilder
+	out["SHA1_BINARY"] = exp.FromArgListFunc(exp.KindSHA1Digest)
+	out["SHA1_HEX"] = exp.FromArgListFunc(exp.KindSHA)
+	out["SHA2_BINARY"] = exp.FromArgListFunc(exp.KindSHA2Digest)
+	out["SHA2_HEX"] = exp.FromArgListFunc(exp.KindSHA2)
+	out["MD5_BINARY"] = exp.FromArgListFunc(exp.KindMD5Digest)
+	out["MD5_NUMBER_LOWER64"] = exp.FromArgListFunc(exp.KindMD5NumberLower64)
+	out["MD5_NUMBER_UPPER64"] = exp.FromArgListFunc(exp.KindMD5NumberUpper64)
+	out["BITMAP_OR_AGG"] = exp.FromArgListFunc(exp.KindBitmapOrAgg)
+	out["SPLIT_PART"] = func(args []exp.Expression) exp.Expression {
+		return exp.SplitPart(exp.Args{
+			"this": seqGet(args, 0), "delimiter": seqGet(args, 1), "part_index": seqGet(args, 2),
+			"part_index_zero_as_one": true, "empty_delimiter_returns_whole": true,
+		})
+	}
+	out["SYSDATE"] = func(args []exp.Expression) exp.Expression {
+		return exp.CurrentTimestamp(exp.Args{"this": seqGet(args, 0), "sysdate": true})
+	}
+	out["TIME_FROM_PARTS"] = func(args []exp.Expression) exp.Expression {
+		return exp.TimeFromParts(exp.Args{
+			"hour": seqGet(args, 0), "min": seqGet(args, 1), "sec": seqGet(args, 2),
+			"nano": seqGet(args, 3), "overflow": true,
+		})
+	}
+	out["UNICODE"] = func(args []exp.Expression) exp.Expression {
+		return exp.Unicode(exp.Args{"this": seqGet(args, 0), "empty_is_zero": true})
+	}
+	out["JAROWINKLER_SIMILARITY"] = func(args []exp.Expression) exp.Expression {
+		return exp.JarowinklerSimilarity(exp.Args{
+			"this": seqGet(args, 0), "expression": seqGet(args, 1),
+			"case_insensitive": true, "integer_scale": true,
+		})
+	}
+	out["GREATEST_IGNORE_NULLS"] = func(kind exp.Kind) func([]exp.Expression) exp.Expression {
+		return func(args []exp.Expression) exp.Expression {
+			values := exp.Args{"ignore_nulls": true}
+			if len(args) > 0 {
+				values["this"] = args[0]
+			}
+			if len(args) > 1 {
+				values["expressions"] = args[1:]
+			}
+			return exp.New(kind, values)
+		}
+	}(exp.KindGreatest)
+	out["LEAST_IGNORE_NULLS"] = func(kind exp.Kind) func([]exp.Expression) exp.Expression {
+		return func(args []exp.Expression) exp.Expression {
+			values := exp.Args{"ignore_nulls": true}
+			if len(args) > 0 {
+				values["this"] = args[0]
+			}
+			if len(args) > 1 {
+				values["expressions"] = args[1:]
+			}
+			return exp.New(kind, values)
+		}
+	}(exp.KindLeast)
+	out["TRY_PARSE_JSON"] = func(args []exp.Expression) exp.Expression {
+		return exp.ParseJSON(exp.Args{"this": seqGet(args, 0), "safe": true})
+	}
+	out["TRY_TO_DOUBLE"] = func(args []exp.Expression) exp.Expression {
+		return exp.ToDouble(exp.Args{
+			"this": seqGet(args, 0), "format": seqGet(args, 1), "safe": true,
+		})
+	}
+	out["TRY_TO_BINARY"] = func(args []exp.Expression) exp.Expression {
+		return exp.ToBinary(exp.Args{
+			"this": seqGet(args, 0), "format": seqGet(args, 1), "safe": true,
+		})
+	}
+	out["TO_GEOGRAPHY"] = snowflakeToGeographyBuilder("TO_GEOGRAPHY", exp.DTypeGeography)
+	out["TO_GEOMETRY"] = snowflakeToGeographyBuilder("TO_GEOMETRY", exp.DTypeGeometry)
+	out["VECTOR_COSINE_SIMILARITY"] = exp.FromArgListFunc(exp.KindCosineDistance)
+	out["VECTOR_INNER_PRODUCT"] = exp.FromArgListFunc(exp.KindDotProduct)
+	out["VECTOR_L1_DISTANCE"] = exp.FromArgListFunc(exp.KindManhattanDistance)
+	out["VECTOR_L2_DISTANCE"] = exp.FromArgListFunc(exp.KindEuclideanDistance)
+	out["SKEW"] = exp.FromArgListFunc(exp.KindSkewness)
+	out["BIT_SHIFTLEFT"] = snowflakeShiftBuilder(exp.KindBitwiseLeftShift)
+	out["BIT_SHIFTRIGHT"] = snowflakeShiftBuilder(exp.KindBitwiseRightShift)
+	out["BITSHIFTLEFT"] = snowflakeShiftBuilder(exp.KindBitwiseLeftShift)
+	out["BITSHIFTRIGHT"] = snowflakeShiftBuilder(exp.KindBitwiseRightShift)
+	out["DATE_FROM_PARTS"] = func(args []exp.Expression) exp.Expression {
+		return exp.DateFromParts(exp.Args{
+			"year": seqGet(args, 0), "month": seqGet(args, 1), "day": seqGet(args, 2),
+			"allow_overflow": true,
+		})
+	}
+	out["DATEFROMPARTS"] = out["DATE_FROM_PARTS"]
+
 	return out
+}
+
+// snowflakeToGeographyBuilder ports the TO_GEOGRAPHY/TO_GEOMETRY lambdas
+// (parsers/snowflake.py:690-701): a single argument becomes a cast, otherwise the call is
+// kept as an anonymous function.
+func snowflakeToGeographyBuilder(name string, dtype exp.DType) func([]exp.Expression) exp.Expression {
+	return func(args []exp.Expression) exp.Expression {
+		if len(args) == 1 {
+			return exp.Cast(exp.Args{"this": args[0], "to": exp.DataType(exp.Args{"this": dtype})})
+		}
+		return exp.Anonymous(exp.Args{"this": name, "expressions": args})
+	}
 }
 
 func snowflakeStaticTemporal(e exp.Expression) bool {
@@ -772,8 +1005,43 @@ func snowflakeBinaryBuilder(kind exp.Kind) func([]exp.Expression) exp.Expression
 func snowflakeDateTruncBuilder(args []exp.Expression) exp.Expression {
 	unit := seqGet(args, 0)
 	this := seqGet(args, 1)
+	isDateUnit := snowflakeIsDateUnit(unit)
 	if this != nil && this.Kind() == exp.KindCast && exp.IsType(asExpression(this.Arg("to")), exp.DTypeDate) {
-		return exp.DateTrunc(exp.Args{"unit": unit, "this": this})
+		trunc := exp.DateTrunc(exp.Args{"unit": unit, "this": this})
+		if !isDateUnit {
+			trunc.Set("input_type_preserved", true)
+		}
+		return trunc
 	}
-	return exp.New(exp.KindTimestampTrunc, exp.Args{"this": this, "unit": unit})
+	trunc := exp.New(exp.KindTimestampTrunc, exp.Args{"this": this, "unit": unit})
+	dtype := exp.DTypeUnknown
+	if this != nil && this.Kind() == exp.KindCast {
+		if to := asExpression(this.Arg("to")); to != nil {
+			dtype, _ = to.Arg("this").(exp.DType)
+		}
+	}
+	if isDateUnit || dtype == exp.DTypeTime || dtype == exp.DTypeTimeTz {
+		trunc.Set("input_type_preserved", true)
+	}
+	return trunc
+}
+
+// snowflakeIsDateUnit reports whether unit is a calendar date part.
+func snowflakeIsDateUnit(unit exp.Expression) bool {
+	if unit == nil {
+		return false
+	}
+	switch strings.ToUpper(unit.Name()) {
+	case "YEAR", "QUARTER", "MONTH", "WEEK", "DAY":
+		return true
+	}
+	return false
+}
+
+// snowflakeShiftBuilder ports _build_bitwise for shifts: Snowflake specifies INT128.
+func snowflakeShiftBuilder(kind exp.Kind) func([]exp.Expression) exp.Expression {
+	return func(args []exp.Expression) exp.Expression {
+		built := exp.New(kind, exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1), "requires_int128": true})
+		return built
+	}
 }

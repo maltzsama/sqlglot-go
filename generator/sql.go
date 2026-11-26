@@ -629,10 +629,71 @@ func (g *Generator) likeSQL(e expressions.Expression) string  { return g.likeSQL
 func (g *Generator) ilikeSQL(e expressions.Expression) string { return g.likeSQLWithOp(e, "ILIKE") }
 
 func (g *Generator) likeSQLWithOp(e expressions.Expression, op string) string {
+	if g.isDialect("duckdb") {
+		if sql, ok := g.likeQuantifierSQL(e, nil); ok {
+			return sql
+		}
+	}
 	if boolValue(e.Arg("negate")) {
 		op = "NOT " + op
 	}
 	return g.binary(e, op)
+}
+
+// likeQuantifierSQL ports generator.py:4539-4566 _like_sql's quantifier expansion
+// (SUPPORTS_LIKE_QUANTIFIERS=false, i.e. DuckDB): LIKE ANY/ALL over a tuple becomes a
+// disjunction/conjunction of individual LIKE predicates.
+func (g *Generator) likeQuantifierSQL(e expressions.Expression, escape expressions.Expression) (string, bool) {
+	rhs := asExpression(e.Arg("expression"))
+	if rhs == nil || (rhs.Kind() != expressions.KindAny && rhs.Kind() != expressions.KindAll) {
+		return "", false
+	}
+	exprs := unnestLikeQuantifier(asExpression(rhs.This()))
+	if len(exprs) == 0 {
+		return "", false
+	}
+	negate := boolValue(e.Arg("negate"))
+	kind := e.Kind()
+	makeLike := func(value expressions.Expression) expressions.Expression {
+		like := expressions.New(kind, expressions.Args{
+			"this": e.This(), "expression": value, "negate": negate,
+		})
+		if escape != nil {
+			like = expressions.Escape(expressions.Args{
+				"this": like, "expression": escape.Arg("expression"),
+			})
+		}
+		return like
+	}
+	var result expressions.Expression = makeLike(exprs[0])
+	connective := expressions.KindOr
+	if rhs.Kind() == expressions.KindAll {
+		connective = expressions.KindAnd
+	}
+	for _, value := range exprs[1:] {
+		prev := result
+		if prev.Kind() == connective {
+			prev = expressions.Paren(expressions.Args{"this": prev})
+		}
+		result = expressions.New(connective, expressions.Args{
+			"this": prev, "expression": makeLike(value),
+		})
+	}
+	return g.gen(result), true
+}
+
+// unnestLikeQuantifier unwraps nested Paren/Tuple nodes into the operand list.
+func unnestLikeQuantifier(e expressions.Expression) []expressions.Expression {
+	if e == nil {
+		return nil
+	}
+	switch e.Kind() {
+	case expressions.KindTuple:
+		return e.Expressions()
+	case expressions.KindParen:
+		return unnestLikeQuantifier(asExpression(e.This()))
+	}
+	return []expressions.Expression{e}
 }
 
 // similarToSQL ports generator.py:4496 similarto_sql. Unlike Like/ILike, SimilarTo has no
@@ -640,9 +701,54 @@ func (g *Generator) likeSQLWithOp(e expressions.Expression, op string) string {
 // Not(SimilarTo(...)) by parseRange, so notSQL renders the NOT prefix instead.
 func (g *Generator) similarToSQL(e expressions.Expression) string { return g.binary(e, "SIMILAR TO") }
 
-// escapeSQL ports generator.py:4411 escape_sql, minus the LIKE-ANY/ALL-quantifier special
-// case (SUPPORTS_LIKE_QUANTIFIERS is not modeled in this port).
-func (g *Generator) escapeSQL(e expressions.Expression) string { return g.binary(e, "ESCAPE") }
+// varMapSQL ports varmap_sql: MAP(keys, values).
+func (g *Generator) varMapSQL(e expressions.Expression) string {
+	return g.funcCall("MAP", []any{e.Arg("keys"), e.Arg("values")}, "(", ")", true)
+}
+
+// decodeCaseSQL is generator.py:6143 decodecase_sql with SUPPORTS_DECODE_CASE=true.
+func (g *Generator) decodeCaseSQL(e expressions.Expression) string {
+	var args []any
+	for _, expr := range e.Expressions() {
+		args = append(args, expr)
+	}
+	return g.funcCall("DECODE", args, "(", ")", true)
+}
+
+// safeDivideSQL ports generator.py:4472-4476 safedivide_sql.
+func (g *Generator) safeDivideSQL(e expressions.Expression) string {
+	n := asExpression(e.This())
+	d := asExpression(e.Arg("expression"))
+	if n != nil && n.Is(expressions.TraitBinary) {
+		n = expressions.Paren(expressions.Args{"this": n})
+	}
+	if d != nil && d.Is(expressions.TraitBinary) {
+		d = expressions.Paren(expressions.Args{"this": d})
+	}
+	return g.gen(expressions.If(expressions.Args{
+		"this":  expressions.NEQ(expressions.Args{"this": d, "expression": expressions.LiteralNumber("0")}),
+		"true":  expressions.Div(expressions.Args{"this": n, "expression": d}),
+		"false": expressions.Null(),
+	}))
+}
+
+// escapeSQL ports generator.py:4411 escape_sql, including the LIKE-ANY/ALL quantifier
+// expansion for dialects without quantifier support (DuckDB).
+func (g *Generator) escapeSQL(e expressions.Expression) string {
+	if g.isDialect("duckdb") {
+		if like := asExpression(e.This()); like != nil &&
+			(like.Kind() == expressions.KindLike || like.Kind() == expressions.KindILike) &&
+			func() bool {
+				rhs := asExpression(like.Arg("expression"))
+				return rhs != nil && (rhs.Kind() == expressions.KindAny || rhs.Kind() == expressions.KindAll)
+			}() {
+			if sql, ok := g.likeQuantifierSQL(like, e); ok {
+				return sql
+			}
+		}
+	}
+	return g.binary(e, "ESCAPE")
+}
 
 func (g *Generator) andSQL(e expressions.Expression) string { return g.connectorSQL(e, "AND", nil) }
 func (g *Generator) orSQL(e expressions.Expression) string  { return g.connectorSQL(e, "OR", nil) }

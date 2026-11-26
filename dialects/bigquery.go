@@ -345,6 +345,33 @@ func bigQueryFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Express
 	out["DATE_DIFF"] = bigQueryBuildDateDiff(exp.KindDateDiff)
 	out["DATE_SUB"] = bigQueryBuildDateDeltaWithInterval(exp.KindDateSub)
 	out["DATE_TRUNC"] = bigQueryBuildDateTrunc
+	// parsers/bigquery.py:105-120: PARSE_DATE/PARSE_DATETIME/PARSE_TIMESTAMP reverse their
+	// (format, value) arguments and default the year to 1970.
+	parseDate := postgresBuildFormattedTimeClass(d, exp.KindStrToDate)
+	out["PARSE_DATE"] = func(args []exp.Expression) exp.Expression {
+		built := parseDate([]exp.Expression{seqGet(args, 1), seqGet(args, 0)})
+		built.Set("default_year", exp.LiteralNumber("1970"))
+		return built
+	}
+	parseDateTime := postgresBuildFormattedTimeClass(d, exp.KindParseDatetime)
+	out["PARSE_DATETIME"] = func(args []exp.Expression) exp.Expression {
+		built := parseDateTime([]exp.Expression{seqGet(args, 1), seqGet(args, 0)})
+		built.Set("default_year", exp.LiteralNumber("1970"))
+		return built
+	}
+	parseTimestamp := postgresBuildFormattedTimeClass(d, exp.KindStrToTime)
+	out["PARSE_TIME"] = func(args []exp.Expression) exp.Expression {
+		built := postgresBuildFormattedTimeClass(d, exp.KindParseTime)([]exp.Expression{seqGet(args, 1), seqGet(args, 0)})
+		return built
+	}
+	out["PARSE_TIMESTAMP"] = func(args []exp.Expression) exp.Expression {
+		built := parseTimestamp([]exp.Expression{seqGet(args, 1), seqGet(args, 0)})
+		built.Set("default_year", exp.LiteralNumber("1970"))
+		if zone := seqGet(args, 2); zone != nil {
+			built.Set("zone", zone)
+		}
+		return built
+	}
 	out["DATETIME"] = bigQueryBuildDatetime
 	out["DATETIME_ADD"] = bigQueryBuildDateDeltaWithInterval(exp.KindDatetimeAdd)
 	out["DATETIME_DIFF"] = bigQueryBuildDateDiff(exp.KindDatetimeDiff)

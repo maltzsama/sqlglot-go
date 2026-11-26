@@ -108,6 +108,12 @@ const (
 	KindZipf                       Kind = kindExtensionBase + iota
 	KindHost                       Kind = kindExtensionBase + iota
 	KindRegDomain                  Kind = kindExtensionBase + iota
+	KindGenerator                  Kind = kindExtensionBase + iota
+	KindTableFromRows              Kind = kindExtensionBase + iota
+	KindArrayRemoveAt              Kind = kindExtensionBase + iota
+	KindPosexplode                 Kind = kindExtensionBase + iota
+	KindGetExtract                 Kind = kindExtensionBase + iota
+	KindStripNullValue             Kind = kindExtensionBase + iota
 )
 
 // GENERATED init
@@ -318,6 +324,7 @@ func init() {
 	className[KindDecodeCase] = "DecodeCase"
 	kindByClassName["DecodeCase"] = KindDecodeCase
 	varLenArgs[KindDecodeCase] = true
+	FunctionByName["DECODE"] = genericFunction(KindDecodeCase)
 	argTypes[KindDecompressBinary] = []argSpec{{"this", true}, {"method", true}}
 	traitsOf[KindDecompressBinary] = TraitCondition | TraitFunc
 	className[KindDecompressBinary] = "DecompressBinary"
@@ -712,4 +719,49 @@ func init() {
 	className[KindRegDomain] = "RegDomain"
 	kindByClassName["RegDomain"] = KindRegDomain
 	FunctionByName["REG_DOMAIN"] = genericFunction(KindRegDomain)
+}
+
+// Generator/TableFromRows (array.py:234, query.py:807) are UDTFs the Snowflake
+// TABLE(GENERATOR(...)) idiom needs; they register through their own init.
+func init() {
+	argTypes[KindGenerator] = []argSpec{{"rowcount", false}, {"timelimit", false}}
+	traitsOf[KindGenerator] = TraitCondition | TraitFunc | TraitUDTF
+	className[KindGenerator] = "Generator"
+	kindByClassName["Generator"] = KindGenerator
+	FunctionByName["GENERATOR"] = genericFunction(KindGenerator)
+
+	argTypes[KindTableFromRows] = []argSpec{{"this", true}, {"alias", false}, {"joins", false}, {"pivots", false}, {"sample", false}}
+	traitsOf[KindTableFromRows] = TraitUDTF | TraitDerivedTable
+	className[KindTableFromRows] = "TableFromRows"
+	kindByClassName["TableFromRows"] = KindTableFromRows
+}
+
+func init() {
+	argTypes[KindArrayRemoveAt] = []argSpec{{"this", true}, {"position", true}}
+	traitsOf[KindArrayRemoveAt] = TraitCondition | TraitFunc
+	className[KindArrayRemoveAt] = "ArrayRemoveAt"
+	kindByClassName["ArrayRemoveAt"] = KindArrayRemoveAt
+	FunctionByName["ARRAY_REMOVE_AT"] = genericFunction(KindArrayRemoveAt)
+
+	argTypes[KindPosexplode] = []argSpec{{"this", true}}
+	traitsOf[KindPosexplode] = TraitCondition | TraitFunc | TraitUDTF | TraitDerivedTable
+	className[KindPosexplode] = "Posexplode"
+	kindByClassName["Posexplode"] = KindPosexplode
+	FunctionByName["POSEXPLODE"] = genericFunction(KindPosexplode)
+}
+
+func init() {
+	argTypes[KindGetExtract] = []argSpec{{"this", true}, {"expression", true}}
+	traitsOf[KindGetExtract] = TraitCondition | TraitFunc
+	className[KindGetExtract] = "GetExtract"
+	kindByClassName["GetExtract"] = KindGetExtract
+	FunctionByName["GET"] = genericFunction(KindGetExtract)
+}
+
+func init() {
+	argTypes[KindStripNullValue] = []argSpec{{"this", true}}
+	traitsOf[KindStripNullValue] = TraitCondition | TraitFunc
+	className[KindStripNullValue] = "StripNullValue"
+	kindByClassName["StripNullValue"] = KindStripNullValue
+	FunctionByName["STRIP_NULL_VALUE"] = genericFunction(KindStripNullValue)
 }

@@ -122,8 +122,9 @@ func quantileLiteral(i, n int) string {
 	return strconv.FormatFloat(float64(i)/float64(n), 'f', -1, 64)
 }
 
-// duckDBArrayRemoveSQL ports remove_from_array_using_filter (dialects/dialect.py:2319) for a
-// non-propagating source: ARRAY_REMOVE(a, x) becomes LIST_FILTER(a, _u -> _u <> x).
+// duckDBArrayRemoveSQL ports remove_from_array_using_filter (dialects/dialect.py:2319-2354):
+// ARRAY_REMOVE(a, x) becomes LIST_FILTER(a, _u -> _u <> x), with a NULL guard when the
+// source dialect propagates NULL removal values and DuckDB does not.
 func duckDBArrayRemoveSQL(g *Generator, e expressions.Expression) string {
 	lambdaID := expressions.ToIdentifier("_u")
 	cond := expressions.NEQ(expressions.Args{"this": lambdaID, "expression": e.Arg("expression")})
@@ -131,7 +132,16 @@ func duckDBArrayRemoveSQL(g *Generator, e expressions.Expression) string {
 		"this":       e.This(),
 		"expression": expressions.Lambda(expressions.Args{"this": cond, "expressions": []expressions.Expression{lambdaID}}),
 	})
-	return g.gen(filter)
+	filterSQL := g.gen(filter)
+	if !truthy(e.Arg("null_propagation")) {
+		return filterSQL
+	}
+	removal := asExpression(e.Arg("expression"))
+	if removal != nil && (removal.Kind() == expressions.KindArray ||
+		(removal.Kind() == expressions.KindLiteral)) {
+		return filterSQL
+	}
+	return "CASE WHEN " + g.gen(removal) + " IS NULL THEN NULL ELSE " + filterSQL + " END"
 }
 
 // duckDBTimeStrToTimeSQL ports timestrtotime_sql (dialects/dialect.py:1769-1786): CAST(this
@@ -184,7 +194,15 @@ func duckDBArrayInsertSQL(g *Generator, e expressions.Expression) string {
 		g.unsupported("ARRAY_INSERT can only be transpiled with a literal position")
 		return g.funcCall("ARRAY_INSERT", []any{this, position, element}, "(", ")", true)
 	}
-	offset, _ := duckDBIntLiteral(asExpression(e.Arg("offset")))
+	offset := 0
+	switch v := e.Arg("offset").(type) {
+	case int:
+		offset = v
+	case float64:
+		offset = int(v)
+	default:
+		offset, _ = duckDBIntLiteral(asExpression(e.Arg("offset")))
+	}
 	if posValue > 0 {
 		posValue -= offset
 	} else if posValue < 0 {

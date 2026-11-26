@@ -126,7 +126,8 @@ func TestHllVarArgs(t *testing.T) {
 // TestConcatWsVarArgs guards the var-len key placement: ConcatWs declares safe/coalesce
 // after its variable-length "expressions" arg (string.py:79-81), so CONCAT_WS('-', x, y)
 // must collect the separator and every operand under "expressions" rather than pushing
-// them into the trailing flag args.
+// them into the trailing flag args. The safe/coalesce flags mirror parser.py:396-401:
+// base is not strict (safe=true) and CONCAT_WS_COALESCE is false.
 func TestConcatWsVarArgs(t *testing.T) {
 	expression := parseOne(t, "CONCAT_WS('-', x, y)")
 	if expression.Kind() != exp.KindConcatWs {
@@ -135,7 +136,10 @@ func TestConcatWsVarArgs(t *testing.T) {
 	if got := len(expression.Expressions()); got != 3 {
 		t.Fatalf("CONCAT_WS expressions count = %d, want 3", got)
 	}
-	if expression.Arg("safe") != nil || expression.Arg("coalesce") != nil {
-		t.Fatalf("CONCAT_WS leaked a positional arg into a flag: safe=%v coalesce=%v", expression.Arg("safe"), expression.Arg("coalesce"))
+	if expression.Arg("safe") != true {
+		t.Fatalf("CONCAT_WS safe = %v, want true (base dialect is not strict)", expression.Arg("safe"))
+	}
+	if expression.Arg("coalesce") != false {
+		t.Fatalf("CONCAT_WS coalesce = %v, want false (base CONCAT_WS_COALESCE)", expression.Arg("coalesce"))
 	}
 }

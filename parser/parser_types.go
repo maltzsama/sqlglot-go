@@ -431,6 +431,13 @@ func (p *Parser) parseTypesBase(checkFunc, schema, allowIdentifiers, withCollati
 				exp.DataTypeParam(exp.Args{"this": exp.LiteralNumber("0")}),
 			}
 		}
+		// parsers/duckdb.py:232 TYPE_CONVERTERS: a bare DECIMAL defaults to (18, 3).
+		if p.dialectIs("duckdb") && dtype == exp.DTypeDecimal && len(expressions) == 0 {
+			expressions = []exp.Expression{
+				exp.DataTypeParam(exp.Args{"this": exp.LiteralNumber("18")}),
+				exp.DataTypeParam(exp.Args{"this": exp.LiteralNumber("3")}),
+			}
+		}
 		// Upstream's scalar branch (parser.py:6429-6433) always sets nested=nested
 		// (True or False), unlike the TZ/interval/null branches which omit it. The
 		// shared dataTypeArgs helper drops a false nested, so build args inline here

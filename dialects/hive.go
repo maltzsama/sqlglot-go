@@ -12,6 +12,8 @@ import (
 // mappings, INITCAP behavior, and typing metadata remain intentionally out of scope.
 func Hive() *Dialect {
 	d := Base()
+	// dialects/hive.py CONCAT_WS_COALESCE = True.
+	d.ConcatWsCoalesce = true
 	d.Name = "hive"
 	// generators/hive.py PAD_FILL_PATTERN_IS_REQUIRED = True.
 	d.PadFillPatternIsRequired = true

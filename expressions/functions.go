@@ -100,6 +100,8 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"ARRAY_MIN":       genericFunction(KindArrayMin),
 	"ARRAY_TO_STRING": genericFunction(KindArrayToString),
 	"ARRAY_REMOVE":    genericFunction(KindArrayRemove),
+	"ARRAY_APPEND":    genericFunction(KindArrayAppend),
+	"ARRAY_PREPEND":   genericFunction(KindArrayPrepend),
 	"DAYOFWEEK_ISO":   genericFunction(KindDayOfWeekIso),
 	"PARSE_JSON":      genericFunction(KindParseJSON),
 	"JSON_FORMAT":     genericFunction(KindJSONFormat),
@@ -297,7 +299,9 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	// parser.py:374). Base has no TimeToStr generator transform, so it renders back verbatim
 	// through functionFallbackSQL (`TIME_TO_STR(...)`); only dialects carrying a TIME_MAPPING
 	// override generation (generators/postgres.py:399 -> TO_CHAR).
-	"TIME_TO_STR": genericFunction(KindTimeToStr),
+	"TIME_TO_STR":  genericFunction(KindTimeToStr),
+	"TIME_TO_UNIX": genericFunction(KindTimeToUnix),
+	"TO_ARRAY":     genericFunction(KindToArray),
 	// dialect-funcs cluster singleton base entries (parity_gaps.txt gaps 114/160; verified
 	// against parser.py:121-129,394 - both are truly base-scope upstream, not per-dialect,
 	// unlike DATABASE()/SCHEMA() below which parsers/mysql.py:134-135 register mysql-only
@@ -449,12 +453,16 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"TO_MAP":                   genericFunction(KindToMap),
 	"TRANSLATE":                genericFunction(KindTranslate),
 	"TS_OR_DI_TO_DI":           genericFunction(KindTsOrDiToDi),
+	"TS_OR_DS_ADD":             genericFunction(KindTsOrDsAdd),
+	"TS_OR_DS_DIFF":            genericFunction(KindTsOrDsDiff),
 	"TS_OR_DS_TO_DATE":         genericFunction(KindTsOrDsToDate),
 	"TS_OR_DS_TO_DATE_STR":     genericFunction(KindTsOrDsToDateStr),
 	"UNIX_DATE":                genericFunction(KindUnixDate),
 	"UNIX_MICROS":              genericFunction(KindUnixMicros),
 	"UNIX_MILLIS":              genericFunction(KindUnixMillis),
 	"UNIX_SECONDS":             genericFunction(KindUnixSeconds),
+	"UNIX_TO_STR":              genericFunction(KindUnixToStr),
+	"UNIX_TO_TIME":             genericFunction(KindUnixToTime),
 	"UNIX_TO_TIME_STR":         genericFunction(KindUnixToTimeStr),
 	"WEEK":                     genericFunction(KindWeek),
 	"YEAR_OF_WEEK":             genericFunction(KindYearOfWeek),

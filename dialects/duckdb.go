@@ -35,6 +35,8 @@ func DuckDB() *Dialect {
 	d.LimitFetch = "LIMIT"
 	// generators/duckdb.py NVL2_SUPPORTED = False.
 	d.Nvl2Supported = false
+	// generators/duckdb.py:1580 SUPPORTS_WINDOW_EXCLUDE = True.
+	d.SupportsWindowExclude = true
 
 	// dialects/duckdb.py:20-39 class attributes.
 	d.NullOrdering = "nulls_are_last"
