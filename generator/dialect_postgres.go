@@ -64,6 +64,9 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindTimeToStr: postgresTimeToStr,
 		// generators/postgres.py:392 exp.StrToTime: TO_TIMESTAMP(this, format_time(e)).
 		exp.KindStrToTime: postgresStrToTime,
+		exp.KindStrToDate: func(g *Generator, e exp.Expression) string {
+			return postgresFormattedTime(g, e, "TO_DATE", e.This())
+		},
 		// generators/postgres.py:407/415 exp.UnixToTime — the TRANSFORMS dict lists the key
 		// twice and Python keeps the last entry, so the scale-aware _unix_to_time_sql
 		// (generators/postgres.py:201-212) is the effective transform, not the plain

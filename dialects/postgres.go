@@ -114,6 +114,8 @@ func Postgres() *Dialect {
 		// entry, but upstream builds the structured nodes (the redshift TO_TIMESTAMP
 		// annotation in tests/dialects/test_redshift.py depends on StrToTime).
 		"TO_TIMESTAMP": postgresBuildToTimestamp(d),
+		// parsers/postgres.py:123 "TO_DATE": build_formatted_time(exp.StrToDate).
+		"TO_DATE": postgresBuildFormattedTimeClass(d, exp.KindStrToDate),
 		// parsers/postgres.py:112 "GET_BIT": builds Getbit with zero_is_msb=True (Postgres
 		// indexes the most significant bit 0), which the postgres getbit_sql generator
 		// renders back as GET_BIT(...). Redshift drops this entry (parsers/redshift.py:35).

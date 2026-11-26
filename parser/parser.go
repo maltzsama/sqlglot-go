@@ -1280,7 +1280,18 @@ func (p *Parser) parseInto() exp.Expression {
 	unlogged := p.matchTextSeq("UNLOGGED")
 	p.match(tokens.TABLE)
 	tbl := p.parseTable(true, false, nil, false, false, false, false)
-	return p.expression(exp.Into(exp.Args{"this": tbl, "temporary": temp, "unlogged": unlogged}), nil, nil)
+	into := p.expression(exp.Into(exp.Args{"this": tbl, "temporary": temp, "unlogged": unlogged}), nil, nil)
+	// parsers/tsql.py:695-705: promote a `#temp` identifier's temporary flag onto the Into.
+	if p.dialectIs("tsql") && into != nil {
+		if table := into.Find(exp.KindTable); table != nil {
+			ident := asExpr(table.This())
+			temporary, _ := ident.Arg("temporary").(bool)
+			if ident != nil && temporary {
+				into.Set("temporary", true)
+			}
+		}
+	}
+	return into
 }
 
 // parseIntoOutfile parses the MySQL `INTO OUTFILE '/path' [CHARACTER SET cs] [{FIELDS|COLUMNS} …]

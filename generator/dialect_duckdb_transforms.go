@@ -113,8 +113,17 @@ func init() {
 		expressions.KindSHA1Digest:             duckDBSHA1DigestSQL,
 		expressions.KindSHA2Digest:             duckDBSHA2DigestSQL,
 		expressions.KindXor:                    duckDBXorSQL,
+		expressions.KindHexString:              duckDBHexStringSQL,
 		expressions.KindLength:                 duckDBLengthSQL,
 		expressions.KindCheckJson:              duckDBCheckJSONSQL,
+		expressions.KindCount:                  duckDBCountSQL,
+		expressions.KindArrayAny:               duckDBArrayAnySQL,
+		expressions.KindAnonymous:              duckDBAnonymousSQL,
+		expressions.KindInt64: func(g *Generator, e expressions.Expression) string {
+			return g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": expressions.DTypeBigInt.IntoExpr(nil)}))
+		},
+		expressions.KindFormat:       duckDBFormatSQL,
+		expressions.KindRespectNulls: duckDBRespectNullsSQL,
 		expressions.KindApproxDistinct: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("APPROX_COUNT_DISTINCT", []any{e.This()}, "(", ")", true)
 		},
@@ -140,6 +149,8 @@ func init() {
 		expressions.KindPosexplode:                    duckDBPosexplodeSQL,
 		expressions.KindDecodeCase:                    duckDBDecodeCaseSQL,
 		expressions.KindSeq1:                          duckDBSeqSQL(1),
+		expressions.KindRegrValx:                      duckDBRegrValSQL("this", "expression"),
+		expressions.KindRegrValy:                      duckDBRegrValSQL("expression", "this"),
 		expressions.KindSeq2:                          duckDBSeqSQL(2),
 		expressions.KindSeq4:                          duckDBSeqSQL(4),
 		expressions.KindSeq8:                          duckDBSeqSQL(8),
@@ -218,11 +229,34 @@ func duckDBBitShiftSQL(op string) func(*Generator, expressions.Expression) strin
 	return func(g *Generator, e expressions.Expression) string {
 		this := e.This()
 		expr := asExpression(e.Arg("expression"))
-		if truthy(e.Arg("requires_int128")) && !duckDBIsBinaryArg(e) {
+		// generators/duckdb.py:1275-1305 _bitshift_sql: binary operands shift through BIT, and
+		// the result is cast back to BLOB because DuckDB shifts do not accept BLOB directly.
+		resultIsBlob := duckDBIsBinaryArg(e)
+		if resultIsBlob {
+			this = duckDBCastToBit(this)
+		} else if truthy(e.Arg("requires_int128")) {
 			this = expressions.Cast(expressions.Args{"this": this, "to": expressions.DTypeInt128.IntoExpr(nil)})
 		}
-		return g.gen(this) + " " + op + " " + g.gen(expr)
+		sql := g.gen(this) + " " + op + " " + g.gen(expr)
+		// DuckDB parses `a << b | c << d` as `(a << b | c) << d`, so a shift nested under any
+		// binary operator is parenthesized (generators/duckdb.py:1297-1299).
+		if parent := e.Parent(); parent != nil && parent.Is(expressions.TraitBinary) {
+			sql = "(" + sql + ")"
+		}
+		if resultIsBlob {
+			sql = "CAST(" + sql + " AS BLOB)"
+		}
+		return sql
 	}
+}
+
+// duckDBCastToBit ports _cast_to_bit (generators/duckdb.py:1038-1045): a binary operand (a hex
+// string becomes UNHEX first) is cast to BIT for the shift.
+func duckDBCastToBit(arg expressions.Expression) expressions.Expression {
+	if arg != nil && arg.Kind() == expressions.KindHexString {
+		arg = expressions.Unhex(expressions.Args{"this": expressions.LiteralString(arg.Text("this"))})
+	}
+	return expressions.Cast(expressions.Args{"this": arg, "to": expressions.DTypeBit.IntoExpr(nil)})
 }
 
 // duckDBIsBinaryArg reports whether the expression's operand is binary/bit typed.
@@ -416,7 +450,9 @@ func duckDBNoDatetimeSQL(g *Generator, e expressions.Expression) string {
 	}
 	if expr != nil {
 		this = expressions.Cast(expressions.Args{"this": this, "to": expressions.DTypeDate.IntoExpr(nil)})
-		expr = expressions.Cast(expressions.Args{"this": expr, "to": expressions.DTypeTime.IntoExpr(nil)})
+		if dtype, ok := castResultDType(expr); !ok || (dtype != expressions.DTypeTime && dtype != expressions.DTypeTimeTz) {
+			expr = expressions.Cast(expressions.Args{"this": expr, "to": expressions.DTypeTime.IntoExpr(nil)})
+		}
 		return g.gen(expressions.Cast(expressions.Args{
 			"this": expressions.Add(expressions.Args{"this": this, "expression": expr}),
 			"to":   expressions.DTypeTimestamp.IntoExpr(nil),
@@ -443,7 +479,13 @@ func duckDBNoTimeSQL(g *Generator, e expressions.Expression) string {
 func duckDBNoTimestampSQL(g *Generator, e expressions.Expression) string {
 	zone := asExpression(e.Arg("zone"))
 	if zone == nil {
-		return g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": expressions.DTypeTimestamp.IntoExpr(nil)}))
+		target := expressions.DTypeTimestamp
+		// BigQuery's TIMESTAMP is TIMESTAMPTZ: its node carries with_tz, which annotate_types
+		// turns into the annotated target type (dialects/dialect.py:1712-1720).
+		if truthy(e.Arg("with_tz")) {
+			target = expressions.DTypeTimestampTz
+		}
+		return g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": target.IntoExpr(nil)}))
 	}
 	if duckDBIsTimezoneName(zone.Name()) {
 		return g.gen(expressions.AtTimeZone(expressions.Args{
@@ -773,9 +815,10 @@ func duckDBMapCatSQL(g *Generator, e expressions.Expression) string {
 
 // duckDBMapContainsKeySQL ports mapcontainskey_sql (generators/duckdb.py:3857-3860).
 func duckDBMapContainsKeySQL(g *Generator, e expressions.Expression) string {
+	// generators/duckdb.py:3853-3857: the map is in the key arg, the searched key in this.
 	return g.funcCall("ARRAY_CONTAINS", []any{
-		duckDBAnon("MAP_KEYS", e.This()),
-		e.Arg("expression"),
+		duckDBAnon("MAP_KEYS", asExpression(e.Arg("key"))),
+		e.This(),
 	}, "(", ")", true)
 }
 
@@ -952,15 +995,63 @@ func duckDBConcatWsSQL(g *Generator, e expressions.Expression) string {
 func duckDBSplitPartSQL(g *Generator, e expressions.Expression) string {
 	delimiter := asExpression(e.Arg("delimiter"))
 	partIndex := asExpression(e.Arg("part_index"))
-	if partIndex != nil && partIndex.IsInt() && partIndex.Name() == "0" && truthy(e.Arg("part_index_zero_as_one")) {
-		partIndex = expressions.LiteralNumber("1")
+	if delimiter == nil || partIndex == nil {
+		return g.functionFallbackSQL(e)
 	}
-	return g.funcCall("SPLIT_PART", []any{e.This(), delimiter, partIndex}, "(", ")", true)
+	if truthy(e.Arg("part_index_zero_as_one")) {
+		// generators/duckdb.py:4036-4044: Snowflake treats 0 and 1 as the first element.
+		partIndex = expressions.Paren(expressions.Args{"this": expressions.Case(expressions.Args{
+			"ifs": []expressions.Expression{expressions.If(expressions.Args{
+				"this": expressions.EQ(expressions.Args{"this": partIndex.Copy(), "expression": expressions.LiteralNumber("0")}),
+				"true": expressions.LiteralNumber("1"),
+			})},
+			"default": partIndex,
+		})})
+	}
+	base := duckDBAnon("SPLIT_PART", e.This(), delimiter, partIndex)
+	if !truthy(e.Arg("empty_delimiter_returns_whole")) {
+		return g.gen(base)
+	}
+	emptyCase := expressions.Paren(expressions.Args{"this": expressions.Case(expressions.Args{
+		"ifs": []expressions.Expression{expressions.If(expressions.Args{
+			"this": duckDBConnectorExpr(expressions.KindOr, []expressions.Expression{
+				expressions.EQ(expressions.Args{"this": partIndex.Copy(), "expression": expressions.LiteralNumber("1")}),
+				expressions.EQ(expressions.Args{"this": partIndex.Copy(), "expression": expressions.LiteralNumber("-1")}),
+			}),
+			"true": e.This(),
+		})},
+		"default": expressions.LiteralString(""),
+	})})
+	return g.gen(expressions.Case(expressions.Args{
+		"ifs": []expressions.Expression{expressions.If(expressions.Args{
+			"this": expressions.EQ(expressions.Args{"this": delimiter.Copy(), "expression": expressions.LiteralString("")}),
+			"true": emptyCase,
+		})},
+		"default": base,
+	}))
 }
 
 // duckDBSplitSQL ports split_sql (generators/duckdb.py:4011-4029).
 func duckDBSplitSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("STR_SPLIT", []any{e.This(), e.Arg("expression")}, "(", ")", true)
+	delimiter := asExpression(e.Arg("expression"))
+	base := duckDBAnon("STR_SPLIT", e.This(), delimiter)
+	var ifs []expressions.Expression
+	if truthy(e.Arg("null_returns_null")) {
+		ifs = append(ifs, expressions.If(expressions.Args{
+			"this": expressions.Is(expressions.Args{"this": delimiter.Copy(), "expression": expressions.Null()}),
+			"true": expressions.Null(),
+		}))
+	}
+	if truthy(e.Arg("empty_delimiter_returns_whole")) {
+		ifs = append(ifs, expressions.If(expressions.Args{
+			"this": expressions.EQ(expressions.Args{"this": delimiter.Copy(), "expression": expressions.LiteralString("")}),
+			"true": expressions.Array(expressions.Args{"expressions": []expressions.Expression{e.This()}}),
+		}))
+	}
+	if len(ifs) == 0 {
+		return g.gen(base)
+	}
+	return g.gen(expressions.Case(expressions.Args{"ifs": ifs, "default": base}))
 }
 
 // duckDBStrtokToArraySQL ports strtoktoarray_sql (generators/duckdb.py:4658-4675).
@@ -1002,6 +1093,11 @@ func duckDBStrtokToArraySQL(g *Generator, e expressions.Expression) string {
 // duckDBTruncSQL ports trunc_sql (generators/duckdb.py:2867-2876).
 func duckDBTruncSQL(g *Generator, e expressions.Expression) string {
 	decimals := asExpression(e.Arg("decimals"))
+	// generators/duckdb.py:2867-2876: only a fractions-supporting source casts the decimals to
+	// INT, and only when the value is not already an integer type.
+	if truthy(e.Arg("fractions_supported")) && decimals != nil && !decimals.IsInt() {
+		decimals = expressions.Cast(expressions.Args{"this": decimals, "to": expressions.DTypeInt.IntoExpr(nil)})
+	}
 	return g.funcCall("TRUNC", []any{e.This(), decimals}, "(", ")", true)
 }
 
@@ -1746,7 +1842,7 @@ func duckDBArrayRemoveAtSQL(g *Generator, e expressions.Expression) string {
 	default:
 		arrLen := expressions.Length(expressions.Args{"this": this})
 		sliceEnd := expressions.Add(expressions.Args{"this": arrLen.Copy(), "expression": expressions.LiteralNumber(duckDBIntStr(pos))})
-		sliceStart := expressions.Add(expressions.Args{"this": arrLen.Copy(), "expression": expressions.LiteralNumber(duckDBIntStr(pos + 2))})
+		sliceStart := expressions.Add(expressions.Args{"this": sliceEnd.Copy(), "expression": expressions.LiteralNumber("2")})
 		left := expressions.Bracket(expressions.Args{
 			"this": this,
 			"expressions": []expressions.Expression{expressions.Slice(expressions.Args{
@@ -1888,13 +1984,13 @@ func duckDBSeqSQL(byteWidth int) func(*Generator, expressions.Expression) string
 		if e.This() != nil && e.This().Name() == "1" {
 			halfVals := map[int]string{1: "128", 2: "32768", 4: "2147483648", 8: "9223372036854775808"}
 			half := expressions.LiteralNumber(halfVals[byteWidth])
-			return g.gen(expressions.Case(expressions.Args{
+			return g.gen(expressions.Paren(expressions.Args{"this": expressions.Case(expressions.Args{
 				"ifs": []expressions.Expression{expressions.If(expressions.Args{
 					"this": expressions.GTE(expressions.Args{"this": mod.Copy(), "expression": half}),
 					"true": expressions.Sub(expressions.Args{"this": mod.Copy(), "expression": maxVal}),
 				})},
 				"default": mod,
-			}))
+			})}))
 		}
 		return g.gen(mod)
 	}
@@ -1950,7 +2046,7 @@ func duckDBTimeFromPartsSQL(g *Generator, e expressions.Expression) string {
 		if nano != nil {
 			sec = expressions.Add(expressions.Args{
 				"this":       sec,
-				"expression": expressions.Div(expressions.Args{"this": nano, "expression": expressions.LiteralNumber("1000000000.0")}),
+				"expression": expressions.Paren(expressions.Args{"this": expressions.Div(expressions.Args{"this": nano, "expression": expressions.LiteralNumber("1000000000.0")})}),
 			})
 		}
 		return g.funcCall("MAKE_TIME", []any{hour, minute, sec}, "(", ")", true)
@@ -1968,7 +2064,7 @@ func duckDBTimeFromPartsSQL(g *Generator, e expressions.Expression) string {
 	if nano != nil {
 		sec = expressions.Add(expressions.Args{
 			"this":       sec,
-			"expression": expressions.Div(expressions.Args{"this": nano, "expression": expressions.LiteralNumber("1000000000.0")}),
+			"expression": expressions.Paren(expressions.Args{"this": expressions.Div(expressions.Args{"this": nano, "expression": expressions.LiteralNumber("1000000000.0")})}),
 		})
 	}
 	hoursMinutes := expressions.Add(expressions.Args{
@@ -2123,18 +2219,15 @@ func duckDBGetExtractSQL(g *Generator, e expressions.Expression) string {
 		}
 	}
 	if this != nil && this.Kind() == expressions.KindArray {
-		index := expr
-		if expr != nil && expr.IsInt() {
-			if v, err := strconv.Atoi(expr.Name()); err == nil {
-				index = expressions.LiteralNumber(strconv.Itoa(v + 1))
-			}
-		}
+		// The Bracket renderer applies DuckDB's 1-based offset; keep the source index as-is.
 		return g.gen(expressions.Bracket(expressions.Args{
 			"this":        this,
-			"expressions": []expressions.Expression{index},
+			"expressions": []expressions.Expression{expr},
 		}))
 	}
-	return g.gen(expressions.JSONExtract(expressions.Args{"this": this, "expression": expr}))
+	// generator.py:6187-6200: a non-container argument extracts through a JSON path built
+	// with the dialect's own path syntax (`GET(v, 'field')` -> `v -> '$.field'`).
+	return g.gen(expressions.JSONExtract(expressions.Args{"this": this, "expression": g.dialect.ToJSONPath(expr)}))
 }
 
 // duckDBFilterSQL ports filter_sql (generators/duckdb.py:4754-4758) for CORR.
@@ -2342,6 +2435,7 @@ func duckDBRegexpInstrSQL(g *Generator, e expressions.Expression) string {
 	}
 	option := asExpression(e.Arg("option"))
 	params := asExpression(e.Arg("parameters"))
+	nullPattern := pattern
 
 	if flags := duckDBValidateRegexpFlags(g, params, "ims"); flags != "" {
 		pattern = expressions.Concat(expressions.Args{"expressions": []expressions.Expression{
@@ -2395,7 +2489,7 @@ func duckDBRegexpInstrSQL(g *Generator, e expressions.Expression) string {
 		})
 	}
 	var nullChecks []expressions.Expression
-	for _, arg := range []expressions.Expression{e.This(), pattern, position, origOcc, option, params} {
+	for _, arg := range []expressions.Expression{e.This(), nullPattern, position, origOcc, option, params} {
 		if arg != nil {
 			nullChecks = append(nullChecks, expressions.Is(expressions.Args{"this": arg.Copy(), "expression": expressions.Null()}))
 		}
@@ -2616,4 +2710,142 @@ func timestampFromPartsArgs(e expressions.Expression) []expressions.Expression {
 		}
 	}
 	return args
+}
+
+// duckDBHexStringSQL ports the DuckDB hexstring_sql override (generators/duckdb.py:4421-4425),
+// which passes binary_function_repr="UNHEX": a binary-typed hex literal transpiles to UNHEX.
+func duckDBHexStringSQL(g *Generator, e expressions.Expression) string {
+	this := e.Text("this")
+	if truthy(e.Arg("is_integer")) {
+		return parseIntBaseToDecimalString(this, 16)
+	}
+	return "UNHEX('" + this + "')"
+}
+
+// duckDBRespectNullsSQL ports respectnulls_sql (generators/duckdb.py:4091-4097): only the
+// general-purpose window functions accept the modifier; everything else drops it.
+func duckDBRespectNullsSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.This())
+	if this != nil {
+		switch this.Kind() {
+		case expressions.KindFirstValue, expressions.KindLag, expressions.KindLastValue,
+			expressions.KindLead, expressions.KindNthValue:
+			return g.respectNullsSQL(e)
+		}
+	}
+	g.unsupported("RESPECT NULLS is not supported for non-window functions.")
+	return g.gen(this)
+}
+
+// duckDBRegrValSQL ports _regr_val_sql (generators/duckdb.py:1360-1408): NULL when the check
+// argument is NULL, otherwise the other argument, with a typed NULL.
+func duckDBRegrValSQL(checkKey, returnKey string) func(*Generator, expressions.Expression) string {
+	return func(g *Generator, e expressions.Expression) string {
+		check := asExpression(e.Arg(checkKey))
+		ret := asExpression(e.Arg(returnKey))
+		if ret == nil {
+			return g.functionFallbackSQL(e)
+		}
+		dtype := expressions.DTypeDouble
+		if resultType, ok := castResultDType(ret); ok && resultType != expressions.DTypeUnknown {
+			dtype = resultType
+		}
+		return g.gen(expressions.If(expressions.Args{
+			"this":  expressions.Is(expressions.Args{"this": check, "expression": expressions.Null()}),
+			"true":  expressions.Cast(expressions.Args{"this": expressions.Null(), "to": dtype.IntoExpr(nil)}),
+			"false": ret,
+		}))
+	}
+}
+
+// duckDBFormatSQL ports format_sql (generators/duckdb.py:4415-4419): a lone %s placeholder
+// becomes DuckDB's positional {} format.
+func duckDBFormatSQL(g *Generator, e expressions.Expression) string {
+	if strings.EqualFold(e.Text("this"), "%s") && len(e.Expressions()) == 1 {
+		return "FORMAT('{}', " + g.gen(e.Expressions()[0]) + ")"
+	}
+	return g.functionFallbackSQL(e)
+}
+
+// duckDBAnonymousSQL handles the upstream DuckDB TRANSFORMS entries whose node our parser keeps
+// as a plain Anonymous call (the parser-side builders are not ported for every dialect), plus
+// the Snowflake helpers that are only reachable through this generic form.
+func duckDBAnonymousSQL(g *Generator, e expressions.Expression) string {
+	name := strings.ToUpper(e.Text("this"))
+	args := e.Expressions()
+	switch name {
+	case "ARRAY_SORT":
+		// generators/duckdb.py:544-546: DuckDB's ARRAY_SORT has no comparator argument.
+		if len(args) == 0 {
+			return g.anonymousSQL(e)
+		}
+		return g.funcCall("ARRAY_SORT", []any{args[0]}, "(", ")", true)
+	case "ARRAY_ANY":
+		if len(args) != 2 {
+			return g.anonymousSQL(e)
+		}
+		arr := g.gen(args[0])
+		return "(ARRAY_LENGTH(" + arr + ") = 0 OR ARRAY_LENGTH(LIST_FILTER(" + arr + ", " + g.gen(args[1]) + ")) <> 0)"
+	case "IS_ARRAY":
+		if len(args) == 0 {
+			return g.anonymousSQL(e)
+		}
+		return "JSON_TYPE(" + g.gen(args[0]) + ") = 'ARRAY'"
+	case "JSONB_EXISTS":
+		if len(args) != 2 {
+			return g.anonymousSQL(e)
+		}
+		return "JSON_EXISTS(" + g.gen(args[0]) + ", " + g.gen(g.dialect.ToJSONPath(args[1])) + ")"
+	case "JSONB_OBJECT_AGG", "JSON_OBJECT_AGG":
+		return g.funcCall("JSON_GROUP_OBJECT", listToAny(args), "(", ")", true)
+	case "OBJECT_INSERT":
+		// generators/duckdb.py:3834-3847: OBJECT_INSERT(obj, key, value) is STRUCT_INSERT with
+		// a `key := value` pair; an empty object becomes STRUCT_PACK.
+		if len(args) != 3 {
+			return g.anonymousSQL(e)
+		}
+		key := asExpression(args[1])
+		value := g.gen(args[2])
+		keyName := ""
+		if key != nil {
+			keyName = key.Name()
+		}
+		pair := keyName + " := " + value
+		if inner := asExpression(args[0]); inner != nil &&
+			(inner.Kind() == expressions.KindStruct || inner.Kind() == expressions.KindStarMap) && len(inner.Expressions()) == 0 {
+			return "STRUCT_PACK(" + pair + ")"
+		}
+		return "STRUCT_INSERT(" + g.gen(args[0]) + ", " + pair + ")"
+	}
+	return g.anonymousSQL(e)
+}
+
+// duckDBArrayAnySQL ports the ARRAY_ANY TRANSFORMS entry (generators/duckdb.py): an empty array
+// is vacuously true, otherwise some element must match the predicate.
+func duckDBArrayAnySQL(g *Generator, e expressions.Expression) string {
+	this := e.This()
+	pred := asExpression(e.Arg("expression"))
+	arr := g.gen(this)
+	return "(ARRAY_LENGTH(" + arr + ") = 0 OR ARRAY_LENGTH(LIST_FILTER(" + arr + ", " + g.gen(pred) + ")) <> 0)"
+}
+
+// duckDBCountSQL ports the DuckDB MULTI_ARG_DISTINCT=False behavior for COUNT: a multi-argument
+// DISTINCT becomes a null-guarded tuple so DuckDB counts distinct combinations.
+func duckDBCountSQL(g *Generator, e expressions.Expression) string {
+	distinct := asExpression(e.This())
+	if distinct == nil || distinct.Kind() != expressions.KindDistinct || len(distinct.Expressions()) <= 1 {
+		return g.functionFallbackSQL(e)
+	}
+	whens := make([]expressions.Expression, 0, len(distinct.Expressions()))
+	for _, arg := range distinct.Expressions() {
+		whens = append(whens, expressions.If(expressions.Args{
+			"this": expressions.Is(expressions.Args{"this": arg, "expression": expressions.Null()}),
+			"true": expressions.Null(),
+		}))
+	}
+	caseExpr := expressions.Case(expressions.Args{
+		"ifs":     whens,
+		"default": expressions.Tuple(expressions.Args{"expressions": distinct.Expressions()}),
+	})
+	return "COUNT(DISTINCT " + g.gen(caseExpr) + ")"
 }

@@ -57,6 +57,8 @@ func init() {
 	dispatch[expressions.KindILike] = (*Generator).ilikeSQL
 	dispatch[expressions.KindNextValueFor] = (*Generator).nextValueForSQL
 	dispatch[expressions.KindConvertTimezone] = (*Generator).convertTimezoneSQL
+	dispatch[expressions.KindFromTimeZone] = (*Generator).fromTimeZoneSQL
+	dispatch[expressions.KindConvert] = (*Generator).convertSQL
 	dispatch[expressions.KindNvl2] = (*Generator).nvl2SQL
 	dispatch[expressions.KindQueryBand] = (*Generator).queryBandSQL
 	dispatch[expressions.KindTranslateCharacters] = (*Generator).translateCharactersSQL

@@ -270,7 +270,12 @@ func (g *Generator) tsOrDsToDateSQL(e expressions.Expression) string {
 		if mapped, ok := dialects.FormatTime(strings.Trim(g.dialect.TimeFormat, "'"), g.dialect.TimeMapping); ok {
 			defaultTimestamp = mapped
 		}
-		if formatName == "%Y-%m-%d" || formatName == defaultTimestamp {
+		// The Hive-family time mapping marks case-sensitive parts with a trailing "strict"
+		// (dialects/hive.go:410-413); strip it before comparing against the dialect
+		// DATE_FORMAT / TIME_FORMAT, as generator.py:5202-5220 compares the real format.
+		comparable := strings.NewReplacer("%mstrict", "%m", "%dstrict", "%d", "%Hstrict", "%H",
+			"%Istrict", "%I", "%Mstrict", "%M", "%Sstrict", "%S").Replace(formatName)
+		if comparable == "%Y-%m-%d" || comparable == defaultTimestamp {
 			format = nil
 		}
 	}

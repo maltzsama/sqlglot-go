@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -62,10 +63,16 @@ func init() {
 		expressions.KindCollateProperty:       propertyLocationUnsupported,
 		expressions.KindRowFormatProperty:     propertyLocationUnsupported,
 		expressions.KindExternalProperty:      propertyLocationUnsupported,
+		expressions.KindProperty:              propertyLocationUnsupported,
+		expressions.KindSchemaCommentProperty: propertyLocationUnsupported,
 	})
 
 	handlers := map[expressions.Kind]func(*Generator, expressions.Expression) string{
 		expressions.KindAnyValue: duckDBAnyValueSQL,
+		expressions.KindAlter: func(g *Generator, e expressions.Expression) string {
+			e.Set("iceberg", false)
+			return g.alterSQL(e)
+		},
 		expressions.KindCommentColumnConstraint: func(g *Generator, _ expressions.Expression) string {
 			return ""
 		},
@@ -464,14 +471,25 @@ func duckDBArrayConcatSQL(g *Generator, e expressions.Expression) string {
 // duckDBArrayContainsSQL ports _array_contains_sql (generators/duckdb.py:549-562): with
 // check_null, a NULL needle is handled by comparing the array's full and non-NULL counts.
 func duckDBArrayContainsSQL(g *Generator, e expressions.Expression) string {
-	this := g.sqlKey(e, "this")
-	expr := g.sqlKey(e, "expression")
-	funcSQL := "ARRAY_CONTAINS(" + this + ", " + expr + ")"
+	this := asExpression(e.Arg("this"))
+	expr := asExpression(e.Arg("expression"))
+	funcSQL := "ARRAY_CONTAINS(" + g.gen(this) + ", " + g.gen(expr) + ")"
 	if !truthy(e.Arg("check_null")) {
 		return funcSQL
 	}
-	return "IF(" + expr + " IS NULL, NULLIF(ARRAY_LENGTH(" + this + ") <> LIST_COUNT(" + this +
-		"), FALSE), " + funcSQL + ")"
+	// generators/duckdb.py:547-558: exp.If renders through case_sql as CASE WHEN.
+	checkNull := expressions.Nullif(expressions.Args{
+		"this": expressions.NEQ(expressions.Args{
+			"this":       expressions.ArraySize(expressions.Args{"this": this}),
+			"expression": expressions.Anonymous(expressions.Args{"this": "LIST_COUNT", "expressions": []expressions.Expression{this}}),
+		}),
+		"expression": expressions.Boolean(expressions.Args{"this": false}),
+	})
+	return g.gen(expressions.If(expressions.Args{
+		"this":  expressions.Is(expressions.Args{"this": expr, "expression": expressions.Null()}),
+		"true":  checkNull,
+		"false": expressions.Anonymous(expressions.Args{"this": "ARRAY_CONTAINS", "expressions": []expressions.Expression{this, expr}}),
+	}))
 }
 
 // duckDBArrayOverlapsSQL ports _array_overlaps_sql (generators/duckdb.py:565-606). The
@@ -755,8 +773,9 @@ func duckDBEncodeDecodeSQL(name string) func(*Generator, expressions.Expression)
 // epoch forms.
 func duckDBUnixToTimeSQL(g *Generator, e expressions.Expression) string {
 	result := duckDBUnixToTimeBaseSQL(g, e)
+	// generators/duckdb.py:848-877: only a naive timestamp target gets the UTC zone tag.
 	if target := asExpression(e.Arg("target_type")); target != nil {
-		if dtype, ok := target.Arg("this").(expressions.DType); ok && (dtype == expressions.DTypeTimestampLtz || dtype == expressions.DTypeTimestampTz) {
+		if dtype, ok := target.Arg("this").(expressions.DType); ok && (dtype == expressions.DTypeTimestamp || dtype == expressions.DTypeTimestampNtz) {
 			return result + " AT TIME ZONE 'UTC'"
 		}
 	}
@@ -934,6 +953,9 @@ func duckDBTimestampFromPartsSQL(g *Generator, e expressions.Expression) string 
 		}
 		e.Set("sec", sec)
 	}
+	// Upstream pops milli/nano into sec, so they no longer appear as positional arguments.
+	e.Set("milli", nil)
+	e.Set("nano", nil)
 	return g.funcCall("MAKE_TIMESTAMP", g.fallbackArgs(e), "(", ")", true)
 }
 
@@ -1114,6 +1136,14 @@ func duckDBNumberExceeds(text, bound string) bool {
 func duckDBCompareDecimal(a, b string) int {
 	ai, aerr := strconv.ParseFloat(a, 64)
 	bi, berr := strconv.ParseFloat(b, 64)
+	// A decimal literal too large for float64 (e.g. BIGDECIMAL(1e1000000)) parses to +Inf
+	// with ErrRange; it still exceeds every bound DuckDB accepts.
+	if math.IsInf(ai, 1) {
+		return 1
+	}
+	if math.IsInf(ai, -1) {
+		return -1
+	}
 	if aerr != nil || berr != nil {
 		return 0
 	}

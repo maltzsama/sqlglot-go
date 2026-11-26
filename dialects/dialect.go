@@ -746,6 +746,10 @@ type Dialect struct {
 	RlikeFullMatch bool
 	// MapIntervalUnits maps an interval unit through DATE_PART_MAPPING (snowflake W -> WEEK).
 	MapIntervalUnits bool
+	// IntervalUnwrappedLiteralsOnly narrows the interval-value forms that render without
+	// parentheses to literals and already-parenthesized expressions (DuckDB's
+	// UNWRAPPED_INTERVAL_VALUES, generators/duckdb.py:1936).
+	IntervalUnwrappedLiteralsOnly bool
 	// JSONKeyValuePairSep ports JSON_KEY_VALUE_PAIR_SEP (base ":"; bigquery/mysql/snowflake/...
 	// ","): the separator jsonkeyvalue_sql emits between a JSON object key and value.
 	JSONKeyValuePairSep string

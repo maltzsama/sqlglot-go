@@ -45,6 +45,13 @@ func dialectFunction(d *dialects.Dialect, name string) func([]exp.Expression) ex
 	if fn, ok := d.Functions[name]; ok {
 		return fn
 	}
+	// parser.py:376-381: a dialect whose ARRAY_AGG_INCLUDES_NULLS is None (Hive/Spark) marks
+	// the aggregate as excluding NULLs, which the generator renders as a FILTER when present.
+	if name == "ARRAY_AGG" && d.ArrayAggIncludesNulls != nil && !*d.ArrayAggIncludesNulls {
+		return func(args []exp.Expression) exp.Expression {
+			return exp.New(exp.KindArrayAgg, exp.Args{"this": seqGet(args, 0), "nulls_excluded": true})
+		}
+	}
 	if d.RemovedFunctions[name] {
 		return nil
 	}

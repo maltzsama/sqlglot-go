@@ -696,7 +696,43 @@ func (p *Parser) parseBracket(this exp.Expression) exp.Expression {
 	if p.dialect.Name == "clickhouse" {
 		return p.parseClickhouseBracket(this)
 	}
-	return p.parseBracketBase(this)
+	bracket := p.parseBracketBase(this)
+	// parsers/bigquery.py:579-601 _parse_bracket: OFFSET/ORDINAL/SAFE_* become the Bracket's
+	// offset/safe args around the plain index.
+	if p.dialectIs("bigquery") {
+		return bigQueryBracketOffsets(bracket, this)
+	}
+	return bracket
+}
+
+// bigQueryBracketOffsets ports the BigQuery _parse_bracket post-process
+// (parsers/bigquery.py:586-600).
+func bigQueryBracketOffsets(bracket exp.Expression, original exp.Expression) exp.Expression {
+	if bracket == nil || bracket == original || bracket.Kind() != exp.KindBracket {
+		return bracket
+	}
+	offsets := map[string]struct {
+		offset int
+		safe   bool
+	}{
+		"OFFSET":       {0, false},
+		"ORDINAL":      {1, false},
+		"SAFE_OFFSET":  {0, true},
+		"SAFE_ORDINAL": {1, true},
+	}
+	for _, index := range bracket.Expressions() {
+		name := strings.ToUpper(index.Name())
+		args := index.Expressions()
+		info, ok := offsets[name]
+		if !ok || len(args) == 0 {
+			// Upstream breaks on the first non-offset element (e.g. a slice).
+			break
+		}
+		bracket.Set("offset", info.offset)
+		bracket.Set("safe", info.safe)
+		index.Replace(args[0])
+	}
+	return bracket
 }
 
 func (p *Parser) parseBracketBase(this exp.Expression) exp.Expression {
@@ -729,10 +765,30 @@ func (p *Parser) parseBracketBase(this exp.Expression) exp.Expression {
 		// "array"/"list" would be misread the same way upstream misreads it.
 		this = p.buildArrayConstructor(ctorKind, expressions, bracketKind)
 	} else {
+		// parser.py:7994-7996: normalize the index to the base (zero-based) offset so the
+		// generator can re-apply the write dialect's own offset.
+		expressions = applyBracketIndexOffset(expressions, -p.dialect.IndexOffset)
 		this = p.expression(exp.Bracket(exp.Args{"this": this, "expressions": expressions}), nil, this.PopComments())
 	}
 	p.addComments(this)
 	return p.parseBracket(this)
+}
+
+// applyBracketIndexOffset mirrors apply_index_offset (expressions/builders.py:1100-1131): a
+// single integer-literal index is shifted by offset; a slice or expression is left alone.
+func applyBracketIndexOffset(expressions []exp.Expression, offset int) []exp.Expression {
+	if offset == 0 || len(expressions) != 1 {
+		return expressions
+	}
+	index := expressions[0]
+	if index == nil || index.Kind() != exp.KindLiteral || !index.IsInt() {
+		return expressions
+	}
+	value, ok := index.ToPy().(int64)
+	if !ok {
+		return expressions
+	}
+	return []exp.Expression{exp.LiteralNumber(fmt.Sprintf("%d", value+int64(offset)))}
 }
 
 // kvToPropEQ ports _kv_to_prop_eq (parser.py:7308-7333) with parse_map=False.

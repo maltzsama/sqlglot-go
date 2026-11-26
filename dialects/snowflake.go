@@ -504,6 +504,10 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	// defaults its alias columns to FLATTEN_COLUMNS.
 	out["FLATTEN"] = exp.FromArgListFunc(exp.KindExplode)
 
+	// parsers/snowflake.py:630-635: TRUNC/TRUNCATE build a numeric Trunc that records that
+	// fractional digits are supported (DuckDB later casts the decimals to INT).
+	out["TRUNC"] = snowflakeTruncBuilder
+	out["TRUNCATE"] = snowflakeTruncBuilder
 	out["DATE_TRUNC"] = snowflakeDateTruncBuilder
 	out["DATETRUNC"] = snowflakeDateTruncBuilder
 	out["DATEADD"] = func(args []exp.Expression) exp.Expression {
@@ -608,6 +612,29 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 			"true": exp.Null(), "false": value,
 		})
 	}
+	// parsers/snowflake.py:570-571 + 232-247 _build_regexp_extract: the position form records
+	// that an out-of-range position returns NULL (REGEXP_EXTRACT_POSITION_OVERFLOW_RETURNS_NULL).
+	regexpExtract := func(kind exp.Kind) func([]exp.Expression) exp.Expression {
+		return func(args []exp.Expression) exp.Expression {
+			m := exp.Args{
+				"this":       seqGet(args, 0),
+				"expression": seqGet(args, 1),
+				"position":   seqGet(args, 2),
+				"occurrence": seqGet(args, 3),
+				"parameters": seqGet(args, 4),
+				"group":      seqGet(args, 5),
+			}
+			if m["group"] == nil {
+				m["group"] = exp.LiteralNumber("0")
+			}
+			if kind == exp.KindRegexpExtract {
+				m["null_if_pos_overflow"] = d.RegexpExtractPositionOverflowReturnsNull
+			}
+			return exp.New(kind, m)
+		}
+	}
+	out["REGEXP_SUBSTR"] = regexpExtract(exp.KindRegexpExtract)
+	out["REGEXP_SUBSTR_ALL"] = regexpExtract(exp.KindRegexpExtractAll)
 	out["GET_PATH"] = func(args []exp.Expression) exp.Expression {
 		return exp.JSONExtract(exp.Args{
 			"this":          seqGet(args, 0),
@@ -702,7 +729,16 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return exp.StrtokToArray(exp.Args{"this": seqGet(args, 0), "expression": delimiter})
 	}
 	out["GET"] = exp.FromArgListFunc(exp.KindGetExtract)
-	out["SPLIT"] = exp.FromArgListFunc(exp.KindSplit)
+	// parsers/snowflake.py:587-592: Snowflake SPLIT propagates a NULL delimiter as NULL and
+	// returns the whole string as one element for an empty delimiter.
+	out["SPLIT"] = func(args []exp.Expression) exp.Expression {
+		return exp.New(exp.KindSplit, exp.Args{
+			"this":                          seqGet(args, 0),
+			"expression":                    seqGet(args, 1),
+			"null_returns_null":             true,
+			"empty_delimiter_returns_whole": true,
+		})
+	}
 	for name, kind := range map[string]exp.Kind{"LIKE": exp.KindLike, "ILIKE": exp.KindILike} {
 		out[name] = func(args []exp.Expression) exp.Expression {
 			like := exp.New(kind, exp.Args{
@@ -723,7 +759,7 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 		return exp.FromArgList(exp.KindTimestampFromParts, args)
 	}
 	for _, name := range []string{
-		"TIMESTAMPFROMPARTS", "TIMESTAMPNTZFROMPARTS",
+		"TIMESTAMPFROMPARTS", "TIMESTAMP_FROM_PARTS", "TIMESTAMPNTZFROMPARTS",
 		"TIMESTAMP_NTZ_FROM_PARTS",
 	} {
 		out[name] = timestampFromParts
@@ -1048,4 +1084,14 @@ func snowflakeShiftBuilder(kind exp.Kind) func([]exp.Expression) exp.Expression 
 		built := exp.New(kind, exp.Args{"this": seqGet(args, 0), "expression": seqGet(args, 1), "requires_int128": true})
 		return built
 	}
+}
+
+// snowflakeTruncBuilder ports parsers/snowflake.py:630-635: the numeric TRUNC form records
+// fractions_supported so DuckDB casts a non-integer decimals argument to INT.
+func snowflakeTruncBuilder(args []exp.Expression) exp.Expression {
+	trunc := exp.New(exp.KindTrunc, exp.Args{"this": seqGet(args, 0), "decimals": seqGet(args, 1)})
+	if len(args) > 1 {
+		trunc.Set("fractions_supported", true)
+	}
+	return trunc
 }
