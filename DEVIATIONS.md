@@ -161,7 +161,9 @@ Upstream renders the NULL guard of a NULL-skipping CONCAT_WS as `arg IS NULL` wi
 unwrapped, so `CONCAT_WS(',', NOT TRUE, 'x')` becomes `NOT TRUE IS NULL`. Trino parses that as
 `NOT (TRUE IS NULL)`, which is TRUE, so the guard wrongly returns NULL for a non-NULL argument. The
 port wraps a compound argument in parentheses: `(NOT TRUE) IS NULL`. Applies to dialects with
-CONCAT_WS_COALESCE (Trino, Postgres, DuckDB, Hive, T-SQL, ...). `generator/concat_ws.go`;
+the shared CONCAT_WS renderer (`generator/concat_ws.go`). Hive and DuckDB dispatch to their own
+handlers and keep the upstream unwrapped form, so they still carry the same guard issue and are a
+known open point; `generator/concat_ws.go`;
 test `concat_ws_guard_test.go`.
 
 ### 1.19 Athena folds quoted identifiers
