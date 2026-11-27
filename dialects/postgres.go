@@ -98,6 +98,14 @@ func Postgres() *Dialect {
 	// override needed - see the default className fallback) gets these two spellings here.
 	// "LENGTH" itself is left unregistered: it already round-trips correctly as Anonymous.
 	d.Functions = map[string]func([]exp.Expression) exp.Expression{
+		// Postgres ARRAY_PREPEND(element, array) normalizes to ArrayPrepend(array, element).
+		"GEN_RANDOM_UUID": exp.FromArgListFunc(exp.KindUuid),
+		"ARRAY_PREPEND": func(args []exp.Expression) exp.Expression {
+			return exp.ArrayPrepend(exp.Args{
+				"this":       hiveSeqGet(args, 1),
+				"expression": hiveSeqGet(args, 0),
+			})
+		},
 		"CHAR_LENGTH":      exp.FromArgListFunc(exp.KindLength),
 		"CHARACTER_LENGTH": exp.FromArgListFunc(exp.KindLength),
 		// parsers/postgres.py:120 "NOW": exp.CurrentTimestamp.from_arg_list. Materialize and

@@ -3453,3 +3453,27 @@ func fromISO8601Cast(dtype expressions.DType) func(*Generator, expressions.Expre
 		}))
 	}
 }
+
+// starMapSQL ports starmap_sql for the base dialect: STRICT pairs become aliased STRUCT
+// fields (STRUCT(value AS key, ...)).
+func (g *Generator) starMapSQL(e expressions.Expression) string {
+	items := e.Expressions()
+	parts := make([]string, 0, len(items)/2)
+	for i := 0; i+1 < len(items); i += 2 {
+		key := asExpression(items[i])
+		value := asExpression(items[i+1])
+		if value == nil {
+			continue
+		}
+		alias := key
+		if key != nil && key.IsString() {
+			alias = expressions.ToIdentifier(key.Name(), false)
+		}
+		if alias == nil {
+			parts = append(parts, g.gen(value))
+			continue
+		}
+		parts = append(parts, g.gen(expressions.AliasExpr(value.Copy(), alias.Name(), false)))
+	}
+	return "STRUCT(" + strings.Join(parts, ", ") + ")"
+}

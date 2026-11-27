@@ -1,6 +1,10 @@
 package generator
 
-import "github.com/maltzsama/sqlglot-go/expressions"
+import (
+	"strings"
+
+	"github.com/maltzsama/sqlglot-go/expressions"
+)
 
 // dispatch is declared with an empty-map var initializer (rather than left nil and only
 // ever assigned inside init()) so it's guaranteed to be a valid, non-nil map as soon as
@@ -62,6 +66,17 @@ func init() {
 	dispatch[expressions.KindToNumber] = (*Generator).toNumberSQL
 	dispatch[expressions.KindSpace] = (*Generator).spaceSQL
 	dispatch[expressions.KindAnyValue] = (*Generator).anyValueSQL
+	dispatch[expressions.KindJSONStripNulls] = func(g *Generator, e expressions.Expression) string {
+		return g.funcCall("JSON_STRIP_NULLS", g.fallbackArgs(e), "(", ")", true)
+	}
+	dispatch[expressions.KindStarMap] = (*Generator).starMapSQL
+	dispatch[expressions.KindTimestampTrunc] = func(g *Generator, e expressions.Expression) string {
+		unit := asExpression(e.Arg("unit"))
+		if unit != nil && (unit.Kind() == expressions.KindLiteral || unit.Kind() == expressions.KindVar || unit.Kind() == expressions.KindColumn) {
+			unit = expressions.Var(expressions.Args{"this": strings.ToUpper(unit.Name())})
+		}
+		return g.funcCall("TIMESTAMP_TRUNC", []any{e.This(), unit, e.Arg("zone")}, "(", ")", true)
+	}
 	dispatch[expressions.KindFromISO8601Date] = fromISO8601Cast(expressions.DTypeDate)
 	dispatch[expressions.KindFromISO8601Timestamp] = fromISO8601Cast(expressions.DTypeTimestampTz)
 	dispatch[expressions.KindFromISO8601TimestampNanos] = fromISO8601Cast(expressions.DTypeTimestampTz)

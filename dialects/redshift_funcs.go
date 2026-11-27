@@ -67,13 +67,14 @@ func redshiftFunctions() map[string]func([]exp.Expression) exp.Expression {
 				"return_type": exp.DTypeTimestamp.IntoExpr(nil),
 			})
 		},
-		"CONVERT_TIMEZONE": buildConvertTimezone("UTC"),
-		"DATEADD":          redshiftBuildDateDelta(exp.KindTsOrDsAdd),
-		"DATE_ADD":         redshiftBuildDateDelta(exp.KindTsOrDsAdd),
-		"DATEDIFF":         redshiftBuildDateDelta(exp.KindTsOrDsDiff),
-		"DATE_DIFF":        redshiftBuildDateDelta(exp.KindTsOrDsDiff),
-		"GETDATE":          exp.FromArgListFunc(exp.KindCurrentTimestamp),
-		"LISTAGG":          exp.FromArgListFunc(exp.KindGroupConcat),
+		"CONVERT_TIMEZONE":  buildConvertTimezone("UTC"),
+		"DATEADD":           redshiftBuildDateDelta(exp.KindTsOrDsAdd),
+		"DATE_ADD":          redshiftBuildDateDelta(exp.KindTsOrDsAdd),
+		"DATEDIFF":          redshiftBuildDateDelta(exp.KindTsOrDsDiff),
+		"DATE_DIFF":         redshiftBuildDateDelta(exp.KindTsOrDsDiff),
+		"FARMFINGERPRINT64": exp.FromArgListFunc(exp.KindFarmFingerprint),
+		"GETDATE":           exp.FromArgListFunc(exp.KindCurrentTimestamp),
+		"LISTAGG":           exp.FromArgListFunc(exp.KindGroupConcat),
 		"REGEXP_SUBSTR": func(args []exp.Expression) exp.Expression {
 			return exp.RegexpExtract(exp.Args{
 				"this":       seqGet(args, 0),

@@ -2,6 +2,7 @@ package dialects
 
 import (
 	exp "github.com/maltzsama/sqlglot-go/expressions"
+	"strconv"
 )
 
 // clickhouse_funcs.go ports the FUNCTIONS overlay in
@@ -145,7 +146,49 @@ func clickhouseSHA2(length int) func([]exp.Expression) exp.Expression {
 // the rendered argument order.
 func clickhouseFunctions() map[string]func([]exp.Expression) exp.Expression {
 	fns := map[string]func([]exp.Expression) exp.Expression{
-		"ANY":           clickhouseFromArgList(exp.KindAnyValue),
+		"ANY": clickhouseFromArgList(exp.KindAnyValue),
+		"LEFTPAD": func(args []exp.Expression) exp.Expression {
+			return exp.New(exp.KindPad, exp.Args{
+				"this":         clickhouseSeqGet(args, 0),
+				"expression":   clickhouseSeqGet(args, 1),
+				"fill_pattern": clickhouseSeqGet(args, 2),
+				"is_left":      true,
+			})
+		},
+		"RIGHTPAD": func(args []exp.Expression) exp.Expression {
+			return exp.New(exp.KindPad, exp.Args{
+				"this":         clickhouseSeqGet(args, 0),
+				"expression":   clickhouseSeqGet(args, 1),
+				"fill_pattern": clickhouseSeqGet(args, 2),
+				"is_left":      false,
+			})
+		},
+		"FARMFINGERPRINT64": clickhouseFromArgList(exp.KindFarmFingerprint),
+		"JSONEXTRACTSTRING": func(args []exp.Expression) exp.Expression {
+			parts := []exp.Expression{exp.JSONPathRoot(exp.Args{})}
+			for _, arg := range args[1:] {
+				if arg == nil {
+					continue
+				}
+				if arg.Kind() == exp.KindLiteral && !arg.IsString() {
+					if n, err := strconv.Atoi(arg.Name()); err == nil {
+						parts = append(parts, exp.JSONPathSubscript(exp.Args{
+							"this": exp.LiteralNumber(strconv.Itoa(n - 1)),
+						}))
+						continue
+					}
+				}
+				if arg.Kind() != exp.KindLiteral {
+					// A dynamic path segment stays a raw JSONExtractString call.
+					return exp.Anonymous(exp.Args{"this": "JSONExtractString", "expressions": args})
+				}
+				parts = append(parts, exp.JSONPathKey(exp.Args{"this": arg}))
+			}
+			return exp.JSONExtractScalar(exp.Args{
+				"this":       clickhouseSeqGet(args, 0),
+				"expression": exp.JSONPath(exp.Args{"expressions": parts}),
+			})
+		},
 		"ARRAYCOMPACT":  clickhouseFromArgList(exp.KindArrayCompact),
 		"ARRAYCONCAT":   clickhouseFromArgList(exp.KindArrayConcat),
 		"ARRAYDISTINCT": clickhouseFromArgList(exp.KindArrayDistinct),
