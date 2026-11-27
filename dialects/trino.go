@@ -12,6 +12,8 @@ import (
 // a separately constructed dialect.
 func Trino() *Dialect {
 	d := Presto()
+	// dialects/trino.py:12 CONCAT_WS_COALESCE = True.
+	d.ConcatWsCoalesce = true
 	d.Name = "trino"
 	d.SupportsUserDefinedTypes = false
 	d.Functions["VERSION"] = exp.FromArgListFunc(exp.KindCurrentVersion)

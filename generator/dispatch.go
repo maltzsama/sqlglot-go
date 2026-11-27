@@ -174,6 +174,7 @@ func init() {
 	dispatch[expressions.KindDataType] = (*Generator).dataTypeSQL
 	dispatch[expressions.KindDataTypeParam] = (*Generator).dataTypeParamSQL
 	dispatch[expressions.KindCast] = (*Generator).castSQL
+	dispatch[expressions.KindConcatWs] = (*Generator).concatWsSQL
 	dispatch[expressions.KindTryCast] = (*Generator).tryCastSQL
 	dispatch[expressions.KindExtract] = (*Generator).extractSQL
 	dispatch[expressions.KindTrim] = (*Generator).trimSQL
