@@ -75,7 +75,7 @@ func init() {
 		exp.KindQuantile:          prestoCall("APPROX_PERCENTILE", "this", "quantile"),
 		exp.KindLastDay:           prestoCall("LAST_DAY_OF_MONTH", "this"),
 		exp.KindGenerateSeries:    prestoGenerateSeriesSQL,
-		exp.KindGenerateDateArray: prestoGenerateSeriesSQL,
+		exp.KindGenerateDateArray: sequenceSQL,
 		// generators/presto.py:393 exp.StrPosition: strposition_sql(supports_occurrence=True).
 		exp.KindStrPosition: strPositionTranspileSQL("STRPOS", false, true),
 		// generators/presto.py:321 exp.ArrayConcat: rename_func("CONCAT").
@@ -111,6 +111,7 @@ func init() {
 		},
 		exp.KindTimeStrToTime: prestoTimeStrToTimeSQL,
 		exp.KindTimeToTimeStr: prestoCast("VARCHAR"),
+		exp.KindStrToUnix:     prestoStrToUnixSQL,
 		exp.KindTimeStrToUnix: func(g *Generator, e exp.Expression) string {
 			return "TO_UNIXTIME(DATE_PARSE(" + g.sqlKey(e, "this") + ", '%Y-%m-%d %T'))"
 		},
@@ -1036,3 +1037,135 @@ var prestoStrictTimeFormat = strings.NewReplacer(
 	"%mstrict", "%m", "%dstrict", "%d", "%Hstrict", "%H",
 	"%Istrict", "%h", "%Mstrict", "%i", "%Sstrict", "%s",
 )
+
+// prestoStrToUnixSQL ports strtounix_sql (generators/presto.py:565-582). TO_UNIXTIME needs a
+// TIMESTAMP, so the input goes through DATE_PARSE, falling back to PARSE_DATETIME (Hive/Joda
+// pattern language) when a time zone makes DATE_PARSE fail.
+func prestoStrToUnixSQL(g *Generator, e exp.Expression) string {
+	this := asExpression(e.This())
+	valueAsText := exp.Cast(exp.Args{"this": this, "to": exp.DTypeText.IntoExpr(nil)})
+	var valueAsTimestamp exp.Expression = this
+	if this.IsString() {
+		valueAsTimestamp = exp.Cast(exp.Args{"this": this, "to": exp.DTypeTimestamp.IntoExpr(nil)})
+	}
+	prestoFormat, hiveFormat := []any{}, []any{}
+	if format := asExpression(e.Arg("format")); format != nil && format.IsString() {
+		prestoFormat = []any{prestoFormatTime(e)}
+		hiveFormat = []any{exp.LiteralString(dialects.HiveFormatTime(format.Name()))}
+	}
+	parseWithoutTZ := g.funcCall("DATE_PARSE", append([]any{valueAsText}, prestoFormat...), "(", ")", true)
+	formatted := g.funcCall("DATE_FORMAT", append([]any{valueAsTimestamp}, prestoFormat...), "(", ")", true)
+	parseWithTZ := g.funcCall("PARSE_DATETIME", append([]any{formatted}, hiveFormat...), "(", ")", true)
+	coalesced := g.funcCall("COALESCE", []any{g.funcCall("TRY", []any{parseWithoutTZ}, "(", ")", true), parseWithTZ}, "(", ")", true)
+	return g.funcCall("TO_UNIXTIME", []any{coalesced}, "(", ")", true)
+}
+
+// sequenceSQL ports sequence_sql (dialects/dialect.py:2396-2441), which Presto uses for
+// GenerateSeries and GenerateDateArray: DATE and TIMESTAMP bounds are cast to the type of the
+// cast operand, and an exclusive end yields an empty array when the step cannot advance.
+func sequenceSQL(g *Generator, e exp.Expression) string {
+	start := asExpression(e.Arg("start"))
+	end := asExpression(e.Arg("end"))
+	step := asExpression(e.Arg("step"))
+	var targetType exp.Expression
+	if start != nil && start.Kind() == exp.KindCast {
+		targetType = asExpression(start.Arg("to"))
+	} else if end != nil && end.Kind() == exp.KindCast {
+		targetType = asExpression(end.Arg("to"))
+	}
+	if start != nil && end != nil {
+		dt, ok := exp.DType(""), false
+		if targetType != nil {
+			dt, ok = targetType.Arg("this").(exp.DType)
+		}
+		if ok && (dt == exp.DTypeDate || dt == exp.DTypeTimestamp) {
+			if start.Kind() == exp.KindCast && asExpression(start.Arg("to")) == targetType {
+				end = exp.Cast(exp.Args{"this": end, "to": targetType})
+			} else {
+				start = exp.Cast(exp.Args{"this": start, "to": targetType})
+			}
+		}
+		if truthy(e.Arg("is_end_exclusive")) {
+			if folded, ok := foldExclusiveSequence(start, end, step); ok {
+				return folded
+			}
+			stepValue := step
+			if stepValue == nil {
+				stepValue = exp.LiteralNumber("1")
+			}
+			end = exp.Paren(exp.Args{"this": exp.Sub(exp.Args{"this": end, "expression": stepValue})})
+			sequenceCall := exp.Anonymous(exp.Args{"this": "SEQUENCE", "expressions": nonNilExprs(start, end, step)})
+			zero := exp.LiteralNumber("0")
+			shouldReturnEmpty := exp.Or(exp.Args{"this": exp.Or(exp.Args{
+				"this": exp.EQ(exp.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
+				"expression": exp.And(exp.Args{
+					"this":       exp.GT(exp.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
+					"expression": exp.GT(exp.Args{"this": start.Copy(), "expression": end.Copy()}),
+				}),
+			}), "expression": exp.And(exp.Args{
+				"this":       exp.LT(exp.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
+				"expression": exp.LT(exp.Args{"this": start.Copy(), "expression": end.Copy()}),
+			})})
+			emptyOrSequence := exp.If(exp.Args{"this": shouldReturnEmpty, "true": exp.Array(exp.Args{"expressions": []exp.Expression{}}), "false": sequenceCall})
+			return g.gen(emptyOrSequence)
+		}
+	}
+	return g.funcCall("SEQUENCE", anyExprs(start, end, step), "(", ")", true)
+}
+
+// nonNilExprs keeps the present operands of a SEQUENCE call.
+func nonNilExprs(items ...exp.Expression) []exp.Expression {
+	var out []exp.Expression
+	for _, item := range items {
+		if item != nil {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+// anyExprs is nonNilExprs in the []any shape funcCall takes.
+func anyExprs(items ...exp.Expression) []any {
+	var out []any
+	for _, item := range items {
+		if item != nil {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+// foldExclusiveSequence is _simplify_unless_literal (generators/presto.py via sequence_sql)
+// for literal integer bounds: the emptiness test and the shortened end are evaluated at
+// transpile time, so the result is an empty array or a SEQUENCE over the adjusted end. Only
+// literal operands fold; anything else keeps the runtime IF.
+func foldExclusiveSequence(start, end, step exp.Expression) (string, bool) {
+	toInt := func(e exp.Expression) (int64, bool) {
+		if e == nil || e.Kind() != exp.KindLiteral || e.IsString() {
+			return 0, false
+		}
+		v, err := strconv.ParseInt(e.Name(), 10, 64)
+		return v, err == nil
+	}
+	s, okS := toInt(start)
+	en, okE := toInt(end)
+	if !okS || !okE {
+		return "", false
+	}
+	st, stepGiven := int64(1), step != nil
+	if stepGiven {
+		v, ok := toInt(step)
+		if !ok {
+			return "", false
+		}
+		st = v
+	}
+	if st == 0 || (st > 0 && s > en) || (st < 0 && s < en) {
+		return "ARRAY[]", true
+	}
+	args := []string{strconv.FormatInt(s, 10), strconv.FormatInt(en-st, 10)}
+	if stepGiven {
+		args = append(args, strconv.FormatInt(st, 10))
+	}
+	return "SEQUENCE(" + strings.Join(args, ", ") + ")", true
+}
