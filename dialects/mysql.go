@@ -166,6 +166,7 @@ func MySQL() *Dialect {
 	// coerce their first argument to a date, including WEEK with an optional mode.
 	d.Functions = map[string]func([]exp.Expression) exp.Expression{
 		"CHAR_LENGTH":      exp.FromArgListFunc(exp.KindLength),
+		"STR_TO_DATE":     mysqlBuildStrToDate,
 		"CHARACTER_LENGTH": exp.FromArgListFunc(exp.KindLength),
 		"CURDATE":          exp.FromArgListFunc(exp.KindCurrentDate),
 		"CURTIME":          exp.FromArgListFunc(exp.KindCurrentTime),
@@ -397,4 +398,42 @@ func mysqlDatePart(kind exp.Kind) func([]exp.Expression) exp.Expression {
 		part.Set("this", exp.TsOrDsToDate(exp.Args{"this": part.This()}))
 		return part
 	}
+}
+
+// mysqlTimeSpecifiers is TIME_SPECIFIERS (parsers/mysql.py:20): the MySQL format codes that
+// carry a time of day.
+const mysqlTimeSpecifiers = "fHhIiklpSsT"
+
+// mysqlBuildStrToDate ports _str_to_date (parsers/mysql.py:36-44): the format is converted
+// through MySQL's TIME_MAPPING, and a format with a time specifier yields StrToTime.
+func mysqlBuildStrToDate(args []exp.Expression) exp.Expression {
+	this := seqGet(args, 0)
+	format := seqGet(args, 1)
+	kind := exp.KindStrToDate
+	var converted exp.Expression
+	if format != nil {
+		if format.IsString() {
+			if forward, ok := FormatTime(format.Name(), mysqlTimeMapping); ok {
+				converted = exp.LiteralString(forward)
+			} else {
+				converted = exp.LiteralString(format.Name())
+			}
+			if hasTimeSpecifier(format.Name()) {
+				kind = exp.KindStrToTime
+			}
+		} else {
+			converted = format
+		}
+	}
+	return exp.New(kind, exp.Args{"this": this, "format": converted})
+}
+
+// hasTimeSpecifier ports _has_time_specifier (parsers/mysql.py:23-34).
+func hasTimeSpecifier(format string) bool {
+	for i := 0; i+1 < len(format); i++ {
+		if format[i] == '%' && strings.ContainsRune(mysqlTimeSpecifiers, rune(format[i+1])) {
+			return true
+		}
+	}
+	return false
 }
