@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"math/big"
 	"slices"
 	"strconv"
 	"strings"
@@ -551,12 +552,23 @@ func foldNumericLiteral(e expressions.Expression) expressions.Expression {
 			return nil
 		}
 		switch e.Kind() {
-		case expressions.KindAdd:
-			return expressions.LiteralNumber(a + b)
-		case expressions.KindSub:
-			return expressions.LiteralNumber(a - b)
-		case expressions.KindMul:
-			return expressions.LiteralNumber(a * b)
+		case expressions.KindAdd, expressions.KindSub, expressions.KindMul:
+			// Compute the exact result and fold only when it fits, so an overflowing literal stays
+			// unfolded as upstream's arbitrary-precision arithmetic leaves it.
+			exact := new(big.Int)
+			x, y := big.NewInt(a), big.NewInt(b)
+			switch e.Kind() {
+			case expressions.KindAdd:
+				exact.Add(x, y)
+			case expressions.KindSub:
+				exact.Sub(x, y)
+			default:
+				exact.Mul(x, y)
+			}
+			if !exact.IsInt64() {
+				return nil
+			}
+			return expressions.LiteralNumber(exact.Int64())
 		case expressions.KindDiv:
 			if b == 0 || a%b != 0 {
 				return nil
