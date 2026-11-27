@@ -131,8 +131,19 @@ func init() {
 			if unit != nil {
 				unitSQL = "'" + strings.ToUpper(unit.Name()) + "'"
 			}
-			value := "CAST(CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP) AS DATE)"
-			return "DATE_ADD(" + unitSQL + ", " + g.sqlKey(e, "expression") + ", " + value + ")"
+			// _ts_or_ds_add_sql + ts_or_ds_add_cast (generators/presto.py:111-114,
+			// dialects/dialect.py:1984-1994): the operand is cast to the node's return
+			// type (DATE by default), going through TIMESTAMP only for a DATE result.
+			returnType := asExpression(e.Arg("return_type"))
+			if returnType == nil {
+				returnType = exp.DTypeDate.IntoExpr(nil)
+			}
+			source := asExpression(e.This())
+			if expIsType(returnType, exp.DTypeDate) {
+				source = exp.Cast(exp.Args{"this": source, "to": exp.DTypeTimestamp.IntoExpr(nil)})
+			}
+			value := exp.Cast(exp.Args{"this": source, "to": returnType})
+			return g.funcCall("DATE_ADD", []any{unitSQL, e.Arg("expression"), value}, "(", ")", true)
 		},
 		exp.KindUnixToStr: func(g *Generator, e exp.Expression) string {
 			return "DATE_FORMAT(FROM_UNIXTIME(" + g.sqlKey(e, "this") + "), " + g.gen(prestoFormatTime(e)) + ")"
