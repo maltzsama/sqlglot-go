@@ -454,6 +454,11 @@ func explodeProjectionToUnnest(selectExpr expressions.Expression, indexOffset in
 
 	for _, selectItem := range selectExpr.Selects() {
 		explode := selectItem.Find(expressions.KindExplode)
+		isPosexplode := false
+		if explode == nil {
+			explode = selectItem.Find(expressions.KindPosexplode)
+			isPosexplode = explode != nil
+		}
 		if explode == nil {
 			continue
 		}
@@ -462,7 +467,22 @@ func explodeProjectionToUnnest(selectExpr expressions.Expression, indexOffset in
 		explodeAlias := ""
 		var explodeAliasIdent expressions.Expression
 		alias := selectItem
-		if selectItem.Kind() == expressions.KindAlias {
+		if selectItem.Kind() == expressions.KindAliases {
+			// exp.Aliases: the first alias is the position and the second the value.
+			aliases := selectItem.Expressions()
+			if len(aliases) >= 2 {
+				posAlias = aliases[0].Name()
+				explodeAlias = aliases[1].Name()
+				explodeAliasIdent = aliases[1]
+			}
+			renamed := expressions.AliasExpr(selectItem.This(), "", false)
+			replaceSelectItem(selectExpr, selectItem, renamed)
+			alias = renamed
+			explode = renamed.Find(expressions.KindPosexplode)
+			if explode == nil {
+				explode = renamed.Find(expressions.KindExplode)
+			}
+		} else if selectItem.Kind() == expressions.KindAlias {
 			// Keep the alias Identifier node: upstream stores it (not just its name) so a
 			// quoted alias such as "MyCol" stays quoted in every rebuilt reference
 			// (transforms.py:437-480).
@@ -478,6 +498,9 @@ func explodeProjectionToUnnest(selectExpr expressions.Expression, indexOffset in
 			replaceSelectItem(selectExpr, selectItem, renamed)
 			alias = renamed
 			explode = renamed.Find(expressions.KindExplode)
+			if explode == nil {
+				explode = renamed.Find(expressions.KindPosexplode)
+			}
 		}
 
 		explodeArg := explode.This()
@@ -490,6 +513,9 @@ func explodeProjectionToUnnest(selectExpr expressions.Expression, indexOffset in
 
 		if explodeAlias == "" {
 			explodeAlias = newName(takenSelectNames, "col")
+			if isPosexplode {
+				posAlias = newName(takenSelectNames, "pos")
+			}
 		}
 		if explodeAliasIdent == nil {
 			explodeAliasIdent = expressions.ToIdentifier(explodeAlias, false)
@@ -525,6 +551,29 @@ func explodeProjectionToUnnest(selectExpr expressions.Expression, indexOffset in
 			}),
 			"true": explodeColumn(),
 		}))
+
+		if isPosexplode {
+			// Insert the position projection right after the exploded value.
+			projections := selectExpr.Expressions()
+			for i, projection := range projections {
+				if projection != alias {
+					continue
+				}
+				posIf := expressions.AliasExpr(expressions.If(expressions.Args{
+					"this": expressions.EQ(expressions.Args{
+						"this":       seriesColumn(),
+						"expression": unnestColumn(posAlias),
+					}),
+					"true": unnestColumn(posAlias),
+				}), posAlias, false)
+				updated := make([]expressions.Expression, 0, len(projections)+1)
+				updated = append(updated, projections[:i+1]...)
+				updated = append(updated, posIf)
+				updated = append(updated, projections[i+1:]...)
+				selectExpr.Set("expressions", updated)
+				break
+			}
+		}
 
 		if len(arrays) == 0 {
 			if selectExpr.Arg("from_") != nil {
