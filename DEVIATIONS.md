@@ -156,6 +156,14 @@ Tests `procedure_block_test.go`, `statement_span_test.go`, `block_stack_fuzz_tes
 
 ---
 
+### 1.20 CONCAT_WS parenthesizes compound NULL checks
+Upstream renders the NULL guard of a NULL-skipping CONCAT_WS as `arg IS NULL` with the argument
+unwrapped, so `CONCAT_WS(',', NOT TRUE, 'x')` becomes `NOT TRUE IS NULL`. Trino parses that as
+`NOT (TRUE IS NULL)`, which is TRUE, so the guard wrongly returns NULL for a non-NULL argument. The
+port wraps a compound argument in parentheses: `(NOT TRUE) IS NULL`. Applies to dialects with
+CONCAT_WS_COALESCE (Trino, Postgres, DuckDB, Hive, T-SQL, ...). `generator/concat_ws.go`;
+test `concat_ws_guard_test.go`.
+
 ### 1.19 Athena folds quoted identifiers
 
 Upstream's outer `Athena` dialect inherits base `LOWERCASE` (unquoted folds, quoted verbatim), an

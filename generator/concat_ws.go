@@ -14,7 +14,12 @@ func (g *Generator) concatWsSQL(e expressions.Expression) string {
 		parts := make([]string, 0, len(all))
 		for _, a := range all {
 			if arg := asExpression(a); arg != nil {
-				parts = append(parts, g.gen(arg)+" IS NULL")
+				rendered := g.gen(arg)
+				// Parenthesize a compound argument: `NOT x IS NULL` parses as NOT (x IS NULL) on Trino.
+				if !atomicConcatArg(arg) {
+					rendered = "(" + rendered + ")"
+				}
+				parts = append(parts, rendered+" IS NULL")
 			}
 		}
 		e.Set("coalesce", true)
@@ -29,4 +34,14 @@ func (g *Generator) concatWsSQL(e expressions.Expression) string {
 	rest.Set("expressions", args[1:])
 	converted := g.convertConcatArgs(rest)
 	return g.funcCall("CONCAT_WS", append([]any{args[0]}, converted...), "(", ")", true)
+}
+
+// atomicConcatArg reports whether an argument renders as one token group, so it needs no
+// parentheses before IS NULL.
+func atomicConcatArg(e expressions.Expression) bool {
+	switch e.Kind() {
+	case expressions.KindColumn, expressions.KindLiteral, expressions.KindIdentifier, expressions.KindParen, expressions.KindNull, expressions.KindVar:
+		return true
+	}
+	return false
 }
