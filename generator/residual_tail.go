@@ -194,7 +194,12 @@ func (g *Generator) convertConcatArgs(e expressions.Expression) []any {
 			}
 		}
 	}
-	if g.dialect.ConcatCoalesce || !boolValue(e.Arg("coalesce")) {
+	// generator.py:3686-3690: CONCAT_WS uses its own dialect flag, every other Concat CONCAT_COALESCE.
+	concatCoalesce := g.dialect.ConcatCoalesce
+	if e.Kind() == expressions.KindConcatWs {
+		concatCoalesce = g.dialect.ConcatWsCoalesce
+	}
+	if concatCoalesce || !boolValue(e.Arg("coalesce")) {
 		return args
 	}
 	wrapped := make([]any, len(args))
