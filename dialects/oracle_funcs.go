@@ -28,7 +28,7 @@ func oracleFormatLiteral(format exp.Expression) exp.Expression {
 // without type annotation: two arguments become TimeToStr, everything else is TO_CHAR.
 func oracleBuildTimeToStrOrToChar(args []exp.Expression) exp.Expression {
 	if len(args) != 2 {
-		return exp.Anonymous(exp.Args{"this": "TO_CHAR", "expressions": args})
+		return exp.FromArgList(exp.KindToChar, args)
 	}
 	return exp.TimeToStr(exp.Args{
 		"this":   oracleSeqGet(args, 0),
