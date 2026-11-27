@@ -977,11 +977,24 @@ func snowflakeTsOrDsAddSQL(g *Generator, e expressions.Expression) string {
 	if returnType == nil {
 		returnType = expressions.DataType(expressions.Args{"this": expressions.DTypeDate})
 	}
-	if dtype, ok := castResultDType(returnType); ok && dtype == expressions.DTypeDate {
+	// ts_or_ds_add_cast (dialects/dialect.py:1984-1994): a DATE result goes through TIMESTAMP
+	// first, then casts to the return type node itself.
+	if dataTypeDType(returnType) == expressions.DTypeDate {
 		this = snowflakeCastTo(this, expressions.DTypeTimestamp)
 	}
-	e.Set("this", snowflakeCastTo(this, dtypeOf(returnType)))
+	e.Set("this", expressions.Cast(expressions.Args{"this": this, "to": returnType}))
 	return snowflakeDateDeltaSQL("DATEADD")(g, e)
+}
+
+// dataTypeDType reads the DType of a DataType node, the shape a return_type argument has.
+func dataTypeDType(dt expressions.Expression) expressions.DType {
+	if dt == nil {
+		return expressions.DTypeUnknown
+	}
+	if dtype, ok := dt.Arg("this").(expressions.DType); ok {
+		return dtype
+	}
+	return expressions.DTypeUnknown
 }
 
 // dtypeOf extracts the DType from a DataType node.
