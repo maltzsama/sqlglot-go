@@ -13,6 +13,8 @@ func Clickhouse() *Dialect {
 	d.Name = "clickhouse"
 	// generators/clickhouse.py: QUERY_HINTS = False.
 	d.NoQueryHints = true
+	// generators/clickhouse.py:183 CAN_IMPLEMENT_ARRAY_ANY = True.
+	d.CanImplementArrayAny = true
 	// generators/clickhouse.py AUTO_REFRESH_BARE_INTERVALS + full interval unit names.
 	d.MapIntervalUnits = true
 	d.DatePartMapping = maps.Clone(d.DatePartMapping)

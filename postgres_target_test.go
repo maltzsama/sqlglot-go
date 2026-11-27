@@ -33,8 +33,10 @@ func TestPostgresTargetTail(t *testing.T) {
 		{"", "SELECT l.id, r.id FROM l, r QUALIFY ROW_NUMBER() OVER () = 1", "SELECT id, _c AS id FROM (SELECT l.id, r.id AS _c, ROW_NUMBER() OVER () AS _w FROM l, r) AS _t WHERE _w = 1"},
 		{"", "SELECT a FROM t QUALIFY ROW_NUMBER() OVER () = 1 AND b > 0", "SELECT a FROM (SELECT a, b, ROW_NUMBER() OVER () AS _w FROM t) AS _t WHERE _w = 1 AND b > 0"},
 		{"", "SELECT x, ROW_NUMBER() OVER (ORDER BY x) AS rn FROM t QUALIFY rn = 2 LIMIT 1", "SELECT x, rn FROM (SELECT x, ROW_NUMBER() OVER (ORDER BY x NULLS FIRST) AS rn FROM t) AS _t WHERE rn = 2 LIMIT 1"},
-		{"tsql", "EOMONTH(GETDATE(), n)", "CAST(DATE_TRUNC('MONTH', CAST(CURRENT_TIMESTAMP AS DATE) + (n) * INTERVAL '1 MONTH') + INTERVAL '1 MONTH' - INTERVAL '1 DAY' AS DATE)"},
-		{"", "DATE_ADD(x, n, 'DAY')", "x + (n) * INTERVAL '1 DAY'"},
+		// Expectations checked against the pinned Python oracle (generators/postgres.py:72):
+		// a non-literal amount renders as INTERVAL '1 <unit>' * <amount>.
+		{"tsql", "EOMONTH(GETDATE(), n)", "CAST(DATE_TRUNC('MONTH', CAST(CURRENT_TIMESTAMP AS DATE) + INTERVAL '1 MONTH' * n) + INTERVAL '1 MONTH' - INTERVAL '1 DAY' AS DATE)"},
+		{"", "DATE_ADD(x, n, 'DAY')", "x + INTERVAL '1 DAY' * n"},
 		{"snowflake", "REGEXP_REPLACE(subject, pattern, replacement)", "REGEXP_REPLACE(subject, pattern, replacement, 'g')"},
 		{"snowflake", "ARRAY_GENERATE_RANGE(0, 3)", "GENERATE_SERIES(0, 3 - 1)"},
 	}

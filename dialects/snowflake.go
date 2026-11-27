@@ -725,7 +725,12 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	}
 	out["STARTSWITH"] = snowflakeBinaryBuilder(exp.KindStartsWith)
 	out["ENDSWITH"] = snowflakeBinaryBuilder(exp.KindEndsWith)
-	out["UUID_STRING"] = exp.FromArgListFunc(exp.KindUuid)
+	// parser.py:469-473 records the source dialect's string UUID type.
+	out["UUID_STRING"] = func(args []exp.Expression) exp.Expression {
+		uuid := exp.FromArgList(exp.KindUuid, args)
+		uuid.Set("is_string", true)
+		return uuid
+	}
 	out["HEX_DECODE_BINARY"] = exp.FromArgListFunc(exp.KindUnhex)
 	out["HEX_ENCODE"] = exp.FromArgListFunc(exp.KindHex)
 	out["STRTOK_TO_ARRAY"] = func(args []exp.Expression) exp.Expression {

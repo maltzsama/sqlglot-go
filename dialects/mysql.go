@@ -162,26 +162,34 @@ func MySQL() *Dialect {
 	// (e.g. `SELECT 1 AS row` -> SELECT 1 AS `row`). See dialects/mysql_reserved.go.
 	d.ReservedKeywords = mysqlReservedKeywords
 
-	// parsers/mysql.py:106-166 FUNCTIONS overlay. The DayOfMonth/DayOfWeek/DayOfYear/
-	// WeekOfYear and LCASE/UCASE spellings are base-scope upstream (auto-registered via each
-	// class's _sql_names), so they now live in the shared exp.FunctionByName singleton (base
-	// and postgres canonicalize them too); MySQL's own spelling is applied by the generator
-	// overrides (generator/dialect_funcs.go). What remains here is genuinely mysql-only:
-	// CURDATE/CURTIME (:110-112) and DATABASE/SCHEMA -> CurrentSchema (:134-135) - verified
-	// against the pinned oracle that base does NOT register those. INSTR -> StrPosition
-	// (parser.py:451) also moved to the shared exp.FunctionByName (base-scope upstream,
-	// verified against parsers/mysql.py which does not register it); mysql still resolves it
-	// there and canonicalizes it to LOCATE on write. TIME_STR_TO_UNIX (temporal.py:472) is
-	// the last base-scope name kept mysql-local (deferred: no fixture exercises the base
-	// rendering it would change).
+	// parsers/mysql.py:106-148 FUNCTIONS overlay. MySQL date-part functions
+	// coerce their first argument to a date, including WEEK with an optional mode.
 	d.Functions = map[string]func([]exp.Expression) exp.Expression{
 		"CHAR_LENGTH":      exp.FromArgListFunc(exp.KindLength),
 		"CHARACTER_LENGTH": exp.FromArgListFunc(exp.KindLength),
 		"CURDATE":          exp.FromArgListFunc(exp.KindCurrentDate),
 		"CURTIME":          exp.FromArgListFunc(exp.KindCurrentTime),
 		"DATABASE":         exp.FromArgListFunc(exp.KindCurrentSchema),
+		"DAY":              mysqlDatePart(exp.KindDay),
+		"DAYOFMONTH":       mysqlDatePart(exp.KindDayOfMonth),
+		"DAYOFWEEK":        mysqlDatePart(exp.KindDayOfWeek),
+		"DAYOFYEAR":        mysqlDatePart(exp.KindDayOfYear),
+		"MONTH":            mysqlDatePart(exp.KindMonth),
 		"SCHEMA":           exp.FromArgListFunc(exp.KindCurrentSchema),
 		"TIME_STR_TO_UNIX": exp.FromArgListFunc(exp.KindTimeStrToUnix),
+		"WEEK":             mysqlDatePart(exp.KindWeek),
+		"WEEKOFYEAR":       mysqlDatePart(exp.KindWeekOfYear),
+		"YEAR":             mysqlDatePart(exp.KindYear),
+		// parsers/mysql.py:122: FROM_UNIXTIME parses with the MySQL time format.
+		"FROM_UNIXTIME": func(args []exp.Expression) exp.Expression {
+			format := hiveSeqGet(args, 1)
+			if format != nil && format.IsString() {
+				if converted, ok := FormatTime(format.Name(), mysqlTimeMapping); ok {
+					format = exp.LiteralString(converted)
+				}
+			}
+			return exp.New(exp.KindUnixToTime, exp.Args{"this": hiveSeqGet(args, 0), "format": format})
+		},
 		// generators/mysql.py:177 exp.NumberToStr: FORMAT(value, decimals).
 		"FORMAT":  exp.FromArgListFunc(exp.KindNumberToStr),
 		"VERSION": exp.FromArgListFunc(exp.KindCurrentVersion),
@@ -381,4 +389,12 @@ func MySQL() *Dialect {
 	delete(cfg.Commands, tokens.SHOW)
 	d.TokenizerConfig = tokens.CompileConfig(cfg)
 	return d
+}
+
+func mysqlDatePart(kind exp.Kind) func([]exp.Expression) exp.Expression {
+	return func(args []exp.Expression) exp.Expression {
+		part := exp.FromArgList(kind, args)
+		part.Set("this", exp.TsOrDsToDate(exp.Args{"this": part.This()}))
+		return part
+	}
 }

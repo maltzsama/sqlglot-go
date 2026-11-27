@@ -59,6 +59,7 @@ func TSQL() *Dialect {
 	d.ReturningEnd = false
 	// parsers/tsql.py:460 SET_OP_MODIFIERS = {"offset"}.
 	d.SetOpModifiers = map[string]bool{"offset": true}
+	d.JSONPathBracketedKeySupported = false
 	d.AlterTableIncludeColumnKeyword = false
 	d.ComputedColumnWithType = false
 	d.TablesampleSeedKeyword = "REPEATABLE"

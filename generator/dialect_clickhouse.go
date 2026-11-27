@@ -3,6 +3,7 @@ package generator
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 )
@@ -96,6 +97,10 @@ func clickhouseJSONExtract(g *Generator, e exp.Expression) string {
 			case exp.KindJSONPathRoot:
 				continue
 			case exp.KindJSONPathKey:
+				if key := asExpression(segment.Arg("this")); key != nil && key.Kind() == exp.KindJSONPathWildcard {
+					g.unsupported("Unsupported JSONPathPart type JSONPathWildcard")
+					continue
+				}
 				args = append(args, exp.LiteralString(segment.Name()))
 			case exp.KindJSONPathSubscript:
 				if index, err := strconv.Atoi(g.sqlKey(segment, "this")); err == nil && index < 0 {
@@ -107,9 +112,11 @@ func clickhouseJSONExtract(g *Generator, e exp.Expression) string {
 					args = append(args, exp.LiteralNumber(strconv.Itoa(index)))
 					continue
 				}
-				args = append(args, segment.Arg("this"))
+				if indexSQL != "" {
+					args = append(args, segment.Arg("this"))
+				}
 			default:
-				args = append(args, exp.LiteralString(g.gen(segment)))
+				g.unsupported("Unsupported JSONPathPart type " + exp.ClassName(segment.Kind()))
 			}
 		}
 		return g.funcCall("JSONExtractString", args, "(", ")", true)
@@ -193,24 +200,8 @@ func clickhouseQuantileSQL(g *Generator, e exp.Expression) string {
 func clickhouseTimeStrToTime(g *Generator, e exp.Expression) string {
 	ts := e.This()
 	tz := asExpression(e.Arg("zone"))
-	if tz != nil && ts != nil && ts.Kind() == exp.KindLiteral {
-		// ClickHouse rejects a UTC offset inside the literal; drop it and pad fractional
-		// seconds to the 6 digits its DateTime64 literal form expects.
-		tsString := strings.TrimSpace(ts.Name())
-		parts := strings.Split(tsString, ".")
-		if len(parts) == 2 {
-			offsetSep := "+"
-			if !strings.Contains(parts[1], "+") {
-				offsetSep = "-"
-			}
-			fracParts := strings.Split(parts[1], offsetSep)
-			fracParts[0] += strings.Repeat("0", maxInt(0, 6-len(fracParts[0])))
-			tsString = parts[0] + "." + fracParts[0]
-			if len(fracParts) > 1 {
-				tsString += offsetSep + fracParts[1]
-			}
-		}
-		ts = exp.LiteralString(tsString)
+	if tz != nil && ts != nil && ts.IsString() {
+		ts = exp.LiteralString(clickhouseLocalTimestamp(strings.TrimSpace(ts.Name())))
 	}
 	dtypeArgs := []exp.Expression{exp.DataTypeParam(exp.Args{"this": exp.LiteralNumber("6")})}
 	if tz != nil {
@@ -220,11 +211,22 @@ func clickhouseTimeStrToTime(g *Generator, e exp.Expression) string {
 	return g.gen(exp.Cast(exp.Args{"this": ts, "to": dtype}))
 }
 
-func maxInt(a, b int) int {
-	if a > b {
-		return a
+// clickhouseLocalTimestamp preserves the literal's wall time because ClickHouse
+// carries the timezone in the DateTime64 type argument.
+func clickhouseLocalTimestamp(value string) string {
+	const localTime = "2006-01-02 15:04:05"
+	normalized := strings.Replace(value, "T", " ", 1)
+	for _, layout := range []string{localTime + "Z07:00", localTime + "Z0700", localTime + "Z07", localTime, "2006-01-02"} {
+		parsed, err := time.Parse(layout, normalized)
+		if err != nil {
+			continue
+		}
+		if parsed.Nanosecond()/1000 != 0 {
+			return parsed.Format(localTime + ".000000")
+		}
+		return parsed.Format(localTime)
 	}
-	return b
+	return value
 }
 
 // clickhouseJSONCastSQL ports _json_cast_sql (generators/clickhouse.py:155-163).
@@ -249,6 +251,7 @@ func clickhouseDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindArrayContains:            clickhouseRename("has"),
 		exp.KindArrayRemove:              clickhouseArrayRemove,
 		exp.KindArrayReverse:             clickhouseRename("arrayReverse"),
+		exp.KindArraySize:                clickhouseArraySize,
 		exp.KindArraySlice:               clickhouseRename("arraySlice"),
 		exp.KindArraySum:                 clickhouseRename("arraySum"),
 		exp.KindArrayMax:                 clickhouseRename("arrayMax"),
@@ -274,10 +277,11 @@ func clickhouseDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindFarmFingerprint:          clickhouseRename("farmFingerprint64"),
 		exp.KindFinal:                    clickhouseFinal,
 		exp.KindIsNan:                    clickhouseRename("isNaN"),
-		exp.KindJarowinklerSimilarity:    clickhouseRename("jaroWinklerSimilarity"),
+		exp.KindJarowinklerSimilarity:    clickhouseJarowinklerSimilarity,
 		exp.KindJSONCast:                 clickhouseJSONCastSQL,
 		exp.KindJSONExtract:              clickhouseJSONExtract,
 		exp.KindJSONExtractScalar:        clickhouseJSONExtract,
+		exp.KindLastDay:                  clickhouseLastDay,
 		exp.KindMedian:                   clickhouseRename("median"),
 		exp.KindNullif:                   clickhouseRename("nullIf"),
 		exp.KindPartitionedByProperty:    func(g *Generator, e exp.Expression) string { return "PARTITION BY " + g.sqlKey(e, "this") },
@@ -332,7 +336,7 @@ func clickhouseDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 			return clickhouseCall(g, "splitByRegexp", asExpression(e.Arg("expression")), e.This(), asExpression(e.Arg("limit")))
 		},
 		exp.KindUnixToTime:            clickhouseUnixToTime,
-		exp.KindTrim:                  (*Generator).trimSQLStandard,
+		exp.KindTrim:                  clickhouseTrim,
 		exp.KindVariance:              clickhouseRename("varSamp"),
 		exp.KindSchemaCommentProperty: func(g *Generator, e exp.Expression) string { return "COMMENT " + g.sqlKey(e, "this") },
 		exp.KindStddev:                clickhouseRename("stddevSamp"),
@@ -400,6 +404,9 @@ func clickhouseDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindSampleProperty:     func(g *Generator, e exp.Expression) string { return "SAMPLE BY " + g.sqlKey(e, "this") },
 
 		// Methods reached through dispatch that ClickHouse overrides.
+		exp.KindExcept:            (*Generator).setOperationsWithWrappedModifiers,
+		exp.KindIntersect:         (*Generator).setOperationsWithWrappedModifiers,
+		exp.KindUnion:             (*Generator).setOperationsWithWrappedModifiers,
 		exp.KindOffset:            clickhouseOffset,
 		exp.KindCTE:               clickhouseCTE,
 		exp.KindValues:            clickhouseValues,
@@ -705,11 +712,49 @@ func clickhouseRegexpILike(g *Generator, e exp.Expression) string {
 
 // clickhouseJSONPathSubscript ports _jsonpathsubscript_sql (generators/clickhouse.py:489-491).
 func clickhouseJSONPathSubscript(g *Generator, e exp.Expression) string {
+	if index := asExpression(e.Arg("this")); index != nil && index.Kind() == exp.KindJSONPathWildcard {
+		g.unsupported("Unsupported JSONPathPart type JSONPathWildcard")
+		return ""
+	}
 	this := g.sqlKey(e, "this")
 	if n, err := strconv.Atoi(this); err == nil {
 		return strconv.Itoa(n + 1)
 	}
 	return this
+}
+
+// clickhouseArraySize ports ARRAY_SIZE_NAME and the dimension check from generator.py:5886-5897.
+func clickhouseArraySize(g *Generator, e exp.Expression) string {
+	if dim := e.Expr(); dim != nil && (!dim.IsInt() || dim.Name() != "1") {
+		g.unsupported("Cannot transpile dimension argument for ARRAY_LENGTH")
+	}
+	return clickhouseCall(g, "LENGTH", e.This())
+}
+
+// clickhouseLastDay ports LAST_DAY_SUPPORTS_DATE_PART = False and generator.py:5232-5240.
+func clickhouseLastDay(g *Generator, e exp.Expression) string {
+	if unit := asExpression(e.Arg("unit")); unit != nil && !strings.EqualFold(unit.Name(), "MONTH") {
+		g.unsupported("Date parts are not supported in LAST_DAY.")
+	}
+	return clickhouseCall(g, "LAST_DAY", e.This())
+}
+
+// clickhouseJarowinklerSimilarity ports jarowinkler_similarity in dialect.py:2647-2657.
+func clickhouseJarowinklerSimilarity(g *Generator, e exp.Expression) string {
+	left, right := e.This(), e.Expr()
+	if boolValue(e.Arg("case_insensitive")) {
+		left = exp.New(exp.KindUpper, exp.Args{"this": left})
+		right = exp.New(exp.KindUpper, exp.Args{"this": right})
+	}
+	return clickhouseCall(g, "jaroWinklerSimilarity", left, right)
+}
+
+// clickhouseTrim ports trim_sql with ClickHouse's default_trim_type="BOTH".
+func clickhouseTrim(g *Generator, e exp.Expression) string {
+	if e.Arg("expression") != nil && e.Arg("position") == nil {
+		e.Set("position", exp.Var(exp.Args{"this": "BOTH"}))
+	}
+	return g.trimSQLStandard(e)
 }
 
 // clickhouseStrToDate ports strtodate_sql (generators/clickhouse.py:463-471).
@@ -902,7 +947,11 @@ func clickhouseNoPivot(g *Generator, e exp.Expression) string {
 
 // clickhouseTimeToStr ports the TimeToStr transform (generators/clickhouse.py:345-350).
 func clickhouseTimeToStr(g *Generator, e exp.Expression) string {
-	return clickhouseCall(g, "formatDateTime", e.This(), asExpression(e.Arg("format")), asExpression(e.Arg("zone")))
+	this := e.This()
+	if this != nil && this.Kind() == exp.KindTsOrDsToTimestamp {
+		this = this.This()
+	}
+	return clickhouseCall(g, "formatDateTime", this, asExpression(e.Arg("format")), asExpression(e.Arg("zone")))
 }
 
 // clickhouseOnClusterTargets ports ON_CLUSTER_TARGETS (generators/clickhouse.py:402-411).

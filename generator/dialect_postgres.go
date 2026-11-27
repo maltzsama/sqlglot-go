@@ -29,7 +29,27 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 			}
 			return g.selectSQL(e)
 		},
-		exp.KindJoin:          postgresJoinSQL,
+		exp.KindJoin:        postgresJoinSQL,
+		exp.KindArrayFilter: postgresArrayFilterSQL,
+		exp.KindUnnest:      postgresUnnestSQL,
+		exp.KindUnicode:     renameFunc("ASCII"),
+		exp.KindSHA2Digest: func(g *Generator, e exp.Expression) string {
+			length := e.Text("length")
+			if length == "" {
+				length = "256"
+			}
+			return g.funcCall("SHA"+length, []any{e.This()}, "(", ")", true)
+		},
+		exp.KindBracket: func(g *Generator, e exp.Expression) string {
+			// generators/postgres.py:480-485: literals need parentheses before subscript.
+			if base := e.This(); base != nil && base.Kind() == exp.KindArray {
+				e.Set("this", exp.Paren(exp.Args{"this": base}))
+			}
+			return g.bracketSQL(e)
+		},
+		exp.KindJSONArrayAgg: func(g *Generator, e exp.Expression) string {
+			return g.funcCall("JSON_AGG", []any{e.This()}, "(", g.sqlKey(e, "order")+")", true)
+		},
 		exp.KindDateDiff:      postgresDateDiffSQL,
 		exp.KindTsOrDsDiff:    postgresDateDiffSQL,
 		exp.KindTimestampDiff: postgresDateDiffSQL,
@@ -102,13 +122,11 @@ func postgresDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		},
 		exp.KindCurrentVersion: func(*Generator, exp.Expression) string { return "VERSION()" },
 		exp.KindGenerateSeries: postgresGenerateSeriesSQL,
-		exp.KindExplode: func(g *Generator, e exp.Expression) string {
-			return g.funcCall("UNNEST", []any{e.This()}, "(", ")", true)
-		},
-		exp.KindDateAdd:       postgresIntervalAddSQL(true),
-		exp.KindTsOrDsAdd:     postgresIntervalAddSQL(true),
-		exp.KindDateSub:       postgresIntervalAddSQL(false),
-		exp.KindRegexpReplace: postgresRegexpReplaceSQL,
+		exp.KindExplode:        renameFunc("UNNEST"),
+		exp.KindDateAdd:        postgresIntervalAddSQL(true),
+		exp.KindTsOrDsAdd:      postgresIntervalAddSQL(true),
+		exp.KindDateSub:        postgresIntervalAddSQL(false),
+		exp.KindRegexpReplace:  postgresRegexpReplaceSQL,
 		exp.KindAnonymous: func(g *Generator, e exp.Expression) string {
 			switch strings.ToUpper(e.Text("this")) {
 			case "TO_NUMBER":
@@ -650,7 +668,10 @@ func postgresLastDaySQL(g *Generator, e exp.Expression) string {
 			if value, ok := numericLiteralName(amount); ok {
 				offset = " + INTERVAL '" + value + " " + unitName + "'"
 			} else {
-				offset = " + (" + g.gen(amount) + ") * INTERVAL '1 " + unitName + "'"
+				// generators/postgres.py:72 builds Interval(1, unit) * amount, so the interval
+				// is the left operand, as the Python oracle renders it.
+				interval := exp.Interval(exp.Args{"this": exp.LiteralNumber("1"), "unit": exp.Var(exp.Args{"this": unitName})})
+				offset = " + " + g.gen(exp.Mul(exp.Args{"this": interval, "expression": amount}))
 			}
 		}
 	}
@@ -659,9 +680,13 @@ func postgresLastDaySQL(g *Generator, e exp.Expression) string {
 
 // postgresRoundSQL wraps a floating operand in DECIMAL before ROUND, matching Postgres types.
 func postgresRoundSQL(g *Generator, e exp.Expression) string {
-	this := asExpression(e.This())
-	if e.Arg("decimals") != nil && this != nil && this.Kind() == exp.KindCast {
-		if dtype, ok := castResultDType(this); ok && (dtype == exp.DTypeDouble || dtype == exp.DTypeFloat) {
+	this := e.This()
+	if e.Arg("decimals") != nil && this != nil {
+		typeExpr := this.Type()
+		if this.Kind() == exp.KindCast || this.Kind() == exp.KindTryCast {
+			typeExpr = asExpression(this.Arg("to"))
+		}
+		if typeExpr != nil && exp.IsType(typeExpr, exp.DTypeDouble) {
 			inner := exp.Cast(exp.Args{"this": this, "to": exp.DTypeDecimal.IntoExpr(nil)})
 			return g.funcCall("ROUND", []any{inner, e.Arg("decimals")}, "(", ")", true)
 		}
@@ -673,44 +698,67 @@ func postgresRoundSQL(g *Generator, e exp.Expression) string {
 // binary operation, converting QUARTER to three months.
 func postgresIntervalAddSQL(add bool) func(*Generator, exp.Expression) string {
 	return func(g *Generator, e exp.Expression) string {
+		this := e.This()
+		if e.Kind() == exp.KindTsOrDsAdd {
+			if returnType := asExpression(e.Arg("return_type")); returnType != nil {
+				// dialect.py:1984-1994: truncate through TIMESTAMP for DATE results.
+				if exp.IsType(returnType, exp.DTypeDate) {
+					this = exp.Cast(exp.Args{"this": this, "to": exp.DTypeTimestamp.IntoExpr(nil)})
+				}
+				this = exp.Cast(exp.Args{"this": this, "to": returnType})
+			}
+		}
+		thisSQL := g.gen(this)
 		count := asExpression(e.Arg("expression"))
+		unit := asExpression(e.Arg("unit"))
 		op := "+"
 		if !add {
 			op = "-"
 		}
 		if count != nil && count.Kind() == exp.KindInterval {
-			return g.sqlKey(e, "this") + " " + op + " " + g.gen(count)
+			nestedUnit := asExpression(count.Arg("unit"))
+			if nestedUnit == nil || nestedUnit.Kind() == exp.KindIntervalSpan {
+				return thisSQL + " " + op + " " + g.gen(count)
+			}
+			unit, count = nestedUnit, count.This()
 		}
-		unit := asExpression(e.Arg("unit"))
 		unitName := "DAY"
 		if unit != nil {
 			unitName = strings.ToUpper(unit.Name())
 		}
-		multiplier := ""
-		switch unitName {
-		case "QUARTER":
+		quarter := unitName == "QUARTER"
+		if quarter {
 			unitName = "MONTH"
-			multiplier = "3 * "
-		case "MILLISECOND":
-			unitName = "MILLISECOND"
 		}
 		if count == nil {
-			return g.sqlKey(e, "this")
+			return thisSQL
 		}
-		if value, ok := numericLiteralName(count); ok {
-			if multiplier != "" {
+		value, isNumeric := numericLiteralName(count)
+		if count.IsString() {
+			value = count.Name()
+			_, err := strconv.ParseFloat(value, 64)
+			isNumeric = err == nil
+			if !isNumeric && !quarter {
+				interval := exp.Interval(exp.Args{"this": count, "unit": unit})
+				return thisSQL + " " + op + " " + g.gen(interval)
+			}
+		}
+		if isNumeric {
+			if quarter {
 				if parsed, err := strconv.ParseFloat(value, 64); err == nil {
 					value = strconv.FormatFloat(parsed*3, 'f', -1, 64)
 				}
 			}
-			return g.sqlKey(e, "this") + " " + op + " INTERVAL '" + value + " " + unitName + "'"
+			return thisSQL + " " + op + " INTERVAL '" + value + " " + unitName + "'"
 		}
-		expr := g.gen(count)
-		if multiplier != "" {
-			expr = multiplier + expr
-			unitName = "MONTH"
+		if count.Is(exp.TraitBinary) {
+			count = exp.Paren(exp.Args{"this": count})
 		}
-		return g.sqlKey(e, "this") + " " + op + " (" + expr + ") * INTERVAL '1 " + unitName + "'"
+		value = "1"
+		if quarter {
+			value = "3"
+		}
+		return thisSQL + " " + op + " INTERVAL '" + value + " " + unitName + "' * " + g.gen(count)
 	}
 }
 
@@ -731,10 +779,21 @@ func postgresRegexpReplaceSQL(g *Generator, e exp.Expression) string {
 		}
 		args = append(args, occurrence)
 	}
+	occurrenceExpr := asExpression(occurrence)
+	replaceAll := (!truthy(e.Arg("single_replace")) &&
+		(occurrenceExpr == nil || occurrenceExpr.IsInt() && occurrenceExpr.Name() == "0"))
+	if replaceAll && (parameters == nil || parameters.IsString()) {
+		modifiers := ""
+		if parameters != nil {
+			modifiers = parameters.Name()
+		}
+		if !strings.Contains(modifiers, "g") {
+			modifiers += "g"
+		}
+		parameters = exp.LiteralString(modifiers)
+	}
 	if parameters != nil {
 		args = append(args, parameters)
-	} else if !truthy(e.Arg("single_replace")) && occurrence == nil {
-		args = append(args, exp.LiteralString("g"))
 	}
 	return g.funcCall("REGEXP_REPLACE", args, "(", ")", true)
 }
@@ -769,6 +828,85 @@ func postgresGenerateSeriesSQL(g *Generator, e exp.Expression) string {
 	return g.funcCall("GENERATE_SERIES", args, "(", ")", true)
 }
 
+// postgresArrayFilterSQL ports filter_array_using_unnest (dialects/dialect.py:2287-2305).
+func postgresArrayFilterSQL(g *Generator, e exp.Expression) string {
+	condition := e.Expr()
+	alias := exp.ToIdentifier("_u")
+	switch {
+	case condition != nil && condition.Kind() == exp.KindLambda && len(condition.Expressions()) == 1:
+		alias, condition = condition.Expressions()[0], condition.This()
+	case condition == nil || !condition.Is(exp.TraitPredicate):
+		g.unsupported("Unsupported filter condition")
+		return ""
+	}
+	unnest := exp.Unnest(exp.Args{
+		"expressions": []exp.Expression{e.This()},
+		"alias":       exp.TableAlias(exp.Args{"columns": []exp.Expression{alias.Copy()}}),
+	})
+	filtered := exp.Select(exp.Args{
+		"expressions": []exp.Expression{alias},
+		"from_":       exp.From(exp.Args{"this": unnest}),
+		"where":       exp.Where(exp.Args{"this": condition}),
+	})
+	return g.gen(exp.Array(exp.Args{"expressions": []exp.Expression{filtered}}))
+}
+
+// postgresUnnestSQL ports the date-series and typed JSON cases in generators/postgres.py:449-478.
+func postgresUnnestSQL(g *Generator, e exp.Expression) string {
+	args := e.Expressions()
+	if len(args) != 1 {
+		return g.unnestSQL(e)
+	}
+	arg := args[0]
+	if arg.Kind() == exp.KindGenerateDateArray {
+		series := exp.GenerateSeries(exp.Args{"start": arg.Arg("start"), "end": arg.Arg("end"), "step": arg.Arg("step")})
+		if parent := e.Parent(); parent != nil && (parent.Kind() == exp.KindFrom || parent.Kind() == exp.KindJoin) {
+			value := exp.ToIdentifier("value")
+			table := exp.Table(exp.Args{
+				"this": series,
+				"alias": exp.TableAlias(exp.Args{
+					"this": exp.ToIdentifier("_t"), "columns": []exp.Expression{value.Copy()},
+				}),
+			})
+			selectExpr := exp.Select(exp.Args{
+				"expressions": []exp.Expression{exp.Cast(exp.Args{"this": value, "to": exp.DTypeDate.IntoExpr(nil)})},
+				"from_":       exp.From(exp.Args{"this": table}),
+			})
+			alias := asExpression(e.Arg("alias"))
+			if alias == nil {
+				alias = exp.TableAlias(exp.Args{"this": exp.ToIdentifier("_unnested_generate_series")})
+			}
+			return g.gen(exp.Subquery(exp.Args{"this": selectExpr, "alias": alias}))
+		}
+		return g.gen(series)
+	}
+
+	// The generator cannot import the optimizer's type annotator. Honor existing
+	// annotations and explicit casts, both of which supply the relevant nested type.
+	argType := arg.Type()
+	if arg.Kind() == exp.KindCast || arg.Kind() == exp.KindTryCast {
+		argType = asExpression(arg.Arg("to"))
+	}
+	if argType != nil && exp.IsType(argType, exp.DTypeArray) {
+		elementTypes := argType.Expressions()
+		if len(elementTypes) == 1 && exp.IsType(elementTypes[0], exp.DTypeJSON) {
+			for arg.Kind() == exp.KindCast || arg.Kind() == exp.KindTryCast {
+				arg = arg.This()
+			}
+			argAsJSON := exp.Cast(exp.Args{"this": arg, "to": exp.DTypeJSON.IntoExpr(nil)})
+			sql := g.funcCall("JSON_ARRAY_ELEMENTS", []any{argAsJSON}, "(", ")", true)
+			if alias := g.sqlKey(e, "alias"); alias != "" {
+				sql += " AS " + alias
+			}
+			if truthy(e.Arg("offset")) {
+				g.unsupported("Unsupported JSON_ARRAY_ELEMENTS with offset")
+			}
+			return sql
+		}
+	}
+	return g.unnestSQL(e)
+}
+
 func postgresIntervalExpr(text string) exp.Expression {
 	trimmed := strings.TrimSpace(text)
 	digits := ""
@@ -783,8 +921,6 @@ func postgresIntervalExpr(text string) exp.Expression {
 	}
 	return exp.Interval(exp.Args{"this": exp.LiteralString(digits), "unit": exp.Var(exp.Args{"this": unit})})
 }
-
-// postgresIntervalFromString converts '  2   days  ' or '1day' into INTERVAL '2 DAY'.
 
 // numericLiteralName returns the signed numeric text of a Literal or Neg(Literal).
 func numericLiteralName(e exp.Expression) (string, bool) {

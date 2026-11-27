@@ -20,6 +20,8 @@ func SQLite() *Dialect {
 	d.EliminateSemiAntiJoins = true
 	// generators/sqlite.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
 	d.LimitFetch = "LIMIT"
+	d.SupportsCreateTableLike = false
+	d.JSONPathBracketedKeySupported = false
 	// generators/sqlite.py NVL2_SUPPORTED = False.
 	d.Nvl2Supported = false
 
@@ -123,6 +125,7 @@ func sqliteFunctions() map[string]func([]exp.Expression) exp.Expression {
 		"JSON_GROUP_ARRAY": func(args []exp.Expression) exp.Expression {
 			return exp.FromArgList(exp.KindJSONArrayAgg, args)
 		},
+		"IIF": exp.FromArgListFunc(exp.KindIf),
 		"JSON_GROUP_OBJECT": func(args []exp.Expression) exp.Expression {
 			return exp.JSONObjectAgg(exp.Args{"expressions": args})
 		},

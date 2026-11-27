@@ -30,6 +30,11 @@ func Postgres() *Dialect {
 	d.TypedDivision = true
 	// parsers/postgres.py:163-166 BITWISE adds HASH -> BitwiseXor, so `a # b` is a bitwise xor.
 	d.BitwiseXorIsHash = true
+	// parsers/postgres.py:168-170 EXPONENT: CARET binds before multiplication and division.
+	d.ExponentOperators = map[tokens.TokenType]bool{tokens.CARET: true}
+	// generators/postgres.py:273-274.
+	d.MultiArgDistinct = false
+	d.CanImplementArrayAny = true
 	// dialects/postgres.py:15 CONCAT_COALESCE = True.
 	d.ConcatCoalesce = true
 	d.NullOrdering = "nulls_are_large"
@@ -108,6 +113,21 @@ func Postgres() *Dialect {
 		},
 		"CHAR_LENGTH":      exp.FromArgListFunc(exp.KindLength),
 		"CHARACTER_LENGTH": exp.FromArgListFunc(exp.KindLength),
+		// parsers/postgres.py:125: projection UNNEST is a set-returning function.
+		"UNNEST": exp.FromArgListFunc(exp.KindExplode),
+		// parsers/postgres.py:156-159 parses aggregate ORDER BY separately.
+		"JSON_AGG": func(args []exp.Expression) exp.Expression {
+			value := hiveSeqGet(args, 0)
+			if value != nil && value.Kind() == exp.KindOrder {
+				input := value.This().Pop()
+				return exp.JSONArrayAgg(exp.Args{"this": input, "order": value})
+			}
+			return exp.JSONArrayAgg(exp.Args{"this": value})
+		},
+		"JSON_OBJECT_AGG": func(args []exp.Expression) exp.Expression {
+			return exp.JSONObjectAgg(exp.Args{"expressions": args})
+		},
+		"STRING_TO_ARRAY": exp.FromArgListFunc(exp.KindStringToArray),
 		// parsers/postgres.py:120 "NOW": exp.CurrentTimestamp.from_arg_list. Materialize and
 		// RisingWave inherit this through their PostgresParser chain, so `NOW()` builds
 		// CurrentTimestamp and renders bare CURRENT_TIMESTAMP there (niladicBareDialects).

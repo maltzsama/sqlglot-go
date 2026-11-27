@@ -25,16 +25,21 @@ func init() {
 		expressions.KindUnixSeconds: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("UNIX_TIMESTAMP", []any{e.This()}, "(", ")", true)
 		},
+		// generators/mysql.py:_unix_to_time_sql: the format is rendered through format_time,
+		// and self.func drops it when absent.
 		expressions.KindUnixToTime: func(g *Generator, e expressions.Expression) string {
-			scale := asExpression(e.Arg("scale"))
-			if scale != nil {
-				ts := expressions.Div(expressions.Args{
+			ts := e.This()
+			if scale := asExpression(e.Arg("scale")); scale != nil {
+				ts = expressions.Div(expressions.Args{
 					"this":       e.This(),
 					"expression": expressions.Anonymous(expressions.Args{"this": "POWER", "expressions": []expressions.Expression{expressions.LiteralNumber("10"), scale}}),
 				})
-				return g.funcCall("FROM_UNIXTIME", []any{ts}, "(", ")", true)
 			}
-			return g.funcCall("FROM_UNIXTIME", []any{e.This()}, "(", ")", true)
+			args := []any{ts}
+			if format := asExpression(e.Arg("format")); format != nil {
+				args = append(args, mysqlConvertFormat(g, format))
+			}
+			return g.funcCall("FROM_UNIXTIME", args, "(", ")", true)
 		},
 		expressions.KindBitwiseAndAgg: renameFunc("BIT_AND"),
 		expressions.KindBitwiseOrAgg:  renameFunc("BIT_OR"),
@@ -117,7 +122,12 @@ func init() {
 		expressions.KindStrToDate:    mysqlStrToDateSQL,
 		expressions.KindStrToTime:    mysqlStrToDateSQL,
 		expressions.KindDay:          mysqlStripDateCast("DAY"),
+		expressions.KindDayOfMonth:   mysqlStripDateCast("DAYOFMONTH"),
+		expressions.KindDayOfWeek:    mysqlStripDateCast("DAYOFWEEK"),
+		expressions.KindDayOfYear:    mysqlStripDateCast("DAYOFYEAR"),
 		expressions.KindMonth:        mysqlStripDateCast("MONTH"),
+		expressions.KindWeek:         mysqlStripDateCast("WEEK"),
+		expressions.KindWeekOfYear:   mysqlStripDateCast("WEEKOFYEAR"),
 		expressions.KindYear:         mysqlStripDateCast("YEAR"),
 		expressions.KindAnonymous: func(g *Generator, e expressions.Expression) string {
 			switch strings.ToUpper(e.Text("this")) {
@@ -264,14 +274,11 @@ func mysqlTsOrDsToDateSQL(g *Generator, e expressions.Expression) string {
 	return "DATE(" + g.sqlKey(e, "this") + ")"
 }
 
-// mysqlStripDateCast removes a redundant TS_OR_DS_TO_DATE around DAY/MONTH/YEAR args.
+// mysqlStripDateCast removes an implicit date conversion before rendering a date part.
 func mysqlStripDateCast(name string) func(*Generator, expressions.Expression) string {
 	return func(g *Generator, e expressions.Expression) string {
-		this := asExpression(e.This())
-		if this != nil && this.Kind() == expressions.KindTsOrDsToDate {
-			return g.funcCall(name, []any{this.This()}, "(", ")", true)
-		}
-		return g.functionFallbackSQL(e)
+		e.Set("this", mysqlStripDateCastArg(e.This()))
+		return g.funcCall(name, g.fallbackArgs(e), "(", ")", true)
 	}
 }
 

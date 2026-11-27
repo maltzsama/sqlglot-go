@@ -1,6 +1,9 @@
 package generator
 
 import (
+	"math/big"
+	"strings"
+
 	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
@@ -15,6 +18,22 @@ func init() {
 		expressions.KindCurrentVersion: func(*Generator, expressions.Expression) string { return "CURRENT_VERSION()" },
 		expressions.KindCurrentCatalog: func(*Generator, expressions.Expression) string { return "CURRENT_CATALOG()" },
 		expressions.KindDateAdd:        dateDeltaSQL("DATEADD", false),
+		expressions.KindDateSub:        databricksDateSubSQL,
+		expressions.KindDatetimeAdd:    hiveCall("TIMESTAMPADD", "unit", "expression", "this"),
+		expressions.KindDatetimeSub: func(g *Generator, e expressions.Expression) string {
+			delta := expressions.Mul(expressions.Args{
+				"this": e.Expr(), "expression": expressions.LiteralNumber(-1),
+			})
+			return g.funcCall("TIMESTAMPADD", []any{e.Arg("unit"), delta, e.This()}, "(", ")", true)
+		},
+		expressions.KindDatetimeTrunc: databricksDatetimeTruncSQL,
+		// The Spark chain inherits the Hive Array preprocess (generators/hive.py:281).
+		expressions.KindArray: func(g *Generator, e expressions.Expression) string {
+			if truthy(e.Arg("struct_name_inheritance")) {
+				applyStructNameInheritance(e.Expressions())
+			}
+			return g.arraySQL(e)
+		},
 		// generators/databricks.py:58-59 removes the inherited RegexpLike and TryCast
 		// mappings, so the base rendering applies.
 		expressions.KindRegexpLike: func(g *Generator, e expressions.Expression) string { return g.functionFallbackSQL(e) },
@@ -43,6 +62,33 @@ func init() {
 		expressions.KindUniform:         databricksUniformSQL,
 		expressions.KindClusterProperty: databricksClusterPropertySQL,
 	})
+}
+
+// databricksDatetimeTruncSQL ports timestamptrunc_sql, normalizing a bare unit
+// name before the shared DATE_TRUNC renderer quotes it.
+func databricksDatetimeTruncSQL(g *Generator, e expressions.Expression) string {
+	unit := asExpression(e.Arg("unit"))
+	if unit != nil && unit.Kind() == expressions.KindWeekStart {
+		if day := strings.ToUpper(unit.Text("this")); day != "MONDAY" {
+			g.unsupported("WEEK(" + day + ") is not supported; falling back to the default week start day")
+		}
+		e.Set("unit", expressions.LiteralString("WEEK"))
+	} else {
+		e.Set("unit", expressions.TimeUnitVar(unit))
+	}
+	return spark2TimestampTruncSQL(g, e)
+}
+
+// databricksDateSubSQL uses Hive's DATE_ADD/ADD_MONTHS form for an integral interval
+// (generators/hive.py:118-139), including intervals parsed with string payloads.
+func databricksDateSubSQL(g *Generator, e expressions.Expression) string {
+	if count := e.Expr(); count != nil && count.Kind() == expressions.KindLiteral {
+		if amount, ok := new(big.Int).SetString(strings.TrimSpace(count.Name()), 10); ok {
+			e.Set("expression", expressions.LiteralNumber(amount.Neg(amount).String()))
+			return g.hiveAddDateSQL(e)
+		}
+	}
+	return hiveDateSubSQL(g, e)
 }
 
 // databricksJSONExtractSQL ports the JSONExtract transform (generators/databricks.py:48): the
@@ -136,9 +182,9 @@ func databricksTimeseriesKeySQL(g *Generator, e expressions.Expression) string {
 // databricksUniformSQL ports uniform_sql (generators/databricks.py:108-116): a `gen` argument
 // from Snowflake's UNIFORM contributes the seed.
 func databricksUniformSQL(g *Generator, e expressions.Expression) string {
-	seed := asExpression(e.Arg("seed"))
+	seed := e.Arg("seed")
 	if gen := asExpression(e.Arg("gen")); gen != nil {
-		seed = gen.This()
+		seed = gen.Arg("this")
 	}
 	return g.funcCall("UNIFORM", []any{e.This(), e.Arg("expression"), seed}, "(", ")", true)
 }

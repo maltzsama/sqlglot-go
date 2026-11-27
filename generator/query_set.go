@@ -15,7 +15,22 @@ func (g *Generator) setOperationSQL(e expressions.Expression) string {
 		distinct = true
 	}
 	distinctOrAll := ""
-	if g.dialect.SetOpExplicitDistinct {
+	if g.isDialect("clickhouse") {
+		// dialects/clickhouse.py:38-42: EXCEPT and INTERSECT default to ALL,
+		// while UNION needs its mode spelled out.
+		if e.Kind() == expressions.KindUnion {
+			switch {
+			case !hasDistinct:
+				g.unsupported("UNION requires DISTINCT or ALL to be specified")
+			case distinct:
+				distinctOrAll = " DISTINCT"
+			default:
+				distinctOrAll = " ALL"
+			}
+		} else if hasDistinct && distinct {
+			distinctOrAll = " DISTINCT"
+		}
+	} else if g.dialect.SetOpExplicitDistinct {
 		// BigQuery's SET_OP_DISTINCT_BY_DEFAULT is None for every operation, so DISTINCT/ALL is
 		// always spelled out (generator.py:1865-1875).
 		if distinct {
@@ -39,6 +54,33 @@ func (g *Generator) setOperationSQL(e expressions.Expression) string {
 		on = " ON (" + on + ")"
 	}
 	return sideKind + opName + distinctOrAll + byName + on
+}
+
+// setOperationsWithWrappedModifiers ports generator.py:1886-1900 for dialects whose
+// set operations cannot carry their own ORDER BY or LIMIT clauses.
+func (g *Generator) setOperationsWithWrappedModifiers(e expressions.Expression) string {
+	limit := asExpression(e.Arg("limit"))
+	order := asExpression(e.Arg("order"))
+	if limit == nil && order == nil {
+		return g.setOperationsSQL(e)
+	}
+	if limit != nil {
+		limit.Pop()
+	}
+	if order != nil {
+		order.Pop()
+	}
+	source := expressions.Subquery(expressions.Args{
+		"this":  e,
+		"alias": expressions.TableAlias(expressions.Args{"this": expressions.ToIdentifier("_l_0")}),
+	})
+	selectExpr := expressions.Select(expressions.Args{
+		"expressions": []expressions.Expression{expressions.Star(expressions.Args{})},
+		"from_":       expressions.From(expressions.Args{"this": source}),
+		"limit":       limit,
+		"order":       order,
+	})
+	return g.gen(g.preprocess(selectExpr))
 }
 
 func (g *Generator) setOperationsSQL(e expressions.Expression) string {

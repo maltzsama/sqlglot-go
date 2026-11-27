@@ -40,7 +40,11 @@ func redshiftDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		},
 		exp.KindCurrentUserId: func(*Generator, exp.Expression) string { return "CURRENT_USER_ID" },
 		exp.KindDateAdd:       dateDeltaSQL("DATEADD", false),
-		exp.KindDateDiff:      dateDeltaSQL("DATEDIFF", false),
+		exp.KindDateDiff:      redshiftDateDiff,
+		exp.KindTsOrDsDiff:    redshiftDateDiff,
+		exp.KindLastDay:       lastDayWithoutDatePart,
+		exp.KindTimeToTimeStr: prestoCast("VARCHAR(MAX)"),
+		exp.KindUnicode:       renameFunc("ASCII"),
 		exp.KindDistKeyProperty: func(g *Generator, e exp.Expression) string {
 			return clickhouseCall(g, "DISTKEY", e.This())
 		},
@@ -99,7 +103,6 @@ func redshiftDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 			return g.sqlKey(e, "this")
 		},
 		exp.KindTsOrDsAdd:  dateDeltaSQL("DATEADD", false),
-		exp.KindTsOrDsDiff: dateDeltaSQL("DATEDIFF", false),
 		exp.KindUnixToTime: redshiftUnixToTime,
 		exp.KindSHA2Digest: func(g *Generator, e exp.Expression) string {
 			length := asExpression(e.Arg("length"))
@@ -155,12 +158,19 @@ func redshiftDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 }
 
 // redshiftSelect applies the generators/redshift.py:93-101 Select preprocess steps
-// (eliminate_distinct_on and unnest_generate_date_array_using_recursive_cte; the window clause,
-// semi/anti join and UNNEST qualification steps are not ported yet) before the base rendering.
+// before the base rendering.
 func redshiftSelect(g *Generator, e exp.Expression) string {
 	e = starRocksEliminateDistinctOn(g, e)
+	snowflakeInlineNamedWindows(e)
 	starRocksUnnestGenerateDateArray(g, e)
 	return g.selectSQL(e)
+}
+
+func redshiftDateDiff(g *Generator, e exp.Expression) string {
+	if e.Arg("unit") == nil {
+		e.Set("unit", exp.Var(exp.Args{"this": "DAY"}))
+	}
+	return dateDeltaSQL("DATEDIFF", false)(g, e)
 }
 
 // redshiftExplode ports explode_sql (generators/redshift.py:368-370).

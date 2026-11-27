@@ -922,11 +922,19 @@ func (p *Parser) parseSetOperation(this exp.Expression, consumePipe bool) exp.Ex
 		constructor = exp.Intersect
 	}
 	comments := p.prev.Comments
-	distinct := true // TODO(slice 5): dialect SET_OP_DISTINCT_BY_DEFAULT overrides.
+	var distinct any = true
 	if p.match(tokens.DISTINCT) {
 		distinct = true
 	} else if p.match(tokens.ALL) {
 		distinct = false
+	} else if p.dialect.Name == "clickhouse" {
+		// dialects/clickhouse.py:38-42 SET_OP_DISTINCT_BY_DEFAULT.
+		if tokenType == tokens.UNION {
+			p.raiseError("Expected DISTINCT or ALL for Union")
+			distinct = nil
+		} else {
+			distinct = false
+		}
 	}
 	// Upstream stores by_name only when matched (parser.py:5738-5742 uses `... or None`),
 	// so leave it nil when absent (like symmetric/siblings) rather than storing False.

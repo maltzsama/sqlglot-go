@@ -24,7 +24,7 @@ const (
 	// pinned Python repr because of a scoped, documented node deferral (see
 	// ast_divergence below). This is a CEILING — it must not grow without a
 	// consciously updated rationale, so the gate can't be dodged by marking rows.
-	maxASTDivergences = 2
+	maxASTDivergences = 0
 )
 
 type fidelityCase struct {
