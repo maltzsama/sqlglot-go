@@ -186,6 +186,14 @@ func isArrayExpression(e expressions.Expression) bool {
 
 func (g *Generator) convertConcatArgs(e expressions.Expression) []any {
 	args := listFromValue(e.Arg("expressions"))
+	// generator.py:3683-3684: a STRICT_STRING_CONCAT dialect casts a safe Concat's arguments to TEXT.
+	if g.dialect.StrictStringConcat && boolValue(e.Arg("safe")) {
+		for i, a := range args {
+			if arg := asExpression(a); arg != nil {
+				args[i] = expressions.Cast(expressions.Args{"this": arg, "to": expressions.DataType(expressions.Args{"this": expressions.DTypeText})})
+			}
+		}
+	}
 	if g.dialect.ConcatCoalesce || !boolValue(e.Arg("coalesce")) {
 		return args
 	}
