@@ -1489,7 +1489,8 @@ func (g *Generator) mergeWithoutTarget(e expressions.Expression) expressions.Exp
 func (g *Generator) mergeSQL(e expressions.Expression) string {
 	// Postgres removes the target table qualifier from WHEN clause columns (see
 	// mergeWithoutTarget); other dialects render the assignments verbatim.
-	if g.isDialect("postgres") {
+	// generators/trino.py:32 also maps exp.Merge to merge_without_target_sql.
+	if g.isDialect("postgres") || g.isDialect("trino") {
 		e = g.mergeWithoutTarget(e)
 	}
 	table := asExpression(e.Arg("this"))
