@@ -43,9 +43,7 @@ func init() {
 		exp.KindRegexpExtractAll: (*Generator).prestoRegexpExtractSQL,
 		exp.KindApproxQuantile:   prestoCall("APPROX_PERCENTILE", "this", "weight", "quantile", "accuracy"),
 		exp.KindDateAdd:          (*Generator).prestoDateAddSQL,
-		exp.KindDateDiff: func(g *Generator, e exp.Expression) string {
-			return g.funcCall("DATE_DIFF", []any{prestoUnit(e), e.Arg("expression"), e.Arg("this")}, "(", ")", true)
-		},
+		exp.KindDateDiff: prestoDateDiffSQL,
 		exp.KindTsOrDsDiff: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("DATE_DIFF", []any{prestoUnit(e),
 				prestoCastToTimestamp(asExpression(e.Arg("expression"))),
@@ -426,12 +424,19 @@ func prestoCastSQL(g *Generator, e exp.Expression) string {
 }
 
 func prestoConcatFunctionSQL(g *Generator, e exp.Expression) string {
-	if !truthy(e.Arg("safe")) && !truthy(e.Arg("coalesce")) {
-		return g.concatSQL(e)
-	}
+	// convert_concat_args (generator.py:3692) wraps with COALESCE only for coalesce=true; a
+	// safe-only Concat just casts each argument (STRICT_STRING_CONCAT).
 	args := e.Expressions()
 	if len(args) == 1 {
-		return "CAST(" + g.gen(args[0]) + " AS VARCHAR)"
+		// SUPPORTS_SINGLE_ARG_CONCAT is false here, so the lone argument renders bare, but a
+		// safe Concat casts it first (convert_concat_args, generator.py:3683-3684).
+		if truthy(e.Arg("safe")) {
+			return "CAST(" + g.gen(args[0]) + " AS VARCHAR)"
+		}
+		return g.gen(args[0])
+	}
+	if !truthy(e.Arg("coalesce")) {
+		return g.concatSQL(e)
 	}
 	parts := make([]string, 0, len(args))
 	for _, arg := range args {
@@ -506,7 +511,13 @@ func prestoGenerateSeriesSQL(g *Generator, e exp.Expression) string {
 func prestoTimestampSQL(g *Generator, e exp.Expression) string {
 	zone := asExpression(e.Arg("zone"))
 	if zone == nil {
-		return "CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP WITH TIME ZONE)"
+		// no_timestamp_sql (dialects/dialect.py:1712-1718) casts to the annotated type, which is
+		// TIMESTAMPTZ only when the node carries with_tz (BigQuery TIMESTAMP).
+		target := "TIMESTAMP"
+		if truthy(e.Arg("with_tz")) {
+			target = "TIMESTAMP WITH TIME ZONE"
+		}
+		return "CAST(" + g.sqlKey(e, "this") + " AS " + target + ")"
 	}
 	if duckDBIsTimezoneName(zone.Name()) {
 		return "CAST(CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP) AS TIMESTAMP) AT TIME ZONE " + g.sqlKey(e, "zone")
@@ -1168,4 +1179,22 @@ func foldExclusiveSequence(start, end, step exp.Expression) (string, bool) {
 		args = append(args, strconv.FormatInt(st, 10))
 	}
 	return "SEQUENCE(" + strings.Join(args, ", ") + ")", true
+}
+
+// prestoDateDiffSQL ports _date_diff_sql (generators/presto.py:172-204) for non-week units:
+// with date_part_boundary, both operands are truncated to the unit before DATE_DIFF counts
+// the boundaries crossed. Presto's DATE_DIFF returns ts2 - ts1, hence the swapped operands.
+func prestoDateDiffSQL(g *Generator, e exp.Expression) string {
+	this := e.This()
+	expr := e.Arg("expression")
+	unit := prestoUnit(e)
+	if truthy(e.Arg("date_part_boundary")) {
+		if this != nil {
+			this = exp.DateTrunc(exp.Args{"unit": unit.Copy(), "this": this})
+		}
+		if expr != nil {
+			expr = exp.DateTrunc(exp.Args{"unit": unit.Copy(), "this": expr})
+		}
+	}
+	return g.funcCall("DATE_DIFF", []any{unit, expr, this}, "(", ")", true)
 }
