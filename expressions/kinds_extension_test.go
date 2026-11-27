@@ -7,8 +7,8 @@ import "testing"
 // without moving kindExtensionBase would alias it onto KindAIAgg (the first extension Kind)
 // and silently repoint that node's dispatch, arg types, and class name.
 func TestKindExtensionBase(t *testing.T) {
-	if KindIntroducer >= kindExtensionBase {
-		t.Fatalf("KindIntroducer (%d) must be below kindExtensionBase (%d)", KindIntroducer, kindExtensionBase)
+	if KindIcebergProperty >= kindExtensionBase {
+		t.Fatalf("KindIcebergProperty (%d) must be below kindExtensionBase (%d)", KindIcebergProperty, kindExtensionBase)
 	}
 	if KindAIAgg < kindExtensionBase {
 		t.Fatalf("KindAIAgg (%d) must be at or above kindExtensionBase (%d)", KindAIAgg, kindExtensionBase)

@@ -6,7 +6,9 @@ package expressions
 // classes the annotate_functions fixtures exercise.
 
 // GENERATED kind constants
-const kindExtensionBase Kind = KindIntroducer + 1
+// kindExtensionBase is one past the last base Kind. Appending a base Kind (e.g.
+// KindIcebergProperty) means bumping this constant so extension Kinds stay distinct.
+const kindExtensionBase Kind = KindIcebergProperty + 1
 const (
 	KindAIAgg                      Kind = kindExtensionBase + iota
 	KindAIClassify                 Kind = kindExtensionBase + iota

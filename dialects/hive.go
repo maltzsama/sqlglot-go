@@ -29,6 +29,8 @@ func Hive() *Dialect {
 	d.JSONPathVarDash = true
 	// generators/hive.py:236 JSON_PATH_SINGLE_QUOTE_ESCAPE = True.
 	d.JSONPathSingleQuoteEscape = true
+	// generators/hive.py:228 TABLESAMPLE_WITH_METHOD = False (inherited by spark2/spark/databricks).
+	d.TablesampleWithMethod = false
 	// generators/hive.py:237 SAFE_JSON_PATH_KEY_RE = ^[_\-a-zA-Z][\-\w]*$.
 	d.JSONPathKeySafety = JSONPathKeySafetyDash
 	// generators/hive.py:240 PARSE_JSON_NAME = "PARSE_JSON".

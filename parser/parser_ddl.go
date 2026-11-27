@@ -1125,6 +1125,10 @@ func init() {
 		"GLOBAL": func(p *Parser, _ bool) exp.Expression {
 			return p.expression(exp.GlobalProperty(nil), nil, nil)
 		},
+		// parser.py:1347: ICEBERG marks an iceberg table; the generator renders it POST_CREATE.
+		"ICEBERG": func(p *Parser, _ bool) exp.Expression {
+			return p.expression(exp.IcebergProperty(nil), nil, nil)
+		},
 		"JOURNAL": func(p *Parser, isDefault bool) exp.Expression {
 			return p.parseJournal(propertyKwargs{isDefault: isDefault})
 		},

@@ -9,6 +9,14 @@ import (
 	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
+// mysqlTimeMapping ports MySQL.TIME_MAPPING (dialects/mysql.py:37-48): the MySQL
+// %-specifiers that differ from strftime, shared by parse-time format conversion
+// (DATE_FORMAT) and the dialect's TimeMapping.
+var mysqlTimeMapping = map[string]string{
+	"%M": "%B", "%c": "%-m", "%e": "%-d", "%h": "%I", "%i": "%M", "%s": "%S",
+	"%u": "%W", "%k": "%-H", "%l": "%-I", "%T": "%H:%M:%S", "%W": "%A",
+}
+
 // applyMySQLAnsiQuotes rewrites the dialect's tokenizer config for MySQL `sql_mode=ANSI_QUOTES`: `"`
 // stops being a string quote and becomes a QUOTED IDENTIFIER delimiter (alongside the backtick),
 // exactly as the real server does (verified MySQL 8.0.33: under ANSI_QUOTES `SELECT "x"` reads column
@@ -189,6 +197,20 @@ func MySQL() *Dialect {
 				"expression": exp.Null(),
 			})})
 		},
+		// parsers/mysql.py:112-115: DATE_FORMAT(value, format) is a TimeToStr over a
+		// timestamp cast, with the format converted from MySQL's %-specifiers.
+		"DATE_FORMAT": func(args []exp.Expression) exp.Expression {
+			format := hiveSeqGet(args, 1)
+			if format != nil && format.IsString() {
+				if converted, ok := FormatTime(format.Name(), mysqlTimeMapping); ok {
+					format = exp.LiteralString(converted)
+				}
+			}
+			return exp.TimeToStr(exp.Args{
+				"this":   exp.TsOrDsToTimestamp(exp.Args{"this": hiveSeqGet(args, 0)}),
+				"format": format,
+			})
+		},
 		// parsers/mysql.py:127-130: MONTHNAME is DATE_FORMAT(x, '%M').
 		"MONTHNAME": func(args []exp.Expression) exp.Expression {
 			return exp.TimeToStr(exp.Args{
@@ -262,10 +284,7 @@ func MySQL() *Dialect {
 	// generators/mysql.py JSON_PATH_BRACKETED_KEY_SUPPORTED = False.
 	d.JSONPathBracketedKeySupported = false
 	// dialects/mysql.py:37-48 TIME_MAPPING and its inverse.
-	d.TimeMapping = map[string]string{
-		"%M": "%B", "%c": "%-m", "%e": "%-d", "%h": "%I", "%i": "%M", "%s": "%S",
-		"%u": "%W", "%k": "%-H", "%l": "%-I", "%T": "%H:%M:%S", "%W": "%A",
-	}
+	d.TimeMapping = mysqlTimeMapping
 	d.InverseTimeMapping = map[string]string{
 		"%B": "%M", "%-m": "%c", "%-d": "%e", "%I": "%h", "%M": "%i", "%S": "%s",
 		"%W": "%u", "%-H": "%k", "%-I": "%l", "%H:%M:%S": "%T", "%A": "%W",

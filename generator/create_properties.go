@@ -106,6 +106,7 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindMergeBlockRatioProperty:  propertyLocationPostName,
 	expressions.KindWithJournalTableProperty: propertyLocationPostName,
 	expressions.KindGlobalProperty:           propertyLocationPostCreate,
+	expressions.KindIcebergProperty:          propertyLocationPostCreate,
 	expressions.KindDynamicProperty:          propertyLocationPostCreate,
 	expressions.KindSetProperty:              propertyLocationPostCreate,
 	expressions.KindVolatileProperty:         propertyLocationPostCreate,
@@ -155,6 +156,7 @@ func init() {
 	// The Teradata CREATE TABLE property set (generator.py:1311-1412 PROPERTY_PARSERS).
 	dispatch[expressions.KindSetProperty] = (*Generator).setPropertySQL
 	dispatch[expressions.KindGlobalProperty] = (*Generator).globalPropertySQL
+	dispatch[expressions.KindIcebergProperty] = (*Generator).icebergPropertySQL
 	dispatch[expressions.KindVolatileProperty] = (*Generator).volatilePropertySQL
 	dispatch[expressions.KindLogProperty] = (*Generator).logPropertySQL
 	dispatch[expressions.KindFallbackProperty] = (*Generator).fallbackPropertySQL
@@ -521,6 +523,8 @@ func (g *Generator) setPropertySQL(e expressions.Expression) string {
 }
 
 func (g *Generator) globalPropertySQL(expressions.Expression) string { return "GLOBAL" }
+
+func (g *Generator) icebergPropertySQL(expressions.Expression) string { return "ICEBERG" }
 
 func (g *Generator) volatilePropertySQL(expressions.Expression) string { return "VOLATILE" }
 

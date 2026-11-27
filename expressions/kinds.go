@@ -1211,6 +1211,10 @@ const (
 	// parser.py:7410-7415). Appended at the end of the iota block so existing Kind values
 	// are not renumbered (values aren't serialized).
 	KindIntroducer
+	// KindIcebergProperty ports exp.IcebergProperty (properties.py:200-201, arg_types {}),
+	// the base PROPERTY_PARSERS entry ICEBERG (parser.py:1347) rendered as "ICEBERG"
+	// POST_CREATE. Appended so existing Kind values stay stable.
+	KindIcebergProperty
 )
 
 type Trait uint32
@@ -1813,6 +1817,7 @@ var argTypes = map[Kind][]argSpec{
 	KindBlockCompressionProperty:     {{"autotemp", false}, {"always", false}, {"default", false}, {"manual", false}, {"never", false}},
 	KindMergeBlockRatioProperty:      {{"this", false}, {"no", false}, {"default", false}, {"percent", false}},
 	KindGlobalProperty:               {},
+	KindIcebergProperty:              {},
 	KindLogProperty:                  {{"no", true}},
 	KindIsolatedLoadingProperty:      {{"no", false}, {"concurrent", false}, {"target", false}},
 	KindWithJournalTableProperty:     {{"this", true}},
@@ -3335,6 +3340,7 @@ var className = map[Kind]string{
 	KindBlockCompressionProperty:            "BlockCompressionProperty",
 	KindMergeBlockRatioProperty:             "MergeBlockRatioProperty",
 	KindGlobalProperty:                      "GlobalProperty",
+	KindIcebergProperty:                     "IcebergProperty",
 	KindLogProperty:                         "LogProperty",
 	KindIsolatedLoadingProperty:             "IsolatedLoadingProperty",
 	KindWithJournalTableProperty:            "WithJournalTableProperty",

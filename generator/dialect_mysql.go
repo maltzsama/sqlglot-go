@@ -241,10 +241,13 @@ func mysqlNormalizeFormat(g *Generator, format string) string {
 	return format
 }
 
-// mysqlStripDateCastArg ports remove_ts_or_ds_to_date: a nested TsOrDsToDate without a
-// format is replaced by its input.
+// mysqlStripDateCastArg ports remove_ts_or_ds_to_date (dialects/dialect.py:1997-2009): a
+// nested TsOrDsToDate or TsOrDsToTimestamp without a format is replaced by its input.
 func mysqlStripDateCastArg(e expressions.Expression) expressions.Expression {
-	if e == nil || e.Kind() != expressions.KindTsOrDsToDate || e.Arg("format") != nil {
+	if e == nil || e.Arg("format") != nil {
+		return e
+	}
+	if e.Kind() != expressions.KindTsOrDsToDate && e.Kind() != expressions.KindTsOrDsToTimestamp {
 		return e
 	}
 	return e.This()

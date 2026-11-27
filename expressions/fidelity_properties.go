@@ -44,6 +44,7 @@ func BlockCompressionProperty(args Args) Expression {
 }
 func MergeBlockRatioProperty(args Args) Expression { return newNode(KindMergeBlockRatioProperty, args) }
 func GlobalProperty(args Args) Expression          { return newNode(KindGlobalProperty, args) }
+func IcebergProperty(args Args) Expression         { return newNode(KindIcebergProperty, args) }
 func LogProperty(args Args) Expression             { return newNode(KindLogProperty, args) }
 func IsolatedLoadingProperty(args Args) Expression { return newNode(KindIsolatedLoadingProperty, args) }
 func WithJournalTableProperty(args Args) Expression {

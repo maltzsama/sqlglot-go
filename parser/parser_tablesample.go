@@ -83,6 +83,12 @@ func (p *Parser) parseTableSample(asModifier bool) exp.Expression {
 		"size":               size,
 		"seed":               seed,
 	}), nil, nil)
+	// parser.py:5285-5286: a dialect with DEFAULT_SAMPLING_METHOD fills in the method it
+	// implies (Snowflake's BERNOULLI), so `SAMPLE (10)` and `TABLESAMPLE (10)` are
+	// equivalent there — and only there: a foreign reader leaves the method unset.
+	if method == nil && p.dialect.DefaultSamplingMethod != "" {
+		sample.Set("method", exp.Var(exp.Args{"this": p.dialect.DefaultSamplingMethod}))
+	}
 	// parsers/duckdb.py:384-394: default the sampling method from the size form.
 	if p.dialect.Name == "duckdb" && method == nil {
 		switch {

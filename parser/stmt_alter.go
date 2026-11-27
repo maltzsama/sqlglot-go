@@ -103,8 +103,24 @@ func (p *Parser) alterParsers() map[string]func(*Parser) []exp.Expression {
 		return hiveAlterParsers
 	case p.dialectIs("clickhouse"):
 		return clickhouseAlterParsers
+	case p.dialectIs("snowflake"):
+		return snowflakeAlterParsers
 	}
 	return alterParsers
+}
+
+// snowflakeAlterParsers ports parsers/snowflake.py:748-751: base ALTER_PARSERS plus
+// MODIFY, which Snowflake accepts as a synonym for ALTER [COLUMN].
+var snowflakeAlterParsers map[string]func(*Parser) []exp.Expression
+
+func init() {
+	snowflakeAlterParsers = make(map[string]func(*Parser) []exp.Expression, len(alterParsers)+1)
+	for k, v := range alterParsers {
+		snowflakeAlterParsers[k] = v
+	}
+	snowflakeAlterParsers["MODIFY"] = func(p *Parser) []exp.Expression {
+		return ensureListExpr(p.parseAlterTableAlter())
+	}
 }
 
 // hiveAlterParsers ports parsers/hive.py:138-141 (ALTER_PARSERS + CHANGE).
