@@ -402,7 +402,7 @@ func mysqlDatePart(kind exp.Kind) func([]exp.Expression) exp.Expression {
 
 // mysqlTimeSpecifiers is TIME_SPECIFIERS (parsers/mysql.py:20): the MySQL format codes that
 // carry a time of day.
-const mysqlTimeSpecifiers = "fHhIiklpSsT"
+const mysqlTimeSpecifiers = "fHhIiklprSsT"
 
 // mysqlBuildStrToDate ports _str_to_date (parsers/mysql.py:36-44): the format is converted
 // through MySQL's TIME_MAPPING, and a format with a time specifier yields StrToTime.
@@ -430,10 +430,15 @@ func mysqlBuildStrToDate(args []exp.Expression) exp.Expression {
 
 // hasTimeSpecifier ports _has_time_specifier (parsers/mysql.py:23-34).
 func hasTimeSpecifier(format string) bool {
-	for i := 0; i+1 < len(format); i++ {
-		if format[i] == '%' && strings.ContainsRune(mysqlTimeSpecifiers, rune(format[i+1])) {
-			return true
+	i := 0
+	for i < len(format) {
+		if format[i] == '%' {
+			i++
+			if i < len(format) && strings.ContainsRune(mysqlTimeSpecifiers, rune(format[i])) {
+				return true
+			}
 		}
+		i++
 	}
 	return false
 }
