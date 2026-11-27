@@ -1055,14 +1055,18 @@ var prestoStrictTimeFormat = strings.NewReplacer(
 func prestoStrToUnixSQL(g *Generator, e exp.Expression) string {
 	this := asExpression(e.This())
 	valueAsText := exp.Cast(exp.Args{"this": this, "to": exp.DTypeText.IntoExpr(nil)})
-	var valueAsTimestamp exp.Expression = this
+	valueAsTimestamp := this
 	if this.IsString() {
 		valueAsTimestamp = exp.Cast(exp.Args{"this": this, "to": exp.DTypeTimestamp.IntoExpr(nil)})
 	}
 	prestoFormat, hiveFormat := []any{}, []any{}
-	if format := asExpression(e.Arg("format")); format != nil && format.IsString() {
+	if format := asExpression(e.Arg("format")); format != nil {
 		prestoFormat = []any{prestoFormatTime(e)}
-		hiveFormat = []any{exp.LiteralString(dialects.HiveFormatTime(format.Name()))}
+		if format.IsString() {
+			hiveFormat = []any{exp.LiteralString(dialects.HiveFormatTime(format.Name()))}
+		} else {
+			hiveFormat = []any{format}
+		}
 	}
 	parseWithoutTZ := g.funcCall("DATE_PARSE", append([]any{valueAsText}, prestoFormat...), "(", ")", true)
 	formatted := g.funcCall("DATE_FORMAT", append([]any{valueAsTimestamp}, prestoFormat...), "(", ")", true)
