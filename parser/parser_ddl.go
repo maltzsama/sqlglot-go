@@ -773,7 +773,40 @@ func (p *Parser) parseColumnDef(this exp.Expression) exp.Expression {
 	// The two upstream sibling branches (ALIAS/MATERIALIZED-prefixed and IN/OUT parameter
 	// constraints, parser.py:7507-7537) are Oracle/T-SQL/procedure-only and aren't exercised
 	// by the base/mysql/postgres corpus, so they're omitted here (documented divergence).
-	if kind != nil && p.match(tokens.ALIAS, false) &&
+	// parser.py:7507-7522: a typeless column, or an ALIAS/MATERIALIZED keyword, starts a computed
+	// column whose storage is PERSISTED, STORED or VIRTUAL and that may carry a data type and NOT NULL.
+	aliasStart := false
+	if kind == nil && p.match(tokens.ALIAS) {
+		aliasStart = true
+	} else if p.matchTexts(map[string]bool{"ALIAS": true, "MATERIALIZED": true}) {
+		aliasStart = true
+	}
+	if aliasStart {
+		persisted := stringsUpper(p.prev.Text) == "MATERIALIZED"
+		expression := p.parseDisjunction()
+		if !persisted {
+			if p.matchTextSeq("PERSISTED") {
+				persisted = true
+			} else if p.matchTexts(map[string]bool{"STORED": true, "VIRTUAL": true}) {
+				persisted = stringsUpper(p.prev.Text) == "STORED"
+			}
+		}
+		var dataType exp.Expression
+		if p.matchTextSeq("AUTO") {
+			dataType = exp.Var(exp.Args{"this": "AUTO"})
+		} else {
+			dataType = p.parseTypes(false, false, true, false)
+		}
+		notNull := p.matchPair(tokens.NOT, tokens.NULL, true)
+		constraints = append(constraints, p.expression(exp.ColumnConstraint(exp.Args{
+			"kind": p.expression(exp.ComputedColumnConstraint(exp.Args{
+				"this":      expression,
+				"persisted": persisted,
+				"data_type": dataType,
+				"not_null":  notNull,
+			}), nil, nil),
+		}), nil, nil))
+	} else if kind != nil && p.match(tokens.ALIAS, false) &&
 		(!p.dialect.WrappedTransformColumnConstraint || p.next.TokenType == tokens.L_PAREN) {
 		p.advance() // consume AS, leaving `(` as the current token for parseDisjunction below
 		// `this` MUST be parsed before the STORED/VIRTUAL match: upstream (parser.py:7295-7299)
