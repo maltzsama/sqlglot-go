@@ -52,6 +52,10 @@ func init() {
 		// generators/presto.py:400 TimestampAdd shares DateAdd's _date_delta_sql, so the interval
 		// goes through the same integer check.
 		exp.KindTimestampAdd: func(g *Generator, e exp.Expression) string { return g.prestoDateAddSQL(e) },
+		// generators/presto.py:357-358 FromTimeZone: WITH_TIMEZONE(this, zone) AT TIME ZONE 'UTC'.
+		exp.KindFromTimeZone: func(g *Generator, e exp.Expression) string {
+			return "WITH_TIMEZONE(" + g.sqlKey(e, "this") + ", " + g.sqlKey(e, "zone") + ") AT TIME ZONE 'UTC'"
+		},
 		exp.KindDayOfWeek: func(g *Generator, e exp.Expression) string {
 			return "((DAY_OF_WEEK(" + g.sqlKey(e, "this") + ") % 7) + 1)"
 		},
