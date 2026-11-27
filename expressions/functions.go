@@ -450,7 +450,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"TIME_ADD":                 genericFunction(KindTimeAdd),
 	"TIME_DIFF":                genericFunction(KindTimeDiff),
 	"TIME_SUB":                 genericFunction(KindTimeSub),
-	"TIME_TO_TIME_STR":         genericFunction(KindTimeToTimeStr),
+	"TIME_TO_TIME_STR":         buildTimeToTimeStr,
 	"TIMESTAMP":                genericFunction(KindTimestamp),
 	"TIMESTAMP_LTZ_FROM_PARTS": genericFunction(KindTimestampLtzFromParts),
 	"TIMESTAMPLTZFROMPARTS":    genericFunction(KindTimestampLtzFromParts),
@@ -464,7 +464,7 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"TS_OR_DS_ADD":             genericFunction(KindTsOrDsAdd),
 	"TS_OR_DS_DIFF":            genericFunction(KindTsOrDsDiff),
 	"TS_OR_DS_TO_DATE":         genericFunction(KindTsOrDsToDate),
-	"TS_OR_DS_TO_DATE_STR":     genericFunction(KindTsOrDsToDateStr),
+	"TS_OR_DS_TO_DATE_STR":     buildTsOrDsToDateStr,
 	"UNIX_DATE":                genericFunction(KindUnixDate),
 	"UNIX_MICROS":              genericFunction(KindUnixMicros),
 	"UNIX_MILLIS":              genericFunction(KindUnixMillis),
@@ -835,4 +835,20 @@ func buildTimestampDiff(args []Expression) Expression {
 	built := FromArgList(KindTimestampDiff, args)
 	built.Set("unit", TimeUnitVar(asExpression(built.Arg("unit"))))
 	return built
+}
+
+// buildTimeToTimeStr ports the base FUNCTIONS entry (parser.py:453-456): TIME_TO_TIME_STR is a
+// CAST to TEXT, so every dialect renders it through its own string type.
+func buildTimeToTimeStr(args []Expression) Expression {
+	return Cast(Args{"this": seqGetExpr(args, 0), "to": DataType(Args{"this": DTypeText})})
+}
+
+// buildTsOrDsToDateStr ports the base FUNCTIONS entry (parser.py:458-464): the first ten
+// characters of the TEXT cast, that is SUBSTRING(CAST(x AS TEXT), 1, 10).
+func buildTsOrDsToDateStr(args []Expression) Expression {
+	return Substring(Args{
+		"this":   buildTimeToTimeStr(args),
+		"start":  LiteralNumber("1"),
+		"length": LiteralNumber("10"),
+	})
 }

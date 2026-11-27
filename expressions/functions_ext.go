@@ -623,6 +623,9 @@ func init() {
 	// bitwise aggregates). Dialects that spell them differently rename at generation time.
 	FunctionByName["MAX_BY"] = genericFunction(KindArgMax)
 	FunctionByName["MIN_BY"] = genericFunction(KindArgMin)
+	// expressions/aggregate.py:63,9: ArgMax and ArgMin also carry the ARGMAX and ARGMIN names.
+	FunctionByName["ARGMAX"] = genericFunction(KindArgMax)
+	FunctionByName["ARGMIN"] = genericFunction(KindArgMin)
 	FunctionByName["SHA"] = genericFunction(KindSHA)
 	FunctionByName["SHA1"] = genericFunction(KindSHA)
 	FunctionByName["BIT_AND"] = genericFunction(KindBitwiseAndAgg)
