@@ -1048,7 +1048,7 @@ func snowflakeFlattenStructuredTypes(e expressions.Expression) {
 		}
 		dtype.Transform(func(node expressions.Expression) expressions.Expression {
 			if node.Kind() == expressions.KindDataType {
-				if inner, ok := castResultDType(node); ok && expressions.NestedTypes[inner] {
+				if inner := dataTypeDType(node); expressions.NestedTypes[inner] {
 					node.Set("expressions", nil)
 				}
 			}
