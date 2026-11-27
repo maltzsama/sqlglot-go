@@ -408,6 +408,9 @@ func (g *Generator) orderedSQL(e expressions.Expression) string {
 					this = "CASE WHEN " + testSQL + " IS NULL THEN 1 ELSE 0 END" + nullSortOrder + ", " + this
 					nullsSortChange = ""
 				}
+				// generator.py:3226: the simulation is skipped for RAND, but the NULLS clause still
+				// drops for a NULL_ORDERING_SUPPORTED=None dialect.
+				nullsSortChange = ""
 			}
 		case !*supported:
 			if (asc && nullsSortChange == " NULLS LAST") || (desc && nullsSortChange == " NULLS FIRST") {
