@@ -39,9 +39,9 @@ func (g *Generator) unicodeStringSQL(e expressions.Expression) string {
 	return left + this + right + escapeSQL
 }
 
-// supportsUEscape ports SUPPORTS_UESCAPE (base True; bigquery, clickhouse and dremio False).
+// supportsUEscape ports SUPPORTS_UESCAPE for dialects without a custom escape clause.
 func (g *Generator) supportsUEscape() bool {
-	return !g.isDialect("bigquery") && !g.isDialect("clickhouse") && !g.isDialect("dremio")
+	return !g.isDialect("bigquery") && !g.isDialect("clickhouse") && !g.isDialect("dremio") && !g.isDialect("oracle")
 }
 
 // structSQL ports struct_sql (generator.py:5267-5278): PropertyEQ fields render as aliases.

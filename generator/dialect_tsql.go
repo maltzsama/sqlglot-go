@@ -114,15 +114,24 @@ func init() {
 		exp.KindTsOrDsToDate:  (*Generator).tsqlTsOrDsToDateSQL,
 		exp.KindCreate:        (*Generator).tsqlCreateSQL,
 		exp.KindSelect:        (*Generator).tsqlSelectSQL,
-		exp.KindInsert:        (*Generator).tsqlInsertSQL,
-		exp.KindCTE:           (*Generator).tsqlCTESQL,
-		exp.KindSubquery:      (*Generator).tsqlSubquerySQL,
-		exp.KindAnd:           (*Generator).tsqlAndSQL,
-		exp.KindOr:            (*Generator).tsqlOrSQL,
-		exp.KindNot:           (*Generator).tsqlNotSQL,
-		exp.KindWhere:         (*Generator).tsqlWhereSQL,
-		exp.KindHaving:        (*Generator).tsqlHavingSQL,
-		exp.KindJoin:          (*Generator).tsqlJoinSQL,
+		exp.KindUnion:         (*Generator).setOperationsWithWrappedModifiers,
+		exp.KindExcept:        (*Generator).setOperationsWithWrappedModifiers,
+		exp.KindIntersect:     (*Generator).setOperationsWithWrappedModifiers,
+		exp.KindOrdered: func(g *Generator, e exp.Expression) string {
+			if value := e.This(); value != nil && value.Kind() == exp.KindRand {
+				e.Set("nulls_first", nil)
+			}
+			return g.orderedSQL(e)
+		},
+		exp.KindInsert:   (*Generator).tsqlInsertSQL,
+		exp.KindCTE:      (*Generator).tsqlCTESQL,
+		exp.KindSubquery: (*Generator).tsqlSubquerySQL,
+		exp.KindAnd:      (*Generator).tsqlAndSQL,
+		exp.KindOr:       (*Generator).tsqlOrSQL,
+		exp.KindNot:      (*Generator).tsqlNotSQL,
+		exp.KindWhere:    (*Generator).tsqlWhereSQL,
+		exp.KindHaving:   (*Generator).tsqlHavingSQL,
+		exp.KindJoin:     (*Generator).tsqlJoinSQL,
 
 		// Dedicated methods (generators/tsql.py:264-655).
 		exp.KindConvert:                      (*Generator).tsqlConvertSQL,
@@ -415,8 +424,11 @@ func (g *Generator) tsqlTrimSQL(e exp.Expression) string {
 	return "TRIM(" + trimType + removeChars + fromPart + target + collationSQL + ")"
 }
 
-// tsqlCreateSQL ports the CREATE OR ALTER rewrite (generators/tsql.py:475-478).
+// tsqlCreateSQL ports generators/tsql.py:409-480.
 func (g *Generator) tsqlCreateSQL(e exp.Expression) string {
+	kind := strings.ToUpper(e.Text("kind"))
+	exists := boolValue(e.Arg("exists"))
+	e.Set("exists", nil)
 	// generators/tsql.py:420-435: VIEW queries and table-valued functions require their
 	// CTEs to stay inside the body, so undo the generic hoist for those two forms.
 	if with := asExpression(e.Arg("with_")); with != nil {
@@ -457,19 +469,63 @@ func (g *Generator) tsqlCreateSQL(e exp.Expression) string {
 		}
 	}
 	// generators/tsql.py:438-456: CREATE TABLE ... AS SELECT becomes SELECT ... INTO.
-	if strings.EqualFold(e.Text("kind"), "TABLE") {
-		if ctas := asExpression(e.Arg("expression")); ctas != nil {
-			if sql, ok := g.tsqlCTAS(e, ctas); ok {
-				return g.prependCtes(e, sql)
+	var sql string
+	if kind == "TABLE" {
+		like := e.Find(exp.KindLikeProperty)
+		ctas := asExpression(e.Arg("expression"))
+		if like != nil {
+			ctas = like.This()
+		}
+		if ctas != nil {
+			if body, ok := g.tsqlCTAS(e, ctas, like != nil); ok {
+				sql = g.prependCtes(e, body)
 			}
 		}
 	}
-	sql := g.createSQL(e)
+	if sql == "" {
+		sql = g.createSQL(e)
+	}
 
+	if exists {
+		return g.tsqlCreateIfNotExists(e, kind, sql)
+	}
 	if truthy(e.Arg("replace")) {
 		sql = strings.Replace(sql, "CREATE OR REPLACE ", "CREATE OR ALTER ", 1)
 	}
 	return sql
+}
+
+func (g *Generator) tsqlCreateIfNotExists(e exp.Expression, kind, sql string) string {
+	table := e.Find(exp.KindTable)
+	if table == nil {
+		return sql
+	}
+	literal := func(value string) string { return g.gen(exp.LiteralString(value)) }
+	var query string
+	switch kind {
+	case "SCHEMA":
+		query = "SELECT * FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = " + literal(table.Name())
+	case "TABLE":
+		query = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = " + literal(table.Name())
+		if schema := table.SchemaName(); schema != "" {
+			query += " AND TABLE_SCHEMA = " + literal(schema)
+		}
+		if catalog := table.CatalogName(); catalog != "" {
+			query += " AND TABLE_CATALOG = " + literal(catalog)
+		}
+	case "INDEX":
+		parts := table.Parts()
+		names := make([]string, 0, len(parts))
+		for _, part := range parts {
+			names = append(names, part.Name())
+		}
+		indexName := e.This().Text("this")
+		query = "SELECT * FROM sys.indexes WHERE object_id = object_id(" + literal(strings.Join(names, ".")) +
+			") AND name = " + literal(indexName)
+	default:
+		return sql
+	}
+	return "IF NOT EXISTS (" + query + ") EXEC(" + literal(sql) + ")"
 }
 
 // ensureBoolOperand ports transforms.ensure_bools' _ensure_bool (transforms.py:711-729) for
@@ -547,7 +603,7 @@ func (g *Generator) tsqlInsertSQL(e exp.Expression) string {
 }
 
 // tsqlCTAS ports the CTAS -> SELECT INTO rewrite (generators/tsql.py:438-456).
-func (g *Generator) tsqlCTAS(e exp.Expression, ctas exp.Expression) (string, bool) {
+func (g *Generator) tsqlCTAS(e exp.Expression, ctas exp.Expression, like bool) (string, bool) {
 	table := e.Find(exp.KindTable)
 	if table == nil {
 		return "", false
@@ -563,16 +619,15 @@ func (g *Generator) tsqlCTAS(e exp.Expression, ctas exp.Expression) (string, boo
 			}
 		}
 	}
-	source := ctas
-	if isUnwrappedQuery(ctas.Kind()) {
-		source = exp.Subquery(exp.Args{"this": ctas})
-	}
-	source.Set("alias", exp.TableAlias(exp.Args{"this": exp.Identifier(exp.Args{"this": "temp"})}))
+	ctas.Set("alias", exp.TableAlias(exp.Args{"this": exp.Identifier(exp.Args{"this": "temp"})}))
 	sel := exp.Select(exp.Args{
 		"expressions": []exp.Expression{exp.Star(nil)},
-		"from_":       exp.From(exp.Args{"this": source}),
+		"from_":       exp.From(exp.Args{"this": ctas}),
 		"into":        exp.Into(exp.Args{"this": table, "temporary": isTemp}),
 	})
+	if like {
+		sel.Set("limit", exp.Limit(exp.Args{"expression": exp.LiteralNumber(0)}))
+	}
 	return g.gen(sel), true
 }
 
@@ -1000,6 +1055,10 @@ func (g *Generator) tsqlSelectSQL(e exp.Expression) string {
 	starRocksUnnestGenerateDateArray(g, e)
 	limit := asExpression(e.Arg("limit"))
 	offset := asExpression(e.Arg("offset"))
+	if limit != nil && limit.Kind() == exp.KindFetch && offset == nil {
+		offset = exp.Offset(exp.Args{"expression": exp.LiteralNumber(0)})
+		e.Set("offset", offset)
+	}
 	if offset != nil {
 		if e.Arg("order") == nil {
 			if e.Arg("distinct") != nil {

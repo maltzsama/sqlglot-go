@@ -35,6 +35,7 @@ func Oracle() *Dialect {
 	// generators/oracle.py:23-42 generator flags.
 	d.LimitFetch = "FETCH"
 	d.TablesampleKeywords = "SAMPLE"
+	d.SupportsWindowExclude = true
 	d.SupportsSelectInto = true
 	d.AlterTableIncludeColumnKeyword = false
 	// dialect.py:345 derives SUPPORTS_COLUMN_JOIN_MARKS from "(+)" in the tokenizer keywords.
@@ -55,6 +56,7 @@ func Oracle() *Dialect {
 	cfg.FormatStrings = maps.Clone(cfg.FormatStrings)
 	cfg.FormatStrings["U'"] = tokens.FormatString{End: "'", TokenType: tokens.UNICODE_STRING}
 	cfg.FormatStrings["u'"] = tokens.FormatString{End: "'", TokenType: tokens.UNICODE_STRING}
+	d.UnicodeStart, d.UnicodeEnd = "U'", "'"
 	cfg.OracleQQuotes = true
 
 	// dialects/oracle.py:66-80 KEYWORDS deltas.

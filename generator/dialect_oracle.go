@@ -50,8 +50,16 @@ func oracleDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 		exp.KindILike: func(g *Generator, e exp.Expression) string {
 			return "LOWER(" + g.sqlKey(e, "this") + ") LIKE LOWER(" + g.sqlKey(e, "expression") + ")"
 		},
-		exp.KindLogicalOr: clickhouseRename("MAX"),
-		exp.KindMod:       clickhouseRename("MOD"),
+		exp.KindLogicalOr:  clickhouseRename("MAX"),
+		exp.KindLogicalAnd: renameFunc("MIN"),
+		exp.KindLastDay:    lastDayWithoutDatePart,
+		exp.KindSelect: func(g *Generator, e exp.Expression) string {
+			if e.Arg("qualify") != nil {
+				e = eliminateQualify(e)
+			}
+			return g.selectSQL(e)
+		},
+		exp.KindMod: clickhouseRename("MOD"),
 		exp.KindRand: func(g *Generator, e exp.Expression) string {
 			return clickhouseCall(g, "DBMS_RANDOM.VALUE",
 				asExpression(e.Arg("lower")), asExpression(e.Arg("upper")))
@@ -61,11 +69,16 @@ func oracleDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 			return clickhouseCall(g, "CONVERT", e.This(), asExpression(e.Arg("dest")), asExpression(e.Arg("source")))
 		},
 		exp.KindStrPosition: func(g *Generator, e exp.Expression) string {
+			position := asExpression(e.Arg("position"))
+			occurrence := asExpression(e.Arg("occurrence"))
+			if position == nil && occurrence != nil {
+				position = exp.LiteralNumber(1)
+			}
 			return clickhouseCall(g, "INSTR",
 				e.This(),
 				asExpression(e.Arg("substr")),
-				asExpression(e.Arg("position")),
-				asExpression(e.Arg("occurrence")),
+				position,
+				occurrence,
 			)
 		},
 		exp.KindStrToTime: oracleStrToTime,
@@ -209,11 +222,22 @@ func exprAnySlice(items []exp.Expression) []any {
 
 // oracleInterval ports interval_sql (generators/oracle.py:160-161).
 func oracleInterval(g *Generator, e exp.Expression) string {
+	if e.This() == nil {
+		return "INTERVAL " + g.sqlKey(e, "unit")
+	}
 	prefix := ""
 	if this := asExpression(e.Arg("this")); this != nil && this.Kind() == exp.KindLiteral {
 		prefix = "INTERVAL "
 	}
 	return prefix + g.sqlKey(e, "this") + " " + g.sqlKey(e, "unit")
+}
+
+// lastDayWithoutDatePart ports lastday_sql with LAST_DAY_SUPPORTS_DATE_PART disabled.
+func lastDayWithoutDatePart(g *Generator, e exp.Expression) string {
+	if unit := asExpression(e.Arg("unit")); unit != nil && !strings.EqualFold(unit.Name(), "MONTH") {
+		g.unsupported("Date parts are not supported in LAST_DAY.")
+	}
+	return g.funcCall("LAST_DAY", []any{e.This()}, "(", ")", true)
 }
 
 // oracleToNumber ports tonumber_sql (generators/oracle.py:163-171).
