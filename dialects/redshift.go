@@ -10,6 +10,9 @@ import (
 func Redshift() *Dialect {
 	d := Postgres()
 	d.Name = "redshift"
+	// generators/redshift.py:28 MULTI_ARG_DISTINCT = True overrides the Postgres value
+	// (generators/postgres.py:273 False), so LISTAGG(DISTINCT a, b) keeps its arguments.
+	d.MultiArgDistinct = true
 	// generators/redshift.py: QUERY_HINTS = False.
 	d.NoQueryHints = true
 	// generators/redshift.py TRANSFORMS: eliminate_distinct_on.
