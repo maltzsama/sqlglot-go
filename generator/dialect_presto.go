@@ -43,7 +43,7 @@ func init() {
 		exp.KindRegexpExtractAll: (*Generator).prestoRegexpExtractSQL,
 		exp.KindApproxQuantile:   prestoCall("APPROX_PERCENTILE", "this", "weight", "quantile", "accuracy"),
 		exp.KindDateAdd:          (*Generator).prestoDateAddSQL,
-		exp.KindDateDiff: prestoDateDiffSQL,
+		exp.KindDateDiff:         prestoDateDiffSQL,
 		exp.KindTsOrDsDiff: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("DATE_DIFF", []any{prestoUnit(e),
 				prestoCastToTimestamp(asExpression(e.Arg("expression"))),
