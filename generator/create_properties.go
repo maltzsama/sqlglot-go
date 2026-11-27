@@ -28,11 +28,13 @@ const (
 // (generator.py:672-787). PartitionedByProperty is dialect-dependent: Postgres uses
 // PARTITION BY after the schema, while base uses PARTITIONED_BY= inside WITH (...).
 var propertyLocations = map[expressions.Kind]propertyLocation{
-	expressions.KindAlgorithmProperty:         propertyLocationPostCreate,
-	expressions.KindDefinerProperty:           propertyLocationPostCreate,
-	expressions.KindMaterializedProperty:      propertyLocationPostCreate,
-	expressions.KindTemporaryProperty:         propertyLocationPostCreate,
-	expressions.KindTransientProperty:         propertyLocationPostCreate,
+	expressions.KindAlgorithmProperty:    propertyLocationPostCreate,
+	expressions.KindDefinerProperty:      propertyLocationPostCreate,
+	expressions.KindMaterializedProperty: propertyLocationPostCreate,
+	expressions.KindTemporaryProperty:    propertyLocationPostCreate,
+	expressions.KindTransientProperty:    propertyLocationPostCreate,
+	// generator.py:783 exp.Tags: POST_WITH.
+	expressions.KindTags:                      propertyLocationPostWith,
 	expressions.KindUnloggedProperty:          propertyLocationPostCreate,
 	expressions.KindAutoIncrementProperty:     propertyLocationPostSchema,
 	expressions.KindCalledOnNullInputProperty: propertyLocationPostSchema,
