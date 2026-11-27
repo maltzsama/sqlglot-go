@@ -49,10 +49,9 @@ func init() {
 				prestoCastToTimestamp(asExpression(e.Arg("expression"))),
 				prestoCastToTimestamp(e.This())}, "(", ")", true)
 		},
-		exp.KindTimestampAdd: func(g *Generator, e exp.Expression) string {
-			return "DATE_ADD('" + strings.ToUpper(asExpression(e.Arg("unit")).Name()) + "', " +
-				g.sqlKey(e, "expression") + ", " + g.sqlKey(e, "this") + ")"
-		},
+		// generators/presto.py:400 TimestampAdd shares DateAdd's _date_delta_sql, so the interval
+		// goes through the same integer check.
+		exp.KindTimestampAdd: func(g *Generator, e exp.Expression) string { return g.prestoDateAddSQL(e) },
 		exp.KindDayOfWeek: func(g *Generator, e exp.Expression) string {
 			return "((DAY_OF_WEEK(" + g.sqlKey(e, "this") + ") % 7) + 1)"
 		},
@@ -708,8 +707,9 @@ func prestoIntegerTyped(e exp.Expression) bool {
 	case exp.KindLiteral:
 		return !e.IsString() && !strings.ContainsAny(e.Name(), ".eE")
 	case exp.KindNeg, exp.KindParen, exp.KindFloor:
-		// FLOOR(x) types as BIGINT for any numeric x (annotate_types FLOOR rule).
-		return e.Kind() == exp.KindFloor || prestoIntegerTyped(e.This())
+		// FLOOR keeps the type of its argument under annotate_types, so only an integer argument
+		// stays integer; a DOUBLE argument still needs the BIGINT cast.
+		return prestoIntegerTyped(e.This())
 	case exp.KindAdd, exp.KindSub, exp.KindMul, exp.KindMod:
 		return prestoIntegerTyped(e.This()) && prestoIntegerTyped(asExpression(e.Arg("expression")))
 	case exp.KindCoalesce:
