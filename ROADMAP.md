@@ -11,7 +11,7 @@ records deliberate differences.
 - **Identity corpus.** 7,609 of 7,609 cases pass, including all 1,876 base, MySQL, and
   PostgreSQL cases. DuckDB and Snowflake are complete (565/565 and 1,543/1,543); the
   [README dialect table](./README.md#dialects-and-verified-coverage) shows the per-dialect results.
-- **Transpile corpus.** 6,927 of 8,881 upstream `validate_all` read/write pairs pass, with 1,954
+- **Transpile corpus.** 8,814 of 8,881 upstream `validate_all` read/write pairs pass, with 67
   remaining gaps. These include same-dialect pairs. The initial harness shipped in
   [#33](https://github.com/maltzsama/sqlglot-go/issues/33).
 - **Optimizer.** The default rule pipeline, including qualification and scope analysis, is
@@ -596,12 +596,9 @@ testdata/fidelity_cases.txt + fidelity_test.go; corpus stays 955/424/468 base/my
   the sibling SET-config row — whose SetConfigProperty.this is itself a Command in the pinned tree
   (_parse_set returns Command mid-CREATE, parser.py:9265-9275), so a Command-free port is impossible
   there; the root stays Create.
-- Two ast_divergence rows (MySQL `PARTITION BY RANGE (YEAR|MONTH(col))`): upstream wraps all 11 MySQL
-  date functions in TsOrDsToDate in the parser and removes it in the generator; this port elides
-  both consistently (no exp.TsOrDsToDate Kind — generator/dialect_funcs.go). The CREATE parses to a
-  full PartitionByRangeProperty and round-trips to identical SQL; only the incidental partition-
-  expression arg shape differs, so want_ast stays the honest Python oracle and only the exact ToS()
-  match is relaxed (capped at maxASTDivergences=2). Closing it belongs to the function-parity slice.
+- Resolved later (was: two MySQL `PARTITION BY RANGE` AST divergences): the parser wraps
+  `YEAR` and `MONTH` inputs in `TsOrDsToDate` and the MySQL generator removes the implicit
+  conversion. Both partition rows now require exact AST parity with the pinned oracle.
 - Resolved later (was: the 1 remaining full-corpus Go-only Command): postgres
   `CREATE FUNCTION ... AS $$ ... $$` dollar-quoted UDF bodies now parse to exp.Heredoc, and
   procedure BEGIN...END bodies to exp.Block (+ exp.WhileBlock/EndStatement), matching upstream

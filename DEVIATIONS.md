@@ -612,8 +612,6 @@ None change `.sql()`:
 ## 4. Cosmetic AST-shape divergences (output identical, `.ToS()` differs)
 
 - Comment bubbling: a trailing comment can attach to a slightly different node.
-- MySQL `PARTITION BY RANGE (YEAR(col))`: upstream wraps/unwraps `TsOrDsToDate`; the port elides
-  both (capped in `fidelity_test.go` `maxASTDivergences`).
 
 ---
 
