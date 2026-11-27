@@ -382,6 +382,11 @@ func snowflakeSelectSQL(g *Generator, e expressions.Expression) string {
 	snowflakeQualifyUnnestedColumns(e)
 	snowflakeEliminateDotVariantLookup(e)
 	explodeProjectionToUnnest(e, 0)
+	// generators/snowflake.py:1017-1022: Snowflake requires a LIMIT before OFFSET, so an
+	// offset without a limit gets LIMIT NULL.
+	if e.Arg("offset") != nil && e.Arg("limit") == nil {
+		e.Set("limit", expressions.Limit(expressions.Args{"expression": expressions.Null()}))
+	}
 	return g.selectSQL(e)
 }
 
