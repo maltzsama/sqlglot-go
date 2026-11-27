@@ -96,14 +96,14 @@ func Snowflake() *Dialect {
 	// Snowflake's ordered TIME_MAPPING inverse (dialects/dialect.py:261-271) prefers
 	// lowercase month/year tokens and uppercase day tokens, matching format_time's
 	// canonicalized output (e.g. `%m-%d-%Y` -> `mm-DD-yyyy`).
-	d.InverseTimeMapping = map[string]string{
+	d.InverseTimeMapping = withStrictTimeInverse(map[string]string{
 		"T": "T", "%Y": "yyyy", "%y": "yy", "%B": "mmmm", "%b": "mon",
 		"%m": "mm", "%d": "DD", "%-d": "dd", "%a": "DY", "%w": "dy",
 		"%H": "hh24", "%I": "hh12", "%M": "mi", "%S": "ss", "%f": "ff6",
 		"%f_zero": "ff0", "%f_one": "ff1", "%f_two": "ff2", "%f_three": "ff3",
 		"%f_four": "ff4", "%f_five": "ff5", "%f_seven": "ff7", "%f_eight": "ff8",
 		"%f_nine": "ff9", "%z": "tzhtzm", "%:z": "tzh:tzm", "%-z": "tzh", "%p": "pm",
-	}
+	})
 	d.TimeMapping = snowflakeTimeMapping
 	d.DatePartMapping = maps.Clone(d.DatePartMapping)
 	if d.DatePartMapping == nil {
@@ -661,8 +661,13 @@ func snowflakeFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expres
 	out["ARRAY_CONSTRUCT"] = func(args []exp.Expression) exp.Expression {
 		return exp.Array(exp.Args{"expressions": args})
 	}
+	// parsers/snowflake.py:413-418: ARRAY_CONTAINS(value, array) keeps the value's type
+	// (ensure_variant=False), so the generator does not cast it to VARIANT when round-tripping.
 	out["ARRAY_CONTAINS"] = func(args []exp.Expression) exp.Expression {
-		return exp.ArrayContains(exp.Args{"this": seqGet(args, 1), "expression": seqGet(args, 0), "check_null": true})
+		return exp.ArrayContains(exp.Args{
+			"this": seqGet(args, 1), "expression": seqGet(args, 0),
+			"ensure_variant": false, "check_null": true,
+		})
 	}
 	out["ARRAY_DISTINCT"] = func(args []exp.Expression) exp.Expression {
 		return exp.ArrayDistinct(exp.Args{"this": seqGet(args, 0), "check_null": true})

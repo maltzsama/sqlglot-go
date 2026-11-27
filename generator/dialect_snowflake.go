@@ -132,12 +132,20 @@ func init() {
 			}
 			return g.logSQL(e)
 		},
-		expressions.KindUnnest:           snowflakeUnnestSQL,
-		expressions.KindIf:               snowflakeIfSQL,
-		expressions.KindStar:             snowflakeStarSQL,
-		expressions.KindMax:              snowflakeMaxOrGreatest,
-		expressions.KindMin:              snowflakeMinOrLeast,
-		expressions.KindStarMap:          clickhouseRename("OBJECT_CONSTRUCT"),
+		expressions.KindUnnest:  snowflakeUnnestSQL,
+		expressions.KindIf:      snowflakeIfSQL,
+		expressions.KindStar:    snowflakeStarSQL,
+		expressions.KindMax:     snowflakeMaxOrGreatest,
+		expressions.KindMin:     snowflakeMinOrLeast,
+		expressions.KindStarMap: clickhouseRename("OBJECT_CONSTRUCT"),
+		// generators/snowflake.py:516/603: exp.Map / exp.VarMap flatten their paired
+		// key/value arrays into OBJECT_CONSTRUCT(key, value, ...).
+		expressions.KindMap:              snowflakeMapSQL,
+		expressions.KindVarMap:           snowflakeMapSQL,
+		expressions.KindUniform:          snowflakeUniformSQL,
+		expressions.KindFormat:           snowflakeFormatSQL,
+		expressions.KindFromTimeZone:     snowflakeFromTimeZoneSQL,
+		expressions.KindTimeStrToTime:    snowflakeTimeStrToTimeSQL,
 		expressions.KindJSONKeys:         clickhouseRename("OBJECT_KEYS"),
 		expressions.KindJSONFormat:       clickhouseRename("TO_JSON"),
 		expressions.KindJSONExtract:      snowflakeJSONExtractSQL,
@@ -207,13 +215,13 @@ func init() {
 		expressions.KindArrayConcatAgg:     snowflakeArrayConcatAggSQL,
 		expressions.KindCurrentDate:        snowflakeCurrentDateSQL,
 		expressions.KindTimeDiff:           snowflakeDateDeltaSQL("DATEDIFF"),
-		expressions.KindTsOrDsAdd:          snowflakeDateDeltaSQL("DATEADD"),
+		expressions.KindTsOrDsAdd:          snowflakeTsOrDsAddSQL,
 		expressions.KindTsOrDsDiff:         snowflakeDateDeltaSQL("DATEDIFF"),
 		expressions.KindDateTrunc:          snowflakeDateTruncSQL,
 		expressions.KindTimestampTrunc:     snowflakeDateTruncSQL,
 		expressions.KindDateFromParts:      clickhouseRename("DATE_FROM_PARTS"),
 		expressions.KindTimeFromParts:      clickhouseRename("TIME_FROM_PARTS"),
-		expressions.KindTimestampFromParts: clickhouseRename("TIMESTAMP_FROM_PARTS"),
+		expressions.KindTimestampFromParts: snowflakeTimestampFromPartsSQL,
 		expressions.KindNthValue:           snowflakeNthValueSQL,
 		expressions.KindWindow:             snowflakeWindowSQL,
 		expressions.KindNot:                snowflakeNotSQL,
@@ -307,7 +315,6 @@ func init() {
 			return g.funcCall("BOOLNOT", []any{e.This()}, "(", ")", true)
 		},
 		expressions.KindJSONObject:   snowflakeJSONObjectSQL,
-		expressions.KindTableSample:  snowflakeTableSampleSQL,
 		expressions.KindPivot:        snowflakePivot,
 		expressions.KindExtract:      snowflakeExtractSQL,
 		expressions.KindDate:         snowflakeDateSQL,
@@ -328,6 +335,8 @@ func init() {
 		expressions.KindGenerateSeries: snowflakeGenerateSeriesSQL,
 		// generators/snowflake.py:545-555: the Select preprocess chain.
 		expressions.KindSelect: snowflakeSelectSQL,
+		// generators/snowflake.py:440: flatten structured column types unless ICEBERG.
+		expressions.KindCreate: snowflakeCreateSQL,
 		// generators/snowflake.py function renames (same-dialect spelling).
 		expressions.KindByteLength: renameFunc("OCTET_LENGTH"),
 		expressions.KindSHA2Digest: renameFunc("SHA2_BINARY"),
@@ -879,7 +888,155 @@ func snowflakeArrayAppendSQL(name string, swap bool) func(*Generator, expression
 
 // snowflakeArrayContainsSQL ports the ArrayContains lambda (generators/snowflake.py:662-667).
 func snowflakeArrayContainsSQL(g *Generator, e expressions.Expression) string {
-	return g.funcCall("ARRAY_CONTAINS", []any{e.Arg("expression"), e.This()}, "(", ")", true)
+	expression := e.Arg("expression")
+	// generators/snowflake.py:416-423: cast the probed value to VARIANT unless the source
+	// dialect already guarantees it (Snowflake's own ARRAY_CONTAINS sets ensure_variant=false).
+	if !isFalseArg(e.Arg("ensure_variant")) {
+		expression = snowflakeCastTo(expression, expressions.DTypeVariant)
+	}
+	return g.funcCall("ARRAY_CONTAINS", []any{expression, e.This()}, "(", ")", true)
+}
+
+// snowflakeCastTo builds CAST(this AS dtype) for the generator-injected casts.
+func snowflakeCastTo(this any, dtype expressions.DType) expressions.Expression {
+	return expressions.Cast(expressions.Args{
+		"this": this,
+		"to":   expressions.DataType(expressions.Args{"this": dtype}),
+	})
+}
+
+// isFalseArg reports whether a stored argument is upstream's Python `False` marker.
+func isFalseArg(value any) bool {
+	b, ok := value.(bool)
+	return ok && !b
+}
+
+// snowflakeMapSQL ports var_map_sql (dialects/dialect.py:1521-1536) with OBJECT_CONSTRUCT:
+// paired key/value arrays flatten into alternating arguments, and a non-array operand falls
+// back to OBJECT_CONSTRUCT(keys, values).
+func snowflakeMapSQL(g *Generator, e expressions.Expression) string {
+	keys, values := asExpression(e.Arg("keys")), asExpression(e.Arg("values"))
+	if keys == nil || values == nil || keys.Kind() != expressions.KindArray || values.Kind() != expressions.KindArray {
+		g.unsupported("Cannot convert array columns into map.")
+		return g.funcCall("OBJECT_CONSTRUCT", []any{keys, values}, "(", ")", true)
+	}
+	args := []any{}
+	ks, vs := keys.Expressions(), values.Expressions()
+	for i := 0; i < len(ks) && i < len(vs); i++ {
+		args = append(args, ks[i], vs[i])
+	}
+	return g.funcCall("OBJECT_CONSTRUCT", args, "(", ")", true)
+}
+
+// snowflakeUniformSQL ports uniform_sql (generators/snowflake.py:1139-1152): Snowflake's
+// three-argument UNIFORM(min, max, gen) wraps the (optional) Databricks seed in RANDOM and
+// defaults a missing generator to RANDOM().
+func snowflakeUniformSQL(g *Generator, e expressions.Expression) string {
+	gen := asExpression(e.Arg("gen"))
+	if seed := asExpression(e.Arg("seed")); seed != nil {
+		gen = expressions.Rand(expressions.Args{"this": seed})
+	}
+	if gen == nil {
+		gen = expressions.Rand(nil)
+	}
+	return g.funcCall("UNIFORM", []any{e.This(), e.Arg("expression"), gen}, "(", ")", true)
+}
+
+// snowflakeFormatSQL ports format_sql (generators/snowflake.py:1123-1128): the one-value
+// `%s` printf becomes TO_CHAR(value); any other format string is unsupported.
+func snowflakeFormatSQL(g *Generator, e expressions.Expression) string {
+	if strings.ToLower(e.Name()) == "%s" && len(e.Expressions()) == 1 {
+		return g.funcCall("TO_CHAR", []any{e.Expressions()[0]}, "(", ")", true)
+	}
+	g.unsupported("Unsupported FORMAT")
+	return g.functionFallbackSQL(e)
+}
+
+// snowflakeFromTimeZoneSQL ports the FromTimeZone transform (generators/snowflake.py:490):
+// CONVERT_TIMEZONE(zone, 'UTC', this).
+func snowflakeFromTimeZoneSQL(g *Generator, e expressions.Expression) string {
+	return g.funcCall("CONVERT_TIMEZONE", []any{e.Arg("zone"), expressions.LiteralString("UTC"), e.This()}, "(", ")", true)
+}
+
+// snowflakeTimeStrToTimeSQL ports timestrtotime_sql (dialects/dialect.py:1769-1786): a
+// timezone-aware value casts to TIMESTAMPTZ, otherwise TIMESTAMP.
+func snowflakeTimeStrToTimeSQL(g *Generator, e expressions.Expression) string {
+	dtype := expressions.DTypeTimestamp
+	if e.Arg("zone") != nil {
+		dtype = expressions.DTypeTimestampTz
+	}
+	return g.gen(snowflakeCastTo(e.This(), dtype))
+}
+
+// snowflakeTsOrDsAddSQL ports date_delta_sql("DATEADD", cast=True) (dialects/dialect.py:
+// 1984-1994, 2014-2026): the DATE-typed result is cast to TIMESTAMP first, then to the
+// return type, so timestamp strings truncate correctly.
+func snowflakeTsOrDsAddSQL(g *Generator, e expressions.Expression) string {
+	this := e.This()
+	returnType := asExpression(e.Arg("return_type"))
+	if returnType == nil {
+		returnType = expressions.DataType(expressions.Args{"this": expressions.DTypeDate})
+	}
+	if dtype, ok := castResultDType(returnType); ok && dtype == expressions.DTypeDate {
+		this = snowflakeCastTo(this, expressions.DTypeTimestamp)
+	}
+	e.Set("this", snowflakeCastTo(this, dtypeOf(returnType)))
+	return snowflakeDateDeltaSQL("DATEADD")(g, e)
+}
+
+// dtypeOf extracts the DType from a DataType node.
+func dtypeOf(dt expressions.Expression) expressions.DType {
+	if dtype, ok := castResultDType(dt); ok {
+		return dtype
+	}
+	return expressions.DTypeUnknown
+}
+
+// snowflakeTimestampFromPartsSQL ports timestampfromparts_sql (generators/snowflake.py:
+// 746-752): the millisecond component becomes nanoseconds in the TIMESTAMP_FROM_PARTS call.
+func snowflakeTimestampFromPartsSQL(g *Generator, e expressions.Expression) string {
+	if milli := asExpression(e.Arg("milli")); milli != nil {
+		e.Set("milli", nil)
+		e.Set("nano", expressions.Mul(expressions.Args{
+			"this":       milli,
+			"expression": expressions.LiteralNumber("1000000"),
+		}))
+	}
+	return clickhouseRename("TIMESTAMP_FROM_PARTS")(g, e)
+}
+
+// snowflakeCreateSQL ports the Create preprocess (generators/snowflake.py:99-115, 440):
+// structured column types keep only their outer type unless the table is ICEBERG.
+func snowflakeCreateSQL(g *Generator, e expressions.Expression) string {
+	snowflakeFlattenStructuredTypes(e)
+	return g.createSQL(e)
+}
+
+func snowflakeFlattenStructuredTypes(e expressions.Expression) {
+	schema := asExpression(e.Arg("this"))
+	if schema == nil || schema.Kind() != expressions.KindSchema {
+		return
+	}
+	if props := asExpression(e.Arg("properties")); props != nil && props.Find(expressions.KindIcebergProperty) != nil {
+		return
+	}
+	for _, column := range schema.Expressions() {
+		if column.Kind() != expressions.KindColumnDef {
+			continue
+		}
+		dtype := asExpression(column.Arg("kind"))
+		if dtype == nil || dtype.Kind() != expressions.KindDataType {
+			continue
+		}
+		dtype.Transform(func(node expressions.Expression) expressions.Expression {
+			if node.Kind() == expressions.KindDataType {
+				if inner, ok := castResultDType(node); ok && expressions.NestedTypes[inner] {
+					node.Set("expressions", nil)
+				}
+			}
+			return node
+		}, false)
+	}
 }
 
 // snowflakeArrayPositionSQL ports the ArrayPosition lambda (generators/snowflake.py:669-673).

@@ -150,6 +150,9 @@ var FunctionByName = map[string]func([]Expression) Expression{
 	"CEILING":         genericFunction(KindCeil),
 	"PERCENTILE_DISC": genericFunction(KindPercentileDisc),
 	"GROUP_CONCAT":    genericFunction(KindGroupConcat),
+	// MAP is a Func subclass resolved by name in base (exp.Map, keys/values); Hive overrides it
+	// with build_var_map's pairing, every other dialect keeps the two positional arrays.
+	"MAP": genericFunction(KindMap),
 	// LAG/LEAD(this[, offset[, default]]) window functions (aggregate.py:150-163); FromArgList
 	// maps args positionally onto {this, offset, default} per KindLag/KindLead's arg_types.
 	"APPROX_QUANTILES": genericFunction(KindApproxQuantiles),
