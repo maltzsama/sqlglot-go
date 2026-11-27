@@ -291,7 +291,7 @@ const (
 	minPassTranspileStarrocks   = 98
 	minPassTranspileTeradata    = 74
 	minPassTranspileTrino       = 137
-	minPassTranspileTSQL        = 355
+	minPassTranspileTSQL        = 375
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
