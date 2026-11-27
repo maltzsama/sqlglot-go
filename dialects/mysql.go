@@ -166,7 +166,7 @@ func MySQL() *Dialect {
 	// coerce their first argument to a date, including WEEK with an optional mode.
 	d.Functions = map[string]func([]exp.Expression) exp.Expression{
 		"CHAR_LENGTH":      exp.FromArgListFunc(exp.KindLength),
-		"STR_TO_DATE":     mysqlBuildStrToDate,
+		"STR_TO_DATE":      mysqlBuildStrToDate,
 		"CHARACTER_LENGTH": exp.FromArgListFunc(exp.KindLength),
 		"CURDATE":          exp.FromArgListFunc(exp.KindCurrentDate),
 		"CURTIME":          exp.FromArgListFunc(exp.KindCurrentTime),
