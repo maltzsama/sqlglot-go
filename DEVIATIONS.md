@@ -586,6 +586,13 @@ Guarding tests: `TestKsqlDBRoundTrip`, `TestKsqlDBFailClosed`.
 Guarding tests: `ksqldb_test.go` (`TestKsqlDBRoundTrip`, `TestKsqlDBAST`, `TestKsqlDBFailClosed`,
 `TestKsqlDBPrintStaysCommand`, `TestKsqlDBTypes`, `TestKsqlDBBaseDegrades`).
 
+### 1.35 Oracle MERGE keeps WHEN-clause conditions
+Upstream's Oracle parser consumes a `WHEN MATCHED ... WHERE <cond>` (and the WHEN NOT MATCHED
+form) and drops the condition, so `MERGE ... WHEN MATCHED THEN UPDATE ... WHERE tgt.x IS NULL`
+loses its filter when transpiled. A MERGE clause's WHERE filters which rows that clause applies
+to, so dropping it changes the statement's meaning. The port keeps the condition. The matching
+corpus expectation stays in `testdata/transpile_corrections.jsonl`.
+
 ## 2. Cross-dialect-only deviations (never affect same-dialect round-trip)
 
 Cross-dialect transpilation between the registered dialects is exercised and gap-tracked by
