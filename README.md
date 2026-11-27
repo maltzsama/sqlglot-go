@@ -160,7 +160,7 @@ pair.
 | Trino | `trino` | 115/115 |
 | T-SQL | `tsql` | 613/613 |
 
-The transpile corpus passes **8,855 of 8,881** pairs, with **26** remaining gaps. Of the
+The transpile corpus passes **8,863 of 8,881** pairs, with **18** remaining gaps. Of the
 recorded pairs, 6,760 cross dialects.
 The identity corpus has no outstanding gaps
 ([parity_gaps.txt](./testdata/parity_gaps.txt) is empty); see
