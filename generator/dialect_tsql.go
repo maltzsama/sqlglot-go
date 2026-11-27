@@ -22,11 +22,13 @@ func init() {
 		},
 		exp.KindAutoIncrementColumnConstraint: func(g *Generator, e exp.Expression) string { return "IDENTITY" },
 		exp.KindCeil:                          rename("CEILING"),
-		exp.KindChr:                           rename("CHAR"),
-		exp.KindDateAdd:                       dateDeltaSQL("DATEADD", false),
-		exp.KindCurrentDate:                   func(g *Generator, e exp.Expression) string { return "GETDATE()" },
-		exp.KindCurrentTimestamp:              func(g *Generator, e exp.Expression) string { return "GETDATE()" },
-		exp.KindCurrentTimestampLTZ:           func(g *Generator, e exp.Expression) string { return "SYSDATETIMEOFFSET()" },
+		exp.KindChr: func(g *Generator, e exp.Expression) string {
+			return g.funcCall("CHAR", listToAny(e.Expressions()), "(", ")", true)
+		},
+		exp.KindDateAdd:             dateDeltaSQL("DATEADD", false),
+		exp.KindCurrentDate:         func(g *Generator, e exp.Expression) string { return "GETDATE()" },
+		exp.KindCurrentTimestamp:    func(g *Generator, e exp.Expression) string { return "GETDATE()" },
+		exp.KindCurrentTimestampLTZ: func(g *Generator, e exp.Expression) string { return "SYSDATETIMEOFFSET()" },
 		exp.KindDateStrToDate: func(g *Generator, e exp.Expression) string {
 			return g.gen(exp.Cast(exp.Args{"this": e.This(), "to": exp.DTypeDate.IntoExpr(nil)}))
 		},
@@ -46,8 +48,13 @@ func init() {
 		},
 		exp.KindGroupConcat: tsqlStringAgg,
 		exp.KindIf: func(g *Generator, e exp.Expression) string {
-			return g.funcCall("IIF", []any{e.This(), e.Arg("true"), e.Arg("false")}, "(", ")", true)
+			condition := e.This()
+			if condition != nil && (condition.Kind() == exp.KindColumn || condition.Kind() == exp.KindLiteral) {
+				condition = exp.NEQ(exp.Args{"this": condition, "expression": exp.LiteralNumber("0")})
+			}
+			return g.funcCall("IIF", []any{condition, e.Arg("true"), e.Arg("false")}, "(", ")", true)
 		},
+		exp.KindAnonymous:         tsqlAnonymousSQL,
 		exp.KindJSONExtract:       tsqlJSONExtract,
 		exp.KindJSONExtractScalar: tsqlJSONExtract,
 		exp.KindLastDay: func(g *Generator, e exp.Expression) string {
@@ -200,9 +207,29 @@ func dateDeltaSQL(name string, cast bool) func(*Generator, exp.Expression) strin
 	return func(g *Generator, e exp.Expression) string {
 		unit := asExpression(e.Arg("unit"))
 		if unit != nil {
-			unit = exp.TimeUnitVar(unit)
+			if unit.Kind() == exp.KindWeekStart {
+				unit = exp.Var(exp.Args{"this": "WEEK"})
+			} else {
+				unit = exp.TimeUnitVar(unit)
+			}
 		}
-		return g.funcCall(name, []any{unit, e.Arg("expression"), e.This()}, "(", ")", true)
+		this := e.This()
+		if cast && this != nil && this.IsString() {
+			casted := exp.Cast(exp.Args{
+				"this": this,
+				"to":   exp.New(exp.KindDataType, exp.Args{"this": exp.DTypeDatetime2}),
+			})
+			dtype, ok := tsqlReturnDType(e)
+			if !ok {
+				// TsOrDsAdd defaults its return type to DATE.
+				dtype = exp.DTypeDate
+			}
+			if dtype == exp.DTypeDate {
+				casted = exp.Cast(exp.Args{"this": casted, "to": exp.DTypeDate.IntoExpr(nil)})
+			}
+			this = casted
+		}
+		return g.funcCall(name, []any{unit, e.Arg("expression"), this}, "(", ")", true)
 	}
 }
 
@@ -223,6 +250,22 @@ func tsqlJSONExtract(g *Generator, e exp.Expression) string {
 
 func tsqlStringAgg(g *Generator, e exp.Expression) string {
 	this := e.This()
+	if this != nil && this.Kind() == exp.KindOrder {
+		if inner := this.This(); inner != nil && inner.Kind() == exp.KindDistinct {
+			if values := inner.Expressions(); len(values) > 0 {
+				this.Set("this", values[0])
+			} else if inner.This() != nil {
+				this.Set("this", inner.This())
+			}
+		}
+	}
+	if this != nil && this.Kind() == exp.KindDistinct {
+		if values := this.Expressions(); len(values) > 0 {
+			this = values[0]
+		} else {
+			this = this.This()
+		}
+	}
 	separator := e.Arg("separator")
 	if separator == nil {
 		separator = exp.LiteralString(",")
@@ -840,7 +883,11 @@ func (g *Generator) tsqlDateDiffSQL(e exp.Expression) string {
 	}
 	unit := asExpression(e.Arg("unit"))
 	if unit != nil {
-		unit = exp.TimeUnitVar(unit)
+		if unit.Kind() == exp.KindWeekStart {
+			unit = exp.Var(exp.Args{"this": "WEEK"})
+		} else {
+			unit = exp.TimeUnitVar(unit)
+		}
 	}
 	return g.funcCall(name, []any{unit, e.Arg("expression"), e.This()}, "(", ")", true)
 }
@@ -947,6 +994,10 @@ func (g *Generator) tsqlPartitionSQL(e exp.Expression) string {
 
 // tsqlSelectSQL ports T-SQL's select_sql OFFSET/FETCH requirements.
 func (g *Generator) tsqlSelectSQL(e exp.Expression) string {
+	if asExpression(e.Arg("qualify")) != nil {
+		e = eliminateQualify(e)
+	}
+	starRocksUnnestGenerateDateArray(g, e)
 	limit := asExpression(e.Arg("limit"))
 	offset := asExpression(e.Arg("offset"))
 	if offset != nil {
@@ -1086,4 +1137,33 @@ func (g *Generator) tsqlDeclareItemSQL(e exp.Expression) string {
 		sql += " = " + dflt
 	}
 	return sql
+}
+
+// tsqlAnonymousSQL handles the raw function calls that T-SQL spells differently.
+func tsqlAnonymousSQL(g *Generator, e exp.Expression) string {
+	switch strings.ToUpper(e.Text("this")) {
+	case "MAKE_TIME":
+		args := listToAny(e.Expressions())
+		args = append(args, exp.LiteralNumber("0"), exp.LiteralNumber("0"))
+		return g.funcCall("TIMEFROMPARTS", args, "(", ")", true)
+	case "TRUNC":
+		if args := e.Expressions(); len(args) == 1 {
+			return g.funcCall("ROUND", []any{args[0], exp.LiteralNumber("0"), exp.LiteralNumber("1")}, "(", ")", true)
+		}
+	case "CHAR":
+		return g.funcCall("CHAR", listToAny(e.Expressions()), "(", ")", true)
+	}
+	return g.anonymousSQL(e)
+}
+
+// tsqlReturnDType reads a TsOrDsAdd return_type as a DType.
+func tsqlReturnDType(e exp.Expression) (exp.DType, bool) {
+	rt := asExpression(e.Arg("return_type"))
+	if rt == nil {
+		return exp.DType(""), false
+	}
+	if dtype, ok := rt.Arg("this").(exp.DType); ok {
+		return dtype, true
+	}
+	return exp.DType(""), false
 }
