@@ -42,6 +42,7 @@ func init() {
 		expressions.KindTimestampFromParts:    clickhouseRename("MAKE_TIMESTAMP"),
 		expressions.KindTsOrDsAdd:             sparkDateAddSQL,
 		expressions.KindTimestampAdd:          sparkDateAddSQL,
+		expressions.KindDatetimeDiff:          sparkTimestampDiffSQL,
 		expressions.KindTimestampDiff:         sparkTimestampDiffSQL,
 		// generators/spark.py:139-141: a safe TryCast renders TRY_CAST, otherwise the Spark 2
 		// cast_sql override applies unchanged.
@@ -188,7 +189,9 @@ func sparkGroupConcat(g *Generator, e expressions.Expression) string {
 	}
 	listagg += ")"
 	if order != nil {
-		return listagg + " WITHIN GROUP (" + g.gen(order) + ")"
+		return g.withinGroupSQL(expressions.WithinGroup(expressions.Args{
+			"this": listagg, "expression": order,
+		}))
 	}
 	return listagg
 }

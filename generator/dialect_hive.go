@@ -69,9 +69,17 @@ func init() {
 		},
 		expressions.KindAlterSet:    (*Generator).hiveAlterSetSQL,
 		expressions.KindAlterColumn: (*Generator).hiveAlterColumnSQL,
+		expressions.KindCreate:      hiveCreateSQL,
 		expressions.KindColumnDef:   hiveColumnDefSQL,
-		expressions.KindDataType:    (*Generator).hiveDataTypeSQL,
-		expressions.KindTryCast:     func(g *Generator, e expressions.Expression) string { return g.castSQLWithPrefix(e, "") },
+		expressions.KindNotNullColumnConstraint: func(g *Generator, e expressions.Expression) string {
+			// generators/hive.py:313: Hive omits explicit NULL constraints.
+			if boolValue(e.Arg("allow_null")) {
+				return ""
+			}
+			return g.notNullColumnConstraintSQL(e)
+		},
+		expressions.KindDataType: (*Generator).hiveDataTypeSQL,
+		expressions.KindTryCast:  func(g *Generator, e expressions.Expression) string { return g.castSQLWithPrefix(e, "") },
 		// generators/hive.py:300 `exp.If: if_sql()` — Hive renders the three-argument IF
 		// form rather than a CASE.
 		expressions.KindIf: func(g *Generator, e expressions.Expression) string {
@@ -81,7 +89,38 @@ func init() {
 		// form (this port's trimSQLStandard), not the LTRIM/RTRIM call form.
 		expressions.KindTrim:           (*Generator).trimSQLStandard,
 		expressions.KindApproxDistinct: hiveCall("APPROX_COUNT_DISTINCT", "this"),
+		expressions.KindIsNan:          hiveCall("ISNAN", "this"),
 		expressions.KindRegexpLike:     func(g *Generator, e expressions.Expression) string { return g.binary(e, "RLIKE") },
+		expressions.KindRegexpReplace:  hiveCall("REGEXP_REPLACE", "this", "expression", "replacement"),
+		expressions.KindMonthsBetween:  hiveCall("MONTHS_BETWEEN", "this", "expression"),
+		expressions.KindMD5Digest: func(g *Generator, e expressions.Expression) string {
+			digest := g.funcCall("MD5", []any{e.This()}, "(", ")", true)
+			return g.funcCall("UNHEX", []any{digest}, "(", ")", true)
+		},
+		expressions.KindExtract: func(g *Generator, e expressions.Expression) string {
+			// generators/hive.py:233 EXTRACT_ALLOWS_QUOTES = False.
+			if unit := e.This(); unit != nil && (unit.IsString() || unit.Kind() == expressions.KindIdentifier) {
+				e.Set("this", expressions.Var(expressions.Args{"this": unit.Name()}))
+			}
+			return g.extractSQL(e)
+		},
+		expressions.KindLeft:  hiveLeftSQL,
+		expressions.KindRight: hiveRightSQL,
+		expressions.KindTrunc: func(g *Generator, e expressions.Expression) string {
+			// generators/hive.py:491-493 trunc_sql.
+			if e.Arg("decimals") != nil {
+				g.unsupported("'decimals' is not supported")
+			}
+			return g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": expressions.DTypeBigInt.IntoExpr(nil)}))
+		},
+		expressions.KindUuid: func(g *Generator, e expressions.Expression) string {
+			// generator.py:6237-6244 uuid_sql.
+			uuid := g.funcCall("UUID", nil, "(", ")", true)
+			if boolValue(e.Arg("is_string")) {
+				return g.gen(expressions.Cast(expressions.Args{"this": uuid, "to": expressions.DTypeVarchar.IntoExpr(nil)}))
+			}
+			return uuid
+		},
 		expressions.KindIgnoreNulls: func(g *Generator, e expressions.Expression) string {
 			// hive.py:432-437: FIRST/LAST/FIRST_VALUE/LAST_VALUE take IGNORE NULLS as a TRUE argument.
 			if this := e.This(); this != nil {
@@ -174,8 +213,10 @@ func init() {
 		expressions.KindArrayToString: func(g *Generator, e expressions.Expression) string {
 			return g.funcCall("CONCAT_WS", []any{e.Arg("expression"), e.This()}, "(", ")", true)
 		},
-		expressions.KindDateDiff: (*Generator).hiveDateDiffUnits,
-		expressions.KindIndex:    hiveIndexSQL,
+		expressions.KindDateDiff:   (*Generator).hiveDateDiffUnits,
+		expressions.KindTsOrDsDiff: (*Generator).hiveDateDiffUnits,
+		expressions.KindIndex:      hiveIndexSQL,
+		expressions.KindExplode:    renameFunc("EXPLODE"),
 		expressions.KindILike: func(g *Generator, e expressions.Expression) string {
 			if g.dialect.Name != "hive" {
 				return g.ilikeSQL(e)
@@ -252,6 +293,12 @@ func init() {
 	registerDialectDispatch("hive", handlers)
 }
 
+// hiveCreateSQL ports the CREATE preprocess chain in generators/hive.py:315-321.
+func hiveCreateSQL(g *Generator, e expressions.Expression) string {
+	return g.createSQL(moveSchemaColumnsToPartitionedBy(
+		ctasWithTmpTablesToCreateTmpView(removeUniqueConstraints(e), false)))
+}
+
 // hiveColumnDefSQL ports columndef_sql (generators/hive.py:466-472): a struct's field names
 // are separated by a colon instead of a space.
 func hiveColumnDefSQL(g *Generator, e expressions.Expression) string {
@@ -271,6 +318,28 @@ func hiveCall(name string, keys ...string) func(*Generator, expressions.Expressi
 		}
 		return g.funcCall(name, args, "(", ")", true)
 	}
+}
+
+// hiveLeftSQL and hiveRightSQL port the substring transforms in dialect.py:1752-1767.
+func hiveLeftSQL(g *Generator, e expressions.Expression) string {
+	return g.gen(expressions.Substring(expressions.Args{
+		"this": e.This(), "start": expressions.LiteralNumber(1), "length": e.Expr(),
+	}))
+}
+
+func hiveRightSQL(g *Generator, e expressions.Expression) string {
+	length := e.Expr()
+	// expressions/core.py:1399-1407 wraps a different binary operator before subtracting.
+	if length != nil && length.Kind() != expressions.KindSub && length.Is(expressions.TraitBinary) {
+		length = expressions.Paren(expressions.Args{"this": length})
+	}
+	start := expressions.Sub(expressions.Args{
+		"this": expressions.Length(expressions.Args{"this": e.This().Copy()}),
+		"expression": expressions.Paren(expressions.Args{"this": expressions.Sub(expressions.Args{
+			"this": length, "expression": expressions.LiteralNumber(1),
+		})}),
+	})
+	return g.gen(expressions.Substring(expressions.Args{"this": e.This(), "start": start}))
 }
 
 // hiveFileFormatPropertySQL ports fileformatproperty_sql (generators/hive.py:604-611):
@@ -797,27 +866,44 @@ func hiveIndexSQL(g *Generator, e expressions.Expression) string {
 	return unique + primary + index + name + table + g.sqlKey(e, "params")
 }
 
-// hiveDateDiffUnits maps sub-day DATE_DIFF units to the UNIX_TIMESTAMP arithmetic Hive uses.
+// hiveDateDiffUnits ports _date_diff_sql in generators/hive.py:139-161.
 func (g *Generator) hiveDateDiffUnits(e expressions.Expression) string {
-	unit := asExpression(e.Arg("unit"))
-	unitName := ""
-	if unit != nil {
-		unitName = strings.ToLower(unit.Name())
-	}
-	y := g.sqlKey(e, "this")
-	x := g.sqlKey(e, "expression")
-	diff := "UNIX_TIMESTAMP(" + y + ") - UNIX_TIMESTAMP(" + x + ")"
+	unitName := strings.ToLower(e.Text("unit"))
+	factor := ""
 	switch unitName {
 	case "hour":
-		return "(" + diff + ") / 3600"
+		factor = " / 3600"
 	case "minute":
-		return "(" + diff + ") / 60"
-	case "second":
-		return diff
+		factor = " / 60"
 	case "millisecond":
-		return "(" + diff + ") * 1000"
+		factor = " * 1000"
 	}
-	return g.functionFallbackSQL(e)
+	if unitName == "second" || factor != "" {
+		y := g.sqlKey(e, "this")
+		x := g.sqlKey(e, "expression")
+		diff := "UNIX_TIMESTAMP(" + y + ") - UNIX_TIMESTAMP(" + x + ")"
+		if factor == "" {
+			return diff
+		}
+		return "(" + diff + ")" + factor
+	}
+	name := "DATEDIFF"
+	divisor := ""
+	switch unitName {
+	case "year":
+		name, divisor = "MONTHS_BETWEEN", " / 12"
+	case "quarter":
+		name, divisor = "MONTHS_BETWEEN", " / 3"
+	case "month":
+		name = "MONTHS_BETWEEN"
+	case "week":
+		divisor = " / 7"
+	}
+	sql := g.funcCall(name, []any{e.This(), e.Expr()}, "(", ")", true)
+	if name == "MONTHS_BETWEEN" || divisor != "" {
+		return "CAST(" + sql + divisor + " AS INT)"
+	}
+	return sql
 }
 
 // hiveTableSQL ports the Table preprocess chain (generators/hive.py:351): a GENERATE_SERIES
