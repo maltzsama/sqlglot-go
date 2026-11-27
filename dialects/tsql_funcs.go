@@ -230,7 +230,8 @@ func tsqlBuildEoMonth(args []exp.Expression) exp.Expression {
 		this = exp.DateAdd(exp.Args{
 			"this":       date,
 			"expression": monthLag,
-			"unit":       exp.Var(exp.Args{"this": tsqlDateDeltaInterval["month"]}),
+			// TimeUnit normalizes a Var unit to upper case on construction (expressions/core.py:2055-2066).
+			"unit": exp.TimeUnitVar(exp.Var(exp.Args{"this": tsqlDateDeltaInterval["month"]})),
 		})
 	}
 	return exp.LastDay(exp.Args{"this": this})
