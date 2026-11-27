@@ -1091,9 +1091,9 @@ func sequenceSQL(g *Generator, e exp.Expression) string {
 		}
 		if ok && (dt == exp.DTypeDate || dt == exp.DTypeTimestamp) {
 			if start.Kind() == exp.KindCast && asExpression(start.Arg("to")) == targetType {
-				end = exp.Cast(exp.Args{"this": end, "to": targetType})
+				end = castToSameType(end, targetType)
 			} else {
-				start = exp.Cast(exp.Args{"this": start, "to": targetType})
+				start = castToSameType(start, targetType)
 			}
 		}
 		if truthy(e.Arg("is_end_exclusive")) {
@@ -1197,4 +1197,19 @@ func prestoDateDiffSQL(g *Generator, e exp.Expression) string {
 		}
 	}
 	return g.funcCall("DATE_DIFF", []any{unit, expr, this}, "(", ")", true)
+}
+
+// castToSameType is exp.cast (expressions/builders.py:457): an operand already cast to the
+// target type is returned unchanged instead of being cast twice.
+func castToSameType(e exp.Expression, target exp.Expression) exp.Expression {
+	if e.Kind() == exp.KindCast {
+		if to := asExpression(e.Arg("to")); to != nil {
+			if dt, ok := to.Arg("this").(exp.DType); ok {
+				if want, ok := target.Arg("this").(exp.DType); ok && dt == want {
+					return e
+				}
+			}
+		}
+	}
+	return exp.Cast(exp.Args{"this": e, "to": target})
 }
