@@ -27,7 +27,8 @@ func TestPostgresTargetTail(t *testing.T) {
 		{"", "ARRAY_PREPEND(a, b)", "ARRAY_PREPEND(b, a)"},
 		{"postgres", "SELECT REGEXP_REPLACE('aaa', 'a', 'b')", "SELECT REGEXP_REPLACE('aaa', 'a', 'b')"},
 		{"snowflake", "REGEXP_REPLACE('aaa', 'a', 'b', 1)", "REGEXP_REPLACE('aaa', 'a', 'b', 1, 'g')"},
-		{"postgres", "SELECT GENERATE_SERIES(a, b, '1.5 days')", "SELECT GENERATE_SERIES(a, b, INTERVAL '1.5 DAY')"},
+		// Unit spelling is kept as written (oracle: INTERVAL '1.5 DAYS').
+		{"postgres", "SELECT GENERATE_SERIES(a, b, '1.5 days')", "SELECT GENERATE_SERIES(a, b, INTERVAL '1.5 DAYS')"},
 		{"snowflake", "ARRAY_GENERATE_RANGE(3, 0, -1)", "GENERATE_SERIES(3, 0 + 1, -1)"},
 		{"", "SELECT 'ok' FROM t QUALIFY COUNT(*) OVER () > 1", "SELECT _c AS ok FROM (SELECT 'ok' AS _c, COUNT(*) OVER () AS _w FROM t) AS _t WHERE _w > 1"},
 		{"", "SELECT l.id, r.id FROM l, r QUALIFY ROW_NUMBER() OVER () = 1", "SELECT id, _c AS id FROM (SELECT l.id, r.id AS _c, ROW_NUMBER() OVER () AS _w FROM l, r) AS _t WHERE _w = 1"},
