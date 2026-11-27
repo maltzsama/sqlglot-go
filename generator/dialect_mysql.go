@@ -15,6 +15,8 @@ func init() {
 	// generator class hierarchy.
 	registerDialectPropertyLocations("mysql", map[expressions.Kind]propertyLocation{
 		expressions.KindVolatileProperty: propertyLocationUnsupported,
+		// generators/mysql.py:267 TransientProperty is UNSUPPORTED.
+		expressions.KindTransientProperty: propertyLocationUnsupported,
 	})
 }
 

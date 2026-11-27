@@ -28,8 +28,11 @@ func PartitionedOfProperty(args Args) Expression   { return newNode(KindPartitio
 func SchemaCommentProperty(args Args) Expression   { return newNode(KindSchemaCommentProperty, args) }
 func SqlReadWriteProperty(args Args) Expression    { return newNode(KindSqlReadWriteProperty, args) }
 func TemporaryProperty(args Args) Expression       { return newNode(KindTemporaryProperty, args) }
-func UnloggedProperty(args Args) Expression        { return newNode(KindUnloggedProperty, args) }
-func WithDataProperty(args Args) Expression        { return newNode(KindWithDataProperty, args) }
+
+// TransientProperty is parser.py:1405 TRANSIENT (expressions/properties.py:540).
+func TransientProperty(args Args) Expression { return newNode(KindTransientProperty, args) }
+func UnloggedProperty(args Args) Expression  { return newNode(KindUnloggedProperty, args) }
+func WithDataProperty(args Args) Expression  { return newNode(KindWithDataProperty, args) }
 
 // Teradata CREATE TABLE properties (properties.py: exp.SetProperty .. exp.VolatileProperty),
 // dispatched from _parse_property_before / PROPERTY_PARSERS (parser.py:2855-2881, 3171-3240).

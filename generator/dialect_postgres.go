@@ -17,6 +17,8 @@ func init() {
 	// generators/postgres.py:426 exp.VolatileProperty: UNSUPPORTED.
 	registerDialectPropertyLocations("postgres", map[exp.Kind]propertyLocation{
 		exp.KindVolatileProperty: propertyLocationUnsupported,
+		// generators/postgres.py:425 TransientProperty is UNSUPPORTED.
+		exp.KindTransientProperty: propertyLocationUnsupported,
 	})
 }
 

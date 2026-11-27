@@ -32,6 +32,7 @@ var propertyLocations = map[expressions.Kind]propertyLocation{
 	expressions.KindDefinerProperty:           propertyLocationPostCreate,
 	expressions.KindMaterializedProperty:      propertyLocationPostCreate,
 	expressions.KindTemporaryProperty:         propertyLocationPostCreate,
+	expressions.KindTransientProperty:         propertyLocationPostCreate,
 	expressions.KindUnloggedProperty:          propertyLocationPostCreate,
 	expressions.KindAutoIncrementProperty:     propertyLocationPostSchema,
 	expressions.KindCalledOnNullInputProperty: propertyLocationPostSchema,
@@ -136,6 +137,7 @@ func init() {
 	dispatch[expressions.KindLockProperty] = (*Generator).propertySQL
 	dispatch[expressions.KindSchemaCommentProperty] = (*Generator).propertySQL
 	dispatch[expressions.KindTemporaryProperty] = (*Generator).temporaryPropertySQL
+	dispatch[expressions.KindTransientProperty] = (*Generator).transientPropertySQL
 	dispatch[expressions.KindMaterializedProperty] = (*Generator).materializedPropertySQL
 	dispatch[expressions.KindUnloggedProperty] = (*Generator).unloggedPropertySQL
 	dispatch[expressions.KindInheritsProperty] = (*Generator).inheritsPropertySQL
@@ -324,6 +326,9 @@ func (g *Generator) propertySQL(e expressions.Expression) string {
 }
 
 func (g *Generator) temporaryPropertySQL(expressions.Expression) string { return "TEMPORARY" }
+
+// transientPropertySQL renders generator.py:274 TransientProperty as TRANSIENT.
+func (g *Generator) transientPropertySQL(expressions.Expression) string { return "TRANSIENT" }
 
 // modulePropertySQL ports moduleproperty_sql (generator.py:2177-2180): sqlite
 // `USING <module>[(cols)]`.

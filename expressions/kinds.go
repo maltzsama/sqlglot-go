@@ -806,6 +806,7 @@ const (
 	KindSchemaCommentProperty
 	KindSqlReadWriteProperty
 	KindTemporaryProperty
+	KindTransientProperty
 	KindUnloggedProperty
 	KindWithDataProperty
 	KindPartitionRange
@@ -1830,6 +1831,7 @@ var argTypes = map[Kind][]argSpec{
 	KindSchemaCommentProperty:        {{"this", true}},
 	KindSqlReadWriteProperty:         {{"this", true}},
 	KindTemporaryProperty:            {{"this", false}},
+	KindTransientProperty:            {{"this", false}},
 	KindUnloggedProperty:             {},
 	KindWithDataProperty:             {{"no", true}, {"statistics", false}},
 	KindPartitionRange:               {{"this", true}, {"expression", false}, {"expressions", false}},
@@ -3353,6 +3355,7 @@ var className = map[Kind]string{
 	KindSchemaCommentProperty:               "SchemaCommentProperty",
 	KindSqlReadWriteProperty:                "SqlReadWriteProperty",
 	KindTemporaryProperty:                   "TemporaryProperty",
+	KindTransientProperty:                   "TransientProperty",
 	KindUnloggedProperty:                    "UnloggedProperty",
 	KindWithDataProperty:                    "WithDataProperty",
 	KindPartitionRange:                      "PartitionRange",

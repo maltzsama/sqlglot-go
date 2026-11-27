@@ -1098,6 +1098,9 @@ func init() {
 		"TEMPORARY": func(p *Parser, _ bool) exp.Expression {
 			return p.expression(exp.TemporaryProperty(nil), nil, nil)
 		},
+		"TRANSIENT": func(p *Parser, _ bool) exp.Expression {
+			return p.expression(exp.TransientProperty(nil), nil, nil)
+		},
 		"UNLOGGED": func(p *Parser, _ bool) exp.Expression {
 			return p.expression(exp.UnloggedProperty(nil), nil, nil)
 		},
