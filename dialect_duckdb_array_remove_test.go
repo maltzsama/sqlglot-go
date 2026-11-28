@@ -9,5 +9,5 @@ func TestDuckDBArrayRemove(t *testing.T) {
 	// DEVIATIONS §1.32: keep NULL array elements, matching Snowflake.
 	transpileCase(t, "", "duckdb",
 		"ARRAY_REMOVE(the_array, target)",
-		"LIST_FILTER(the_array, _u -> _u IS DISTINCT FROM target)")
+		"LIST_FILTER(the_array, LAMBDA _u : _u IS DISTINCT FROM target)")
 }

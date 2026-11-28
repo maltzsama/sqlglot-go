@@ -458,7 +458,7 @@ func duckDBArrowJSONExtractArray(g *Generator, e expressions.Expression) string 
 		// BigQuery returns SQL NULL when any element is an object or array.
 		extractSQL := g.gen(extract)
 		jsonArray := "CAST(" + extractSQL + " AS JSON[])"
-		nonScalar := "LIST_FILTER(" + jsonArray + ", x -> JSON_TYPE(x) IN ('OBJECT', 'ARRAY'))"
+		nonScalar := "LIST_FILTER(" + jsonArray + ", LAMBDA x : JSON_TYPE(x) IN ('OBJECT', 'ARRAY'))"
 		return "CASE WHEN " + extractSQL + " IS NULL THEN NULL WHEN LENGTH(" + nonScalar + ") = 0 THEN " +
 			g.gen(expressions.Cast(expressions.Args{"this": extract, "to": to})) + " ELSE NULL END"
 	}
@@ -1334,6 +1334,11 @@ func duckDBTableSampleSQL(g *Generator, e expressions.Expression) string {
 
 // duckDBLambdaSQL renders DuckDB's `LAMBDA x, y : body` form when the parser saw the keyword.
 func duckDBLambdaSQL(g *Generator, e expressions.Expression) string {
+	// generators/duckdb.py:2776-2785: from DuckDB 1.3 every lambda uses the LAMBDA form with a colon.
+	if g.dialect.VersionAtLeast(1, 3) {
+		params := g.expressions(exprsOptions{expression: e, key: "expressions", flat: true})
+		return "LAMBDA " + params + " : " + g.sqlKey(e, "this")
+	}
 	if truthy(e.Arg("colon")) {
 		params := g.expressions(exprsOptions{expression: e, key: "expressions", flat: true})
 		return "LAMBDA " + params + " : " + g.sqlKey(e, "this")

@@ -52,6 +52,10 @@ const (
 )
 
 type Dialect struct {
+	// Version is the dialect version that version-gated generation and parsing compare against
+	// (dialect.py Dialect.version). Nil means the latest, which is the upstream default
+	// (sys.maxsize, dialects/dialect.py:1165).
+	Version *[3]int
 	Name            string
 	QuoteStart      string
 	QuoteEnd        string
@@ -1944,4 +1948,17 @@ func (d *Dialect) JSONPathConfig() jsonpath.Config {
 	}
 
 	return cfg
+}
+
+// VersionAtLeast reports whether the dialect version is at least major.minor. The latest version
+// (Version == nil) is at least every version, as upstream's sys.maxsize default is.
+func (d *Dialect) VersionAtLeast(major, minor int) bool {
+	if d == nil || d.Version == nil {
+		return true
+	}
+	v := d.Version
+	if v[0] != major {
+		return v[0] > major
+	}
+	return v[1] >= minor
 }
