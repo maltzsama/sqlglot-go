@@ -28,6 +28,7 @@ func teradataDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 	return map[exp.Kind]func(*Generator, exp.Expression) string{
 		exp.KindArgMax:             clickhouseRename("MAX_BY"),
 		exp.KindHexString:          teradataHexStringSQL,
+		exp.KindExecute:            teradataExecuteSQL,
 		exp.KindTeradataConversion: teradataConversionSQL,
 		exp.KindTeradataTitle:      teradataTitleSQL,
 		exp.KindTeradataNamed:      teradataNamedSQL,
@@ -362,4 +363,15 @@ func teradataTitleSQL(g *Generator, e exp.Expression) string {
 // teradataNamedSQL ports teradatanamed_sql (generators/teradata.py:137-138).
 func teradataNamedSQL(g *Generator, e exp.Expression) string {
 	return g.sqlKey(e, "this") + " (NAMED " + g.sqlKey(e, "alias") + ")"
+}
+
+// teradataExecuteSQL ports the Teradata execute_sql (generators/teradata.py:116-119): the macro
+// call renders as EXECUTE with its argument list, when there is one.
+func teradataExecuteSQL(g *Generator, e exp.Expression) string {
+	this := g.sqlKey(e, "this")
+	arguments := ""
+	if len(e.Expressions()) > 0 {
+		arguments = "(" + g.expressions(exprsOptions{expression: e, flat: true}) + ")"
+	}
+	return "EXECUTE " + this + arguments
 }
