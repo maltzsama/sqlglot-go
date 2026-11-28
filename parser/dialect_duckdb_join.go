@@ -14,18 +14,26 @@ import (
 // duckDBNearestAhead is _parse_table_alias's lookahead (parsers/duckdb.py:438-441) without
 // consuming tokens: `NEAREST <number>` or `APPROX NEAREST`.
 func (p *Parser) duckDBNearestAhead() bool {
-	if p.curr.IsValid() && stringsUpper(p.curr.Text) == "NEAREST" && p.next.TokenType == tokens.NUMBER {
+	// _match_text_seq skips quoted identifiers (TEXT_MATCH_EXCLUDED_TOKENS), so "APPROX" is an alias.
+	plainWord := func(t tokens.Token, text string) bool {
+		return t.IsValid() && !textMatchExcludedTokens[t.TokenType] && stringsUpper(t.Text) == text
+	}
+	if plainWord(p.curr, "NEAREST") && p.next.TokenType == tokens.NUMBER {
 		return true
 	}
-	return p.curr.IsValid() && stringsUpper(p.curr.Text) == "APPROX" &&
-		p.next.IsValid() && stringsUpper(p.next.Text) == "NEAREST"
+	return plainWord(p.curr, "APPROX") && plainWord(p.next, "NEAREST")
 }
 
 // parseDuckDBJoin ports DuckDBParser._parse_join (parsers/duckdb.py:446-493).
 func (p *Parser) parseDuckDBJoin(skipJoinToken bool, parseBracket bool, aliasTokens map[tokens.TokenType]bool) exp.Expression {
 	joinType := ""
 	if p.matchTextSeq("JOIN", "BY", "(", "TYPE") {
-		joinType = p.parseVar(true, nil, false).Text("this")
+		typeVar := p.parseVar(true, nil, false)
+		if typeVar == nil {
+			p.raiseError("Expected a join type after JOIN BY (TYPE")
+			return nil
+		}
+		joinType = typeVar.Text("this")
 		p.matchRParen(nil)
 		skipJoinToken = true
 	}

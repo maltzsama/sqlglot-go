@@ -1324,7 +1324,7 @@ var argTypes = map[Kind][]argSpec{
 	// ksqlDB (beyond-upstream): `WITHIN <size> <unit> [(<before>, <after>)] [GRACE PERIOD ...]`
 	// between the joined relation and its ON criteria (SqlBase.g4 joinWindow), and the
 	// DROP ... DELETE TOPIC / INSERT INTO ... WITH (...) clauses on their own statements.
-	KindJoin:                  {{"this", true}, {"on", false}, {"within", false}, {"grace", false}, {"side", false}, {"kind", false}, {"using", false}, {"method", false}, {"global_", false}, {"hint", false}, {"match_condition", false}, {"directed", false}, {"expressions", false}, {"pivots", false}},
+	KindJoin:                  {{"this", true}, {"on", false}, {"within", false}, {"grace", false}, {"side", false}, {"kind", false}, {"using", false}, {"method", false}, {"global_", false}, {"hint", false}, {"match_condition", false}, {"directed", false}, {"expressions", false}, {"pivots", false}, {"nearest", false}},
 	KindTable:                 {{"this", false}, {"alias", false}, {"schema", false}, {"catalog", false}, {"laterals", false}, {"joins", false}, {"pivots", false}, {"hints", false}, {"system_time", false}, {"version", false}, {"format", false}, {"pattern", false}, {"ordinality", false}, {"when", false}, {"only", false}, {"partition", false}, {"changes", false}, {"rows_from", false}, {"sample", false}, {"indexed", false}},
 	KindTableAlias:            {{"this", false}, {"columns", false}},
 	KindWhere:                 defaultArgTypes,

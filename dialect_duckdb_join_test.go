@@ -1,6 +1,11 @@
 package sqlglot_test
 
-import "testing"
+import (
+	"testing"
+
+	sqlglot "github.com/maltzsama/sqlglot-go"
+	"github.com/maltzsama/sqlglot-go/generator"
+)
 
 // DuckDB join and statement forms from parsers/duckdb.py (_parse_join, STATEMENT_PARSERS)
 // and generators/duckdb.py (join_sql). Expected outputs are the pinned upstream v30.35.0
@@ -26,5 +31,22 @@ func TestDuckDBJoinByTypeAndNearest(t *testing.T) {
 func TestDuckDBConnectDisconnect(t *testing.T) {
 	for _, sql := range []string{`CONNECT "remote db"`, "CONNECT qk", "DISCONNECT"} {
 		transpileCase(t, "duckdb", "duckdb", sql, sql)
+	}
+}
+
+// A quoted "APPROX" is an alias, not the APPROX NEAREST modifier (TEXT_MATCH_EXCLUDED_TOKENS).
+func TestDuckDBQuotedApproxIsAlias(t *testing.T) {
+	transpileCase(t, "duckdb", "duckdb",
+		`SELECT * FROM a JOIN b "APPROX" NEAREST 1 BY DISTANCE a.x`,
+		`SELECT * FROM a JOIN b AS "APPROX" NEAREST 1 BY DISTANCE a.x`)
+	transpileCase(t, "duckdb", "duckdb",
+		"SELECT * FROM a JOIN b APPROX NEAREST 1 BY DISTANCE a.x",
+		"SELECT * FROM a JOIN b APPROX NEAREST 1 BY DISTANCE a.x")
+}
+
+// A JOIN BY (TYPE with no type name is a parse error, not a nil dereference.
+func TestDuckDBJoinByMissingTypeIsParseError(t *testing.T) {
+	if _, err := sqlglot.Transpile("SELECT * FROM a JOIN BY (TYPE", "duckdb", "duckdb", generator.Options{}); err == nil {
+		t.Fatal("expected a parse error")
 	}
 }
