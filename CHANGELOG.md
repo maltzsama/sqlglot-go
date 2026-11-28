@@ -18,6 +18,40 @@ merged, tags the version and publishes the GitHub release. See
 [AGENTS.md § Releasing](./AGENTS.md#releasing). Entries for **v0.5.0 and earlier** were written by hand
 before release-please was adopted.
 
+## [0.44.0](https://github.com/maltzsama/sqlglot-go/compare/v0.43.0...v0.44.0) (2026-11-28)
+
+
+### Features
+
+* **duckdb:** port JOIN BY, NEAREST joins and CONNECT statements ([b626ab2](https://github.com/maltzsama/sqlglot-go/commit/b626ab2e3c2b1455c8003f178f3e85b7c5403433))
+* **teradata:** parse and render character hex literals ([32e1174](https://github.com/maltzsama/sqlglot-go/commit/32e1174105a0889475da008409c0f361ac784576))
+* **teradata:** parse conversion attributes and TABLE function calls ([fed4b49](https://github.com/maltzsama/sqlglot-go/commit/fed4b49fe026e5f0f2b9651412a7eb7719df61aa))
+
+
+### Bug Fixes
+
+* **duckdb:** guard the JOIN BY type and match quoted APPROX as an alias ([5ab3a98](https://github.com/maltzsama/sqlglot-go/commit/5ab3a98bc748254dfd8165ce6642d882cb719179))
+* **duckdb:** match v30.35.0 array, sort, regex, format and interval output ([f75b69d](https://github.com/maltzsama/sqlglot-go/commit/f75b69df264f1f1b7aadf68f94e45bbac331bd47))
+* **duckdb:** match v30.35.0 pivot, sample, SORT BY and join keyword output ([8beb621](https://github.com/maltzsama/sqlglot-go/commit/8beb621a01dc978784bce4b03752cf870455e9ab))
+* **duckdb:** route every raw lambda template through one version-aware helper ([1988f13](https://github.com/maltzsama/sqlglot-go/commit/1988f132c3144e7d98dd1617f7d2ae98bfeffd8f))
+* **generator:** stop null-ordering resolution from recursing into its own ORDER BY ([ff951b7](https://github.com/maltzsama/sqlglot-go/commit/ff951b78c6f6c74bfc9f580b2653acb722880fe4))
+* **generator:** stop null-ordering resolution from recursing into its own ORDER BY ([6efadeb](https://github.com/maltzsama/sqlglot-go/commit/6efadeb41cc157b4960aa4f4eed9fccbf3048501))
+* **parser:** port IS predicate precedence for DuckDB, Postgres and Dremio ([69bee44](https://github.com/maltzsama/sqlglot-go/commit/69bee44fe76d85466392ff0ceecfd1b3f276e66c))
+* **parser:** port VALUES operand wrapping, slice defaults and IS operands ([030068d](https://github.com/maltzsama/sqlglot-go/commit/030068d5488eee2823e4bdd3d4cfe9f1d278839b))
+* **parser:** set the IS predicate precedence for every pinned dialect ([c995b5d](https://github.com/maltzsama/sqlglot-go/commit/c995b5d01c09c591d1bb0a15f4abaa3b3c69b6a2))
+* **reference:** point the tripwire and fidelity audit at the v30.33.0 reference ([b10a5ef](https://github.com/maltzsama/sqlglot-go/commit/b10a5efb700703678d121a35759451694e342741))
+
+
+### Documentation
+
+* **coverage:** refresh the v30.35.0 figures and state the floor rule ([f73c93a](https://github.com/maltzsama/sqlglot-go/commit/f73c93a927e3ff5fe00ff3b6c6c2090b391ed7e5))
+* state that the upstream is maintained by its authors ([567712f](https://github.com/maltzsama/sqlglot-go/commit/567712fa55067a898f33a41b395425d5c92dd015))
+
+
+### Refactoring
+
+* **lint:** simplify three conditions flagged by staticcheck ([3c0c8df](https://github.com/maltzsama/sqlglot-go/commit/3c0c8df426c68daa2c976051f149c63203b927ee))
+
 ## [0.43.0](https://github.com/maltzsama/sqlglot-go/compare/v0.42.2...v0.43.0) (2026-11-28)
 
 
