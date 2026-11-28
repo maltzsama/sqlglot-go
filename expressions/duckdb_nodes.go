@@ -18,3 +18,13 @@ func SortArray(args Args) Expression        { return newNode(KindSortArray, args
 func RegexpFullMatch(args Args) Expression  { return newNode(KindRegexpFullMatch, args) }
 func Summarize(args Args) Expression        { return newNode(KindSummarize, args) }
 func UnpivotColumns(args Args) Expression   { return newNode(KindUnpivotColumns, args) }
+
+// ConnectTo is DuckDB's `CONNECT 'uri'` statement (expressions/ddl.py:134).
+func ConnectTo(args Args) Expression { return newNode(KindConnectTo, args) }
+
+// Disconnect is DuckDB's `DISCONNECT` statement (expressions/ddl.py:138).
+func Disconnect(args Args) Expression { return newNode(KindDisconnect, args) }
+
+// Nearest is the `NEAREST n BY DISTANCE|SIMILARITY expr` join modifier
+// (expressions/query.py:825).
+func Nearest(args Args) Expression { return newNode(KindNearest, args) }

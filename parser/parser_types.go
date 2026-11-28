@@ -908,10 +908,11 @@ func (p *Parser) parseSlice(this exp.Expression) exp.Expression {
 		return this
 	}
 
+	// parser.py:8489-8492: DuckDB's `-` in `[a:-:step]` is the default end, which depends on
+	// the sign of step, so the end stays empty and the generator writes the `-`.
 	var end exp.Expression
 	if p.matchPair(tokens.DASH, tokens.COLON, false) {
 		p.advance()
-		end = exp.Neg(exp.Args{"this": exp.LiteralNumber("1")})
 	} else {
 		end = p.parseAssignment()
 	}
@@ -971,6 +972,10 @@ var arrayConstructors = map[string]exp.Kind{
 // upstream - the guard is `exp_class == exp.Array`).
 func (p *Parser) buildArrayConstructor(kind exp.Kind, expressions []exp.Expression, bracketKind tokens.TokenType) exp.Expression {
 	constructor := exp.New(kind, exp.Args{"expressions": expressions})
+	if kind == exp.KindArray {
+		// parser.py:170: value_constructor is set when the only argument is a query.
+		constructor.Set("value_constructor", len(expressions) == 1 && expressions[0] != nil && expressions[0].Is(exp.TraitQuery))
+	}
 	if kind == exp.KindArray && p.dialect.HasDistinctArrayConstructors {
 		constructor.Set("bracket_notation", bracketKind == tokens.L_BRACKET)
 	}

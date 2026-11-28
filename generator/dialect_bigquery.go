@@ -173,11 +173,7 @@ func bigQueryArgMaxMin(name string) func(*Generator, expressions.Expression) str
 
 // bigQueryArraySQL ports inline_array_unless_query (dialects/dialect.py:1262-1266).
 func bigQueryArraySQL(g *Generator, e expressions.Expression) string {
-	exprs := e.Expressions()
-	if len(exprs) > 0 && exprs[0].Find(expressions.TraitQuery) != nil {
-		return g.funcCall("ARRAY", []any{exprs[0]}, "(", ")", true)
-	}
-	return g.inlineArraySQL(e)
+	return inlineArrayUnlessQuery(g, e)
 }
 
 // bigQueryArrayContainsSQL ports _array_contains_sql (generators/bigquery.py:168-175).

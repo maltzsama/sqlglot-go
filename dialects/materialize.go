@@ -5,6 +5,8 @@ package dialects
 func Materialize() *Dialect {
 	d := Postgres()
 	d.Name = "materialize"
+	// IS_PREDICATE_PRECEDENCE as the pinned parser resolves it (parsers/*.py, inherited when unset).
+	d.IsPredicatePrecedence = IsPredicatePrecedenceLow
 
 	// dialects/materialize.py:9 NORMALIZE_NOT_NULL = True (postgres.py:16 overrides False).
 	d.NormalizeNotNull = true

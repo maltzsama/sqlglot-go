@@ -15,6 +15,9 @@ func init() {
 	dispatch[expressions.KindProperties] = (*Generator).propertiesSQL
 	dispatch[expressions.KindAttach] = (*Generator).attachSQL
 	dispatch[expressions.KindDetach] = (*Generator).detachSQL
+	dispatch[expressions.KindConnectTo] = (*Generator).connectToSQL
+	dispatch[expressions.KindDisconnect] = (*Generator).disconnectSQL
+	dispatch[expressions.KindNearest] = (*Generator).nearestSQL
 	dispatch[expressions.KindUserDefinedFunction] = (*Generator).userDefinedFunctionSQL
 	dispatch[expressions.KindMacroOverloads] = (*Generator).macroOverloadsSQL
 	dispatch[expressions.KindMacroOverload] = (*Generator).macroOverloadSQL
@@ -350,4 +353,30 @@ func (g *Generator) detachSQL(e expressions.Expression) string {
 		}
 	}
 	return "DETACH" + exists + kind + " " + g.sqlKey(e, "this")
+}
+
+// connectToSQL ports connectto_sql (generator.py:3051-3052).
+func (g *Generator) connectToSQL(e expressions.Expression) string {
+	return "CONNECT " + g.sqlKey(e, "this")
+}
+
+// disconnectSQL ports disconnect_sql (generator.py:3054-3055).
+func (g *Generator) disconnectSQL(_ expressions.Expression) string {
+	return "DISCONNECT"
+}
+
+// nearestSQL ports nearest_sql (generator.py:3135-3141): `[APPROX ]NEAREST n BY METRIC expr`.
+func (g *Generator) nearestSQL(e expressions.Expression) string {
+	if !g.dialect.SupportsNearestJoin {
+		g.unsupported("NEAREST joins are not supported")
+	}
+	approximate := ""
+	if truthy(e.Arg("approximate")) {
+		approximate = "APPROX "
+	}
+	metric := "DISTANCE"
+	if truthy(e.Arg("similarity")) {
+		metric = "SIMILARITY"
+	}
+	return approximate + "NEAREST " + g.sqlKey(e, "count") + " BY " + metric + " " + g.sqlKey(e, "this")
 }

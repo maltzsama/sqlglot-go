@@ -1,11 +1,32 @@
 package parser
 
 import (
+	"github.com/maltzsama/sqlglot-go/dialects"
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 func (p *Parser) parseRange(this exp.Expression) exp.Expression {
+	return p.parseRangeIs(this, false)
+}
+
+// isPredicateAhead ports _is_predicate_ahead (parser.py:6402-6411): an IS, ISNULL or NOTNULL
+// token (or NOT NULL) starts a postfix predicate when the dialect does not bind IS tightly.
+func (p *Parser) isPredicateAhead() bool {
+	if p.dialect.IsPredicatePrecedence == dialects.IsPredicatePrecedenceHigh {
+		return false
+	}
+	switch p.curr.TokenType {
+	case tokens.IS, tokens.ISNULL, tokens.NOTNULL, tokens.NOT:
+	default:
+		return false
+	}
+	return p.curr.TokenType != tokens.NOT || p.next.TokenType == tokens.NULL
+}
+
+// parseRangeIs ports _parse_range(this, parse_is) (parser.py:6448-...): parse_is=false stops
+// before a postfix IS predicate, which the equality level then consumes.
+func (p *Parser) parseRangeIs(this exp.Expression, parseIs bool) exp.Expression {
 	if this == nil {
 		this = p.parseBitwise()
 	}
@@ -29,7 +50,8 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 	// v30.17.0 (parser.py:6052-6082): range operators chain in a loop, each NOT bound to
 	// the operator that follows it; a negated link gets parenthesized when another range
 	// operator (or NOT) follows so precedence survives regeneration.
-	for {
+	for parseIs || !p.isPredicateAhead() {
+		// parser.py:6457-6458: stop before a postfix IS predicate unless the caller consumes it.
 		negate := p.match(tokens.NOT)
 		matched := true
 		before := this
@@ -61,7 +83,12 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 			// SimilarTo has no "negate" arg, so `negate` stays set and the generic
 			// `Not`-wrapping below (_negate_range's fallback) applies to `NOT ... SIMILAR TO`.
 			p.advance()
-			this = p.parseEscape(p.expression(exp.SimilarTo(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
+			if p.dialect.RegexpRangeOperators {
+				// parsers/duckdb.py:160: RANGE_PARSERS[SIMILAR_TO] = _parse_regexp_full_match.
+				this = p.parseEscape(p.expression(exp.RegexpFullMatch(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
+			} else {
+				this = p.parseEscape(p.expression(exp.SimilarTo(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil))
+			}
 		case tokens.ISNULL:
 			p.advance()
 			this = p.expression(exp.Is(exp.Args{"this": this, "expression": exp.Null()}), nil, nil)
@@ -80,8 +107,14 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 		case tokens.TILDE:
 			// parsers/duckdb.py:222: RANGE_PARSERS[TILDE] = binary_range_parser(RegexpFullMatch).
 			if p.dialect.RegexpRangeOperators {
+				// parsers/duckdb.py:346-352 _parse_tilde: since DuckDB 2.0 `~` matches anywhere
+				// in the string (RegexpLike); before that it matched the whole string.
 				p.advance()
-				this = p.expression(exp.RegexpFullMatch(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil)
+				if p.dialect.VersionAtLeast(2, 0) {
+					this = p.expression(exp.RegexpLike(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil)
+				} else {
+					this = p.expression(exp.RegexpFullMatch(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil)
+				}
 			} else {
 				matched = false
 			}
@@ -332,7 +365,8 @@ func (p *Parser) parseIs(this exp.Expression) exp.Expression {
 		if negate {
 			constructor = exp.NullSafeEQ
 		}
-		return p.expression(constructor(exp.Args{"this": this, "expression": p.parseBitwise()}), nil, nil)
+		left, right := p.predicateOperands(this, p.parseIsRhsDistinct())
+		return p.expression(constructor(exp.Args{"this": left, "expression": right}), nil, nil)
 	}
 	var expression exp.Expression
 	if p.match(tokens.JSON) {
@@ -367,9 +401,11 @@ func (p *Parser) parseIs(this exp.Expression) exp.Expression {
 	// v30.17.0 (parser.py:6125-6130): under !NORMALIZE_NOT_NULL, `x IS NOT NULL` keeps
 	// Is(negate=True) rather than normalizing to NOT(Is(...)).
 	if negate && expression != nil && expression.Kind() == exp.KindNull && !p.dialect.NormalizeNotNull {
-		this = p.expression(exp.Is(exp.Args{"this": this, "expression": expression, "negate": true}), nil, nil)
+		left, right := p.predicateOperands(this, expression)
+		this = p.expression(exp.Is(exp.Args{"this": left, "expression": right, "negate": true}), nil, nil)
 	} else {
-		this = p.expression(exp.Is(exp.Args{"this": this, "expression": expression}), nil, nil)
+		left, right := p.predicateOperands(this, expression)
+		this = p.expression(exp.Is(exp.Args{"this": left, "expression": right}), nil, nil)
 		if negate {
 			this = p.expression(exp.Not(exp.Args{"this": this}), nil, nil)
 		}
@@ -413,4 +449,70 @@ func (p *Parser) parseBetween(this exp.Expression) exp.Expression {
 	p.match(tokens.AND)
 	high := p.parseBitwise()
 	return p.expression(exp.Between(exp.Args{"this": this, "low": low, "high": high, "symmetric": symmetric}), nil, nil)
+}
+
+// predicateOperands ports the is-predicate branch of _build_predicate (parser.py:6118-6138):
+// a left operand that is a connector, NOT, NULL-safe NEQ or an exact equality or comparison
+// node is parenthesized, and so is a right operand that is a predicate, connector, NOT or ESCAPE.
+func (p *Parser) predicateOperands(this, expression exp.Expression) (exp.Expression, exp.Expression) {
+	if this != nil && (this.Is(exp.TraitConnector) || this.Kind() == exp.KindNot || this.Kind() == exp.KindNullSafeNEQ || isExactEqualityOrComparison(this.Kind())) {
+		this = p.expression(exp.Paren(exp.Args{"this": this}), nil, nil)
+	}
+	if expression != nil && (expression.Is(exp.TraitPredicate) || expression.Is(exp.TraitConnector) || expression.Kind() == exp.KindNot || expression.Kind() == exp.KindEscape) {
+		expression = p.expression(exp.Paren(exp.Args{"this": expression}), nil, nil)
+	}
+	return this, expression
+}
+
+// isExactEqualityOrComparison reports whether kind is one of the EQUALITY or COMPARISON node
+// classes (parser.py:982-993), which upstream matches by exact type.
+func isExactEqualityOrComparison(kind exp.Kind) bool {
+	switch kind {
+	case exp.KindEQ, exp.KindNEQ, exp.KindNullSafeEQ, exp.KindGT, exp.KindGTE, exp.KindLT, exp.KindLTE:
+		return true
+	}
+	return false
+}
+
+// parseIsRhsDistinct ports _parse_is_rhs(distinct=True) (parser.py:6540-6546): the operand of
+// IS [NOT] DISTINCT FROM binds at the dialect's IS precedence.
+func (p *Parser) parseIsRhsDistinct() exp.Expression {
+	switch p.dialect.IsPredicatePrecedence {
+	case dialects.IsPredicatePrecedenceLow:
+		return p.parseEqualityIs(false)
+	case dialects.IsPredicatePrecedenceEquality:
+		return p.parseComparison()
+	case dialects.IsPredicatePrecedenceComparison:
+		return p.parseRange(nil)
+	}
+	return p.parseBitwise()
+}
+
+// predicateOperandsBinary ports the non-IS branch of _build_predicate (parser.py:6447-...): an
+// equality or comparison whose operand is an IS-style predicate gets that operand parenthesized.
+func (p *Parser) predicateOperandsBinary(this, expression exp.Expression) (exp.Expression, exp.Expression) {
+	inner := func(e exp.Expression) exp.Expression {
+		if e != nil && e.Kind() == exp.KindNot {
+			return asNodeThis(e)
+		}
+		return e
+	}
+	isPredicateKind := func(k exp.Kind) bool {
+		return k == exp.KindIs || k == exp.KindNullSafeEQ || k == exp.KindNullSafeNEQ
+	}
+	if l := inner(this); l != nil && isPredicateKind(l.Kind()) {
+		this = p.expression(exp.Paren(exp.Args{"this": this}), nil, nil)
+	}
+	if r := inner(expression); r != nil && isPredicateKind(r.Kind()) {
+		expression = p.expression(exp.Paren(exp.Args{"this": expression}), nil, nil)
+	}
+	return this, expression
+}
+
+// asNodeThis returns a Not node's operand.
+func asNodeThis(e exp.Expression) exp.Expression {
+	if t, ok := e.Arg("this").(exp.Expression); ok {
+		return t
+	}
+	return nil
 }

@@ -52,6 +52,10 @@ const (
 )
 
 type Dialect struct {
+	// Version is the dialect version that version-gated generation and parsing compare against
+	// (dialect.py Dialect.version). Nil means the latest, which is the upstream default
+	// (sys.maxsize, dialects/dialect.py:1165).
+	Version         *[3]int
 	Name            string
 	QuoteStart      string
 	QuoteEnd        string
@@ -762,6 +766,14 @@ type Dialect struct {
 	IdentifyPivotStrings bool
 	// DirectedJoins ports DIRECTED_JOINS (snowflake True): `[kind] DIRECTED JOIN`.
 	DirectedJoins bool
+	// SupportsNearestJoin ports SUPPORTS_NEAREST_JOIN (generator.py:379; duckdb True).
+	SupportsNearestJoin bool
+	// IsPredicatePrecedence ports IS_PREDICATE_PRECEDENCE (parser.py:344-348): how far IS
+	// binds. The zero value is High, the base default; DuckDB and Postgres use Low.
+	IsPredicatePrecedence IsPredicatePrecedence
+	// SemiAntiJoinNoSide is the inverse of SEMI_ANTI_JOIN_WITH_SIDE (generator.py:441; duckdb
+	// False): SEMI and ANTI joins render without their side keyword.
+	SemiAntiJoinNoSide bool
 	// RlikeFullMatch ports snowflake RANGE_PARSERS[RLIKE] building RegexpLike(full_match=true).
 	RlikeFullMatch bool
 	// MapIntervalUnits maps an interval unit through DATE_PART_MAPPING (snowflake W -> WEEK).
@@ -1945,3 +1957,26 @@ func (d *Dialect) JSONPathConfig() jsonpath.Config {
 
 	return cfg
 }
+
+// VersionAtLeast reports whether the dialect version is at least major.minor. The latest version
+// (Version == nil) is at least every version, as upstream's sys.maxsize default is.
+func (d *Dialect) VersionAtLeast(major, minor int) bool {
+	if d == nil || d.Version == nil {
+		return true
+	}
+	v := d.Version
+	if v[0] != major {
+		return v[0] > major
+	}
+	return v[1] >= minor
+}
+
+// IsPredicatePrecedence ports the IsPredicatePrecedence enum (parser.py:344-348).
+type IsPredicatePrecedence int
+
+const (
+	IsPredicatePrecedenceHigh IsPredicatePrecedence = iota
+	IsPredicatePrecedenceComparison
+	IsPredicatePrecedenceEquality
+	IsPredicatePrecedenceLow
+)

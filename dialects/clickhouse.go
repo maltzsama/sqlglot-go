@@ -11,6 +11,8 @@ import (
 func Clickhouse() *Dialect {
 	d := Base()
 	d.Name = "clickhouse"
+	// IS_PREDICATE_PRECEDENCE as the pinned parser resolves it (parsers/*.py, inherited when unset).
+	d.IsPredicatePrecedence = IsPredicatePrecedenceLow
 	// generators/clickhouse.py: QUERY_HINTS = False.
 	d.NoQueryHints = true
 	// generators/clickhouse.py:183 CAN_IMPLEMENT_ARRAY_ANY = True.

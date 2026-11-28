@@ -6,8 +6,8 @@
 # harness runs against. Run this once after cloning.
 set -euo pipefail
 
-VERSION="v30.33.0"
-EXPECTED_SHA="0936dbe9192a3b57c6e6992acfcb93d4b429c51f"
+VERSION="v30.35.0"
+EXPECTED_SHA="324cdefc4abf291f997c8b241f40c0f5444896a5"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST="$REPO_ROOT/.reference/sqlglot-$VERSION"
 

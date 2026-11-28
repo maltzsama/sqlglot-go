@@ -13,6 +13,8 @@ import (
 func StarRocks() *Dialect {
 	d := MySQL()
 	d.Name = "starrocks"
+	// IS_PREDICATE_PRECEDENCE as the pinned parser resolves it (parsers/*.py, inherited when unset).
+	d.IsPredicatePrecedence = IsPredicatePrecedenceComparison
 	// StarRocks has its own eliminate_distinct_on path; the inherited MySQL flag would
 	// re-run the generic transform and lose the StarRocks NULL-ordering emulation.
 	d.EliminateDistinctOn = false

@@ -13,6 +13,8 @@ import (
 func Oracle() *Dialect {
 	d := Base()
 	d.Name = "oracle"
+	// IS_PREDICATE_PRECEDENCE as the pinned parser resolves it (parsers/*.py, inherited when unset).
+	d.IsPredicatePrecedence = IsPredicatePrecedenceLow
 	// generators/oracle.py TRANSFORMS: eliminate_distinct_on.
 	d.EliminateDistinctOn = true
 	// generators/oracle.py:31 DATA_TYPE_SPECIFIERS_ALLOWED = True.

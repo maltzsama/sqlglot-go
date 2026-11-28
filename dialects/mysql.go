@@ -81,6 +81,8 @@ func parseMySQLVersion(value string) (int, error) {
 func MySQL() *Dialect {
 	d := Base()
 	d.Name = "mysql"
+	// IS_PREDICATE_PRECEDENCE as the pinned parser resolves it (parsers/*.py, inherited when unset).
+	d.IsPredicatePrecedence = IsPredicatePrecedenceComparison
 	// generators/mysql.py:124 / generators/tsql.py:138 NULL_ORDERING_SUPPORTED = None.
 	d.NullOrderingSupported = nil
 	// generators/mysql.py PAD_FILL_PATTERN_IS_REQUIRED = True.

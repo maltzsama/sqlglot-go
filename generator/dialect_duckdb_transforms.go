@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -722,18 +723,18 @@ func duckDBArrayBagSQL(kind string) func(*Generator, expressions.Expression) str
 			a1 := g.gen(arr1)
 			a2 := g.gen(arr2)
 			return "CASE WHEN " + a1 + " IS NULL OR " + a2 + " IS NULL THEN NULL ELSE LIST_FILTER(LIST_DISTINCT(" + a1 +
-				"), e -> LENGTH(LIST_FILTER(" + a2 + ", x -> x IS NOT DISTINCT FROM e)) = 0) END"
+				"), " + duckDBLambda(g, "e", "LENGTH(LIST_FILTER("+a2+", "+duckDBLambda(g, "x", "x IS NOT DISTINCT FROM e")+")) = 0") + ") END"
 		}
 		a1 := g.gen(arr1)
 		a2 := g.gen(arr2)
-		cond := "LENGTH(LIST_FILTER(" + a1 + "[1:pair[2]], e -> e IS NOT DISTINCT FROM pair[1]))"
+		cond := "LENGTH(LIST_FILTER(" + a1 + "[1:pair[2]], " + duckDBLambda(g, "e", "e IS NOT DISTINCT FROM pair[1]") + "))"
 		op := ">"
 		if kind == "INTERSECT" {
 			op = "<="
 		}
-		pairs := "LIST_FILTER(LIST_ZIP(" + a1 + ", GENERATE_SERIES(1, LENGTH(" + a1 + "))), pair -> (" +
-			cond + " " + op + " LENGTH(LIST_FILTER(" + a2 + ", e -> e IS NOT DISTINCT FROM pair[1]))))"
-		body := "LIST_TRANSFORM(" + pairs + ", pair -> pair[1])"
+		pairs := "LIST_FILTER(LIST_ZIP(" + a1 + ", GENERATE_SERIES(1, LENGTH(" + a1 + "))), " + duckDBLambda(g, "pair",
+			"("+cond+" "+op+" LENGTH(LIST_FILTER("+a2+", "+duckDBLambda(g, "e", "e IS NOT DISTINCT FROM pair[1]")+")))") + ")"
+		body := "LIST_TRANSFORM(" + pairs + ", " + duckDBLambda(g, "pair", "pair[1]") + ")"
 		return "CASE WHEN " + a1 + " IS NULL OR " + a2 + " IS NULL THEN NULL ELSE " + body + " END"
 	}
 }
@@ -824,8 +825,8 @@ func duckDBMapCatSQL(g *Generator, e expressions.Expression) string {
 	a := g.sqlKey(e, "this")
 	b := g.sqlKey(e, "expression")
 	keys := "LIST_DISTINCT(LIST_CONCAT(MAP_KEYS(" + a + "), MAP_KEYS(" + b + ")))"
-	entries := "LIST_TRANSFORM(" + keys + ", __k -> STRUCT_PACK(key := __k, value := COALESCE(" + b + "[__k], " + a + "[__k])))"
-	kept := "LIST_FILTER(" + entries + ", __x -> NOT __x.value IS NULL)"
+	entries := "LIST_TRANSFORM(" + keys + ", " + duckDBLambda(g, "__k", "STRUCT_PACK(key := __k, value := COALESCE("+b+"[__k], "+a+"[__k]))") + ")"
+	kept := "LIST_FILTER(" + entries + ", " + duckDBLambda(g, "__x", "NOT __x.value IS NULL") + ")"
 	return "CASE WHEN " + a + " IS NULL OR " + b + " IS NULL THEN NULL ELSE MAP_FROM_ENTRIES(" + kept + ") END"
 }
 
@@ -2879,10 +2880,42 @@ func duckDBRegrValSQL(checkKey, returnKey string) func(*Generator, expressions.E
 // duckDBFormatSQL ports format_sql (generators/duckdb.py:4415-4419): a lone %s placeholder
 // becomes DuckDB's positional {} format.
 func duckDBFormatSQL(g *Generator, e expressions.Expression) string {
-	if strings.EqualFold(e.Text("this"), "%s") && len(e.Expressions()) == 1 {
-		return "FORMAT('{}', " + g.gen(e.Expressions()[0]) + ")"
+	if truthy(e.Arg("is_fmt")) {
+		return g.funcCall("FORMAT", append([]any{e.This()}, anySlice(e.Expressions())...), "(", ")", true)
 	}
-	return g.functionFallbackSQL(e)
+	fmtText := e.Text("this")
+	this := asExpression(e.This())
+	isString := this != nil && this.IsString()
+	if isString && fmtText == "%S" && len(e.Expressions()) == 1 {
+		inner := g.funcCall("FORMAT", []any{expressions.LiteralString("{}"), e.Expressions()[0]}, "(", ")", true)
+		return g.funcCall("UPPER", []any{inner}, "(", ")", true)
+	}
+	if isString && strings.Contains(fmtText, "%s") && !strings.Contains(formatSpecifierPattern.ReplaceAllString(fmtText, ""), "%") {
+		// Brace formatting supports non-string %s arguments, as in PostgreSQL.
+		fmt := strings.ReplaceAll(fmtText, "{", "{{")
+		fmt = strings.ReplaceAll(fmt, "}", "}}")
+		fmt = formatSpecifierPattern.ReplaceAllStringFunc(fmt, func(m string) string {
+			if m == "%%" {
+				return "%"
+			}
+			return "{}"
+		})
+		return g.funcCall("FORMAT", append([]any{expressions.LiteralString(fmt)}, anySlice(e.Expressions())...), "(", ")", true)
+	}
+	return g.funcCall("PRINTF", append([]any{e.This()}, anySlice(e.Expressions())...), "(", ")", true)
+}
+
+// formatSpecifierPattern matches the `%%` and `%s` tokens that generators/duckdb.py:4700-4712
+// (re.sub(r"%%|%s", ...)) treats as literal percent or a brace placeholder.
+var formatSpecifierPattern = regexp.MustCompile(`%%|%s`)
+
+// anySlice converts expressions to the []any form funcCall takes.
+func anySlice(exprs []expressions.Expression) []any {
+	out := make([]any, 0, len(exprs))
+	for _, x := range exprs {
+		out = append(out, x)
+	}
+	return out
 }
 
 // duckDBAnonymousSQL handles the upstream DuckDB TRANSFORMS entries whose node our parser keeps
@@ -3074,7 +3107,7 @@ func duckDBMinhashSQL(g *Generator, e expressions.Expression) string {
 	}
 	k := g.gen(e.This())
 	expr := g.gen(exprs[0])
-	return "(SELECT JSON_OBJECT('state', LIST(min_h ORDER BY seed NULLS FIRST), 'type', 'minhash', 'version', 1) FROM (SELECT seed, LIST_MIN(LIST_TRANSFORM(vals, __v -> HASH(CAST(__v AS TEXT) || CAST(seed AS TEXT)))) AS min_h FROM (SELECT LIST(" + expr + ") AS vals), RANGE(0, " + k + ") AS t(seed)))"
+	return "(SELECT JSON_OBJECT('state', LIST(min_h ORDER BY seed NULLS FIRST), 'type', 'minhash', 'version', 1) FROM (SELECT seed, LIST_MIN(LIST_TRANSFORM(vals, " + duckDBLambda(g, "__v", "HASH(CAST(__v AS TEXT) || CAST(seed AS TEXT))") + ")) AS min_h FROM (SELECT LIST(" + expr + ") AS vals), RANGE(0, " + k + ") AS t(seed)))"
 }
 
 // duckDBMinhashCombineSQL ports minhashcombine_sql (generators/duckdb.py:3489-3492).
@@ -3094,7 +3127,7 @@ func duckDBApproximateSimilaritySQL(g *Generator, e expressions.Expression) stri
 // BITMAP_CONSTRUCT_AGG_TEMPLATE (generators/duckdb.py:2062-2077).
 func duckDBBitmapConstructAggSQL(g *Generator, e expressions.Expression) string {
 	arg := g.gen(e.This())
-	return "(SELECT CASE WHEN l IS NULL OR LENGTH(l) = 0 THEN NULL WHEN LENGTH(l) <> LENGTH(LIST_FILTER(l, __v -> __v BETWEEN 0 AND 32767)) THEN NULL WHEN LENGTH(l) < 5 THEN UNHEX(PRINTF('%04X', LENGTH(l)) || h || REPEAT('00', GREATEST(0, 4 - LENGTH(l)) * 2)) ELSE UNHEX('08000000000000000000' || h) END FROM (SELECT l, COALESCE(LIST_REDUCE(LIST_TRANSFORM(l, __x -> PRINTF('%02X%02X', CAST(__x AS INT) & 255, (CAST(__x AS INT) >> 8) & 255)), (__a, __b) -> __a || __b, ''), '') AS h FROM (SELECT LIST_SORT(LIST_DISTINCT(LIST(" + arg + ") FILTER(WHERE NOT " + arg + " IS NULL))) AS l)))"
+	return "(SELECT CASE WHEN l IS NULL OR LENGTH(l) = 0 THEN NULL WHEN LENGTH(l) <> LENGTH(LIST_FILTER(l, " + duckDBLambda(g, "__v", "__v BETWEEN 0 AND 32767") + ")) THEN NULL WHEN LENGTH(l) < 5 THEN UNHEX(PRINTF('%04X', LENGTH(l)) || h || REPEAT('00', GREATEST(0, 4 - LENGTH(l)) * 2)) ELSE UNHEX('08000000000000000000' || h) END FROM (SELECT l, COALESCE(LIST_REDUCE(LIST_TRANSFORM(l, " + duckDBLambda(g, "__x", "PRINTF('%02X%02X', CAST(__x AS INT) & 255, (CAST(__x AS INT) >> 8) & 255)") + "), " + duckDBLambda(g, "__a, __b", "__a || __b") + ", ''), '') AS h FROM (SELECT LIST_SORT(LIST_DISTINCT(LIST(" + arg + ") FILTER(WHERE NOT " + arg + " IS NULL))) AS l)))"
 }
 
 // duckDBLateralJoin renders a lateral source as CROSS JOIN, or LEFT JOIN LATERAL ... ON TRUE

@@ -59,6 +59,11 @@ func (g *Generator) queryModifiers(e expressions.Expression, sqls ...string) str
 	if !g.dialect.QualifyBeforeWindow {
 		parts = append(parts, qualify)
 	}
+	// generators/duckdb.py:1640-1643: DuckDB renders the sample clause among the after-having
+	// modifiers, before ORDER BY, instead of after LIMIT.
+	if g.isDialect("duckdb") {
+		parts = append(parts, g.sqlKey(e, "sample"))
+	}
 	parts = append(parts, g.sqlKey(e, "order"))
 	parts = append(parts, g.offsetLimitModifiers(e, fetch, limit)...)
 	parts = append(parts, g.afterLimitModifiers(e)...)
@@ -79,7 +84,10 @@ func (g *Generator) afterLimitModifiers(e expressions.Expression) []string {
 	if locks != "" {
 		locks = " " + locks
 	}
-	parts := []string{locks, g.sqlKey(e, "sample")}
+	parts := []string{locks}
+	if !g.isDialect("duckdb") {
+		parts = append(parts, g.sqlKey(e, "sample"))
+	}
 	// after_limit_modifiers override (generators/clickhouse.py:564-576): SETTINGS and
 	// FORMAT trail every other query modifier.
 	if g.isDialect("clickhouse") {

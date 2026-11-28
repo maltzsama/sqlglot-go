@@ -23,7 +23,7 @@ expect `want`. Pairs naming an unregistered dialect and UnsupportedError wants a
 
 Run manually (after `scripts/fetch-reference.sh`, since .reference/ is gitignored):
 
-    PYTHONPATH=.reference/sqlglot-v30.33.0 python3 scripts/extract_dialect_corpus.py --transpile-only
+    PYTHONPATH=.reference/sqlglot-v30.35.0 python3 scripts/extract_dialect_corpus.py --transpile-only
 
 Use --transpile-only to refresh testdata/transpile_corpus.jsonl while leaving
 testdata/dialect_identity.jsonl byte-identical (a plain full run rewrites every identity section
@@ -45,7 +45,7 @@ from pathlib import Path
 
 REFERENCE_HINT = (
     "Could not import sqlglot. Run scripts/fetch-reference.sh first, then invoke this script as:\n"
-    "  PYTHONPATH=.reference/sqlglot-v30.33.0 python3 scripts/extract_dialect_corpus.py"
+    "  PYTHONPATH=.reference/sqlglot-v30.35.0 python3 scripts/extract_dialect_corpus.py"
 )
 
 # Upstream gates some validate_identity cases behind

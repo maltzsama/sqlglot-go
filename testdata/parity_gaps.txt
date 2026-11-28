@@ -1,0 +1,999 @@
+{"dialect":"athena","category":"parse: Error tokenizing 'CREATE DATABASE foo COMMENT \"a\\\"b'","sql":"CREATE DATABASE foo COMMENT \"a\\\"b\""}
+{"dialect":"athena","category":"parse: Error tokenizing 'CREATE TABLE t AS SELECT '\\' AS '","sql":"CREATE TABLE t AS SELECT '\\' AS x"}
+{"dialect":"athena","category":"parse: Error tokenizing 'CREATE VIEW v AS SELECT '\\' AS '","sql":"CREATE VIEW v AS SELECT '\\' AS x"}
+{"dialect":"athena","category":"parse: Error tokenizing 'SELECT '\\'","sql":"SELECT '\\'"}
+{"dialect":"athena","category":"parse: Error tokenizing 'SELECT * FROM t WHERE name LIKE 'a\\_%' ESCAPE '\\'","sql":"SELECT * FROM t WHERE name LIKE 'a\\_%' ESCAPE '\\'"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"(SELECT 1 AS foo) FULL OUTER UNION ALL BY NAME (SELECT 2 AS foo, 3 AS bar)"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"(SELECT 1 AS foo) FULL UNION ALL BY NAME (SELECT 2 AS foo)"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SAFE_CONVERT_BYTES_TO_STRING(b'Â')"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT * FROM GAP_FILL((SELECT CURRENT_DATETIME() AS ts), ts_column => 'ts', bucket_width => INTERVAL '1' HOUR)"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT * FROM proj.region_or_dataset.INFORMATION_SCHEMA.TABLES"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT * FROM region_or_dataset.INFORMATION_SCHEMA.TABLES"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT * FROM region_or_dataset.INFORMATION_SCHEMA.TABLES AS some_name"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT 0 isnull"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT AI.GENERATE('Write a haiku', endpoint => 'gemini-2.5-flash', model_params => JSON '{\"generationConfig\": {\"temperature\": 0}}')"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT ARRAY_AGG((SELECT c FROM t ORDER BY c) IGNORE NULLS LIMIT 1) FROM u"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT CASE WHEN TRUE THEN 0 ELSE 1 END isnull"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT INT64(JSON_QUERY(JSON '{\"key\": 2000}', '$.key'))"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT JSON '\"foo\"'"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT JSON '\"foo\"' AS json_data"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT JSON '''{}'''"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT JSON '1'"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT JSON '[1, \"a\", null]'"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT JSON 'null'"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT JSON 'true'"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT JSON '{\"a\": 1}'"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT JSON_OBJECT(['a', 'b'], [JSON '10', JSON '\"foo\"']) AS json_data"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT SCHEMATA.schema_name FROM `region-us`.`INFORMATION_SCHEMA`.`SCHEMATA`"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT SCHEMATA.schema_name FROM region-us.INFORMATION_SCHEMA.SCHEMATA"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT STRING(data.144) FROM t"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT STRING(data.1e10) FROM t"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT b\"\\x0a$'x'00\""}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT data.144A_FLAG FROM t"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT s.schema_name FROM region-us.INFORMATION_SCHEMA.SCHEMATA AS s"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT t.144 A_FLAG FROM t"}
+{"dialect":"bigquery","category":"gen: canonicalization","sql":"SELECT t.1a FROM t"}
+{"dialect":"bigquery","category":"gen: cast/type","sql":"SELECT SAFE_CAST('100000000000000000000000000000' AS NUMERIC(38, 0))"}
+{"dialect":"bigquery","category":"gen: cast/type","sql":"SELECT SAFE_CAST('foo' AS NUMERIC(10, 3))"}
+{"dialect":"bigquery","category":"parse: Error tokenizing 'SELECT `a\\`b'","sql":"SELECT `a\\`b`"}
+{"dialect":"bigquery","category":"parse: Expecting )","sql":"SELECT * FROM ML.DESCRIBE_DATA(TABLE `_SESSION.input`)"}
+{"dialect":"bigquery","category":"parse: Expecting )","sql":"SELECT * FROM ML.DESCRIBE_DATA(TABLE `region-us.INFORMATION_SCHEMA.SCHEMATA_OPTIONS`)"}
+{"dialect":"bigquery","category":"parse: Expecting )","sql":"WITH t AS (SELECT 1 AS x) SELECT * FROM ML.VALIDATE_DATA_DRIFT(TABLE t, TABLE t)"}
+{"dialect":"bigquery","category":"parse: Expecting )","sql":"WITH t AS (SELECT 42 AS x) SELECT * FROM ML.DESCRIBE_DATA(TABLE t, STRUCT(2 AS num_quantiles))"}
+{"dialect":"bigquery","category":"parse: Invalid expression / Unexpected token","sql":"SELECT `a\\\\\\n\\`b` AS result FROM (SELECT 1 AS `a\\\\\\n\\`b`)"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"INSERT INTO t (col1, col2) VALUES (('abcd'), (1234))"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT \"a\\\\\""}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT \"a\\\\\"\"b\""}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM (VALUES ((1), ('x')), ((2), ('y'))) AS t(a, b)"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM (VALUES (1, 'x'), (2, 'y')) AS t(a, b)"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM VALUES ((1), (2), (3))"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM foo PASTE JOIN bla"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM numbers(1) AS n CROSS JOIN (VALUES (1), (2)) SETTINGS joined_subquery_requires_alias = 0"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id > 0 GLOBAL FULL OUTER JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id > 0 GLOBAL INNER JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id > 0 GLOBAL JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id > 0 GLOBAL LEFT ANY JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id > 0 GLOBAL LEFT JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id GLOBAL IN (SELECT 1) GLOBAL FULL OUTER JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id GLOBAL IN (SELECT 1) GLOBAL INNER JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id GLOBAL IN (SELECT 1) GLOBAL JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id GLOBAL IN (SELECT 1) GLOBAL LEFT ANY JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id GLOBAL IN (SELECT 1) GLOBAL LEFT JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id GLOBAL NOT IN (SELECT 2) GLOBAL FULL OUTER JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id GLOBAL NOT IN (SELECT 2) GLOBAL INNER JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id GLOBAL NOT IN (SELECT 2) GLOBAL JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id GLOBAL NOT IN (SELECT 2) GLOBAL LEFT ANY JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id AND b.id GLOBAL NOT IN (SELECT 2) GLOBAL LEFT JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id GLOBAL ANY LEFT JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id GLOBAL FULL OUTER JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id GLOBAL INNER JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id GLOBAL JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id GLOBAL LEFT ANY JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT * FROM t AS a JOIN s AS b ON a.id = b.id GLOBAL LEFT JOIN u AS c ON a.id = c.id"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT 1 UNION ALL SELECT 1 INTERSECT SELECT 1 LIMIT 1 SETTINGS limit = 1"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT 1 UNION ALL SELECT 2 INTERSECT SELECT 2 FORMAT JSON"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT 2 <> ANY(SELECT 1)"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT 2 = ANY(SELECT 1 UNION ALL SELECT 2)"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT 2 = ANY(SELECT 2)"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT `a\\\\b`"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT arrayMap((a, b) -> a * b, [1, 2, 3], [10, 20, 30]) AS products"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT event_id FROM \"analytics\".\"uniqExactIf\"(final = 1)"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"SELECT trimLeft(s, 'xy'), trimRight(s, 'xy'), trimBoth(s, 'xy')"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"WITH t(a, b) AS (VALUES (1, 'x'), (2, 'y')) SELECT * FROM t"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"arrayFilter((x, y) -> y, [1, 2, 3], [1, 0, 1])"}
+{"dialect":"clickhouse","category":"gen: canonicalization","sql":"arrayMap((x, y, z) -> x + y + z, [1, 2], [3, 4], [5, 6])"}
+{"dialect":"clickhouse","category":"gen: ddl/properties","sql":"CREATE TABLE a ENGINE=Memory AS (SELECT 1 AS c) COMMENT 'foo'"}
+{"dialect":"clickhouse","category":"parse: Expecting )","sql":"SELECT country, sum(installs) AS installs FROM cluster('default', view(SELECT 'US' AS country, count() AS installs FROM numbers(1) GROUP BY country)) GROUP BY country"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM (SELECT 1 AS id) AS a NATURAL FULL JOIN (SELECT 1 AS id) AS b"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM (SELECT 1 AS id) AS a NATURAL FULL OUTER JOIN (SELECT 1 AS id) AS b"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM (SELECT 1 AS id) AS a NATURAL INNER JOIN (SELECT 1 AS id) AS b"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM (SELECT 1 AS id) AS a NATURAL JOIN (SELECT 1 AS id) AS b"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM (SELECT 1 AS id) AS a NATURAL LEFT JOIN (SELECT 1 AS id) AS b"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM (SELECT 1 AS id) AS a NATURAL LEFT OUTER JOIN (SELECT 1 AS id) AS b"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM (SELECT 1 AS id) AS a NATURAL RIGHT JOIN (SELECT 1 AS id) AS b"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM (SELECT 1 AS id) AS a NATURAL RIGHT OUTER JOIN (SELECT 1 AS id) AS b"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM foo AS a PASTE JOIN bla AS b PASTE JOIN baz AS c"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT x FROM view(SELECT 1 AS x)"}
+{"dialect":"clickhouse","category":"parse: Invalid expression / Unexpected token","sql":"SELECT x, COUNT() FROM y GROUP BY x WITH TOTALS LIMIT 1"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"/* comment */ OPTIMIZE db.t"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"/* first */ OPTIMIZE db. /* second */ t /* third */"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"OPTIMIZE /* comment */ db.t"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"OPTIMIZE CaT. /* sqlglot.meta case_sensitive=true */ Db /* sqlglot.meta case_sensitive=false */"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"OPTIMIZE catalog. /* first */ db. /* second */ t"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"OPTIMIZE db /* comment */ .t"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"OPTIMIZE db. -- comment\nt"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"OPTIMIZE db. /* comment */ t"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"OPTIMIZE db.t -- comment\n"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"OPTIMIZE t UNKNOWN -- trailing\n"}
+{"dialect":"databricks","category":"gen: canonicalization","sql":"OPTIMIZE t UNKNOWN /* trailing */"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"CAST(x AS TIMESTAMP(6) WITHOUT TIME ZONE)"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP(6))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP(7))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP(8))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP(9))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP_LTZ(6))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP_LTZ(7))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP_LTZ(8))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP_LTZ(9))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP_NTZ(6))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP_NTZ(7))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP_NTZ(8))"}
+{"dialect":"databricks","category":"gen: cast/type","sql":"SELECT CAST('2026-08-18 14:30:45.123456789' AS TIMESTAMP_NTZ(9))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE FUNCTION f(col STRING) RETURNS STRING DETERMINISTIC RETURN col"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP(6))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP(7))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP(8))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP(9))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP_LTZ(6))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP_LTZ(7))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP_LTZ(8))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP_LTZ(9))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP_NTZ(6))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP_NTZ(7))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP_NTZ(8))"}
+{"dialect":"databricks","category":"gen: ddl/properties","sql":"CREATE TABLE t (ts TIMESTAMP_NTZ(9))"}
+{"dialect":"databricks","category":"parse: Expecting )","sql":"SELECT * FROM stock_ticker MATCH_RECOGNIZE (PARTITION BY symbol ORDER BY tstamp MEASURES MATCH_NUMBER() AS match_no, CLASSIFIER() AS class, LAST(down.tstamp) AS bottom_tstamp ALL ROWS PER MATCH PATTERN (strt down+ up+) DEFINE down AS price < PREV(price), up AS price > PREV(price))"}
+{"dialect":"databricks","category":"parse: Expecting )","sql":"SELECT * FROM stock_ticker MATCH_RECOGNIZE (PARTITION BY symbol ORDER BY tstamp MEASURES MATCH_NUMBER() AS match_no, CLASSIFIER() AS class, LAST(down.tstamp) AS bottom_tstamp ALL ROWS PER MATCH SHOW EMPTY MATCHES PATTERN (strt down+ up+) DEFINE down AS price < PREV(price), up AS price > PREV(price))"}
+{"dialect":"databricks","category":"parse: Expecting )","sql":"SELECT * FROM stock_ticker MATCH_RECOGNIZE (PARTITION BY symbol ORDER BY tstamp MEASURES MATCH_NUMBER() AS match_no, CLASSIFIER() AS class, LAST(down.tstamp) AS bottom_tstamp PATTERN (strt down+ up+) DEFINE down AS price < PREV(price), up AS price > PREV(price))"}
+{"dialect":"databricks","category":"parse: Expecting )","sql":"SELECT symbol, start_tstamp, end_tstamp, run_length FROM stock_ticker MATCH_RECOGNIZE (PARTITION BY symbol ORDER BY tstamp MEASURES FIRST(tstamp) AS start_tstamp, LAST(tstamp) AS end_tstamp, COUNT(*) AS run_length ONE ROW PER MATCH AFTER MATCH SKIP PAST LAST ROW PATTERN (strt up+) DEFINE up AS price > PREV(price)) AS T"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE NOT c MATCH_ANY 'x' AND d MATCH_ALL 'y' OR e = 1"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH 'hello world' USING ANALYZER std_analyzer"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH 'word1 word2'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH 'x'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH 'x' USING ANALYZER 'standard'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH ('word1 word2')"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_ALL 'word1 word2'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_ALL 'x'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_ALL ('word1 word2')"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_ANY 'word1 word2'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_ANY 'x' USING ANALYZER `kw_analyzer`"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_ANY ('word1 word2')"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_PHRASE 'word1 word2 ~3'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_PHRASE 'word1 word2 ~3+'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_PHRASE 'word1 word2'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_PHRASE ('word1 word2')"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_PHRASE_EDGE 'word1 word2'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_PHRASE_EDGE ('word1 word2')"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_PHRASE_PREFIX 'word1 word2'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_PHRASE_PREFIX ('word1 word2')"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_REGEXP 'word1 word2'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c MATCH_REGEXP ('word1 word2')"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c NOT MATCH_ALL 'word1 word2'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c NOT MATCH_ANY ('x') USING ANALYZER 'standard'"}
+{"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c match_regexp '^key_word.*'"}
+{"dialect":"dremio","category":"parse: The number of provided arguments","sql":"SELECT REGEXP_SPLIT(tags, ',', 'ALL', 1000) AS t"}
+{"dialect":"hive","category":"gen: canonicalization","sql":"'\\\n'"}
+{"dialect":"hive","category":"gen: canonicalization","sql":"INSERT OVERWRITE DIRECTORY 'x' ROW FORMAT DELIMITED FIELDS TERMINATED BY '\u0001' COLLECTION ITEMS TERMINATED BY ',' MAP KEYS TERMINATED BY ':' LINES TERMINATED BY '' STORED AS TEXTFILE SELECT * FROM `a`.`b`"}
+{"dialect":"hive","category":"gen: canonicalization","sql":"SELECT a, ABS(b) AS b, SUM(c) FROM tabl AS t GROUP BY a, ABS(b) GROUPING SETS ((a, ABS(b)), a)"}
+{"dialect":"hive","category":"gen: canonicalization","sql":"SELECT a, SUM(c) FROM t GROUP BY a, DATE_FORMAT(b, 'yyyy') GROUPING SETS ((a, DATE_FORMAT(b, 'yyyy')), a)"}
+{"dialect":"hive","category":"gen: canonicalization","sql":"SELECT a, b, SUM(c) FROM tabl AS t GROUP BY a, b GROUPING SETS ((a, b), a)"}
+{"dialect":"hive","category":"gen: canonicalization","sql":"SELECT a, b, SUM(c) FROM tabl AS t GROUP BY t.a, b GROUPING SETS ((t.a, b), t.a)"}
+{"dialect":"hive","category":"gen: cast/type","sql":"1.0bd"}
+{"dialect":"hive","category":"gen: ddl/properties","sql":"CREATE TABLE t (a INT) TBLPROPERTIES ('a\\') ; SELECT 1; --'='1')"}
+{"dialect":"hive","category":"parse: Expecting )","sql":"FROM (FROM x LATERAL VIEW EXPLODE(arr) a AS c SELECT k, c) AS s INSERT INTO t SELECT s.c INSERT INTO u SELECT s.k"}
+{"dialect":"hive","category":"parse: Expecting )","sql":"SELECT * FROM (FROM x LATERAL VIEW EXPLODE(y) t AS a SELECT a) AS q"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"-- a\nFROM x\n-- b\nINSERT OVERWRITE TABLE t SELECT k\n-- c\nINSERT INTO u SELECT v"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM (SELECT k, v FROM x WHERE v > 0) AS s INSERT OVERWRITE TABLE t SELECT s.k"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM a JOIN b ON a.k = b.k LEFT JOIN c ON a.k = c.k INSERT OVERWRITE TABLE t SELECT a.k, c.v"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x AS v INSERT OVERWRITE TABLE a PARTITION(ds = '1') SELECT v.k, v.m['c'] AS c WHERE v.os = 'ios' INSERT OVERWRITE TABLE b PARTITION(ds) SELECT v.k, v.ds WHERE v.os = 'android' INSERT INTO c SELECT v.os, COUNT(DISTINCT v.k) AS uv GROUP BY v.os"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT INTO TABLE a SELECT k"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE LOCAL DIRECTORY '/tmp/a' SELECT k INSERT OVERWRITE DIRECTORY '/tmp/b' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' SELECT v"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a SELECT k"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a SELECT k INSERT INTO b SELECT v WHERE k > 0"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a SELECT k, COUNT(*) WHERE v > 1 GROUP BY k HAVING COUNT(*) > 2 ORDER BY k LIMIT 10 INSERT INTO b SELECT DISTINCT k DISTRIBUTE BY k SORT BY k"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a SELECT k, v"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x LATERAL VIEW EXPLODE(arr) a AS c LATERAL VIEW OUTER EXPLODE(m) b AS mk, mv INSERT OVERWRITE TABLE t SELECT c, mk"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x LATERAL VIEW EXPLODE(y) t AS a SELECT a"}
+{"dialect":"hive","category":"parse: Invalid expression / Unexpected token","sql":"WITH c AS (SELECT 1 AS k) FROM c INSERT OVERWRITE TABLE a SELECT k INSERT INTO b SELECT k"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"INSERT INTO sales PARTITION(p1) VALUES (1)"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"INSERT INTO sales SUBPARTITION(p1) VALUES (1)"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT APPROX_COUNT_DISTINCT(a) FROM t"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'!it's!' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq''it's'' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'(it's)' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'0it's0' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'<it's>' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'Ait'sA' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'[]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'[a\nb]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'[a''b]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'[a;b]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'[a]b]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'[it's]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'[é漢]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq']it's]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'{it's}' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT Nq'|\\n|' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT TOP(5), x FROM t"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT TO_DATE(c, 'DD-MON-YYYY', 'NLS_DATE_LANGUAGE = AMERICAN') FROM t"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT TO_TIMESTAMP(c, 'DD-MON-YYYY', 'NLS_DATE_LANGUAGE = AMERICAN') FROM t"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT VAR_POP(a) FROM t"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT VAR_SAMP(x) FROM t"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'!it's!' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq''it's'' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'(it's)' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'0it's0' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'<it's>' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'Ait'sA' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'[]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'[a\nb]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'[a''b]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'[a;b]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'[a]b]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'[it's]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'[é漢]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq']it's]' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'{it's}' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT nq'|\\n|' FROM dual"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"SELECT top, x FROM t"}
+{"dialect":"oracle","category":"gen: canonicalization","sql":"create table t (id number) pctfree 10 nologging"}
+{"dialect":"oracle","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'SCC')"}
+{"dialect":"oracle","category":"gen: ddl/properties","sql":"CREATE TABLE t (id NUMBER) storage (initial 64 k next 1 m) nologging"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT NQ'","sql":"SELECT NQ'(it's)' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT NQ'!it's!' FROM dua'","sql":"SELECT NQ'!it's!' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT NQ''it's'' FROM dua'","sql":"SELECT NQ''it's'' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT NQ'0it's0' FROM dua'","sql":"SELECT NQ'0it's0' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT NQ'<it's>' FROM dua'","sql":"SELECT NQ'<it's>' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT NQ'Ait'sA' FROM dua'","sql":"SELECT NQ'Ait'sA' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT NQ'[it's]' FROM dua'","sql":"SELECT NQ'[it's]' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT NQ']it's]' FROM dua'","sql":"SELECT NQ']it's]' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT NQ'{it's}' FROM dua'","sql":"SELECT NQ'{it's}' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT nQ'","sql":"SELECT nQ'(it's)' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT nQ'!it's!' FROM dua'","sql":"SELECT nQ'!it's!' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT nQ''it's'' FROM dua'","sql":"SELECT nQ''it's'' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT nQ'0it's0' FROM dua'","sql":"SELECT nQ'0it's0' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT nQ'<it's>' FROM dua'","sql":"SELECT nQ'<it's>' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT nQ'Ait'sA' FROM dua'","sql":"SELECT nQ'Ait'sA' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT nQ'[it's]' FROM dua'","sql":"SELECT nQ'[it's]' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT nQ']it's]' FROM dua'","sql":"SELECT nQ']it's]' FROM dual"}
+{"dialect":"oracle","category":"parse: Error tokenizing 'SELECT nQ'{it's}' FROM dua'","sql":"SELECT nQ'{it's}' FROM dual"}
+{"dialect":"oracle","category":"parse: Expected CTE to have alias","sql":"WITH MATCH_RECOGNIZE AS (SELECT 1 FROM DUAL) SELECT * FROM MATCH_RECOGNIZE"}
+{"dialect":"oracle","category":"parse: Expected CTE to have alias","sql":"WITH SAMPLE AS (SELECT 1 FROM DUAL) SELECT * FROM SAMPLE"}
+{"dialect":"oracle","category":"parse: Expected CTE to have alias","sql":"WITH TABLESAMPLE AS (SELECT 1 FROM DUAL) SELECT * FROM TABLESAMPLE"}
+{"dialect":"oracle","category":"parse: Expected table name but got <Token token_type","sql":"INSERT WHEN k > 1 THEN INTO t VALUES (k) ELSE INTO u VALUES (k) SELECT k FROM x"}
+{"dialect":"oracle","category":"parse: Expecting","sql":"SELECT 1 MATCH_RECOGNIZE FROM DUAL"}
+{"dialect":"oracle","category":"parse: Expecting","sql":"SELECT MATCH_RECOGNIZE FROM t WHERE MATCH_RECOGNIZE > 0"}
+{"dialect":"oracle","category":"parse: Expecting","sql":"SELECT MATCH_RECOGNIZE, COUNT(*) FROM t GROUP BY MATCH_RECOGNIZE ORDER BY MATCH_RECOGNIZE"}
+{"dialect":"oracle","category":"parse: Expecting )","sql":"INSERT INTO sales PARTITION (p1) (col1) VALUES (1)"}
+{"dialect":"oracle","category":"parse: Expecting )","sql":"INSERT INTO sales PARTITION(p1) (col1) SELECT col1 FROM source"}
+{"dialect":"oracle","category":"parse: Expecting )","sql":"INSERT INTO sales PARTITION(p1) (col1) VALUES (1)"}
+{"dialect":"oracle","category":"parse: Expecting )","sql":"INSERT INTO sales SUBPARTITION(p1) (col1) VALUES (1)"}
+{"dialect":"oracle","category":"parse: Expecting )","sql":"SELECT JSON_VALUE(doc, '$.a' RETURNING NUMBER DEFAULT 0 ON ERROR NULL ON EMPTY) FROM t"}
+{"dialect":"oracle","category":"parse: Expecting )","sql":"SELECT JSON_VALUE(doc, '$.a' RETURNING NUMBER NULL ON ERROR) FROM t"}
+{"dialect":"oracle","category":"parse: Expecting )","sql":"SELECT JSON_VALUE(doc, '$.a' RETURNING NUMBER) FROM t"}
+{"dialect":"oracle","category":"parse: Expecting )","sql":"SELECT JSON_VALUE(doc, '$.a' RETURNING VARCHAR2(10)) FROM t"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"INSERT INTO \"SH\".\"SALES\" SUBPARTITION(\"P1\") s (col1) VALUES (1)"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"INSERT INTO sales PARTITION(p1) s (col1) VALUES (1)"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"INSERT INTO sales PARTITION(p1) s VALUES (1)"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"INSERT INTO sales SUBPARTITION(p1) s (col1) VALUES (1)"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"INSERT INTO sales SUBPARTITION(p1) s VALUES (1)"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF SCN (123456 + 1)"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF SCN (123456 + 1) s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF SCN 123456"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF SCN 123456 + 1"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF SCN 123456 + 1 s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF SCN 123456 s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF SCN :scn"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF SCN :scn s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF TIMESTAMP SYSDATE - 1 / 24"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF TIMESTAMP SYSDATE - 1 / 24 s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF TIMESTAMP SYSTIMESTAMP"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF TIMESTAMP SYSTIMESTAMP - INTERVAL '1' HOUR"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF TIMESTAMP SYSTIMESTAMP - INTERVAL '1' HOUR s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF TIMESTAMP SYSTIMESTAMP s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF TIMESTAMP TO_TIMESTAMP('2026-10-10 12:00:00', 'YYYY-MM-DD HH24:MI:SS')"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" AS OF TIMESTAMP TO_TIMESTAMP('2026-10-10 12:00:00', 'YYYY-MM-DD HH24:MI:SS') s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" PARTITION (\"P1\") s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" PARTITION(\"P1\") s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" PARTITION(p1) s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" SUBPARTITION(\"P1\") s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM \"SH\".\"SALES\" SUBPARTITION(p1) s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM sales PARTITION(p1) AS OF SCN 123456 s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM sales SAMPLE (10) AS OF SCN 123456 s"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM sales SUBPARTITION(sp1) SAMPLE (10) AS OF TIMESTAMP SYSDATE - 1 s WHERE s.id = 1"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1 SAMPLE FROM DUAL"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1 TABLESAMPLE FROM DUAL"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NQ'[]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NQ'[a\nb]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NQ'[a''b]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NQ'[a;b]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NQ'[a]b]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NQ'[é漢]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NQ'|\\n|' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(x, 2) FROM FIRST OVER (ORDER BY y) AS c FROM t"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(x, 2) FROM FIRST RESPECT NULLS OVER (ORDER BY y) AS c FROM t"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(x, 2) FROM LAST IGNORE NULLS OVER (ORDER BY y) AS c FROM t"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT NTH_VALUE(x, 2) FROM LAST OVER (ORDER BY y) AS c FROM t"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT SAMPLE FROM t WHERE SAMPLE > 0"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT SAMPLE, COUNT(*) FROM t GROUP BY SAMPLE ORDER BY SAMPLE"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT SUBSTR(MIN(SQL_ID || SQL_TEXT), 14, 120) SAMPLE FROM V$SQLAREA"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT TABLESAMPLE FROM t WHERE TABLESAMPLE > 0"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT TABLESAMPLE, COUNT(*) FROM t GROUP BY TABLESAMPLE ORDER BY TABLESAMPLE"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT nQ'[]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT nQ'[a\nb]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT nQ'[a''b]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT nQ'[a;b]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT nQ'[a]b]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT nQ'[é漢]' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT nQ'|\\n|' FROM dual"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT s.col1 FROM sales AS OF SCN 123456 s JOIN sales AS OF SCN 123457 t ON s.id = t.id"}
+{"dialect":"oracle","category":"parse: Invalid expression / Unexpected token","sql":"SELECT s.col1 FROM sales PARTITION(p1) s JOIN sales SUBPARTITION(sp1) t ON s.id = t.id"}
+{"dialect":"oracle","category":"parse: TO does not support CTE","sql":"WITH dup_hiredate(eid, emp_last, mgr_id, reportLevel, hire_date, job_id) AS (SELECT employee_id, last_name, manager_id, 0 AS reportLevel, hire_date, job_id FROM employees WHERE manager_id IS NULL UNION ALL SELECT e.employee_id, e.last_name, e.manager_id, r.reportLevel + 1 AS reportLevel, e.hire_date, e.job_id FROM dup_hiredate r, employees e WHERE r.eid = e.manager_id) CYCLE hire_date SET is_cycle TO 'Y' DEFAULT 'N' SELECT LPAD(' ', 2 * reportLevel) || emp_last AS emp_name, eid, mgr_id, hire_date, job_id, is_cycle FROM dup_hiredate"}
+{"dialect":"oracle","category":"parse: does not support CTE","sql":"WITH dup_hiredate(eid, emp_last, mgr_id, reportLevel, hire_date, job_id) AS (SELECT employee_id, last_name, manager_id, 0 AS reportLevel, hire_date, job_id FROM employees WHERE manager_id IS NULL UNION ALL SELECT e.employee_id, e.last_name, e.manager_id, r.reportLevel + 1 AS reportLevel, e.hire_date, e.job_id FROM dup_hiredate r, employees e WHERE r.eid = e.manager_id) SEARCH DEPTH FIRST BY hire_date SET order1 CYCLE hire_date SET is_cycle TO 'Y' DEFAULT 'N' SELECT LPAD(' ', 2 * reportLevel) || emp_last AS emp_name, eid, mgr_id, hire_date, job_id, is_cycle FROM dup_hiredate ORDER BY order1"}
+{"dialect":"presto","category":"gen: canonicalization","sql":"SELECT INTERVAL 'x) ; SELECT 1; --' WEEK"}
+{"dialect":"presto","category":"gen: cast/type","sql":"CAST(x AS TIME(5) WITH TIME ZONE)"}
+{"dialect":"presto","category":"gen: cast/type","sql":"CAST(x AS TIMESTAMP(9) WITH TIME ZONE)"}
+{"dialect":"presto","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM x OFFSET 1 ROW"}
+{"dialect":"redshift","category":"gen: canonicalization","sql":"DATE_PART(year, \"somecol\")"}
+{"dialect":"redshift","category":"gen: canonicalization","sql":"SELECT \"date_part\"(year, CURRENT_DATE) FROM (SELECT 'day' AS year) AS t"}
+{"dialect":"redshift","category":"gen: canonicalization","sql":"SELECT DATE_DIFF(COALESCE(t.unit, 'day'), t.start_date, t.end_date) FROM t"}
+{"dialect":"redshift","category":"gen: cast/type","sql":"65::\"char\""}
+{"dialect":"redshift","category":"gen: cast/type","sql":"CAST(65 AS \"char\")"}
+{"dialect":"redshift","category":"gen: cast/type","sql":"SELECT \"date_part\"('year'::text, CURRENT_DATE)"}
+{"dialect":"redshift","category":"gen: cast/type","sql":"SELECT DATE_ADD('month'::VARCHAR::TEXT, 1, DATE '2024-01-01')"}
+{"dialect":"redshift","category":"gen: cast/type","sql":"SELECT DATE_ADD(CAST('month' AS VARCHAR(1)), 1, CAST('2024-01-01' AS TIMESTAMP))"}
+{"dialect":"redshift","category":"gen: cast/type","sql":"SELECT DATE_DIFF('second'::TEXT, TIMESTAMP '2024-01-01', TIMESTAMP '2024-01-01 00:01:00')"}
+{"dialect":"redshift","category":"gen: cast/type","sql":"SELECT DATE_DIFF('weeks'::VARCHAR::TEXT, TIMESTAMP '2024-01-01', TIMESTAMP '2024-01-15')"}
+{"dialect":"redshift","category":"gen: cast/type","sql":"SELECT DATE_PART(minute, timestamp '2023-01-04 04:05:06.789')"}
+{"dialect":"redshift","category":"gen: cast/type","sql":"SELECT DATE_PART(month, date '20220502')"}
+{"dialect":"redshift","category":"gen: ddl/properties","sql":"ALTER TABLE t DROP b CASCADE"}
+{"dialect":"redshift","category":"parse: Expected CTE to have alias","sql":"WITH qualify AS (SELECT 1 AS x) SELECT * FROM qualify"}
+{"dialect":"redshift","category":"parse: Required keyword","sql":"SELECT qualify FROM t"}
+{"dialect":"risingwave","category":"gen: ddl/properties","sql":"ALTER TABLE t DROP IF EXISTS b"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"COPY INTO t FROM @s/a--b/c"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"LIST '@\"my stage\"/my path'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"LIST @named_stage"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"LOCALTIMESTAMP"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"OBJECT_CONSTRUCT_KEEP_NULL(*)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"OBJECT_CONSTRUCT_KEEP_NULL(t.* EXCLUDE (col1, col2))"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"OBJECT_CONSTRUCT_KEEP_NULL(t.* ILIKE 'col1%')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"OBJECT_CONSTRUCT_KEEP_NULL(t.*)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"PUT file:///dir/tmp.csv @%table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"PUT file:///dir/tmp.csv @s1/test PARALLEL=1 AUTO_COMPRESS=FALSE source_compression=gzip OVERWRITE=TRUE"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"PUT file:///tmp/a--b @s/p"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_SUBSTR(subject, pattern, 1, 1, 'e', 0)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"REGEXP_SUBSTR_ALL(subject, pattern, 1, 1, 'e', 0)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT $1 FROM @%t/a--b"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT $1 FROM @db.sch.stg/a--b"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT $1 FROM @s/a--b"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT $1 FROM @s/a//b"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT $1 FROM @~/a--b"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT (SELECT 1 WHERE 1 IN (SELECT value FROM TABLE(FLATTEN(INPUT => PARSE_JSON('[1]'))))) AS nested_value"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT (SELECT MAX(value) FROM TABLE(FLATTEN(INPUT => PARSE_JSON('[1, 2]')))) AS max_value"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM @s /* keep */ (PATTERN => 'x')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM @s/a--b (FILE_FORMAT => 'f')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM @s/a--b, @t/c--d"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT * FROM DIRECTORY(@s /* keep */)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT TOP 0 2 AS x"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT BUILD_SCOPED_FILE_URL(@s /* keep */, 'x')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 IGNORE NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1 RESPECT NULLS) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) IGNORE NULLS OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(TABLE1.COLUMN1) RESPECT NULLS OVER (PARTITION BY RANDOM_COLUMN1, RANDOM_COLUMN2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS MY_ALIAS FROM TABLE1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(is_deleted) IGNORE NULLS OVER (PARTITION BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(is_deleted) IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(is_deleted) OVER (PARTITION BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(is_deleted) OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(is_deleted) RESPECT NULLS OVER (PARTITION BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT FIRST_VALUE(is_deleted) RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT INTERVAL '1\\' SECOND; SELECT 1; --'"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LAST_VALUE(is_deleted) IGNORE NULLS OVER (PARTITION BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LAST_VALUE(is_deleted) IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LAST_VALUE(is_deleted) OVER (PARTITION BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LAST_VALUE(is_deleted) OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LAST_VALUE(is_deleted) RESPECT NULLS OVER (PARTITION BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT LAST_VALUE(is_deleted) RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM FIRST IGNORE NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT NTH_VALUE(is_deleted, 2) FROM LAST RESPECT NULLS OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT NTH_VALUE(is_deleted, 2) OVER (PARTITION BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT NTH_VALUE(is_deleted, 2) OVER (PARTITION BY id) AS nth_is_deleted FROM my_table"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TOP 1 1 AS x EXCEPT SELECT TOP 1 2 AS x"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TOP 1 1 AS x INTERSECT SELECT TOP 1 2 AS x"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TOP 1 1 AS x UNION ALL SELECT 2 AS x LIMIT 1"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TOP 1 1 AS x UNION ALL SELECT TOP 1 2 AS x"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TOP 1 1 AS x UNION ALL SELECT TOP 1 2 AS x UNION ALL SELECT TOP 1 3 AS x"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TOP 1 1 AS x UNION SELECT TOP 1 2 AS x"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TOP(5), x FROM t"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT TOP(x) FROM t"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT lateral FROM t"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 (+) = t2.c2"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 = t2.c2 (+)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 = t2.c2(+)"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT top, x FROM t"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"SELECT top:field FROM t"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"TO_TIMESTAMP('2024-05-09 01:02:03 PM', 'YyYy-Mm-dD Hh12:mI:sS pM')"}
+{"dialect":"snowflake","category":"gen: canonicalization","sql":"ls @named_stage"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"\n            SELECT\n              uc.user_id,\n              uc.start_ts AS ts,\n              CASE\n                WHEN uc.start_ts::DATE >= '2023-01-01' AND uc.country_code IN ('US') AND uc.user_id NOT IN (\n                  SELECT DISTINCT\n                    _id\n                  FROM\n                    users,\n                    LATERAL FLATTEN(INPUT => PARSE_JSON(flags)) datasource\n                  WHERE datasource.value:name = 'something'\n                )\n                  THEN 'Sample1'\n                  ELSE 'Sample2'\n              END AS entity\n            FROM user_countries AS uc\n            LEFT JOIN (\n              SELECT user_id, MAX(IFF(service_entity IS NULL,1,0)) AS le_null\n              FROM accepted_user_agreements\n              GROUP BY 1\n            ) AS aua\n              ON uc.user_id = aua.user_id\n            "}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'DD Mon YYYY')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'Dd')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'Dy')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'Mmmm')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'Mon xZz')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'Mon')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'Yy')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'dD')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'dDyYyYmM')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'dY')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'dd')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'dy')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'mMmM')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(DATE '2024-05-09', 'mOn')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_CHAR(TIMESTAMP '2024-05-09 13:02:03.123', 'YyYy-Mm-dD\"T\"Hh24:mI:sS.fF3')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'DD Mon YYYY')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'Dd')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'Dy')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'Mmmm')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'Mon xZz')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'Mon')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'Yy')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'dD')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'dDyYyYmM')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'dY')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'dd')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'dy')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'mMmM')"}
+{"dialect":"snowflake","category":"gen: cast/type","sql":"TO_VARCHAR(DATE '2024-05-09', 'mOn')"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE OR REPLACE TABLE foo (a INT) COPY TAGS"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE SCOPED TEMP TABLE t (a INT)"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE orders_clone_restore CLONE orders AT (TIMESTAMP => TO_TIMESTAMP_TZ('04/05/2013 01:02:03', 'mm/dd/yyyy hh24:mi:ss'))"}
+{"dialect":"snowflake","category":"gen: ddl/properties","sql":"CREATE TABLE t (a ARRAY(INT), b ARRAY(ARRAY(INT)), c OBJECT(x INT), d MAP(VARCHAR, INT))"}
+{"dialect":"snowflake","category":"parse: Error tokenizing 'PUT file","sql":"PUT file:///dir/a\"b.csv @stg"}
+{"dialect":"snowflake","category":"parse: Error tokenizing 'SELECT $1 FROM @s/a/*'","sql":"SELECT $1 FROM @s/a/*b"}
+{"dialect":"snowflake","category":"parse: Expected CTE to have alias","sql":"WITH rollback(rollback) AS (SELECT 1) SELECT rollback.rollback FROM rollback"}
+{"dialect":"snowflake","category":"parse: Expected table name but got <Token token_type","sql":"SELECT x FROM glob"}
+{"dialect":"snowflake","category":"parse: Expected table name but got <Token token_type","sql":"SELECT x FROM returning"}
+{"dialect":"snowflake","category":"parse: Expecting )","sql":"SELECT * FROM (SELECT $1 FROM @s/a--b) AS x"}
+{"dialect":"snowflake","category":"parse: Found multiple 'FETCH' clauses","sql":"SELECT TOP 1 1 AS x UNION ALL SELECT TOP 1 2 AS x FETCH FIRST 1 ROW ONLY"}
+{"dialect":"snowflake","category":"parse: Found multiple 'LIMIT' clauses","sql":"SELECT TOP 1 1 AS x UNION ALL SELECT TOP 1 2 AS x ORDER BY x DESC LIMIT 1 OFFSET 1"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST '@\"my stage\"/my path' pattern='.*[.]csv'"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST @\"my_DB\".\"schEMA1\".\"MYstage\"/CaseSensitivePath"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST @db1.schema1.%table1"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST @db1.schema1.named_stage"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST @my_repo/branches/main/"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST @named_stage/analysis/ pattern='.*data_0.*'"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST @named_stage/path1"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST @s/a /* keep */"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST @s/a--b"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST @schema1.%table1"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"LIST @schema1.named_stage"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"MERGE INTO t USING s ON t.id = s.id WHEN MATCHED AND s.value > 0 THEN UPDATE ALL BY NAME WHEN MATCHED THEN DELETE WHEN NOT MATCHED AND s.value > 0 THEN INSERT ALL BY NAME"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN UPDATE ALL BY NAME WHEN NOT MATCHED THEN INSERT (id, value) VALUES (s.id, s.value)"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN UPDATE ALL BY NAME WHEN NOT MATCHED THEN INSERT ALL BY NAME"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN UPDATE SET value = s.value WHEN NOT MATCHED THEN INSERT ALL BY NAME"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1 returning"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1 rollback"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1 using"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT ?::NUMBER(10,2)"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT ROLLBACK(3)"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT returning FROM t"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT rollback FROM t"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT rollback.x FROM (SELECT 1 AS x) rollback"}
+{"dialect":"snowflake","category":"parse: Invalid expression / Unexpected token","sql":"SELECT using FROM t"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO @my_stage/path/ FROM my_table FILE_FORMAT = sch.my_format"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO my_table FROM (SELECT t.$1 FROM @\"db\".\"sch\".\"my_stage\"/path/ AS t) FILE_FORMAT = \"db\".\"sch\".\"my_format\""}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO my_table FROM @\"db\".\"sch\".\"my_stage\"/path/ FILE_FORMAT = \"db\".\"sch\".\"my_format\""}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO my_table FROM @db.sch.my_stage/path/ FILE_FORMAT = db.sch.my_format"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO my_table FROM @my_stage/path/ FILE_FORMAT = db.sch.my_format"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO my_table FROM @my_stage/path/ FILE_FORMAT = sch.my_format ON_ERROR = CONTINUE PURGE = TRUE"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"COPY INTO my_table FROM @my_stage/path/$FILENAME FILE_FORMAT = sch.my_format"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"LIST @%table1"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"LIST @%table1 pattern='.*data_0.*'"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"LIST @%table1/path1"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"LIST @~"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"LIST @~ pattern=''"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"LIST @~/path1"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"LS @~"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT 1 glob"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT 1 lateral"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT glob FROM t"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT top FROM t"}
+{"dialect":"snowflake","category":"parse: Required keyword","sql":"SELECT top.x FROM t AS top"}
+{"dialect":"spark","category":"gen: canonicalization","sql":"'\\U0001F600'"}
+{"dialect":"spark","category":"gen: canonicalization","sql":"LISTAGG(DISTINCT x, '-')"}
+{"dialect":"spark","category":"gen: canonicalization","sql":"LISTAGG(DISTINCT x, '-') WITHIN GROUP (ORDER BY x DESC)"}
+{"dialect":"spark","category":"gen: canonicalization","sql":"REFRESH FUNCTION db.func1"}
+{"dialect":"spark","category":"gen: canonicalization","sql":"SELECT COUNT(1), d, h FROM t GROUP BY d, h GROUPING SETS ((d, h), (d))"}
+{"dialect":"spark","category":"gen: canonicalization","sql":"SELECT a, b, c FROM t GROUP BY ROLLUP (a), b, CUBE (c)"}
+{"dialect":"spark","category":"gen: canonicalization","sql":"SELECT a, b, c FROM t GROUP BY a, GROUPING SETS ((a), (b)), c"}
+{"dialect":"spark","category":"gen: canonicalization","sql":"SELECT c1, c2, c3, c4 FROM t GROUP BY CUBE (c1, c2), c3, c4"}
+{"dialect":"spark","category":"gen: canonicalization","sql":"SELECT c1, c2, c3, c4 FROM t GROUP BY c3, CUBE (c1, c2), c4"}
+{"dialect":"spark","category":"gen: ddl/properties","sql":"ALTER TABLE t DROP COLUMNS a, b"}
+{"dialect":"spark","category":"gen: ddl/properties","sql":"ALTER TABLE t REPLACE COLUMNS a INT, b STRING"}
+{"dialect":"spark","category":"gen: ddl/properties","sql":"CREATE FUNCTION f(col STRING) RETURNS STRING DETERMINISTIC RETURN col"}
+{"dialect":"spark","category":"gen: ddl/properties","sql":"CREATE TABLE t (a INT) USING CSV OPTIONS (header = TRUE, maxColumns = 10, sep = '|') TBLPROPERTIES ('purpose' = 'test')"}
+{"dialect":"spark","category":"gen: ddl/properties","sql":"CREATE TABLE t (a INT, b STRING, UNIQUE (a))"}
+{"dialect":"spark","category":"parse: Expecting )","sql":"ALTER TABLE t ADD COLUMNS (a.b INT COMMENT 'x' AFTER c, d.e.f STRING)"}
+{"dialect":"spark","category":"parse: Expecting )","sql":"ALTER TABLE t DROP COLUMNS (a, b.c)"}
+{"dialect":"spark","category":"parse: Invalid expression / Unexpected token","sql":"FROM (SELECT k, v FROM x QUALIFY ROW_NUMBER() OVER (PARTITION BY k ORDER BY v) = 1) AS s INSERT INTO t SELECT s.v INSERT INTO u SELECT s.k"}
+{"dialect":"spark","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a PARTITION(ds = '1') SELECT k WHERE v > 0 INSERT INTO b SELECT k, v"}
+{"dialect":"spark","category":"parse: Required keyword","sql":"ALTER TABLE t DROP COLUMNS IF EXISTS (a, b.c)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"BEGIN; CREATE TEMP TRIGGER tr AFTER INSERT ON t BEGIN SELECT CASE WHEN NEW.x THEN 1 END; SELECT 2; END; END"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"BEGIN; END"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"BEGIN; END TRANSACTION"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"BEGIN; EXPLAIN QUERY PLAN CREATE TEMP TRIGGER tr AFTER INSERT ON t BEGIN SELECT CASE WHEN NEW.x THEN 1 END; SELECT 2; END; END"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"END"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"END TRANSACTION"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"INSERT INTO foo AS f (x, y) VALUES (1, 2)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"INSERT INTO foo AS f (x, y) VALUES (1, 2) ON CONFLICT(x) DO UPDATE SET y = f.y + 1"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA \"a b\""}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA \"a\"\"b\""}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA \"a.b\""}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA \"aux db\".table_info = 'items'"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA \"aux db\".table_info(items)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA \"aux\"\"db\".table_info(items)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA \"aux.db\".table_info(items)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA \"select\""}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA \"x--comment\""}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA \"x; SELECT 123\""}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA 'a b'"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA 'aux db'.table_info(items)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA [a b]"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA [aux db].table_info(items)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA `a b`"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA `aux db`.table_info(items)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA main.\"table_info\"(items)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"REINDEX tbl"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT \"IIF\"(0, 1, 1, 2)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT * FROM station WHERE city IS NOT ''"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT * FROM t WHERE NULL IS NOT y"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT * FROM t WHERE a REGEXP 'x'"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT +(x + 1) FROM t"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT ++x, +-x, -+x FROM t"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT +t.x FROM t"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT +x COLLATE NOCASE FROM t"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT +x FROM t"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT .5_5"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 1_000"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS ((FALSE))"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS ((NULL))"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS ((TRUE))"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS (FALSE)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS (NULL)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS (TRUE)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS NOT ((FALSE))"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS NOT ((NULL))"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS NOT ((TRUE))"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS NOT (FALSE)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS NOT (NULL)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 2 IS NOT (TRUE)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 5 IS +TRUE, 5 IS NOT +TRUE, 0 IS +FALSE"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT CONCAT(a, b) FROM t"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT DATE('nOw'), STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT DATE_SUB(d, '1'') ; SELECT 1; --')"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT FALSE IS DISTINCT FROM NULL = NULL"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT FALSE IS DISTINCT FROM TRUE IS DISTINCT FROM FALSE"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT GROUP_CONCAT(DISTINCT x ORDER BY y DESC)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT GROUP_CONCAT(x ORDER BY y)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT IIF(a, b, c, d)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT IIF(a, b, c, d, e)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL IS NOT DISTINCT FROM NULL BETWEEN 0 AND 0"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL IS NOT DISTINCT FROM NULL GLOB '0'"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL IS NOT DISTINCT FROM NULL IN (0)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL IS NOT DISTINCT FROM NULL LIKE '0'"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL IS NOT NULL BETWEEN 0 AND 1"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL IS NOT NULL IN (0, 1)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL IS NOT NULL NOT IN (0, 1)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL IS NULL < FALSE"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL IS NULL < FALSE IN (0)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL IS NULL BETWEEN 0 AND 0"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL NOTNULL BETWEEN 0 AND 1"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL NOTNULL IN (0, 1)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT NULL NOTNULL NOT IN (0, 1)"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT STRFTIME('%f')"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT STRFTIME('%s')"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT SUM(z) OVER (PARTITION BY GROUP_CONCAT(x ORDER BY y)) FROM t GROUP BY z"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT a IS b, a IS NOT b FROM t"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT x FROM t LIMIT -1"}
+{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT x FROM t LIMIT 5, -2"}
+{"dialect":"sqlite","category":"gen: ddl/properties","sql":"CREATE TABLE t (a INTEGER PRIMARY KEY, b TEXT) STRICT"}
+{"dialect":"sqlite","category":"parse: Expected table name but got <Token token_type","sql":"UPDATE OR ABORT t SET b = 'x' WHERE id = 1"}
+{"dialect":"sqlite","category":"parse: Expected table name but got <Token token_type","sql":"UPDATE OR FAIL t SET b = 'x' WHERE id = 1"}
+{"dialect":"sqlite","category":"parse: Expected table name but got <Token token_type","sql":"UPDATE OR IGNORE t SET b = 'x' WHERE id = 1"}
+{"dialect":"sqlite","category":"parse: Expected table name but got <Token token_type","sql":"UPDATE OR REPLACE t SET b = 'x' WHERE id = 1"}
+{"dialect":"sqlite","category":"parse: Expected table name but got <Token token_type","sql":"UPDATE OR ROLLBACK t SET b = 'x' WHERE id = 1"}
+{"dialect":"sqlite","category":"parse: Invalid expression / Unexpected token","sql":"REINDEX schma.idx"}
+{"dialect":"sqlite","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1_0.2_5"}
+{"dialect":"sqlite","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1_000_000 AS x"}
+{"dialect":"sqlite","category":"parse: The number of provided arguments","sql":"SELECT \"IF\"(0, 1, 1, 2)"}
+{"dialect":"sqlite","category":"parse: The number of provided arguments","sql":"SELECT IF(a, b, c, d)"}
+{"dialect":"sqlite","category":"parse: The number of provided arguments","sql":"SELECT IF(a, b, c, d, e)"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"REFRESH CONNECTIONS"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"REFRESH DICTIONARY dict_obj"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT * FROM (SELECT 1 AS id) AS s, UNNEST([1, 2], ['a', 'b'])"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT * FROM (SELECT 1 AS id) AS s, UNNEST([1, 2], ['a', 'b']) AS t"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT LIKE('xyz', 'x%')"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT MAP{1:1, 2:2, 3:3} AS numbers"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT MAP{1:2, 3:NULL}[1]"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT MAP{1:MAP{2:1}, 3:NULL}[1][2]"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT MAP{1:NULL}"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT MAP{t.k:10}[1] FROM (SELECT 1 AS k) AS t CROSS JOIN (SELECT 2 AS k) AS u"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT TIME_SLICE(dt, 5, 'minute', 'ceil')"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT TIME_SLICE(dt, 5, 'minute', 'floor')"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT TIME_SLICE(dt, INTERVAL 1 DAY, FLOOR)"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT TIME_SLICE(dt, INTERVAL 5 MINUTE, CEIL)"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT TIME_SLICE(dt, INTERVAL 5 MINUTE, floor)"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT TIME_SLICE(dt, INTERVAL 7 DAY, CEIL)"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT TO_DAYS(dt) FROM t"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT map{1:\"apple\", 2:\"orange\", 3:\"pear\"} AS fruit"}
+{"dialect":"starrocks","category":"gen: canonicalization","sql":"SELECT map{true:map{3.13:\"abc\"}, false:map{}} AS nest"}
+{"dialect":"starrocks","category":"gen: cast/type","sql":"SELECT DATEDIFF(CAST('2026-03-11 01:00:00' AS DATETIME), CAST('2026-03-10 23:00:00' AS DATETIME))"}
+{"dialect":"starrocks","category":"parse: Expecting","sql":"REFRESH CONNECTIONS FORCE"}
+{"dialect":"starrocks","category":"parse: Expecting","sql":"REFRESH MATERIALIZED VIEW db.lo_mv1 PARTITION START ('2020-02-01') END ('2020-03-01') FORCE WITH SYNC MODE"}
+{"dialect":"starrocks","category":"parse: Expecting","sql":"REFRESH MATERIALIZED VIEW lo_mv1 FORCE"}
+{"dialect":"starrocks","category":"parse: Expecting","sql":"REFRESH MATERIALIZED VIEW lo_mv1 PARTITION START (\"2020-02-01\") END (\"2020-03-01\")"}
+{"dialect":"starrocks","category":"parse: Expecting )","sql":"SELECT FIRST_VALUE(x IGNORE NULLS) OVER (ORDER BY t)"}
+{"dialect":"starrocks","category":"parse: Expecting )","sql":"SELECT LAG(x IGNORE NULLS) OVER (ORDER BY t)"}
+{"dialect":"starrocks","category":"parse: Expecting )","sql":"SELECT LAG(x IGNORE NULLS, 2) OVER (ORDER BY t)"}
+{"dialect":"starrocks","category":"parse: Expecting )","sql":"SELECT LAG(x IGNORE NULLS, 2, 0) OVER (ORDER BY t)"}
+{"dialect":"starrocks","category":"parse: Expecting )","sql":"SELECT LAST_VALUE(x IGNORE NULLS) OVER (ORDER BY t)"}
+{"dialect":"starrocks","category":"parse: Expecting )","sql":"SELECT LEAD(x IGNORE NULLS) OVER (ORDER BY t)"}
+{"dialect":"starrocks","category":"parse: Expecting )","sql":"SELECT LEAD(x IGNORE NULLS, 2) OVER (ORDER BY t)"}
+{"dialect":"starrocks","category":"parse: Expecting )","sql":"SELECT LEAD(x IGNORE NULLS, 2, 0) OVER (ORDER BY t)"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"ADD BACKEND BLACKLIST 10001, 10002"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"ADD COMPUTE NODE BLACKLIST 10005"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"ADD SQL DIGEST BLACKLIST abcdef0123456789abcdef0123456789"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"ADD SQLBLACKLIST \"select count(distinct .+) from .+\""}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"ADMIN SET FRONTEND CONFIG ('disable_balance' = 'true')"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"ADMIN SHOW FRONTEND CONFIG LIKE 'disable_balance'"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"BACKUP SNAPSHOT example_db.snapshot1 TO example_repo ON (example_tbl)"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"CANCEL LOAD FROM example_db WHERE LABEL = 'example_label'"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"DEALLOCATE PREPARE stmt1"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"DELETE BACKEND BLACKLIST 10001"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"DELETE COMPUTE NODE BLACKLIST 10005"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"DELETE SQL DIGEST BLACKLIST abcdef0123456789abcdef0123456789, 0123456789abcdef0123456789abcdef"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"DELETE SQLBLACKLIST 3, 4"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"EXPORT TABLE example_db.example_tbl TO 's3://bucket/export/'"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"INSTALL PLUGIN FROM '/home/users/plugin.zip'"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"PAUSE ROUTINE LOAD FOR example_db.example_job"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"RECOVER TABLE example_db.example_tbl"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"REFRESH MATERIALIZED VIEW lo_mv1 WITH ASYNC MODE"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"REFRESH MATERIALIZED VIEW lo_mv1 WITH SYNC MODE"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"RESTORE SNAPSHOT example_db.snapshot1 FROM example_repo ON (example_tbl) PROPERTIES ('backup_timestamp' = '2018-05-04-16-45-08')"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"RESUME ROUTINE LOAD FOR example_db.example_job"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"SELECT LAG(x, 1, 0) IGNORE NULLS OVER (ORDER BY t)"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"SUBMIT TASK AS INSERT INTO t2 SELECT * FROM t1"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"TRANSLATE TRINO SELECT id, name FROM products WHERE price > 500"}
+{"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"UNINSTALL PLUGIN auditdemo"}
+{"dialect":"starrocks","category":"parse: Required keyword","sql":"SELECT TIME_SLICE(dt, INTERVAL 5 MINUTE)"}
+{"dialect":"starrocks","category":"parse: Required keyword","sql":"SELECT TIME_SLICE(dt, INTERVAL 7 DAY)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"'0A'XC"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"'0A'XCV"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"('0A'XC)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"('0A'XCV)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"CHARACTERS('')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"CHARACTERS('a  ')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"CHARACTERS('abc')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"CHARACTERS('é中')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"CHARACTERS(NULL)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"CHARACTERS(x)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"CURDATE()"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"CURRENT_TIME AT TIME ZONE 'America Pacific'"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"CURTIME()"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"DAYOFWEEK(CURRENT_DATE)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"DAYOFWEEK(NULL)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"DAYOFWEEK(d)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"DEL FROM db.t ALL"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"DEL FROM t ALL"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"DELETE FROM db.t ALL"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"DELETE FROM t ALL"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"DELETE db.t ALL"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"DELETE t ALL"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"EXEC example_macro"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"EXECUTE example_macro()"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"EXECUTE example_macro(arg_a=1, arg_b='value')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT INTO db.t (1, CURRENT_TIMESTAMP(0), 'value')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT INTO db.t (2, NULL, 'null')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT INTO t (1, CURRENT_TIMESTAMP(0), 'value')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT INTO t (2, NULL, 'null')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT db.t (1, CURRENT_TIMESTAMP(0), 'value')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT db.t (2, NULL, 'null')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT t (1, CURRENT_TIMESTAMP(0), 'value')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT t (2, NULL, 'null')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT '41'XCV"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT 2 ** MOD(8, 5)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT AVG(x) OVER (ORDER BY d ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM t"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT BEGIN(p) FROM t"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT CURDATE()"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT CURRENT_TIME AS request_time"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT CURTIME() AS request_time"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT END(p) FROM t"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT EXISTS(SELECT '0A'XC)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT EXISTS(SELECT '0A'XCV)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT EXISTS(SELECT '41'XC FROM u)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT EXISTS(SELECT '41'XCV FROM u)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT curdate()"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT curtime() AS request_time"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"TRUNC(x, 'YYYY')"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"VALUES ('0A'XC)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"VALUES ('0A'XCV)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"characters(x)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"curdate()"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"current_time"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"curtime()"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"dayofweek(d)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"ts (TIME(6) WITH TIME ZONE)"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"x (CHAR(3))"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"CAST(-128 AS BYTEINT)"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"CAST(127 AS BYTEINT)"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"CAST(x AS BYTEINT)"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"CAST(x AS byteint)"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"DAYOFWEEK(CAST('2026-11-15 12:00:00' AS TIMESTAMP))"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"DAYOFWEEK(CAST('2026-11-15' AS DATE))"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"EXECUTE example_macro(DATE '2024-01-02', COALESCE(NULL, 3), 'a;b')"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"INSERT INTO db.t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"INSERT INTO t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"INSERT db.t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"INSERT t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"SELECT ('41'XC)::VARCHAR(10)"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"SELECT ('41'XCV)::VARCHAR(10)"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"SELECT amount (BIGINT) AS converted FROM events"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE))"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'MM')"}
+{"dialect":"teradata","category":"gen: cast/type","sql":"amount (INTEGER)::BIGINT"}
+{"dialect":"teradata","category":"gen: ddl/properties","sql":"CREATE TABLE z (a BYTEINT, b SMALLINT)"}
+{"dialect":"teradata","category":"parse: Expected AS after CAST","sql":"CAST('0A'XC AS VARCHAR(10))"}
+{"dialect":"teradata","category":"parse: Expected AS after CAST","sql":"CAST('0A'XCV AS VARCHAR(10))"}
+{"dialect":"teradata","category":"parse: Expected AS after CAST","sql":"CAST('323032342D30312D3031'XC AS DATE FORMAT 'YYYY-MM-DD')"}
+{"dialect":"teradata","category":"parse: Expected AS after CAST","sql":"CAST('323032342D30312D3031'XCV AS DATE FORMAT 'YYYY-MM-DD')"}
+{"dialect":"teradata","category":"parse: Expected END after CASE","sql":"SELECT CASE WHEN a = 1 THEN '41'XC ELSE '42'XC END FROM t"}
+{"dialect":"teradata","category":"parse: Expected END after CASE","sql":"SELECT CASE WHEN a = 1 THEN '41'XCV ELSE '42'XCV END FROM t"}
+{"dialect":"teradata","category":"parse: Expected END after CASE","sql":"SELECT CASE WHEN x = 1 THEN BEGIN(p) ELSE END(p) END AS bound_value FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"COALESCE('0A'XC, NULL)"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"COALESCE('0A'XCV, NULL)"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"LENGTH('0A'XC)"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"LENGTH('0A'XCV)"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT (x + 1) (NAMED result) FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT (x + 1) (TITLE 'Heading') FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT BEGIN(t.p) AS bound_value FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT BEGIN(t.p) FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT COALESCE(BEGIN(p), END(p)) FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT COALESCE(x (NAMED inner_result), 0) AS result FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT COALESCE(x, 1) (TITLE 'Heading') FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT END(t.p) AS bound_value FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT END(t.p) FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT SUM(a) OVER (PARTITION BY '41'XC) FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT SUM(a) OVER (PARTITION BY '41'XCV) FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT UPPER(TITLE(x (TITLE 'Heading'))) FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT amount (NAMED r, DECIMAL(12, 2), TITLE 'Revenue') FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT t.x (TITLE '') AS result FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (FORMAT '999') (NAMED result) (TITLE 'Heading') AS a FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED \"result name\") AS a FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED \"result name\") FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED 'result name') FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED inner_result) + 1 AS result FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result /* note */) AS a FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result) (TITLE 'Heading') (FORMAT '999') AS a FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result) AS a FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result) FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result) a FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result, TITLE 'Heading', FORMAT '999') FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (TITLE 'Display heading') FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (TITLE 'Heading', FORMAT '999') FROM t"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x FROM t WHERE x (NAMED result) > 1"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"SUM(amount) (DECIMAL(12, 2)) (BIGINT)"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"TO_CHAR(CURRENT_DATE, '59595959'XC)"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"TO_CHAR(CURRENT_DATE, '59595959'XCV)"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"TRUNC(CURRENT_DATE, '4D4D'XC)"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"date_text (FORMAT 'YYYYMMDD', DATE)"}
+{"dialect":"teradata","category":"parse: Expecting )","sql":"t.d (FORMAT 'YYYY-MM-DD') (CHAR(10))"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DEL FROM t AS \"ALL\" ALL"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DEL FROM t AS d ALL"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DELETE FROM t AS \"ALL\" ALL"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DELETE FROM t AS d ALL"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DELETE t AS \"ALL\" ALL"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DELETE t AS d ALL"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"EXEC example_db.example_macro(1)"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"EXEC example_macro()"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"EXEC example_macro(1,, 3)"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT ''XC AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT ''XCV AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT ''xc AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT ''xcv AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0'XC AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0'XCV AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0'xc AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0'xcv AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0A'XC AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0A'XCV AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0A'xc AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0A'xcv AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '41'XC::VARCHAR(10)"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '41'XCV::VARCHAR(10)"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '7B31327D'XC AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '7B31327D'XCV AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '7B31327D'xc AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '7B31327D'xcv AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 'aBcD'XC AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 'aBcD'XCV AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 'aBcD'xc AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 'aBcD'xcv AS s"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT BEGIN(p) AS bound_value FROM t"}
+{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT END(p) AS bound_value FROM t"}
+{"dialect":"trino","category":"gen: canonicalization","sql":"SELECT * FROM t ORDER BY x FETCH FIRST ROW ONLY"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT DATE_ADD('MILLISECOND', 1, TIMESTAMP '2020-01-01 00:00:00')"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '01:02:03.1234'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '01:02:03.456 -08:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '01:02:03.456'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '12:00:00 +02:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '12:00:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '12:00:00.1 +02:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '12:00:00.1'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '12:00:00.10 +02:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '12:00:00.10'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '12:00:00.100 +02:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIME '12:00:00.100'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2012-10-31 01:00 +2'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2012-10-31 01:00 -2'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2012-10-31 01:00:00 +02:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2020-01-01 00:00:00 +02:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2020-01-01 00:00:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2020-01-01 00:00:00.1 +02:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2020-01-01 00:00:00.1'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2020-01-01 00:00:00.10 +02:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2020-01-01 00:00:00.10'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2020-01-01 00:00:00.100 +02:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2020-01-01 00:00:00.100'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2020-01-01'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2026-03-01 00:00:00.1234 +02:00'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2026-03-01 00:00:00.1234'"}
+{"dialect":"trino","category":"gen: cast/type","sql":"SELECT TIMESTAMP '2026-03-01 00:00:00.123456789'"}
+{"dialect":"trino","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t ORDER BY x FETCH FIRST 1 ROW ONLY"}
+{"dialect":"trino","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t ORDER BY x FETCH NEXT 1 ROW WITH TIES"}
+{"dialect":"trino","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t ORDER BY x OFFSET 1 ROW FETCH NEXT 1 ROW ONLY"}
+{"dialect":"trino","category":"parse: does not support CTE","sql":"WITH t AS (SELECT * FROM TABLE(sequence(start => 1, stop => 2))) TABLE t"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"DELETE FROM dbo.t (ROWLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"ISNULL(JSON_QUERY(x, '$.a'), JSON_VALUE(x, '$.a'))"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_QUERY(REPLACE(REPLACE(x , '''', '\"'), '\"\"', '\"'))"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_QUERY(r.JSON, '$.Attr_INT')"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_QUERY(x, '$.a')"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_VALUE(r.JSON, '$.Attr_INT')"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"JSON_VALUE(x, '$.a')"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT\n  *\nFROM (\n  SELECT\n    a\n  FROM x\n  UNION ALL\n  (\n    SELECT\n    TOP 1\n      a\n    FROM y\n  )\n) AS _l_0\nORDER BY\n  (\n    SELECT\n      NULL\n  )\nOFFSET 1 ROWS"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT\nTOP 1\n  *\nFROM (\n  SELECT\n    *\n  FROM (\n    SELECT\n      a\n    FROM x\n    UNION ALL\n    SELECT\n      a\n    FROM y\n  ) AS _l_0\n  ORDER BY\n    (\n      SELECT\n        NULL\n    )\n  OFFSET 1 ROWS\n) AS u"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM ##t (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM ##t AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM ##t s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM #t (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM #t AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM #t s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM (SELECT 1 AS x UNION ALL SELECT 2 AS x) AS _l_0 ORDER BY (SELECT NULL) OFFSET 1 ROWS FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [##t] (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [##t] (NOLOCK) AS s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [##t] (NOLOCK) s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [##t] AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [##t] s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [#t] (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [#t] (NOLOCK) AS s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [#t] (NOLOCK) s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [#t] AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [#t] s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [cast] AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [cast] s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [count] (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [count] (NOLOCK) AS s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [count] (NOLOCK) s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [count] AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [count] s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [dbo].[t] (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [dbo].[t] (NOLOCK) AS s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [dbo].[t] (NOLOCK) s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [dbo].[t] AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [dbo].[t] s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [left] AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM [left] s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (NOLOCK) AS s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (NOLOCK) AS s JOIN dbo.u AS u ON s.id = u.id"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (NOLOCK) JOIN dbo.u AS u (ROWLOCK) ON t.id = u.id"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (NOLOCK) s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (noexpand)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (nolock)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (nowait)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (paglock)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (readcommitted)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (readpast)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (readuncommitted)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (repeatableread)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (rowlock)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (serializable)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (snapshot)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (tablock)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (tablockx)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (updlock)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t (xlock)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t AS s (NOLOCK) PIVOT(SUM(x) FOR id IN ([1])) AS p"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t AS s /* alias */ (NOLOCK /* hint */)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM dbo.t s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM server.db.dbo.t AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM server.db.dbo.t s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM t (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM t (NOLOCK) AS s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM t (NOLOCK) s"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM t AS s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT * FROM t s (NOLOCK)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR JSON PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR XML PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR JSON PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR XML PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x EXCEPT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR JSON PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR XML PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR JSON PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR XML PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x INTERSECT SELECT 2 AS x ORDER BY x OFFSET 0 ROWS OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x ORDER BY x FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR JSON PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR XML PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR JSON PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR XML PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION ALL SELECT 2 AS x ORDER BY x OFFSET 0 ROWS OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR JSON PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR XML PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR JSON PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR XML PATH"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x OFFSET 0 ROWS FOR XML PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT 1 AS x UNION SELECT 2 AS x ORDER BY x OFFSET 0 ROWS OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT TOP 1 * FROM (SELECT 1 AS x UNION ALL SELECT 2 AS x) AS _l_0 FOR JSON PATH OPTION(RECOMPILE)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT TOP 10 s.RECORDID, n.c.value('(/*:FORM_ROOT/*:SOME_TAG)[1]', 'float') AS SOME_TAG_VALUE FROM source_table.dbo.source_data AS s(nolock) CROSS APPLY FormContent.nodes('/*:FORM_ROOT') AS N(C)"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT a FROM x EXCEPT SELECT a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT a FROM x INTERSECT SELECT a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT a FROM x UNION ALL SELECT a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT a FROM x UNION SELECT a FROM (SELECT a AS a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY) AS t ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT a FROM x UNION SELECT a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"SELECT a FROM x UNION SELECT a FROM y UNION SELECT a FROM z ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"UPDATE dbo.t (ROWLOCK) SET x = 1"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"UPDATE s SET x = 1 FROM dbo.t AS s (ROWLOCK) JOIN dbo.u AS u ON s.id = u.id"}
+{"dialect":"tsql","category":"gen: canonicalization","sql":"WITH x(a) AS (SELECT 1), y(a) AS (SELECT 2) SELECT a FROM x UNION SELECT a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"gen: cast/type","sql":"SELECT CASE WHEN CAST(y AS BOOLEAN) THEN 1 ELSE 0 END FROM t"}
+{"dialect":"tsql","category":"gen: cast/type","sql":"SELECT CASE WHEN TRY_CAST(y AS BOOLEAN) THEN 1 ELSE 0 END FROM t"}
+{"dialect":"tsql","category":"parse: Expected AS after CAST","sql":"SELECT * FROM [cast] (NOLOCK)"}
+{"dialect":"tsql","category":"parse: Expected AS after CAST","sql":"SELECT * FROM [cast] (NOLOCK) AS s"}
+{"dialect":"tsql","category":"parse: Expected AS after CAST","sql":"SELECT * FROM [cast] (NOLOCK) s"}
+{"dialect":"tsql","category":"parse: Found multiple 'FETCH' clauses","sql":"SELECT -1 AS x UNION ALL SELECT TOP 2 x FROM (VALUES (2), (1), (0)) AS t(x) ORDER BY x OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY"}
+{"dialect":"tsql","category":"parse: Found multiple 'FETCH' clauses","sql":"SELECT TOP 1 a FROM x EXCEPT SELECT TOP 2 a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"parse: Found multiple 'FETCH' clauses","sql":"SELECT TOP 1 a FROM x INTERSECT SELECT TOP 2 a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"parse: Found multiple 'FETCH' clauses","sql":"SELECT TOP 1 a FROM x UNION ALL SELECT TOP 2 a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"parse: Found multiple 'FETCH' clauses","sql":"SELECT TOP 1 a FROM x UNION SELECT TOP 2 a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"parse: Found multiple 'FETCH' clauses","sql":"SELECT a FROM x EXCEPT SELECT TOP 1 a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"parse: Found multiple 'FETCH' clauses","sql":"SELECT a FROM x INTERSECT SELECT TOP 1 a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"parse: Found multiple 'FETCH' clauses","sql":"SELECT a FROM x UNION ALL SELECT TOP 1 a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"parse: Found multiple 'FETCH' clauses","sql":"SELECT a FROM x UNION SELECT TOP 1 a FROM y ORDER BY a OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY"}
+{"dialect":"tsql","category":"parse: Invalid expression / Unexpected token","sql":"DROP VIEW a.b.c, a.b.d"}
+{"dialect":"tsql","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM ##t (NOLOCK) AS s"}
+{"dialect":"tsql","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM ##t (NOLOCK) s"}
+{"dialect":"tsql","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM #t (NOLOCK) AS s"}
+{"dialect":"tsql","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM #t (NOLOCK) s"}
+{"dialect":"tsql","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 1 output"}
+{"dialect":"tsql","category":"parse: Invalid expression / Unexpected token","sql":"SELECT output FROM t"}
+{"dialect":"tsql","category":"parse: Required keyword","sql":"SELECT * FROM [left] (NOLOCK)"}
+{"dialect":"tsql","category":"parse: Required keyword","sql":"SELECT * FROM [left] (NOLOCK) AS s"}
+{"dialect":"tsql","category":"parse: Required keyword","sql":"SELECT * FROM [left] (NOLOCK) s"}

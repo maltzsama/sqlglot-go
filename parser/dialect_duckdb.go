@@ -19,12 +19,20 @@ func init() {
 		},
 		StatementParsers: map[tokens.TokenType]parserOverrideFunc{
 			// parsers/duckdb.py:263-270 STATEMENT_PARSERS.
-			tokens.ATTACH:    func(p *Parser) exp.Expression { return p.parseDuckDBAttachDetach(true) },
-			tokens.DETACH:    func(p *Parser) exp.Expression { return p.parseDuckDBAttachDetach(false) },
-			tokens.FORCE:     (*Parser).parseDuckDBForce,
-			tokens.INSTALL:   func(p *Parser) exp.Expression { return p.parseDuckDBInstall(false) },
-			tokens.SHOW:      (*Parser).parseDuckDBShow,
-			tokens.SUMMARIZE: (*Parser).parseDuckDBSummarize,
+			tokens.ATTACH: func(p *Parser) exp.Expression { return p.parseDuckDBAttachDetach(true) },
+			tokens.DETACH: func(p *Parser) exp.Expression { return p.parseDuckDBAttachDetach(false) },
+			tokens.FORCE:  (*Parser).parseDuckDBForce,
+			tokens.CONNECT: func(p *Parser) exp.Expression {
+				this := p.parseString()
+				if this == nil {
+					this = p.parseIdVar(true, nil)
+				}
+				return p.expression(exp.ConnectTo(exp.Args{"this": this}), nil, nil)
+			},
+			tokens.DISCONNECT: func(p *Parser) exp.Expression { return p.expression(exp.Disconnect(exp.Args{}), nil, nil) },
+			tokens.INSTALL:    func(p *Parser) exp.Expression { return p.parseDuckDBInstall(false) },
+			tokens.SHOW:       (*Parser).parseDuckDBShow,
+			tokens.SUMMARIZE:  (*Parser).parseDuckDBSummarize,
 			// parser.py:1174,1181 STATEMENT_PARSERS PIVOT/UNPIVOT.
 			tokens.PIVOT:   func(p *Parser) exp.Expression { return p.parseSimplifiedPivot(false) },
 			tokens.UNPIVOT: func(p *Parser) exp.Expression { return p.parseSimplifiedPivot(true) },

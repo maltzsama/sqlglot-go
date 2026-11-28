@@ -1,18 +1,19 @@
 # sqlglot-go roadmap
 
 sqlglot-go tracks the tokenizer, parser, AST, generator, schema, and optimizer of
-[tobymao/sqlglot](https://github.com/tobymao/sqlglot) v30.33.0. Port behavior from the pinned
+[tobymao/sqlglot](https://github.com/tobymao/sqlglot) v30.35.0. Port behavior from the pinned
 Python checkout and use the matching upstream tests as the oracle. The
 [contributor guide](./CONTRIBUTING.md) covers local checks and [DEVIATIONS.md](./DEVIATIONS.md)
 records deliberate differences.
 
 ## Current status
 
-- **Identity corpus.** 7,609 of 7,609 cases pass, including all 1,876 base, MySQL, and
-  PostgreSQL cases. DuckDB and Snowflake are complete (565/565 and 1,543/1,543); the
-  [README dialect table](./README.md#dialects-and-verified-coverage) shows the per-dialect results.
-- **Transpile corpus.** 9,091 of 10,818 upstream v30.33.0 `validate_all` read/write pairs pass, with 1,725 gaps remaining
-  remaining gaps. These include same-dialect pairs. The initial harness shipped in
+- **Identity corpus.** 8,404 of 9,403 upstream v30.35.0 cases pass, with 999 open rows in
+  `testdata/parity_gaps.txt`. Base, MySQL, PostgreSQL and DuckDB are complete (980/980, 428/428,
+  468/468 and 736/736). The [README dialect table](./README.md#dialects-and-verified-coverage) shows the
+  per-dialect results.
+- **Transpile corpus.** 9,287 of 11,017 upstream v30.35.0 `validate_all` read/write pairs pass, with
+  1,730 gaps remaining. These include same-dialect pairs. The initial harness shipped in
   [#33](https://github.com/maltzsama/sqlglot-go/issues/33).
 - **Optimizer.** The default rule pipeline, including qualification and scope analysis, is
   ported. The full `optimizer.sql`, TPC-H, and TPC-DS suites pass. Standalone annotation and
@@ -606,7 +607,7 @@ testdata/fidelity_cases.txt + fidelity_test.go; corpus stays 955/424/468 base/my
 
 ## TSQL (SQL Server) dialect — DONE (issue #118)
 
-Ported 1:1 from `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/tsql.py`.
+Ported 1:1 from `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/tsql.py`.
 `dialects.GetOrRaise("tsql")` returns a real dialect: CASE_INSENSITIVE normalization, `[bracket]`
 identifiers, `N'...'` national strings, `@`/`@@`/`#` single tokens, `GO` batches, `0x` hex literals,
 `TYPED_DIVISION`, `CONCAT_COALESCE`, `LIMIT_IS_TOP`, `LIMIT_FETCH=FETCH`, `ENSURE_BOOLS`, and the
@@ -633,7 +634,7 @@ breaking), and the pretty UDF parameter-list indent. Regression tests:
 `TestTSQLParserGeneratorGaps` in `tsql_test.go`.
 ## ClickHouse dialect — DONE (issue #3)
 
-Ported 1:1 from `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/clickhouse.py`.
+Ported 1:1 from `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/clickhouse.py`.
 `dialects.GetOrRaise("clickhouse")` returns a real dialect: CASE_SENSITIVE normalization,
 `NORMALIZE_FUNCTIONS=False` (original function spelling preserved through
 `PRESERVE_ORIGINAL_NAMES`), `NULL_ORDERING=nulls_are_last`, `INDEX_OFFSET=1`,
@@ -666,7 +667,7 @@ UNESCAPED_SEQUENCES merge. Regression tests: `clickhouse_test.go`
 
 ## StarRocks dialect — DONE (issue #3)
 
-Ported 1:1 from `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/starrocks.py`.
+Ported 1:1 from `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/starrocks.py`.
 StarRocks extends MySQL upstream, so `dialects.StarRocks()` starts from `MySQL()` and applies the
 deltas: the parser-override registry now has a parent chain (`starrocks` → `mysql`) and the
 generator dispatch reuses the existing `dialectParents` chain; `INDEX_OFFSET=1`; the tokenizer
@@ -689,7 +690,7 @@ in `testdata/parity_gaps.txt`. Regression tests: `starrocks_test.go`.
 
 ## Doris dialect — DONE (issue #3)
 
-Ported 1:1 from `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/doris.py`.
+Ported 1:1 from `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/doris.py`.
 Doris extends MySQL upstream, so `dialects.Doris()` starts from `MySQL()` and joins the same
 parser/generator inheritance chains as StarRocks.
 
@@ -711,7 +712,7 @@ Corpus: 56 `validate_identity` cases from `tests/dialects/test_doris.py`
 
 ## Oracle dialect — DONE (issue #3)
 
-Ported 1:1 from `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/oracle.py`.
+Ported 1:1 from `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/oracle.py`.
 Oracle extends the base dialect (not MySQL), with UPPERCASE normalization,
 `SUPPORTS_COLUMN_JOIN_MARKS` derived from the `(+)` keyword, the Oracle tokenizer (`MINUS` ->
 EXCEPT, `START` -> BEGIN, `VARCHAR2`/`NVARCHAR2`, `U+...'` strings, `@`/`$`/`#` vars,
@@ -737,7 +738,7 @@ Corpus: 249 `validate_identity` cases from `tests/dialects/test_oracle.py`
 
 ## Redshift dialect — DONE (issue #34)
 
-Ported 1:1 from `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/redshift.py`.
+Ported 1:1 from `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/redshift.py`.
 Redshift extends Postgres (the parser and generator override chains fall back to the postgres
 tables), with case-insensitive identifier normalization, `NormalizeNotNull`, the `(+)` outer-join
 marker enabled through `SUPPORTS_COLUMN_JOIN_MARKS`, `LockingReadsSupported = False`, no derived
@@ -786,7 +787,7 @@ Known divergences for this slice:
 
 ## Materialize dialect — DONE (issue #36)
 
-Ported 1:1 from `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/materialize.py`.
+Ported 1:1 from `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/materialize.py`.
 Materialize extends Postgres with `NormalizeNotNull` re-enabled, `SupportsCreateTableLike` and
 `SupportsBetweenFlags` back at their base defaults, and `TYPED_LAMBDA_ARGS = True`.
 
@@ -806,7 +807,7 @@ in `testdata/parity_gaps.txt`. Regression tests: `materialize_test.go`.
 
 ## RisingWave dialect — DONE (issue #36)
 
-Ported 1:1 from `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/risingwave.py`.
+Ported 1:1 from `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/risingwave.py`.
 RisingWave extends Postgres with `NormalizeNotNull`, parenthesized struct access required, struct
 star expansion supported, `LockingReadsSupported = False`, `SupportsBetweenFlags` back at the base
 default, unwrapped transform column constraints (`col INT AS expr` without parentheses), and
@@ -830,7 +831,7 @@ Corpus: 7 `validate_identity` cases from `tests/dialects/test_risingwave.py`
 ## Spark 2, Spark 3 and Databricks dialects — DONE (issue #35)
 
 Ported 1:1 from
-`.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/{spark2,spark,databricks}.py`
+`.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/{spark2,spark,databricks}.py`
 plus the shared `transforms.py` preprocess helpers. The dialects form the upstream chain
 `Spark2(Hive) → Spark(Spark2) → Databricks(Spark)`.
 
@@ -865,7 +866,7 @@ The optimizer fixture suite passes in full.
 ## BigQuery dialect — DONE (issue #41)
 
 Ported 1:1 from
-`.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/bigquery.py`: the camel-case and
+`.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/bigquery.py`: the camel-case and
 `SUPPORTS_USER_DEFINED_TYPES=False` flags, the backtick/`"""` tokenizer with `0x` hex strings,
 `CURRENT_DATETIME`, and the TIMESTAMP→TIMESTAMPTZ / DATETIME / BYTES keyword remaps.
 
@@ -891,7 +892,7 @@ running annotate fixtures that do not pass yet are recorded in `optimizer/testda
 
 ## DuckDB dialect — DONE (issue #39)
 
-Ported from `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/duckdb.py`: the
+Ported from `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/duckdb.py`: the
 case-insensitive identifier strategy, `e'...'` byte strings, `$` heredocs and parameters, `//`/`**`/
 `^@`/`@>`/`<@` operators, the `ATTACH`/`DETACH`/`INSTALL`/`FORCE`/`SUMMARIZE`/`PIVOT`/`UNPIVOT`
 statement parsers, prefix aliases (`foo: 1`, `FROM foo: t`), `LAMBDA x : body`, `#N` positional
@@ -916,7 +917,7 @@ rewrites. Newly active optimizer fixture cases are recorded in
 ## Snowflake dialect — PARTIAL (issue #40)
 
 Ported the identity-relevant core of
-`.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/snowflake.py`: the uppercase
+`.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/snowflake.py`: the uppercase
 identifier normalization, `x'...'` hex strings, `$$` raw strings, `//` comments, `$` parameters,
 the Snowflake keyword remaps (FLOAT→DOUBLE, TIMESTAMP_TZ, MINUS→EXCEPT, SAMPLE, …), `DIRECTED`
 joins, `UNDROP`, the `DATEADD`/`DATEDIFF`/`TIMESTAMPADD` argument order, `DATE_PART`/`EXTRACT`
@@ -1006,7 +1007,7 @@ pair asserts `expression.sql(write_dialect) == write_sql`.
 
 ## SQLite dialect — DONE (issue #38)
 
-Ported `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/sqlite.py` as
+Ported `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/sqlite.py` as
 `dialects/sqlite.go`, `parser/dialect_sqlite.go` and `generator/dialect_sqlite.go`: the
 CASE_INSENSITIVE identifier normalization, `"`/`[]`/backtick identifiers, `x'..'`/`0x` hex
 strings, non-nested comments, the ATTACH/DETACH/INDEXED BY/MATCH keywords and REPLACE command,
@@ -1059,7 +1060,7 @@ executable comments; `dialects/dialecttype_test.go` pins the identity and settin
 
 ## Dremio dialect — DONE (requested extension)
 
-Ported `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/dremio.py`:
+Ported `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/dremio.py`:
 the `nulls_are_last` ordering, `CONCAT`/`CONCAT_WS` coalescing, typed division, the
 `//` comment, the `AT TIMESTAMP`/`AT SNAPSHOT` time travel, `CURRENT_DATE_UTC`, `DATETYPE`,
 `DATE_ADD`/`DATE_SUB` with `CAST(... AS INTERVAL <unit>)`, `DATE_FORMAT`/`TO_DATE`/`TO_CHAR`
@@ -1076,7 +1077,7 @@ also corrected Redshift's `BETWEEN` flag behaviour).
 
 ## Teradata dialect — DONE (queued extension)
 
-Ported `.reference/sqlglot-v30.33.0/sqlglot/{dialects,parsers,generators}/teradata.py` as
+Ported `.reference/sqlglot-v30.35.0/sqlglot/{dialects,parsers,generators}/teradata.py` as
 `dialects/teradata.go`, `parser/dialect_teradata.go` and `generator/dialect_teradata.go`: the
 Teradata tokenizer keyword set (`SEL`/`UPD`/`DEL`/`INS`, `LOCKING`, `SAMPLE`, `TOP`, `MOD`,
 `MINUS`, the `EQ`/`NE`/`^=`/`NOT=` inequality spellings and `**`), the `X'..'`/`0x` hex strings,

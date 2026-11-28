@@ -10,6 +10,8 @@ import (
 func Doris() *Dialect {
 	d := MySQL()
 	d.Name = "doris"
+	// IS_PREDICATE_PRECEDENCE as the pinned parser resolves it (parsers/*.py, inherited when unset).
+	d.IsPredicatePrecedence = IsPredicatePrecedenceComparison
 
 	// generators/doris.py:26-31/40-45 generator flags.
 	d.VarcharRequiresSize = false

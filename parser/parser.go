@@ -961,6 +961,18 @@ func (p *Parser) parseSetOperation(this exp.Expression, consumePipe bool) exp.Ex
 	if expression != nil && expression.Kind() == exp.KindValues {
 		expression = p.valuesToSelect(expression)
 	}
+	// parser.py:6255-6265: a parenthesized VALUES operand is wrapped the same way, inside its
+	// Subquery, so its query modifiers move onto the SELECT.
+	for _, operand := range []exp.Expression{this, expression} {
+		if operand == nil || operand.Kind() != exp.KindSubquery {
+			continue
+		}
+		if values := operand.Unnest(); values != nil && values.Kind() == exp.KindValues {
+			if wrapper := values.Parent(); wrapper != nil {
+				wrapper.Set("this", p.valuesToSelect(values))
+			}
+		}
+	}
 	return p.expression(constructor(exp.Args{
 		"this":       this,
 		"distinct":   distinct,
@@ -1889,6 +1901,9 @@ func (p *Parser) parseVersion() exp.Expression {
 }
 
 func (p *Parser) parseTableAlias(aliasTokensArg map[tokens.TokenType]bool) exp.Expression {
+	if p.dialect.Name == "duckdb" && p.duckDBNearestAhead() {
+		return nil
+	}
 	if p.match(tokens.MATCH_CONDITION, false) {
 		return nil
 	}
@@ -1973,7 +1988,10 @@ func (p *Parser) parseJoinParts() (method, side, kind *tokens.Token) {
 		prev := p.prev
 		side = &prev
 	}
-	if p.matchSet(joinKinds) {
+	// parsers/duckdb.py:132 JOIN_KINDS = Parser.JOIN_KINDS - {STRAIGHT_JOIN}: DuckDB reads
+	// straight_join as an ordinary name, so it is never a join kind there.
+	excludedStraightJoin := p.dialect.Name == "duckdb" && p.curr.TokenType == tokens.STRAIGHT_JOIN
+	if !excludedStraightJoin && p.matchSet(joinKinds) {
 		prev := p.prev
 		kind = &prev
 	}
@@ -1981,6 +1999,9 @@ func (p *Parser) parseJoinParts() (method, side, kind *tokens.Token) {
 }
 
 func (p *Parser) parseJoin(skipJoinToken bool, parseBracket bool, aliasTokensArg map[tokens.TokenType]bool) exp.Expression {
+	if p.dialect.Name == "duckdb" {
+		return p.parseDuckDBJoin(skipJoinToken, parseBracket, aliasTokensArg)
+	}
 	if p.dialect.Name == "clickhouse" {
 		// parsers/clickhouse.py:682-690 passes parse_bracket=True so ARRAY JOIN accepts
 		// bracket literals as join sources.
@@ -2021,7 +2042,8 @@ func (p *Parser) parseJoinBase(skipJoinToken bool, parseBracket bool, aliasToken
 	index := p.index
 	method, side, kind := p.parseJoinParts()
 	// parser.py:4657: Snowflake's DIRECTED join modifier.
-	directed := p.matchTextSeq("DIRECTED")
+	// parser.py:4902 SUPPORTS_DIRECTED_JOIN: base True, DuckDB False (parsers/duckdb.py:130).
+	directed := p.dialect.Name != "duckdb" && p.matchTextSeq("DIRECTED")
 	// parsers/tsql.py:406 JOIN_HINTS: `INNER LOOP JOIN` / `HASH JOIN` / `MERGE JOIN`.
 	var joinHint string
 	if p.dialect.Name == "tsql" && p.matchTexts(tsqlJoinHints) {
@@ -3522,15 +3544,24 @@ func (p *Parser) parseCTEBase() exp.Expression {
 // valuesToSelect ports _values_to_select (parser.py:4247-4250): wrap a bare Values in
 // `SELECT * FROM (VALUES ...) [AS _values]` (the alias is added only when the Values has none).
 func (p *Parser) valuesToSelect(values exp.Expression) exp.Expression {
+	sel := exp.Select(exp.Args{
+		"expressions": []exp.Expression{exp.Star(nil)},
+	})
+	// parser.py:4247-4249: query modifiers (ORDER BY, LIMIT, OFFSET, ...) move from the VALUES
+	// onto the wrapping SELECT, in QUERY_MODIFIERS order.
+	for _, key := range exp.QueryModifierKeys() {
+		if modifier := values.Arg(key); modifier != nil {
+			values.Set(key, nil)
+			sel.Set(key, modifier)
+		}
+	}
 	if values.Arg("alias") == nil {
 		values.Set("alias", p.expression(exp.TableAlias(exp.Args{
 			"this": exp.Identifier(exp.Args{"this": "_values", "quoted": false}),
 		}), nil, nil))
 	}
-	return p.expression(exp.Select(exp.Args{
-		"expressions": []exp.Expression{exp.Star(nil)},
-		"from_":       p.expression(exp.From(exp.Args{"this": values}), nil, nil),
-	}), nil, nil)
+	sel.Set("from_", p.expression(exp.From(exp.Args{"this": values}), nil, nil))
+	return p.expression(sel, nil, nil)
 }
 
 func (p *Parser) parseRecursiveWithSearch() exp.Expression {

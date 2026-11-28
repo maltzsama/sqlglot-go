@@ -1091,6 +1091,9 @@ const (
 	KindTypeof
 	KindParseDatetime
 	KindDetach
+	KindConnectTo
+	KindDisconnect
+	KindNearest
 	KindOnCluster
 	KindPartitionId
 	KindReplacePartition
@@ -1321,7 +1324,7 @@ var argTypes = map[Kind][]argSpec{
 	// ksqlDB (beyond-upstream): `WITHIN <size> <unit> [(<before>, <after>)] [GRACE PERIOD ...]`
 	// between the joined relation and its ON criteria (SqlBase.g4 joinWindow), and the
 	// DROP ... DELETE TOPIC / INSERT INTO ... WITH (...) clauses on their own statements.
-	KindJoin:                  {{"this", true}, {"on", false}, {"within", false}, {"grace", false}, {"side", false}, {"kind", false}, {"using", false}, {"method", false}, {"global_", false}, {"hint", false}, {"match_condition", false}, {"directed", false}, {"expressions", false}, {"pivots", false}},
+	KindJoin:                  {{"this", true}, {"on", false}, {"within", false}, {"grace", false}, {"side", false}, {"kind", false}, {"using", false}, {"method", false}, {"global_", false}, {"hint", false}, {"match_condition", false}, {"directed", false}, {"expressions", false}, {"pivots", false}, {"nearest", false}},
 	KindTable:                 {{"this", false}, {"alias", false}, {"schema", false}, {"catalog", false}, {"laterals", false}, {"joins", false}, {"pivots", false}, {"hints", false}, {"system_time", false}, {"version", false}, {"format", false}, {"pattern", false}, {"ordinality", false}, {"when", false}, {"only", false}, {"partition", false}, {"changes", false}, {"rows_from", false}, {"sample", false}, {"indexed", false}},
 	KindTableAlias:            {{"this", false}, {"columns", false}},
 	KindWhere:                 defaultArgTypes,
@@ -1440,7 +1443,7 @@ var argTypes = map[Kind][]argSpec{
 	KindFloor:                 {{"this", true}, {"decimals", false}, {"to", false}},
 	KindGroupConcat:           {{"this", true}, {"separator", false}, {"on_overflow", false}, {"within_group", false}},
 	KindUnnest:                {{"expressions", true}, {"alias", false}, {"offset", false}, {"explode_array", false}},
-	KindArray:                 {{"expressions", false}, {"bracket_notation", false}, {"struct_name_inheritance", false}},
+	KindArray:                 {{"expressions", false}, {"bracket_notation", false}, {"struct_name_inheritance", false}, {"value_constructor", false}},
 	KindArrayAppend:           {{"this", true}, {"expression", true}, {"null_propagation", false}},
 	KindArrayConstructCompact: {{"expressions", false}},
 	KindArrayIntersect:        {{"expressions", true}, {"is_multiset", false}},
@@ -1478,7 +1481,7 @@ var argTypes = map[Kind][]argSpec{
 	KindRespectNulls:          defaultArgTypes,
 	KindPivotAny:              {{"this", false}},
 	KindPivotAlias:            {{"this", true}, {"alias", false}},
-	KindInterval:              {{"this", false}, {"unit", false}},
+	KindInterval:              {{"this", false}, {"unit", false}, {"fraction_in_string", false}},
 	KindIntervalSpan:          {{"this", true}, {"expression", true}},
 	KindJSONExtract:           {{"this", true}, {"expression", true}, {"only_json_types", false}, {"expressions", false}, {"variant_extract", false}, {"json_query", false}, {"option", false}, {"quote", false}, {"on_condition", false}, {"requires_json", false}, {"emits", false}},
 	KindJSONExtractScalar:     {{"this", true}, {"expression", true}, {"only_json_types", false}, {"expressions", false}, {"json_type", false}, {"scalar_only", false}, {"json_subtype", false}},
@@ -2057,6 +2060,9 @@ var argTypes = map[Kind][]argSpec{
 	KindTypeof:                   {{"this", true}},
 	KindParseDatetime:            {{"this", true}, {"format", false}, {"zone", false}, {"default_year", false}},
 	KindDetach:                   {{"this", true}, {"kind", false}, {"exists", false}, {"cluster", false}, {"permanent", false}, {"sync", false}},
+	KindConnectTo:                {{"this", true}},
+	KindDisconnect:               {},
+	KindNearest:                  {{"this", true}, {"count", true}, {"approximate", false}, {"similarity", false}},
 	KindOnCluster:                {{"this", true}},
 	KindPartitionId:              {{"this", true}},
 	KindReplacePartition:         {{"expression", true}, {"source", true}},
@@ -2152,7 +2158,7 @@ var argTypes = map[Kind][]argSpec{
 	KindGetbit:                 {{"this", true}, {"expression", true}, {"zero_is_msb", false}},
 	KindDateFromUnixDate:       defaultArgTypes,
 	KindReadParquet:            {{"expressions", true}},
-	KindFormat:                 {{"this", true}, {"expressions", false}},
+	KindFormat:                 {{"this", true}, {"expressions", false}, {"is_fmt", false}},
 	KindAcos:                   {{"this", true}},
 	KindAcosh:                  {{"this", true}},
 	KindArrayConcatAgg:         {{"this", true}},
@@ -3548,6 +3554,9 @@ var className = map[Kind]string{
 	KindTypeof:                   "Typeof",
 	KindParseDatetime:            "ParseDatetime",
 	KindDetach:                   "Detach",
+	KindConnectTo:                "ConnectTo",
+	KindDisconnect:               "Disconnect",
+	KindNearest:                  "Nearest",
 	KindOnCluster:                "OnCluster",
 	KindPartitionId:              "PartitionId",
 	KindReplacePartition:         "ReplacePartition",
@@ -3832,4 +3841,13 @@ func KindsWithTrait(trait Trait) []Kind {
 		}
 	}
 	return out
+}
+
+// QueryModifierKeys returns the QUERY_MODIFIERS arg keys in upstream order (expressions/core.py:2549).
+func QueryModifierKeys() []string {
+	keys := make([]string, 0, len(queryModifierArgTypes))
+	for _, spec := range queryModifierArgTypes {
+		keys = append(keys, spec.Key)
+	}
+	return keys
 }

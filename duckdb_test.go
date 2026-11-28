@@ -56,9 +56,8 @@ func TestDuckDBFunctions(t *testing.T) {
 		"SELECT STRPTIME('2020-01-01', '%Y-%m-%d')",
 		"SELECT LIST_SORT(x)",
 		"SELECT ARRAY_REVERSE_SORT(x)",
-		"SELECT LIST_SORT(x, 'DESC')",
-		"SELECT LIST_FILTER(x, _u -> _u > 1)",
-		"SELECT LIST_TRANSFORM(x, _u -> _u + 1)",
+		"SELECT LIST_FILTER(x, LAMBDA _u : _u > 1)",
+		"SELECT LIST_TRANSFORM(x, LAMBDA _u : _u + 1)",
 		"SELECT LIST_DISTINCT(x)",
 		"SELECT LIST_CONCAT(a, b)",
 		"SELECT LIST_APPEND(a, 1)",
@@ -84,6 +83,8 @@ func TestDuckDBFunctions(t *testing.T) {
 	} {
 		assertRoundTrip(t, "duckdb", sql, sql)
 	}
+	// v30.35.0: a descending LIST_SORT(x, 'DESC') renders as ARRAY_REVERSE_SORT (generators/duckdb.py:569).
+	assertRoundTrip(t, "duckdb", "SELECT LIST_SORT(x, 'DESC')", "SELECT ARRAY_REVERSE_SORT(x)")
 }
 
 // TestDuckDBTemporalOps verifies the interval binary-op canonicalization.
@@ -250,8 +251,8 @@ func TestDuckDBCanonicalizations(t *testing.T) {
 		// parsers/duckdb.py:106-110 EXPONENT lists both CARET and DSTAR (Teradata takes
 		// only DSTAR), so `^` is exponentiation here, not xor.
 		"SELECT 2 ^ 3":                   "SELECT POWER(2, 3)",
-		"SELECT x ~ y":                   "SELECT REGEXP_FULL_MATCH(x, y)",
-		"SELECT x !~ y":                  "SELECT NOT REGEXP_FULL_MATCH(x, y)",
+		"SELECT x ~ y":                   "SELECT REGEXP_MATCHES(x, y)",
+		"SELECT x !~ y":                  "SELECT NOT REGEXP_MATCHES(x, y)",
 		"SELECT a ^@ b":                  "SELECT STARTS_WITH(a, b)",
 		"SELECT e'Hello world'":          "SELECT e'Hello world'",
 		"SELECT STRING_AGG(x, ', ')":     "SELECT LISTAGG(x, ', ')",
@@ -474,7 +475,7 @@ func TestDuckDBTailTranspileFixes(t *testing.T) {
 		{"duckdb", "tsql", "WITH t1(c) AS (SELECT 1), t2 AS (SELECT CAST(c AS INTEGER) FROM t1) SELECT * FROM t2", "WITH t1(c) AS (SELECT 1), t2 AS (SELECT CAST(c AS INTEGER) AS c FROM t1) SELECT * FROM t2"},
 		{"spark", "duckdb", "SELECT h.id, amount FROM hourlycostagg h LATERAL VIEW inline(h.costs) c", "SELECT h.id, amount FROM hourlycostagg AS h CROSS JOIN LATERAL (SELECT UNNEST(h.costs, max_depth => 2)) AS c"},
 		{"spark", "duckdb", "SELECT POSEXPLODE(x) AS (a, b)", "SELECT GENERATE_SUBSCRIPTS(x, 1) - 1 AS a, UNNEST(x) AS b"},
-		{"snowflake", "duckdb", "SELECT STRTOK('ab')", `SELECT CASE WHEN ' ' = '' AND 'ab' = '' THEN NULL WHEN ' ' = '' AND 1 = 1 THEN 'ab' WHEN ' ' = '' THEN NULL WHEN 1 < 0 THEN NULL WHEN 'ab' IS NULL OR ' ' IS NULL OR 1 IS NULL THEN NULL ELSE LIST_FILTER(REGEXP_SPLIT_TO_ARRAY('ab', CASE WHEN ' ' = '' THEN '' ELSE '[' || REGEXP_REPLACE(' ', '([\[\]^.\-*+?(){}|$\\])', '\\\1', 'g') || ']' END), x -> NOT x = '')[1] END`},
+		{"snowflake", "duckdb", "SELECT STRTOK('ab')", `SELECT CASE WHEN ' ' = '' AND 'ab' = '' THEN NULL WHEN ' ' = '' AND 1 = 1 THEN 'ab' WHEN ' ' = '' THEN NULL WHEN 1 < 0 THEN NULL WHEN 'ab' IS NULL OR ' ' IS NULL OR 1 IS NULL THEN NULL ELSE LIST_FILTER(REGEXP_SPLIT_TO_ARRAY('ab', CASE WHEN ' ' = '' THEN '' ELSE '[' || REGEXP_REPLACE(' ', '([\[\]^.\-*+?(){}|$\\])', '\\\1', 'g') || ']' END), LAMBDA x : NOT x = '')[1] END`},
 	}
 	for _, tc := range cases {
 		out, err := sqlglot.Transpile(tc.sql, tc.read, tc.write, generator.Options{})

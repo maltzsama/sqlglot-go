@@ -182,6 +182,7 @@ func init() {
 		expressions.KindLogicalOr:             duckDBLogicalSQL("BOOL_OR"),
 		expressions.KindLogicalAnd:            duckDBLogicalSQL("BOOL_AND"),
 		expressions.KindDateAdd:               duckDBDateDeltaSQL("+"),
+		expressions.KindInterval:              duckDBIntervalSQL,
 		expressions.KindDateSub:               duckDBDateDeltaSQL("-"),
 		expressions.KindDatetimeAdd:           duckDBDateDeltaSQL("+"),
 		expressions.KindDatetimeSub:           duckDBDateDeltaSQL("-"),
@@ -285,7 +286,14 @@ func duckDBArraySQL(g *Generator, e expressions.Expression) string {
 	if truthy(e.Arg("struct_name_inheritance")) {
 		applyStructNameInheritance(exprs)
 	}
-	if len(exprs) > 0 && exprs[0].Find(expressions.TraitQuery) != nil {
+	return inlineArrayUnlessQuery(g, e)
+}
+
+// inlineArrayUnlessQuery ports dialects/dialect.py:1513-1523: a single top-level query
+// renders as ARRAY(query) unless value_constructor marks a bracketed scalar subquery.
+func inlineArrayUnlessQuery(g *Generator, e expressions.Expression) string {
+	exprs := e.Expressions()
+	if len(exprs) == 1 && exprs[0] != nil && exprs[0].Is(expressions.TraitQuery) && !truthy(e.Arg("value_constructor")) {
 		return g.funcCall("ARRAY", []any{exprs[0]}, "(", ")", true)
 	}
 	return g.inlineArraySQL(e)
@@ -458,7 +466,7 @@ func duckDBArrowJSONExtractArray(g *Generator, e expressions.Expression) string 
 		// BigQuery returns SQL NULL when any element is an object or array.
 		extractSQL := g.gen(extract)
 		jsonArray := "CAST(" + extractSQL + " AS JSON[])"
-		nonScalar := "LIST_FILTER(" + jsonArray + ", x -> JSON_TYPE(x) IN ('OBJECT', 'ARRAY'))"
+		nonScalar := "LIST_FILTER(" + jsonArray + ", " + duckDBLambda(g, "x", "JSON_TYPE(x) IN ('OBJECT', 'ARRAY')") + ")"
 		return "CASE WHEN " + extractSQL + " IS NULL THEN NULL WHEN LENGTH(" + nonScalar + ") = 0 THEN " +
 			g.gen(expressions.Cast(expressions.Args{"this": extract, "to": to})) + " ELSE NULL END"
 	}
@@ -934,48 +942,49 @@ func implicitDatetimeCast(arg expressions.Expression) expressions.Expression {
 	})
 }
 
-// duckDBSortArraySQL ports _array_sort_sql (generators/duckdb.py:545-548): a descending sort
-// is ARRAY_REVERSE_SORT, everything else LIST_SORT.
+// duckDBSortArraySQL ports _array_sort_sql (generators/duckdb.py:561-575). array_sort_order
+// (dialects/dialect.py:3092-3100) reads literal asc and nulls_first flags; a non-literal flag
+// leaves the call as LIST_SORT(this) and is reported as unsupported.
 func duckDBSortArraySQL(g *Generator, e expressions.Expression) string {
 	arr := e.This()
-	ascExpr := asExpression(e.Arg("asc"))
-	nullsFirst := asExpression(e.Arg("nulls_first"))
-
-	isBool := func(node expressions.Expression) bool {
-		return node != nil && node.Kind() == expressions.KindBoolean
-	}
-	isTrue := func(node expressions.Expression) bool { return isBool(node) && truthy(node.Arg("this")) }
-
-	if !isBool(ascExpr) && !isBool(nullsFirst) {
-		return g.funcCall("LIST_SORT", []any{arr, ascExpr, nullsFirst}, "(", ")", true)
-	}
-
-	nullsAreFirst := isTrue(nullsFirst)
-	var nullsFirstSQL expressions.Expression
-	if nullsAreFirst {
-		nullsFirstSQL = expressions.LiteralString("NULLS FIRST")
-	}
-
-	if !isBool(ascExpr) {
-		return g.funcCall("LIST_SORT", []any{arr, ascExpr, nullsFirstSQL}, "(", ")", true)
-	}
-
-	descending := ascExpr != nil && !truthy(ascExpr.Arg("this"))
-	if !descending && !nullsAreFirst {
+	asc, nullsFirst, ok := arraySortOrder(e)
+	if !ok {
+		g.unsupported("LIST_SORT only takes literal orders")
 		return g.funcCall("LIST_SORT", []any{arr}, "(", ")", true)
 	}
-	if !nullsAreFirst {
-		return g.funcCall("ARRAY_REVERSE_SORT", []any{arr}, "(", ")", true)
+	if !nullsFirst {
+		name := "LIST_SORT"
+		if !asc {
+			name = "ARRAY_REVERSE_SORT"
+		}
+		return g.funcCall(name, []any{arr}, "(", ")", true)
 	}
-	direction := "ASC"
-	if descending {
-		direction = "DESC"
+	direction := "DESC"
+	if asc {
+		direction = "ASC"
 	}
-	return g.funcCall("LIST_SORT", []any{
-		arr,
-		expressions.LiteralString(direction),
-		expressions.LiteralString("NULLS FIRST"),
-	}, "(", ")", true)
+	return g.funcCall("LIST_SORT", []any{arr, expressions.LiteralString(direction), expressions.LiteralString("NULLS FIRST")}, "(", ")", true)
+}
+
+// arraySortOrder ports array_sort_order (dialects/dialect.py:3092-3100): asc defaults to true,
+// and ok is false when a flag is not a literal boolean.
+func arraySortOrder(e expressions.Expression) (asc bool, nullsFirst bool, ok bool) {
+	ascExpr := asExpression(e.Arg("asc"))
+	if ascExpr == nil {
+		ascExpr = expressions.True_()
+	}
+	if ascExpr.Kind() != expressions.KindBoolean {
+		return false, false, false
+	}
+	asc = truthy(ascExpr.Arg("this"))
+	nf := asExpression(e.Arg("nulls_first"))
+	if nf == nil {
+		return asc, false, true
+	}
+	if nf.Kind() != expressions.KindBoolean {
+		return false, false, false
+	}
+	return asc, truthy(nf.Arg("this")), true
 }
 
 // duckDBTimestampFromPartsSQL renders TimestampFromParts as MAKE_TIMESTAMP.
@@ -1311,7 +1320,24 @@ func duckDBIgnoreNullsSQL(g *Generator, e expressions.Expression) string {
 // (generators/duckdb.py:1739) before the base PIVOT rendering: DuckDB only accepts simple
 // column names inside a (UN)PIVOT.
 func duckDBPivot(g *Generator, e expressions.Expression) string {
-	return g.pivotSQL(unqualifyColumnsDeep(e))
+	// generators/duckdb.py:1598-1604 _unqualify_pivot_columns: DuckDB binds the pivot clauses
+	// (ON, USING, GROUP BY, ...) without a table qualifier. The source and CTEs keep theirs.
+	for _, key := range expressions.ArgKeys(e.Kind()) {
+		if key == "this" || key == "with_" {
+			continue
+		}
+		switch v := e.Arg(key).(type) {
+		case expressions.Expression:
+			e.Set(key, unqualifyColumnsDeep(v))
+		case []expressions.Expression:
+			items := make([]expressions.Expression, len(v))
+			for i, item := range v {
+				items[i] = unqualifyColumnsDeep(item)
+			}
+			e.Set(key, items)
+		}
+	}
+	return g.pivotSQL(e)
 }
 
 // duckDBTableSampleSQL ports tablesample_sql (generators/duckdb.py:3118-3133).
@@ -1332,8 +1358,26 @@ func duckDBTableSampleSQL(g *Generator, e expressions.Expression) string {
 	return g.tableSampleSQLWithKeyword(e, keyword)
 }
 
+// duckDBLambda writes a lambda the way DuckDB of this dialect version reads it: the LAMBDA form
+// from 1.3 on (generators/duckdb.py:2776-2785), and the arrow form before that. Parameters are
+// wrapped in parentheses only when there is more than one, as Generator.lambda_sql does.
+func duckDBLambda(g *Generator, params, body string) string {
+	if g.dialect.VersionAtLeast(1, 3) {
+		return "LAMBDA " + params + " : " + body
+	}
+	if strings.Contains(params, ", ") {
+		params = "(" + params + ")"
+	}
+	return params + " -> " + body
+}
+
 // duckDBLambdaSQL renders DuckDB's `LAMBDA x, y : body` form when the parser saw the keyword.
 func duckDBLambdaSQL(g *Generator, e expressions.Expression) string {
+	// generators/duckdb.py:2776-2785: from DuckDB 1.3 every lambda uses the LAMBDA form with a colon.
+	if g.dialect.VersionAtLeast(1, 3) {
+		params := g.expressions(exprsOptions{expression: e, key: "expressions", flat: true})
+		return "LAMBDA " + params + " : " + g.sqlKey(e, "this")
+	}
 	if truthy(e.Arg("colon")) {
 		params := g.expressions(exprsOptions{expression: e, key: "expressions", flat: true})
 		return "LAMBDA " + params + " : " + g.sqlKey(e, "this")
@@ -1414,8 +1458,26 @@ func duckDBDateDeltaSQL(op string) func(*Generator, expressions.Expression) stri
 		if toType != nil {
 			thisSQL = g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": toType}))
 		}
-		return thisSQL + " " + op + " " + g.gen(interval)
+		return dateDeltaToBinarySQL(g, e, thisSQL+" "+op+" "+g.gen(interval))
 	}
+}
+
+// dateDeltaToBinarySQL ports date_delta_to_binary_sql (dialects/dialect.py:2456-2464): the
+// binary form is parenthesized when its parent is a binary, unary or AT TIME ZONE expression,
+// except a parent Paren or an Add/Sub that has this node as its left operand.
+func dateDeltaToBinarySQL(g *Generator, e expressions.Expression, binary string) string {
+	parent := e.Parent()
+	if parent == nil {
+		return binary
+	}
+	if !parent.Is(expressions.TraitBinary) && !parent.Is(expressions.TraitUnary) && parent.Kind() != expressions.KindAtTimeZone {
+		return binary
+	}
+	leftOperand := (parent.Kind() == expressions.KindAdd || parent.Kind() == expressions.KindSub) && parent.This() == e
+	if parent.Kind() == expressions.KindParen || leftOperand {
+		return binary
+	}
+	return "(" + binary + ")"
 }
 
 // duckDBWithinGroupSQL ports withingroup_sql (generators/duckdb.py:3196-3236) for the
@@ -1481,30 +1543,20 @@ func duckDBDiffUnit(unit expressions.Expression) any {
 	return unit
 }
 
-// duckDBJoinSQL ports the DuckDBGenerator.join_sql override (generators/duckdb.py:3145-3160):
-// DuckDB has no ON-less `LEFT/INNER JOIN UNNEST(...)`, so a synthetic UNNEST join gets a
-// dummy ON TRUE; a plain comma join has its synthetic side/kind cleared first.
+// duckDBJoinSQL ports DuckDBGenerator.join_sql (generators/duckdb.py:3314-3336). MARK and
+// SINGLE joins, and RIGHT SEMI/ANTI joins, render as `JOIN BY (TYPE <side_kind>)`. DuckDB has
+// no ON-less `LEFT/INNER JOIN UNNEST(...)`, so such a join gets a dummy ON TRUE; any other
+// plain comma-style join has its synthetic side and kind cleared first.
 func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
-	// DuckDB renders SEMI/ANTI joins without the LEFT/RIGHT side keyword.
-	if kind := strings.ToUpper(e.Text("kind")); kind == "SEMI" || kind == "ANTI" {
-		switch side := strings.ToUpper(e.Text("side")); side {
-		case "LEFT":
-			// DuckDB's SEMI/ANTI joins are left-sided by default.
-			e.Set("side", nil)
-		case "RIGHT":
-			// DuckDB 1.4 expresses right-sided SEMI/ANTI joins as a typed join.
-			joinOp := "RIGHT_" + kind
-			savedSide, savedKind := e.Arg("side"), e.Arg("kind")
-			e.Set("side", nil)
-			e.Set("kind", nil)
-			out := g.joinSQL(e)
-			e.Set("side", savedSide)
-			e.Set("kind", savedKind)
-			return strings.Replace(out, "JOIN ", "JOIN BY (TYPE "+joinOp+") ", 1)
-		}
+	side := strings.ToUpper(e.Text("side"))
+	kind := strings.ToUpper(e.Text("kind"))
+	if kind == "MARK" || kind == "SINGLE" || (side == "RIGHT" && (kind == "SEMI" || kind == "ANTI")) {
+		typ := strings.Join(nonEmptyStrings(side, kind), "_")
+		return g.joinSQLWithOp(e, "JOIN BY (TYPE "+typ+")")
 	}
-	if !truthy(e.Arg("using")) && !truthy(e.Arg("on")) && strings.ToUpper(e.Text("method")) == "" {
-		switch strings.ToUpper(e.Text("kind")) {
+	if !truthy(e.Arg("using")) && !truthy(e.Arg("on")) && !truthy(e.Arg("nearest")) &&
+		strings.ToUpper(e.Text("method")) == "" {
+		switch kind {
 		case "", "INNER", "OUTER":
 			if this := asExpression(e.Arg("this")); this != nil && this.Kind() == expressions.KindUnnest {
 				e.Set("on", expressions.True_())
@@ -1515,6 +1567,17 @@ func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
 		}
 	}
 	return g.joinSQL(e)
+}
+
+// nonEmptyStrings returns the non-empty values in order (Python's `"_".join(x for x in ... if x)`).
+func nonEmptyStrings(values ...string) []string {
+	out := make([]string, 0, len(values))
+	for _, v := range values {
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // generators/duckdb.py:1729 exp.SHA renders as SHA1.
@@ -1533,4 +1596,15 @@ func init() {
 		expressions.KindTimeStrToTime:   duckDBTimeStrToTimeSQL,
 		expressions.KindArrayRemove:     duckDBArrayRemoveSQL,
 	})
+}
+
+// duckDBIntervalSQL ports DuckDBGenerator.interval_sql (generators/duckdb.py:3307-3313):
+// DuckDB truncates INTERVAL '1.5' DAY to one day, but keeps the fraction of INTERVAL '1.5 DAY'.
+func duckDBIntervalSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.This())
+	unit := asExpression(e.Arg("unit"))
+	if truthy(e.Arg("fraction_in_string")) && this != nil && unit != nil && unit.Kind() == expressions.KindVar {
+		return "INTERVAL '" + this.Name() + " " + g.sqlKey(e, "unit") + "'"
+	}
+	return g.intervalSQL(e)
 }

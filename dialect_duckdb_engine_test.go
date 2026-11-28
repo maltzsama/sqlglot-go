@@ -26,10 +26,10 @@ func TestDuckDBEngineCorrections(t *testing.T) {
 	t.Run("array_remove_keeps_nulls", func(t *testing.T) {
 		duckDBEngineCorrection(t, "snowflake",
 			"ARRAY_REMOVE([1, NULL, 2], 1)",
-			"LIST_FILTER([1, NULL, 2], _u -> _u IS DISTINCT FROM 1)")
+			"LIST_FILTER([1, NULL, 2], LAMBDA _u : _u IS DISTINCT FROM 1)")
 		duckDBEngineCorrection(t, "snowflake",
 			"ARRAY_REMOVE([1, 2, 3], NULL)",
-			"CASE WHEN NULL IS NULL THEN NULL ELSE LIST_FILTER([1, 2, 3], _u -> _u IS DISTINCT FROM NULL) END")
+			"CASE WHEN NULL IS NULL THEN NULL ELSE LIST_FILTER([1, 2, 3], LAMBDA _u : _u IS DISTINCT FROM NULL) END")
 	})
 
 	t.Run("base64_alphabet_translate", func(t *testing.T) {
@@ -62,7 +62,7 @@ func TestDuckDBEngineCorrections(t *testing.T) {
 	t.Run("json_value_array_scalar_only", func(t *testing.T) {
 		duckDBEngineCorrection(t, "bigquery",
 			"JSON_VALUE_ARRAY('{\"arr\": [{\"a\":1}]}', '$.arr')",
-			"CASE WHEN '{\"arr\": [{\"a\":1}]}' -> '$.arr' IS NULL THEN NULL WHEN LENGTH(LIST_FILTER(CAST('{\"arr\": [{\"a\":1}]}' -> '$.arr' AS JSON[]), x -> JSON_TYPE(x) IN ('OBJECT', 'ARRAY'))) = 0 THEN CAST('{\"arr\": [{\"a\":1}]}' -> '$.arr' AS TEXT[]) ELSE NULL END")
+			"CASE WHEN '{\"arr\": [{\"a\":1}]}' -> '$.arr' IS NULL THEN NULL WHEN LENGTH(LIST_FILTER(CAST('{\"arr\": [{\"a\":1}]}' -> '$.arr' AS JSON[]), LAMBDA x : JSON_TYPE(x) IN ('OBJECT', 'ARRAY'))) = 0 THEN CAST('{\"arr\": [{\"a\":1}]}' -> '$.arr' AS TEXT[]) ELSE NULL END")
 	})
 
 	t.Run("safe_parse_json_try_cast", func(t *testing.T) {
