@@ -230,7 +230,9 @@ func writeGaps(fails map[gapKey]string) error {
 
 // Scope B includes MySQL, Postgres, the Presto-family dialects Athena, Trino,
 // Presto, and Hive, and TSQL. Their gaps in testdata/parity_gaps.txt are the generator-port
-// burndown list. Pass and total floors are monotonic: raise them, never lower them.
+// burndown list. Pass and total floors are monotonic within one pinned reference: raise them, never lower them.
+// A pin bump re-measures them (the pairs that drop out or change expectation are then gone from the
+// corpus); see the pin-bump commits in git history.
 const (
 	minPassBase        = 980
 	minPassBigQuery    = 741
@@ -239,7 +241,7 @@ const (
 	minPassAthena      = 58
 	minPassTrino       = 155
 	minPassPresto      = 168
-	minPassHive        = 142
+	minPassHive        = 143
 	minPassTSQL        = 709
 	minPassClickhouse  = 501
 	minPassStarrocks   = 174

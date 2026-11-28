@@ -164,7 +164,6 @@
 {"dialect":"dremio","category":"parse: The number of provided arguments","sql":"SELECT REGEXP_SPLIT(tags, ',', 'ALL', 1000) AS t"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"'\\\n'"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"INSERT OVERWRITE DIRECTORY 'x' ROW FORMAT DELIMITED FIELDS TERMINATED BY '\u0001' COLLECTION ITEMS TERMINATED BY ',' MAP KEYS TERMINATED BY ':' LINES TERMINATED BY '' STORED AS TEXTFILE SELECT * FROM `a`.`b`"}
-{"dialect":"hive","category":"gen: canonicalization","sql":"SELECT FALSE IS DISTINCT FROM NULL < NULL"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"SELECT a, ABS(b) AS b, SUM(c) FROM tabl AS t GROUP BY a, ABS(b) GROUPING SETS ((a, ABS(b)), a)"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"SELECT a, SUM(c) FROM t GROUP BY a, DATE_FORMAT(b, 'yyyy') GROUPING SETS ((a, DATE_FORMAT(b, 'yyyy')), a)"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"SELECT a, b, SUM(c) FROM tabl AS t GROUP BY a, b GROUPING SETS ((a, b), a)"}

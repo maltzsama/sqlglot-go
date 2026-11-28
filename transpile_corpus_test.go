@@ -266,7 +266,9 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 // Cross-dialect pass/total floors, bucketed by the WRITE dialect (the generation target,
 // where the per-dialect generator TRANSFORMS/TYPE_MAPPING gaps live — issue #33 step 3).
 // Read-side parse gaps surface under their target's bucket with a "parse:" category.
-// Pass and total floors are monotonic: raise them, never lower them.
+// Pass and total floors are monotonic within one pinned reference: raise them, never lower them.
+// A pin bump re-measures them (the pairs that drop out or change expectation are then gone from the
+// corpus); see the pin-bump commits in git history.
 const (
 	minPassTranspileBase        = 957
 	minPassTranspileAthena      = 12
@@ -276,7 +278,7 @@ const (
 	minPassTranspileDoris       = 104
 	minPassTranspileDremio      = 31
 	minPassTranspileDuckDB      = 1508
-	minPassTranspileHive        = 507
+	minPassTranspileHive        = 508
 	minPassTranspileMaterialize = 32
 	minPassTranspileMySQL       = 382
 	minPassTranspileOracle      = 202
@@ -285,7 +287,7 @@ const (
 	minPassTranspileRedshift    = 204
 	minPassTranspileRisingWave  = 6
 	minPassTranspileSnowflake   = 1023
-	minPassTranspileSpark       = 849
+	minPassTranspileSpark       = 850
 	minPassTranspileSpark2      = 91
 	minPassTranspileSQLite      = 225
 	minPassTranspileStarrocks   = 102

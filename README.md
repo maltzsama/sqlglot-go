@@ -134,37 +134,37 @@ pair.
 | Dialect | Name | Identity cases passing |
 | --- | --- | ---: |
 | Base | `""` | 980/980 |
-| Athena | `athena` | 51/51 |
-| BigQuery | `bigquery` | 689/689 |
-| ClickHouse | `clickhouse` | 468/468 |
-| Databricks | `databricks` | 176/176 |
-| Doris | `doris` | 56/56 |
-| Dremio | `dremio` | 46/46 |
-| DuckDB | `duckdb` | 565/565 |
-| Hive | `hive` | 141/141 |
+| Athena | `athena` | 58/63 |
+| BigQuery | `bigquery` | 741/779 |
+| ClickHouse | `clickhouse` | 501/555 |
+| Databricks | `databricks` | 208/249 |
+| Doris | `doris` | 75/100 |
+| Dremio | `dremio` | 46/47 |
+| DuckDB | `duckdb` | 736/736 |
+| Hive | `hive` | 143/166 |
 | ksqlDB | `ksqldb` (alias `ksql`) | 57/57 (project fixtures) |
 | MariaDB | `mariadb` | Dedicated tests, no upstream identity corpus |
-| Materialize | `materialize` | 24/24 |
+| Materialize | `materialize` | 25/25 |
 | MySQL | `mysql` | 428/428 |
-| Oracle | `oracle` | 249/249 |
+| Oracle | `oracle` | 302/437 |
 | PostgreSQL | `postgres` | 468/468 |
-| Presto | `presto` | 170/170 |
-| Redshift | `redshift` | 171/171 |
-| RisingWave | `risingwave` | 7/7 |
-| Snowflake | `snowflake` | 1,543/1,543 |
-| Spark | `spark` | 227/227 |
+| Presto | `presto` | 168/172 |
+| Redshift | `redshift` | 195/210 |
+| RisingWave | `risingwave` | 7/8 |
+| Snowflake | `snowflake` | 1,590/1,739 |
+| Spark | `spark` | 253/272 |
 | Spark 2 | `spark2` | Covered by read/write pairs |
-| SQLite | `sqlite` | 136/136 |
-| StarRocks | `starrocks` | 145/145 |
-| Teradata | `teradata` | 84/84 |
-| Trino | `trino` | 115/115 |
-| T-SQL | `tsql` | 613/613 |
+| SQLite | `sqlite` | 231/321 |
+| StarRocks | `starrocks` | 174/233 |
+| Teradata | `teradata` | 154/307 |
+| Trino | `trino` | 155/187 |
+| T-SQL | `tsql` | 709/864 |
 
-The transpile corpus passes **9,091 of 10,818** pairs against upstream v30.35.0, with **1,725** remaining gaps. Of the
-recorded pairs, 6,760 cross dialects.
-The identity corpus has no outstanding gaps
-([parity_gaps.txt](./testdata/parity_gaps.txt) is empty); see
-[transpile gaps](./testdata/transpile_gaps.txt) for the remaining transpile cases. The default
+The transpile corpus passes **9,287 of 11,017** pairs against upstream v30.35.0, with **1,730** remaining gaps
+(**8,467** of the recorded pairs cross dialects; see [transpile gaps](./testdata/transpile_gaps.txt)).
+The identity corpus passes **8,404 of 9,403** cases, with **999** open rows in
+[parity_gaps.txt](./testdata/parity_gaps.txt). Base, MySQL and PostgreSQL are complete, and so is DuckDB
+(736/736). Most open identity rows are in T-SQL, Teradata, Snowflake, Oracle, SQLite and StarRocks. The default
 optimizer pipeline passes its full `optimizer.sql`,
 TPC-H, and TPC-DS suites. The standalone simplification fixtures now pass **521/521** cases;
 standalone type annotation gaps remain in

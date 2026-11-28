@@ -481,7 +481,6 @@
 {"read":"hive","write":"duckdb","category":"gen: transpile mismatch","sql":"ARRAY_REMOVE(the_array, target)"}
 {"read":"hive","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT EXISTS(arr, x -> x > 2)"}
 {"read":"hive","write":"hive","category":"gen: cast/type","sql":"1.0bd"}
-{"read":"hive","write":"hive","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL < NULL"}
 {"read":"hive","write":"hive","category":"gen: transpile mismatch","sql":"SELECT a, SUM(c) FROM t GROUP BY a, DATE_FORMAT(b, 'yyyy') GROUPING SETS ((a, DATE_FORMAT(b, 'yyyy')), a)"}
 {"read":"hive","write":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a SELECT k"}
 {"read":"hive","write":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x LATERAL VIEW EXPLODE(y) t AS a SELECT a"}
@@ -493,7 +492,6 @@
 {"read":"hive","write":"presto","category":"parse: Invalid expression / Unexpected token","sql":"FROM x LATERAL VIEW EXPLODE(y) t AS a SELECT a"}
 {"read":"hive","write":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE Payments ADD COLUMNS (Stock DECIMAL(38, 0), dropid VARCHAR(500))"}
 {"read":"hive","write":"spark","category":"gen: cast/type","sql":"1.0bd"}
-{"read":"hive","write":"spark","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL < NULL"}
 {"read":"hive","write":"spark","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a SELECT k"}
 {"read":"hive","write":"spark2","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a SELECT k"}
 {"read":"hive","write":"teradata","category":"gen: transpile mismatch","sql":"DAYOFWEEK(d)"}
