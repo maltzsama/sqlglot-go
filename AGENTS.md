@@ -58,7 +58,7 @@ and all 7609 cases in the per-dialect corpus pass
 (`testdata/dialect_identity.jsonl`; `testdata/parity_gaps.txt` is empty). Cross-dialect
 transpilation is verified the same way
 against upstream's `validate_all` read/write pairs (`testdata/transpile_corpus.jsonl`,
-`TestTranspileCorpus`): 8863/8881 pairs pass (18 open), tracked in `testdata/transpile_gaps.txt`.
+`TestTranspileCorpus`): 8869/8881 pairs pass (12 open), tracked in `testdata/transpile_gaps.txt`.
 AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
 `exp.Command` where upstream builds a structured node (`fidelity_test.go` +
 `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,

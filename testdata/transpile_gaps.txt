@@ -6,12 +6,6 @@
 {"read":"bigquery","write":"spark2","category":"gen: transpile mismatch","sql":"SELECT * FROM UNNEST([STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob', 92), STRUCT('Diana', 95)])"}
 {"read":"bigquery","write":"trino","category":"gen: cast/type","sql":"SELECT * FROM UNNEST([STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob', 92), STRUCT('Diana', 95)])"}
 {"read":"bigquery","write":"trino","category":"gen: cast/type","sql":"SELECT * FROM UNNEST([STRUCT('Alice' AS name, STRUCT(85 AS math, 90 AS english) AS scores), STRUCT('Bob' AS name, STRUCT(92 AS math, 88 AS english) AS scores)])"}
-{"read":"postgres","write":"athena","category":"gen: transpile mismatch","sql":"SELECT U&'a\nb'"}
-{"read":"postgres","write":"athena","category":"gen: transpile mismatch","sql":"SELECT U&'can''t'"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT U&'a\nb'"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT U&'can''t'"}
-{"read":"postgres","write":"presto","category":"gen: transpile mismatch","sql":"SELECT U&'Hello winter \\2603 !'"}
-{"read":"postgres","write":"presto","category":"gen: transpile mismatch","sql":"SELECT U&'can''t'"}
 {"read":"snowflake","write":"","category":"gen: transpile mismatch","sql":"SELECT TO_TIMESTAMP('2025-01-16 14:45:30.123', 'yyyy-mm-DD hh24:mi:ss.ff6')"}
 {"read":"spark","write":"bigquery","category":"gen: transpile mismatch","sql":"select explode_outer([])"}
 {"read":"spark","write":"bigquery","category":"gen: transpile mismatch","sql":"select posexplode_outer([])"}
