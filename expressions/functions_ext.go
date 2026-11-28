@@ -119,6 +119,8 @@ const (
 	KindFromISO8601Date            Kind = kindExtensionBase + iota
 	KindFromISO8601Timestamp       Kind = kindExtensionBase + iota
 	KindFromISO8601TimestampNanos  Kind = kindExtensionBase + iota
+	// PosexplodeOuter is Posexplode with the ExplodeOuter trait (array.py:260).
+	KindPosexplodeOuter Kind = kindExtensionBase + iota
 )
 
 // GENERATED init
@@ -623,6 +625,9 @@ func init() {
 	// bitwise aggregates). Dialects that spell them differently rename at generation time.
 	FunctionByName["MAX_BY"] = genericFunction(KindArgMax)
 	FunctionByName["MIN_BY"] = genericFunction(KindArgMin)
+	// expressions/aggregate.py:63,9: ArgMax and ArgMin also carry the ARGMAX and ARGMIN names.
+	FunctionByName["ARGMAX"] = genericFunction(KindArgMax)
+	FunctionByName["ARGMIN"] = genericFunction(KindArgMin)
 	FunctionByName["SHA"] = genericFunction(KindSHA)
 	FunctionByName["SHA1"] = genericFunction(KindSHA)
 	FunctionByName["BIT_AND"] = genericFunction(KindBitwiseAndAgg)
@@ -752,6 +757,12 @@ func init() {
 	className[KindPosexplode] = "Posexplode"
 	kindByClassName["Posexplode"] = KindPosexplode
 	FunctionByName["POSEXPLODE"] = genericFunction(KindPosexplode)
+
+	argTypes[KindPosexplodeOuter] = []argSpec{{"this", true}}
+	traitsOf[KindPosexplodeOuter] = TraitCondition | TraitFunc | TraitUDTF | TraitDerivedTable
+	className[KindPosexplodeOuter] = "PosexplodeOuter"
+	kindByClassName["PosexplodeOuter"] = KindPosexplodeOuter
+	FunctionByName["POSEXPLODE_OUTER"] = genericFunction(KindPosexplodeOuter)
 }
 
 func init() {

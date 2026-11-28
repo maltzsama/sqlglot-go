@@ -18,6 +18,10 @@ func Presto() *Dialect {
 	d.PadFillPatternIsRequired = true
 	// generators/presto.py TRANSFORMS: eliminate_distinct_on.
 	d.EliminateDistinctOn = true
+	// generators/presto.py:273 MULTI_ARG_DISTINCT = False; Trino inherits it from Presto.
+	d.MultiArgDistinct = false
+	// generators/presto.py:270 LIMIT_ONLY_LITERALS = True.
+	d.LimitOnlyLiterals = true
 	// generators/presto.py TRANSFORMS: eliminate_semi_and_anti_joins.
 	d.EliminateSemiAntiJoins = true
 	// generators/presto.py NVL2_SUPPORTED = False.

@@ -17,6 +17,8 @@ func init() {
 		FunctionParsers: map[string]parserOverrideFunc{
 			// parsers/snowflake.py:736-742 FUNCTION_PARSERS.
 			"DATE_PART": (*Parser).parseSnowflakeDatePart,
+			// parsers/snowflake.py:740 LISTAGG via _parse_string_agg.
+			"LISTAGG": (*Parser).parseStringAgg,
 		},
 		// parsers/snowflake.py:382-387 NO_PAREN_FUNCTIONS.
 		NoParenFunctions: map[tokens.TokenType]func(exp.Args) exp.Expression{

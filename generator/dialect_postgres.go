@@ -17,6 +17,8 @@ func init() {
 	// generators/postgres.py:426 exp.VolatileProperty: UNSUPPORTED.
 	registerDialectPropertyLocations("postgres", map[exp.Kind]propertyLocation{
 		exp.KindVolatileProperty: propertyLocationUnsupported,
+		// generators/postgres.py:425 TransientProperty is UNSUPPORTED.
+		exp.KindTransientProperty: propertyLocationUnsupported,
 	})
 }
 
@@ -914,8 +916,8 @@ func postgresIntervalExpr(text string) exp.Expression {
 		digits += string(trimmed[0])
 		trimmed = trimmed[1:]
 	}
+	// The unit keeps its written spelling (DAYS stays DAYS), as the upstream interval parse does.
 	unit := strings.ToUpper(strings.TrimSpace(trimmed))
-	unit = strings.TrimSuffix(unit, "S")
 	if digits == "" || unit == "" {
 		return nil
 	}

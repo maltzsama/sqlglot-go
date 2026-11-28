@@ -59,10 +59,12 @@ SQL. Activation is semantic, not byte-preserving (`SELECT 1 /*!50000 + 100 */` r
 Upstream parses `RESET MASTER` as `Alias(RESET AS MASTER)`. The port degrades all MySQL `RESET …` to
 `exp.Command`. `reset` as an identifier unaffected. `dialects/mysql.go`.
 
-### 1.7 Postgres `U&'…'` / `U&"…"` decoded
-Upstream mis-tokenizes `U&'\0067'` as `U & '…'` and errors on the identifier form. The port decodes
-the SQL-standard escapes into an ordinary `Literal`/`Identifier`. A custom `UESCAPE 'c'` clause fails
-closed. Ledger `pg-unicode-identifier`; tests `unicode_escape_test.go`, `tokens/unicode_escape_test.go`.
+### 1.7 Postgres `U&"…"` quoted identifiers decoded
+Upstream v30.17.0 and the latest checked upstream (v30.33.0+75) both keep `U&'…'` string literals as
+`UnicodeString` with the escape text unchanged, so the port does the same (no deviation). For the
+quoted identifier form `U&"…"`, the port decodes the SQL-standard escapes into a plain quoted
+`Identifier`, and a custom `UESCAPE 'c'` on an identifier fails closed. Ledger `pg-unicode-identifier`;
+tests `unicode_escape_test.go`, `tokens/unicode_escape_test.go`.
 
 ### 1.8 `SAVEPOINT` / `RELEASE SAVEPOINT` → `Savepoint`
 Upstream parses `SAVEPOINT s` as an `Alias` and errors on `RELEASE SAVEPOINT s`. The port builds
@@ -155,6 +157,16 @@ Consequences, all engine-verified:
 Tests `procedure_block_test.go`, `statement_span_test.go`, `block_stack_fuzz_test.go`.
 
 ---
+
+### 1.20 CONCAT_WS parenthesizes compound NULL checks
+Upstream renders the NULL guard of a NULL-skipping CONCAT_WS as `arg IS NULL` with the argument
+unwrapped, so `CONCAT_WS(',', NOT TRUE, 'x')` becomes `NOT TRUE IS NULL`. Trino parses that as
+`NOT (TRUE IS NULL)`, which is TRUE, so the guard wrongly returns NULL for a non-NULL argument. The
+port wraps a compound argument in parentheses: `(NOT TRUE) IS NULL`. Applies to dialects with
+the shared CONCAT_WS renderer (`generator/concat_ws.go`). Hive and DuckDB dispatch to their own
+handlers and keep the upstream unwrapped form, so they still carry the same guard issue and are a
+known open point; `generator/concat_ws.go`;
+test `concat_ws_guard_test.go`.
 
 ### 1.19 Athena folds quoted identifiers
 
@@ -577,6 +589,13 @@ Guarding tests: `TestKsqlDBRoundTrip`, `TestKsqlDBFailClosed`.
 
 Guarding tests: `ksqldb_test.go` (`TestKsqlDBRoundTrip`, `TestKsqlDBAST`, `TestKsqlDBFailClosed`,
 `TestKsqlDBPrintStaysCommand`, `TestKsqlDBTypes`, `TestKsqlDBBaseDegrades`).
+
+### 1.35 Oracle MERGE keeps WHEN-clause conditions
+Upstream's Oracle parser consumes a `WHEN MATCHED ... WHERE <cond>` (and the WHEN NOT MATCHED
+form) and drops the condition, so `MERGE ... WHEN MATCHED THEN UPDATE ... WHERE tgt.x IS NULL`
+loses its filter when transpiled. A MERGE clause's WHERE filters which rows that clause applies
+to, so dropping it changes the statement's meaning. The port keeps the condition. The matching
+corpus expectation stays in `testdata/transpile_corrections.jsonl`.
 
 ## 2. Cross-dialect-only deviations (never affect same-dialect round-trip)
 

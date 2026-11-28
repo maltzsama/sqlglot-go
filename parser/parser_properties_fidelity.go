@@ -667,6 +667,11 @@ func propertyIdentifierText(identifier exp.Expression) string {
 // temporary Properties node because propertyParserFunc returns one expression.
 func (p *Parser) parseWithProperty() exp.Expression {
 	// parser.py:3100-3104: WITH (SYSTEM_VERSIONING ...).
+	// parsers/snowflake.py:1028-1030 (Snowflake's _parse_with_property override runs before the
+	// base branches): WITH TAG (...) is a Tags property.
+	if p.dialectIs("snowflake") && p.match(tokens.TAG, true) {
+		return p.parseSnowflakeTags()
+	}
 	if p.dialect.Name == "tsql" && p.matchTextSeq("(", "SYSTEM_VERSIONING") {
 		prop := p.parseSystemVersioningProperty(true)
 		p.matchRParen(prop)

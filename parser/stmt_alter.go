@@ -359,7 +359,40 @@ func (p *Parser) parseAlterTableAlter() exp.Expression {
 		}
 		return alter
 	}
+	if p.dialect.Name == "tsql" {
+		return p.parseTsqlAlterTableAlter()
+	}
 	return p.parseAlterTableAlterBase()
+}
+
+// parseTsqlAlterTableAlter ports the T-SQL override (parsers/tsql.py:800-816): a column's
+// collation identifier becomes a Var, and after a data type the statement may carry NOT NULL
+// or NULL, which sets allow_null.
+func (p *Parser) parseTsqlAlterTableAlter() exp.Expression {
+	alter := p.parseAlterTableAlterBase()
+	if alter == nil {
+		return nil
+	}
+	if collation := asExpressionOrNil(alter.Arg("collate")); collation != nil && collation.Kind() == exp.KindColumn {
+		if ident := asExpressionOrNil(collation.This()); ident != nil && ident.Kind() == exp.KindIdentifier {
+			collation.Set("this", exp.Var(exp.Args{"this": ident.Name()}))
+		}
+	}
+	if alter.Arg("dtype") != nil {
+		if p.matchPair(tokens.NOT, tokens.NULL, true) {
+			alter.Set("allow_null", false)
+		} else if p.match(tokens.NULL) {
+			alter.Set("allow_null", true)
+		}
+	}
+	return alter
+}
+
+func asExpressionOrNil(v any) exp.Expression {
+	if e, ok := v.(exp.Expression); ok {
+		return e
+	}
+	return nil
 }
 
 func (p *Parser) parseAlterTableAlterBase() exp.Expression {
@@ -415,10 +448,8 @@ func (p *Parser) parseAlterTableAlterBase() exp.Expression {
 	if p.match(tokens.USING) {
 		using = p.parseDisjunction()
 	}
-	// AlterColumn.allow_null WITH a dtype is generator-only (a programmatic AST can set
-	// it; SUPPORTS_ALTER_COLUMN_NULLABILITY gates rendering): upstream v30.17.0 does not
-	// PARSE a trailing [NOT] NULL here — the statement falls back to Command — so neither
-	// does the port (consuming it would silently drop nullability on unsupporting dialects).
+	// A trailing [NOT] NULL is parsed only by the T-SQL override (parseTsqlAlterTableAlter);
+	// other dialects fall back to Command here, as upstream does (parser.py:9066-9115).
 	return withExists(exp.Args{
 		"this":    column,
 		"dtype":   dtype,

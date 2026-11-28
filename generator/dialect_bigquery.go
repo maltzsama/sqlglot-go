@@ -818,8 +818,19 @@ func (g *Generator) bigQueryBracketSQL(e expressions.Expression) string {
 	}
 
 	exprsSQL := g.expressions(exprsOptions{expression: e, flat: true})
-	if offset, ok := e.Arg("offset").(int); ok {
-		switch offset {
+	// Python compares the offset with 0 and 1, so a boolean offset is 0 or 1 (True == 1).
+	offsetValue, hasOffset := -1, false
+	switch v := e.Arg("offset").(type) {
+	case int:
+		offsetValue, hasOffset = v, true
+	case bool:
+		offsetValue, hasOffset = 0, true
+		if v {
+			offsetValue = 1
+		}
+	}
+	if hasOffset {
+		switch offsetValue {
 		case 0:
 			exprsSQL = "OFFSET(" + exprsSQL + ")"
 		case 1:

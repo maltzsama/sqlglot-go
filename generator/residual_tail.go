@@ -186,7 +186,20 @@ func isArrayExpression(e expressions.Expression) bool {
 
 func (g *Generator) convertConcatArgs(e expressions.Expression) []any {
 	args := listFromValue(e.Arg("expressions"))
-	if g.dialect.ConcatCoalesce || !boolValue(e.Arg("coalesce")) {
+	// generator.py:3683-3684: a STRICT_STRING_CONCAT dialect casts a safe Concat's arguments to TEXT.
+	if g.dialect.StrictStringConcat && boolValue(e.Arg("safe")) {
+		for i, a := range args {
+			if arg := asExpression(a); arg != nil {
+				args[i] = expressions.Cast(expressions.Args{"this": arg, "to": expressions.DataType(expressions.Args{"this": expressions.DTypeText})})
+			}
+		}
+	}
+	// generator.py:3686-3690: CONCAT_WS uses its own dialect flag, every other Concat CONCAT_COALESCE.
+	concatCoalesce := g.dialect.ConcatCoalesce
+	if e.Kind() == expressions.KindConcatWs {
+		concatCoalesce = g.dialect.ConcatWsCoalesce
+	}
+	if concatCoalesce || !boolValue(e.Arg("coalesce")) {
 		return args
 	}
 	wrapped := make([]any, len(args))
@@ -213,7 +226,12 @@ func (g *Generator) convertConcatArgs(e expressions.Expression) []any {
 // functionFallbackSQL here too, which renders the identical ARRAY(a, b, c) paren form.
 func (g *Generator) arraySQL(e expressions.Expression) string {
 	if g.isDialect("presto") {
-		// generators/presto.py:316-319 (the struct-field-name preprocess has no effect here).
+		// generators/presto.py:316-319: the struct field names are inherited from the first element
+		// first (inherit_struct_field_names); each struct is then typed on its own values.
+		elems := e.Expressions()
+		if truthy(e.Arg("struct_name_inheritance")) {
+			applyStructNameInheritance(elems)
+		}
 		return "ARRAY[" + g.expressions(exprsOptions{expression: e, flat: true}) + "]"
 	}
 	if !g.isDialect("postgres") {

@@ -35,7 +35,13 @@ func (g *Generator) unicodeStringSQL(e expressions.Expression) string {
 			this = escapedUnicodePattern.ReplaceAllString(this, substitute)
 		}
 	}
-	this = strings.ReplaceAll(g.replaceLineBreaks(this), "'", "''")
+	// generator.py:1678-1683: a Unicode literal only doubles its closing quote, while a target without
+	// UNICODE_START gets the ordinary escape_str (escape_backslash=False).
+	if g.dialect.UnicodeStart != "" {
+		this = strings.ReplaceAll(g.replaceLineBreaks(this), right, right+right)
+	} else {
+		this = g.escapeStrOpts(this, escapeStrOptions{escapeBackslash: false})
+	}
 	return left + this + right + escapeSQL
 }
 

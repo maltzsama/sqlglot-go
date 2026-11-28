@@ -40,6 +40,8 @@ var snowflakeTimeMapping = map[string]string{
 func Snowflake() *Dialect {
 	d := Base()
 	d.Name = "snowflake"
+	// generators/snowflake.py:385 LIMIT_ONLY_LITERALS = True.
+	d.LimitOnlyLiterals = true
 	// dialects/snowflake.py:27 ARRAY_AGG_INCLUDES_NULLS = None.
 	noNulls := false
 	d.ArrayAggIncludesNulls = &noNulls

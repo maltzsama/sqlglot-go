@@ -174,6 +174,11 @@ func init() {
 	dispatch[expressions.KindDataType] = (*Generator).dataTypeSQL
 	dispatch[expressions.KindDataTypeParam] = (*Generator).dataTypeParamSQL
 	dispatch[expressions.KindCast] = (*Generator).castSQL
+	// generator.py:4144-4145 strtotime_sql: the base form passes only this and format.
+	dispatch[expressions.KindStrToTime] = func(g *Generator, e expressions.Expression) string {
+		return g.funcCall("STR_TO_TIME", []any{e.This(), e.Arg("format")}, "(", ")", true)
+	}
+	dispatch[expressions.KindConcatWs] = (*Generator).concatWsSQL
 	dispatch[expressions.KindTryCast] = (*Generator).tryCastSQL
 	dispatch[expressions.KindExtract] = (*Generator).extractSQL
 	dispatch[expressions.KindTrim] = (*Generator).trimSQL

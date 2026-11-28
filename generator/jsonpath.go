@@ -118,7 +118,8 @@ func (g *Generator) jsonPathKeySQL(e expressions.Expression) string {
 
 // jsonPathSubscriptSQL ports _jsonpathsubscript_sql (generator.py:5376-5378).
 func (g *Generator) jsonPathSubscriptSQL(e expressions.Expression) string {
-	if g.isDialect("bigquery") || g.isDialect("sqlite") || g.isDialect("tsql") {
+	// SUPPORTED_JSON_PATH_PARTS excludes JSONPathWildcard for these dialects (snowflake.py:645).
+	if g.isDialect("bigquery") || g.isDialect("sqlite") || g.isDialect("tsql") || g.isDialect("snowflake") {
 		if inner := asExpression(e.Arg("this")); inner != nil && inner.Kind() == expressions.KindJSONPathWildcard {
 			// These generators omit JSONPathWildcard from their supported parts.
 			if !g.isDialect("bigquery") {

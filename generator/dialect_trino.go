@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"strconv"
 	"strings"
 
 	exp "github.com/maltzsama/sqlglot-go/expressions"
@@ -15,6 +16,12 @@ func init() {
 		exp.KindLocationProperty: func(g *Generator, e exp.Expression) string { return "LOCATION=" + g.sqlKey(e, "this") },
 		exp.KindJSONExtract:      (*Generator).trinoJSONExtractSQL,
 		exp.KindArrayUniqueAgg:   func(g *Generator, e exp.Expression) string { return "ARRAY_AGG(DISTINCT " + g.sqlKey(e, "this") + ")" },
+		// generators/trino.py:24-26 ArraySum via REDUCE.
+		exp.KindArraySum: func(g *Generator, e exp.Expression) string {
+			return "REDUCE(" + g.sqlKey(e, "this") + ", 0, (acc, x) -> acc + x, acc -> acc)"
+		},
+		// generators/trino.py:45 timestrtotime_sql with include_precision=True.
+		exp.KindTimeStrToTime: trinoTimeStrToTimeSQL,
 		exp.KindDeclare: func(g *Generator, e exp.Expression) string {
 			replace := ""
 			if truthy(e.Arg("replace")) {
@@ -203,4 +210,19 @@ func (g *Generator) trinoLeaveSQL(e exp.Expression) string {
 // trinoIterateSQL ports iterate_sql (generators/trino.py:124-125).
 func (g *Generator) trinoIterateSQL(e exp.Expression) string {
 	return "ITERATE " + g.sqlKey(e, "this")
+}
+
+// trinoTimeStrToTimeSQL ports timestrtotime_sql(include_precision=True) (dialects/dialect.py:1769-1784):
+// a literal with sub-second digits gets TIMESTAMP(3|6), and a zone selects WITH TIME ZONE.
+func trinoTimeStrToTimeSQL(g *Generator, e exp.Expression) string {
+	target := "TIMESTAMP"
+	if this := asExpression(e.This()); this != nil && this.Kind() == exp.KindLiteral {
+		if precision := subsecondPrecision(this.Name()); precision > 0 {
+			target += "(" + strconv.Itoa(precision) + ")"
+		}
+	}
+	if asExpression(e.Arg("zone")) != nil {
+		target += " WITH TIME ZONE"
+	}
+	return "CAST(" + g.sqlKey(e, "this") + " AS " + target + ")"
 }

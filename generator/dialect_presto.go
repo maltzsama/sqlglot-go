@@ -43,17 +43,18 @@ func init() {
 		exp.KindRegexpExtractAll: (*Generator).prestoRegexpExtractSQL,
 		exp.KindApproxQuantile:   prestoCall("APPROX_PERCENTILE", "this", "weight", "quantile", "accuracy"),
 		exp.KindDateAdd:          (*Generator).prestoDateAddSQL,
-		exp.KindDateDiff: func(g *Generator, e exp.Expression) string {
-			return g.funcCall("DATE_DIFF", []any{prestoUnit(e), e.Arg("expression"), e.Arg("this")}, "(", ")", true)
-		},
+		exp.KindDateDiff:         prestoDateDiffSQL,
 		exp.KindTsOrDsDiff: func(g *Generator, e exp.Expression) string {
 			return g.funcCall("DATE_DIFF", []any{prestoUnit(e),
 				prestoCastToTimestamp(asExpression(e.Arg("expression"))),
 				prestoCastToTimestamp(e.This())}, "(", ")", true)
 		},
-		exp.KindTimestampAdd: func(g *Generator, e exp.Expression) string {
-			return "DATE_ADD('" + strings.ToUpper(asExpression(e.Arg("unit")).Name()) + "', " +
-				g.sqlKey(e, "expression") + ", " + g.sqlKey(e, "this") + ")"
+		// generators/presto.py:400 TimestampAdd shares DateAdd's _date_delta_sql, so the interval
+		// goes through the same integer check.
+		exp.KindTimestampAdd: func(g *Generator, e exp.Expression) string { return g.prestoDateAddSQL(e) },
+		// generators/presto.py:357-358 FromTimeZone: WITH_TIMEZONE(this, zone) AT TIME ZONE 'UTC'.
+		exp.KindFromTimeZone: func(g *Generator, e exp.Expression) string {
+			return "WITH_TIMEZONE(" + g.sqlKey(e, "this") + ", " + g.sqlKey(e, "zone") + ") AT TIME ZONE 'UTC'"
 		},
 		exp.KindDayOfWeek: func(g *Generator, e exp.Expression) string {
 			return "((DAY_OF_WEEK(" + g.sqlKey(e, "this") + ") % 7) + 1)"
@@ -75,7 +76,7 @@ func init() {
 		exp.KindQuantile:          prestoCall("APPROX_PERCENTILE", "this", "quantile"),
 		exp.KindLastDay:           prestoCall("LAST_DAY_OF_MONTH", "this"),
 		exp.KindGenerateSeries:    prestoGenerateSeriesSQL,
-		exp.KindGenerateDateArray: prestoGenerateSeriesSQL,
+		exp.KindGenerateDateArray: sequenceSQL,
 		// generators/presto.py:393 exp.StrPosition: strposition_sql(supports_occurrence=True).
 		exp.KindStrPosition: strPositionTranspileSQL("STRPOS", false, true),
 		// generators/presto.py:321 exp.ArrayConcat: rename_func("CONCAT").
@@ -111,6 +112,7 @@ func init() {
 		},
 		exp.KindTimeStrToTime: prestoTimeStrToTimeSQL,
 		exp.KindTimeToTimeStr: prestoCast("VARCHAR"),
+		exp.KindStrToUnix:     prestoStrToUnixSQL,
 		exp.KindTimeStrToUnix: func(g *Generator, e exp.Expression) string {
 			return "TO_UNIXTIME(DATE_PARSE(" + g.sqlKey(e, "this") + ", '%Y-%m-%d %T'))"
 		},
@@ -289,28 +291,63 @@ func (g *Generator) prestoDataTypeSQL(e exp.Expression) string {
 // port infers them for literal values and reports anything else unsupported.
 func (g *Generator) prestoStructSQL(e exp.Expression) string {
 	values := []string{}
-	schema := []string{}
-	unknown := false
 	for _, x := range e.Expressions() {
 		if x.Kind() == exp.KindPropertyEQ {
-			value := asExpression(x.Arg("expression"))
-			if dtype := prestoLiteralType(value); dtype != "" {
-				schema = append(schema, g.sqlKey(x, "this")+" "+dtype)
-			} else {
-				unknown = true
-			}
-			values = append(values, g.gen(value))
+			values = append(values, g.gen(asExpression(x.Arg("expression"))))
 		} else {
 			values = append(values, g.gen(x))
 		}
 	}
-	if len(values) == 0 || len(schema) != len(values) {
-		if unknown {
-			g.unsupported("Cannot convert untyped key-value definitions (try annotate_types).")
-		}
-		return "ROW(" + strings.Join(values, ", ") + ")"
+	if len(values) == 0 {
+		return "ROW()"
 	}
-	return "CAST(ROW(" + strings.Join(values, ", ") + ") AS ROW(" + strings.Join(schema, ", ") + "))"
+	if schema, ok := prestoStructSchema(g, e); ok {
+		return "CAST(ROW(" + strings.Join(values, ", ") + ") AS ROW(" + schema + "))"
+	}
+	if prestoStructHasUntypedField(e) {
+		g.unsupported("Cannot convert untyped key-value definitions (try annotate_types).")
+	}
+	return "ROW(" + strings.Join(values, ", ") + ")"
+}
+
+// prestoStructSchema builds the ROW field list of a struct whose fields are all typed
+// (literals or nested structs). ok is false when any field is untyped.
+func prestoStructSchema(g *Generator, e exp.Expression) (string, bool) {
+	fields := []string{}
+	for _, x := range e.Expressions() {
+		if x.Kind() != exp.KindPropertyEQ {
+			return "", false
+		}
+		value := asExpression(x.Arg("expression"))
+		if value == nil {
+			return "", false
+		}
+		var dtype string
+		if value.Kind() == exp.KindStruct {
+			inner, ok := prestoStructSchema(g, value)
+			if !ok {
+				return "", false
+			}
+			dtype = "ROW(" + inner + ")"
+		} else if dtype = prestoLiteralType(value); dtype == "" {
+			return "", false
+		}
+		fields = append(fields, g.sqlKey(x, "this")+" "+dtype)
+	}
+	return strings.Join(fields, ", "), len(fields) > 0
+}
+
+// prestoStructHasUntypedField reports a key-value field whose type cannot be inferred.
+func prestoStructHasUntypedField(e exp.Expression) bool {
+	for _, x := range e.Expressions() {
+		if x.Kind() == exp.KindPropertyEQ {
+			value := asExpression(x.Arg("expression"))
+			if value == nil || (value.Kind() != exp.KindStruct && prestoLiteralType(value) == "") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func prestoLiteralType(e exp.Expression) string {
@@ -425,12 +462,19 @@ func prestoCastSQL(g *Generator, e exp.Expression) string {
 }
 
 func prestoConcatFunctionSQL(g *Generator, e exp.Expression) string {
-	if !truthy(e.Arg("safe")) && !truthy(e.Arg("coalesce")) {
-		return g.concatSQL(e)
-	}
+	// convert_concat_args (generator.py:3692) wraps with COALESCE only for coalesce=true; a
+	// safe-only Concat just casts each argument (STRICT_STRING_CONCAT).
 	args := e.Expressions()
 	if len(args) == 1 {
-		return "CAST(" + g.gen(args[0]) + " AS VARCHAR)"
+		// SUPPORTS_SINGLE_ARG_CONCAT is false here, so the lone argument renders bare, but a
+		// safe Concat casts it first (convert_concat_args, generator.py:3683-3684).
+		if truthy(e.Arg("safe")) {
+			return "CAST(" + g.gen(args[0]) + " AS VARCHAR)"
+		}
+		return g.gen(args[0])
+	}
+	if !truthy(e.Arg("coalesce")) {
+		return g.concatSQL(e)
 	}
 	parts := make([]string, 0, len(args))
 	for _, arg := range args {
@@ -505,7 +549,13 @@ func prestoGenerateSeriesSQL(g *Generator, e exp.Expression) string {
 func prestoTimestampSQL(g *Generator, e exp.Expression) string {
 	zone := asExpression(e.Arg("zone"))
 	if zone == nil {
-		return "CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP WITH TIME ZONE)"
+		// no_timestamp_sql (dialects/dialect.py:1712-1718) casts to the annotated type, which is
+		// TIMESTAMPTZ only when the node carries with_tz (BigQuery TIMESTAMP).
+		target := "TIMESTAMP"
+		if truthy(e.Arg("with_tz")) {
+			target = "TIMESTAMP WITH TIME ZONE"
+		}
+		return "CAST(" + g.sqlKey(e, "this") + " AS " + target + ")"
 	}
 	if duckDBIsTimezoneName(zone.Name()) {
 		return "CAST(CAST(" + g.sqlKey(e, "this") + " AS TIMESTAMP) AS TIMESTAMP) AT TIME ZONE " + g.sqlKey(e, "zone")
@@ -696,8 +746,9 @@ func prestoIntegerTyped(e exp.Expression) bool {
 	case exp.KindLiteral:
 		return !e.IsString() && !strings.ContainsAny(e.Name(), ".eE")
 	case exp.KindNeg, exp.KindParen, exp.KindFloor:
-		// FLOOR(x) types as BIGINT for any numeric x (annotate_types FLOOR rule).
-		return e.Kind() == exp.KindFloor || prestoIntegerTyped(e.This())
+		// FLOOR keeps the type of its argument under annotate_types, so only an integer argument
+		// stays integer; a DOUBLE argument still needs the BIGINT cast.
+		return prestoIntegerTyped(e.This())
 	case exp.KindAdd, exp.KindSub, exp.KindMul, exp.KindMod:
 		return prestoIntegerTyped(e.This()) && prestoIntegerTyped(asExpression(e.Arg("expression")))
 	case exp.KindCoalesce:
@@ -1036,3 +1087,213 @@ var prestoStrictTimeFormat = strings.NewReplacer(
 	"%mstrict", "%m", "%dstrict", "%d", "%Hstrict", "%H",
 	"%Istrict", "%h", "%Mstrict", "%i", "%Sstrict", "%s",
 )
+
+// prestoStrToUnixSQL ports strtounix_sql (generators/presto.py:565-582). TO_UNIXTIME needs a
+// TIMESTAMP, so the input goes through DATE_PARSE, falling back to PARSE_DATETIME (Hive/Joda
+// pattern language) when a time zone makes DATE_PARSE fail.
+func prestoStrToUnixSQL(g *Generator, e exp.Expression) string {
+	this := asExpression(e.This())
+	valueAsText := exp.Cast(exp.Args{"this": this, "to": exp.DTypeText.IntoExpr(nil)})
+	valueAsTimestamp := this
+	if this.IsString() {
+		valueAsTimestamp = exp.Cast(exp.Args{"this": this, "to": exp.DTypeTimestamp.IntoExpr(nil)})
+	}
+	prestoFormat, hiveFormat := []any{}, []any{}
+	if format := asExpression(e.Arg("format")); format != nil {
+		prestoFormat = []any{prestoFormatTime(e)}
+		if format.IsString() {
+			hiveFormat = []any{exp.LiteralString(dialects.HiveFormatTime(format.Name()))}
+		} else {
+			hiveFormat = []any{format}
+		}
+	}
+	parseWithoutTZ := g.funcCall("DATE_PARSE", append([]any{valueAsText}, prestoFormat...), "(", ")", true)
+	formatted := g.funcCall("DATE_FORMAT", append([]any{valueAsTimestamp}, prestoFormat...), "(", ")", true)
+	parseWithTZ := g.funcCall("PARSE_DATETIME", append([]any{formatted}, hiveFormat...), "(", ")", true)
+	coalesced := g.funcCall("COALESCE", []any{g.funcCall("TRY", []any{parseWithoutTZ}, "(", ")", true), parseWithTZ}, "(", ")", true)
+	return g.funcCall("TO_UNIXTIME", []any{coalesced}, "(", ")", true)
+}
+
+// sequenceSQL ports sequence_sql (dialects/dialect.py:2396-2441), which Presto uses for
+// GenerateSeries and GenerateDateArray: DATE and TIMESTAMP bounds are cast to the type of the
+// cast operand, and an exclusive end yields an empty array when the step cannot advance.
+func sequenceSQL(g *Generator, e exp.Expression) string {
+	start := asExpression(e.Arg("start"))
+	end := asExpression(e.Arg("end"))
+	step := asExpression(e.Arg("step"))
+	var targetType exp.Expression
+	if start != nil && start.Kind() == exp.KindCast {
+		targetType = asExpression(start.Arg("to"))
+	} else if end != nil && end.Kind() == exp.KindCast {
+		targetType = asExpression(end.Arg("to"))
+	}
+	if start != nil && end != nil {
+		dt, ok := exp.DType(""), false
+		if targetType != nil {
+			dt, ok = targetType.Arg("this").(exp.DType)
+		}
+		if ok && (dt == exp.DTypeDate || dt == exp.DTypeTimestamp) {
+			if start.Kind() == exp.KindCast && asExpression(start.Arg("to")) == targetType {
+				end = castToSameType(end, targetType)
+			} else {
+				start = castToSameType(start, targetType)
+			}
+		}
+		if truthy(e.Arg("is_end_exclusive")) {
+			if folded, ok := foldExclusiveSequence(start, end, step); ok {
+				return folded
+			}
+			stepValue := step
+			if stepValue == nil {
+				stepValue = exp.LiteralNumber("1")
+			}
+			end = exp.Paren(exp.Args{"this": exp.Sub(exp.Args{"this": end, "expression": stepValue})})
+			sequenceCall := exp.Anonymous(exp.Args{"this": "SEQUENCE", "expressions": nonNilExprs(start, end, step)})
+			zero := exp.LiteralNumber("0")
+			shouldReturnEmpty := exp.Or(exp.Args{"this": exp.Or(exp.Args{
+				"this": exp.EQ(exp.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
+				"expression": exp.And(exp.Args{
+					"this":       exp.GT(exp.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
+					"expression": exp.GT(exp.Args{"this": start.Copy(), "expression": end.Copy()}),
+				}),
+			}), "expression": exp.And(exp.Args{
+				"this":       exp.LT(exp.Args{"this": stepValue.Copy(), "expression": zero.Copy()}),
+				"expression": exp.LT(exp.Args{"this": start.Copy(), "expression": end.Copy()}),
+			})})
+			emptyOrSequence := exp.If(exp.Args{"this": shouldReturnEmpty, "true": exp.Array(exp.Args{"expressions": []exp.Expression{}}), "false": sequenceCall})
+			return g.gen(emptyOrSequence)
+		}
+	}
+	return g.funcCall("SEQUENCE", anyExprs(start, end, step), "(", ")", true)
+}
+
+// nonNilExprs keeps the present operands of a SEQUENCE call.
+func nonNilExprs(items ...exp.Expression) []exp.Expression {
+	var out []exp.Expression
+	for _, item := range items {
+		if item != nil {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+// anyExprs is nonNilExprs in the []any shape funcCall takes.
+func anyExprs(items ...exp.Expression) []any {
+	var out []any
+	for _, item := range items {
+		if item != nil {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+// foldExclusiveSequence is _simplify_unless_literal (generators/presto.py via sequence_sql)
+// for literal integer bounds: the emptiness test and the shortened end are evaluated at
+// transpile time, so the result is an empty array or a SEQUENCE over the adjusted end. Only
+// literal operands fold; anything else keeps the runtime IF.
+func foldExclusiveSequence(start, end, step exp.Expression) (string, bool) {
+	toInt := func(e exp.Expression) (int64, bool) {
+		if e == nil || e.Kind() != exp.KindLiteral || e.IsString() {
+			return 0, false
+		}
+		v, err := strconv.ParseInt(e.Name(), 10, 64)
+		return v, err == nil
+	}
+	s, okS := toInt(start)
+	en, okE := toInt(end)
+	if !okS || !okE {
+		return "", false
+	}
+	st, stepGiven := int64(1), step != nil
+	if stepGiven {
+		v, ok := toInt(step)
+		if !ok {
+			return "", false
+		}
+		st = v
+	}
+	adjusted := en - st
+	if st == 0 || (st > 0 && s > adjusted) || (st < 0 && s < adjusted) {
+		return "ARRAY[]", true
+	}
+	args := []string{strconv.FormatInt(s, 10), strconv.FormatInt(adjusted, 10)}
+	if stepGiven {
+		args = append(args, strconv.FormatInt(st, 10))
+	}
+	return "SEQUENCE(" + strings.Join(args, ", ") + ")", true
+}
+
+// prestoDateDiffSQL ports _date_diff_sql (generators/presto.py:172-204) for non-week units:
+// with date_part_boundary, both operands are truncated to the unit before DATE_DIFF counts
+// the boundaries crossed. Presto's DATE_DIFF returns ts2 - ts1, hence the swapped operands.
+func prestoDateDiffSQL(g *Generator, e exp.Expression) string {
+	this := e.This()
+	expr := e.Arg("expression")
+	unit := prestoUnit(e)
+	if truthy(e.Arg("date_part_boundary")) {
+		rawUnit := asExpression(e.Arg("unit"))
+		dow, isWeek := prestoWeekUnitToDow(rawUnit)
+		if isWeek {
+			unit = exp.LiteralString("WEEK")
+			// DATE_TRUNC('WEEK', ...) starts on Monday, so both operands shift by the same delta to
+			// align the week start without changing the diff (generators/presto.py:182-190).
+			shift := 1
+			if dow != 7 {
+				shift = 1 - dow
+			}
+			if shift != 0 {
+				delta := exp.Interval(exp.Args{"this": exp.LiteralString(strconv.Itoa(shift)), "unit": exp.Var(exp.Args{"this": "DAY"})})
+				this = exp.Add(exp.Args{"this": this, "expression": delta})
+				expr = exp.Add(exp.Args{"this": expr, "expression": delta.Copy()})
+			}
+		}
+		if rawUnit == nil || rawUnit.Kind() != exp.KindWeekStart || isWeek {
+			if this != nil {
+				this = exp.DateTrunc(exp.Args{"unit": unit.Copy(), "this": this})
+			}
+			if expr != nil {
+				expr = exp.DateTrunc(exp.Args{"unit": unit.Copy(), "this": expr})
+			}
+		}
+	}
+	return g.funcCall("DATE_DIFF", []any{unit, expr, this}, "(", ")", true)
+}
+
+// prestoWeekUnitToDow ports week_unit_to_dow (dialects/dialect.py:2114-2134): WEEK and ISOWEEK
+// start on Monday (1), WeekStart names map to their ISO day number.
+func prestoWeekUnitToDow(unit exp.Expression) (int, bool) {
+	if unit == nil {
+		return 0, false
+	}
+	if unit.Kind() == exp.KindVar {
+		switch strings.ToUpper(unit.Name()) {
+		case "WEEK", "ISOWEEK":
+			return 1, true
+		}
+		return 0, false
+	}
+	if unit.Kind() == exp.KindWeekStart {
+		days := map[string]int{"MONDAY": 1, "TUESDAY": 2, "WEDNESDAY": 3, "THURSDAY": 4, "FRIDAY": 5, "SATURDAY": 6, "SUNDAY": 7}
+		if dow, ok := days[strings.ToUpper(unit.Name())]; ok {
+			return dow, true
+		}
+	}
+	return 0, false
+}
+
+// castToSameType is exp.cast (expressions/builders.py:457): an operand already cast to the
+// target type is returned unchanged instead of being cast twice.
+func castToSameType(e exp.Expression, target exp.Expression) exp.Expression {
+	if e.Kind() == exp.KindCast {
+		if to := asExpression(e.Arg("to")); to != nil {
+			if dt, ok := to.Arg("this").(exp.DType); ok {
+				if want, ok := target.Arg("this").(exp.DType); ok && dt == want {
+					return e
+				}
+			}
+		}
+	}
+	return exp.Cast(exp.Args{"this": e, "to": target})
+}

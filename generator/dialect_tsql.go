@@ -504,7 +504,7 @@ func (g *Generator) tsqlCreateIfNotExists(e exp.Expression, kind, sql string) st
 	var query string
 	switch kind {
 	case "SCHEMA":
-		query = "SELECT * FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = " + literal(table.Name())
+		query = "SELECT * FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = " + literal(tsqlTableName(table))
 	case "TABLE":
 		query = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = " + literal(table.Name())
 		if schema := table.SchemaName(); schema != "" {
@@ -1225,4 +1225,16 @@ func tsqlReturnDType(e exp.Expression) (exp.DType, bool) {
 		return dtype, true
 	}
 	return exp.DType(""), false
+}
+
+// tsqlTableName ports exp.table_name (expressions/builders.py:751): the dotted catalog, schema
+// and name parts that are present, so a schema named in the db slot still resolves.
+func tsqlTableName(table exp.Expression) string {
+	var parts []string
+	for _, part := range []string{table.Text("catalog"), table.SchemaName(), table.Name()} {
+		if part != "" {
+			parts = append(parts, part)
+		}
+	}
+	return strings.Join(parts, ".")
 }
