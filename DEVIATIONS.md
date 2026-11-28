@@ -59,10 +59,12 @@ SQL. Activation is semantic, not byte-preserving (`SELECT 1 /*!50000 + 100 */` r
 Upstream parses `RESET MASTER` as `Alias(RESET AS MASTER)`. The port degrades all MySQL `RESET …` to
 `exp.Command`. `reset` as an identifier unaffected. `dialects/mysql.go`.
 
-### 1.7 Postgres `U&'…'` / `U&"…"` decoded
-Upstream mis-tokenizes `U&'\0067'` as `U & '…'` and errors on the identifier form. The port decodes
-the SQL-standard escapes into an ordinary `Literal`/`Identifier`. A custom `UESCAPE 'c'` clause fails
-closed. Ledger `pg-unicode-identifier`; tests `unicode_escape_test.go`, `tokens/unicode_escape_test.go`.
+### 1.7 Postgres `U&"…"` quoted identifiers decoded
+Upstream v30.17.0 and the latest checked upstream (v30.33.0+75) both keep `U&'…'` string literals as
+`UnicodeString` with the escape text unchanged, so the port does the same (no deviation). For the
+quoted identifier form `U&"…"`, the port decodes the SQL-standard escapes into a plain quoted
+`Identifier`, and a custom `UESCAPE 'c'` on an identifier fails closed. Ledger `pg-unicode-identifier`;
+tests `unicode_escape_test.go`, `tokens/unicode_escape_test.go`.
 
 ### 1.8 `SAVEPOINT` / `RELEASE SAVEPOINT` → `Savepoint`
 Upstream parses `SAVEPOINT s` as an `Alias` and errors on `RELEASE SAVEPOINT s`. The port builds

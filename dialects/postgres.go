@@ -195,8 +195,10 @@ func Postgres() *Dialect {
 	// DecodeUnicode drives the extract+decode (tokens/unicode_escape.go). Beyond pinned
 	// upstream, which mis-tokenizes `U&'...'` as `U & '...'` (bitwise-AND of a column named U)
 	// and parse-errors the identifier form; see DEVIATIONS §1.
+	// dialects/postgres.py:97 UNICODE_STRINGS: U&'...' and u&'...' tokenize as UNICODE_STRING with the
+	// text kept as written (DEVIATIONS §1.7 was removed: the pinned and latest upstream both keep it).
 	for _, prefix := range []string{"U&", "u&"} {
-		cfg.FormatStrings[prefix+"'"] = tokens.FormatString{End: "'", TokenType: tokens.STRING, DecodeUnicode: true}
+		cfg.FormatStrings[prefix+"'"] = tokens.FormatString{End: "'", TokenType: tokens.UNICODE_STRING}
 		cfg.FormatStrings[prefix+`"`] = tokens.FormatString{End: `"`, TokenType: tokens.IDENTIFIER, DecodeUnicode: true}
 	}
 	// dialects/postgres.py:65-67 BIT_STRINGS=[("b'","'"),("B'","'")] / HEX_STRINGS=

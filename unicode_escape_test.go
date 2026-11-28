@@ -8,11 +8,10 @@ import (
 	"github.com/maltzsama/sqlglot-go/generator"
 )
 
-// Postgres `U&'...'` string literals and `U&"..."` quoted identifiers are decoded into the
-// real code points they denote, so an AST consumer (e.g. a name-based authorization check)
-// sees the actual string / identifier the server executes rather than the escaped spelling.
-// This is beyond pinned upstream, which mis-tokenizes `U&'...'` as `U & '...'` and
-// parse-errors the identifier form. See DEVIATIONS §1.
+// Postgres `U&'...'` string literals are kept as written, as upstream does: they parse to a
+// UnicodeString and round-trip unchanged (the pinned and latest upstream both do this). The
+// `U&"..."` quoted identifiers are still decoded into the names they denote (DEVIATIONS §1.7),
+// so a name-based authorization check sees the real identifier.
 
 func genPG(t *testing.T, e exp.Expression) string {
 	t.Helper()
@@ -24,20 +23,17 @@ func genPG(t *testing.T, e exp.Expression) string {
 }
 
 func TestPostgresUnicodeString(t *testing.T) {
+	// Expected round-trips are the pinned oracle's output (upstream keeps the escape text).
 	cases := []struct {
 		sql     string
-		wantVal string
+		wantRaw string
 		wantSQL string
 	}{
-		{`SELECT U&'\0067\0072\0061\0064\0065'`, "grade", "SELECT 'grade'"},
-		{`SELECT U&'\0073\0065\0074'`, "set", "SELECT 'set'"},
-		{`SELECT u&'\0067rade'`, "grade", "SELECT 'grade'"}, // lowercase u& prefix
-		{`SELECT U&'a''b\0063'`, "a'bc", "SELECT 'a''bc'"},  // delimiter doubling + escape
-		{`SELECT U&'plain'`, "plain", "SELECT 'plain'"},
-		{`SELECT U&'\+01F600'`, "\U0001F600", "SELECT '\U0001F600'"},         // six-hex astral
-		{`SELECT U&'\D835\DD0D'`, "\U0001D50D", "SELECT '\U0001D50D'"},       // surrogate pair 4+4
-		{`SELECT U&'\D835\+00DD0D'`, "\U0001D50D", "SELECT '\U0001D50D'"},    // surrogate pair 4+6
-		{`SELECT U&'\+00D835\+00DD0D'`, "\U0001D50D", "SELECT '\U0001D50D'"}, // surrogate pair 6+6
+		{`SELECT U&'\0067\0072\0061\0064\0065'`, `\0067\0072\0061\0064\0065`, `SELECT U&'\0067\0072\0061\0064\0065'`},
+		{`SELECT u&'\0067rade'`, `\0067rade`, `SELECT U&'\0067rade'`},
+		{`SELECT U&'a''b\0063'`, `a'b\0063`, `SELECT U&'a''b\0063'`},
+		{`SELECT U&'plain'`, "plain", "SELECT U&'plain'"},
+		{`SELECT U&'\+01F600'`, `\+01F600`, `SELECT U&'\+01F600'`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.sql, func(t *testing.T) {
@@ -45,15 +41,12 @@ func TestPostgresUnicodeString(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parse: %v", err)
 			}
-			if e.Kind() != exp.KindSelect {
-				t.Fatalf("root = %v, want Select:\n%s", exp.ClassName(e.Kind()), e.ToS())
-			}
 			lit := e.Expressions()[0]
-			if lit.Kind() != exp.KindLiteral || lit.Arg("is_string") != true {
-				t.Fatalf("expr = %v, want string Literal:\n%s", exp.ClassName(lit.Kind()), e.ToS())
+			if lit.Kind() != exp.KindUnicodeString {
+				t.Fatalf("expr = %v, want UnicodeString:\n%s", exp.ClassName(lit.Kind()), e.ToS())
 			}
-			if got := lit.Text("this"); got != tc.wantVal {
-				t.Fatalf("decoded value = %q, want %q", got, tc.wantVal)
+			if got := lit.Text("this"); got != tc.wantRaw {
+				t.Fatalf("text = %q, want %q", got, tc.wantRaw)
 			}
 			if got := genPG(t, e); got != tc.wantSQL {
 				t.Fatalf("round-trip = %q, want %q", got, tc.wantSQL)
@@ -111,22 +104,20 @@ func TestPostgresUnicodeFailClosedAndNoRegression(t *testing.T) {
 	// A custom `UESCAPE 'c'` clause is not decoded (the tokenizer assumes the default '\'),
 	// so such forms must fail closed (parse error), never silently decode against the wrong
 	// escape character.
-	t.Run("custom UESCAPE fails closed", func(t *testing.T) {
-		if _, err := sqlglot.ParseOne(`SELECT U&'\0441' UESCAPE '!'`, "postgres"); err == nil {
-			t.Fatal("expected a parse error for a custom UESCAPE clause, got none")
+	t.Run("custom UESCAPE round-trips as upstream", func(t *testing.T) {
+		e, err := sqlglot.ParseOne(`SELECT U&'\0441' UESCAPE '!'`, "postgres")
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		if got := genPG(t, e); got != `SELECT U&'\0441' UESCAPE '!'` {
+			t.Fatalf("round-trip = %q", got)
 		}
 	})
 
-	// Escapes PostgreSQL itself rejects must fail closed (parse error), never silently decode
-	// to a replacement/garbage value a name-based check could be fooled by. Verified against
-	// PostgreSQL 17.6 (each errors: "invalid Unicode escape value" / "invalid Unicode surrogate").
+	// Identifier escapes PostgreSQL rejects must fail closed (parse error), so a name-based check
+	// is never fooled by a garbage decoded identifier (DEVIATIONS §1.7).
 	for _, sql := range []string{
-		`SELECT U&'\+110000'`,  // beyond U+10FFFF
-		`SELECT U&'\0000'`,     // NUL
-		`SELECT U&'\D800'`,     // lone high surrogate
-		`SELECT U&'\DC00'`,     // lone low surrogate
-		`SELECT U&'a\g0z'`,     // malformed escape
-		`SELECT U&"info\D800"`, // invalid escape in an identifier
+		`SELECT U&"info\D800"`, // invalid escape in an identifier (identifier decoding is kept)
 	} {
 		t.Run("invalid escape fails closed/"+sql, func(t *testing.T) {
 			if _, err := sqlglot.ParseOne(sql, "postgres"); err == nil {
