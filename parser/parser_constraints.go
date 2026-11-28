@@ -126,8 +126,17 @@ func init() {
 					return p.expression(exp.OnUpdateColumnConstraint(exp.Args{"this": this}), nil, nil)
 				}
 			}
+			// parser.py:1454-1459: a bare ON <id> is an OnProperty (for example the T-SQL filegroup).
+			// The dispatcher has already consumed ON, so the identifier is next.
+			if !p.match(tokens.UPDATE, false) {
+				return p.expression(exp.OnProperty(exp.Args{"this": p.parseIdVar(false, nil)}), nil, nil)
+			}
 			p.retreat(index)
 			return nil
+		},
+		// "WITH" ports parser.py:1471-1473: WITH (<properties>) becomes a Properties node.
+		"WITH": func(p *Parser) exp.Expression {
+			return p.expression(exp.Properties(exp.Args{"expressions": p.parseWrappedProperties()}), nil, nil)
 		},
 		// "PATH" ports parser.py:1391 (exp.PathColumnConstraint(this=_parse_string())). It is
 		// reached generically here — via parseColumnConstraint's loop — so it composes with any
