@@ -291,7 +291,7 @@ const (
 	minPassTranspileSpark2      = 91
 	minPassTranspileSQLite      = 225
 	minPassTranspileStarrocks   = 102
-	minPassTranspileTeradata    = 94
+	minPassTranspileTeradata    = 97
 	minPassTranspileTrino       = 163
 	minPassTranspileTSQL        = 405
 )
