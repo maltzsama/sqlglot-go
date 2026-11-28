@@ -269,28 +269,28 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 // Pass and total floors are monotonic: raise them, never lower them.
 const (
 	minPassTranspileBase        = 957
-	minPassTranspileAthena      = 11
-	minPassTranspileBigQuery    = 748
-	minPassTranspileClickhouse  = 255
+	minPassTranspileAthena      = 12
+	minPassTranspileBigQuery    = 749
+	minPassTranspileClickhouse  = 256
 	minPassTranspileDatabricks  = 289
 	minPassTranspileDoris       = 104
 	minPassTranspileDremio      = 31
-	minPassTranspileDuckDB      = 1490
-	minPassTranspileHive        = 505
+	minPassTranspileDuckDB      = 1508
+	minPassTranspileHive        = 507
 	minPassTranspileMaterialize = 32
-	minPassTranspileMySQL       = 381
+	minPassTranspileMySQL       = 382
 	minPassTranspileOracle      = 202
-	minPassTranspilePostgres    = 451
-	minPassTranspilePresto      = 621
-	minPassTranspileRedshift    = 187
+	minPassTranspilePostgres    = 472
+	minPassTranspilePresto      = 622
+	minPassTranspileRedshift    = 204
 	minPassTranspileRisingWave  = 6
-	minPassTranspileSnowflake   = 1005
-	minPassTranspileSpark       = 847
+	minPassTranspileSnowflake   = 1023
+	minPassTranspileSpark       = 849
 	minPassTranspileSpark2      = 91
-	minPassTranspileSQLite      = 224
+	minPassTranspileSQLite      = 225
 	minPassTranspileStarrocks   = 102
 	minPassTranspileTeradata    = 94
-	minPassTranspileTrino       = 162
+	minPassTranspileTrino       = 163
 	minPassTranspileTSQL        = 405
 )
 

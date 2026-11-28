@@ -239,7 +239,7 @@ const (
 	minPassAthena      = 58
 	minPassTrino       = 155
 	minPassPresto      = 168
-	minPassHive        = 141
+	minPassHive        = 142
 	minPassTSQL        = 709
 	minPassClickhouse  = 501
 	minPassStarrocks   = 174
@@ -250,9 +250,9 @@ const (
 	minPassRisingWave  = 7
 	minPassSpark       = 253
 	minPassDatabricks  = 208
-	minPassDuckDB      = 731
+	minPassDuckDB      = 736
 	minPassSnowflake   = 1590
-	minPassSQLite      = 230
+	minPassSQLite      = 231
 	minPassDremio      = 46
 	minPassTeradata    = 154
 	minPassKsqlDB      = 57

@@ -482,12 +482,10 @@
 {"read":"hive","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT EXISTS(arr, x -> x > 2)"}
 {"read":"hive","write":"hive","category":"gen: cast/type","sql":"1.0bd"}
 {"read":"hive","write":"hive","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL < NULL"}
-{"read":"hive","write":"hive","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL = NULL"}
 {"read":"hive","write":"hive","category":"gen: transpile mismatch","sql":"SELECT a, SUM(c) FROM t GROUP BY a, DATE_FORMAT(b, 'yyyy') GROUPING SETS ((a, DATE_FORMAT(b, 'yyyy')), a)"}
 {"read":"hive","write":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a SELECT k"}
 {"read":"hive","write":"hive","category":"parse: Invalid expression / Unexpected token","sql":"FROM x LATERAL VIEW EXPLODE(y) t AS a SELECT a"}
 {"read":"hive","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT EXISTS(arr, x -> x > 2)"}
-{"read":"hive","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL = NULL"}
 {"read":"hive","write":"postgres","category":"gen: transpile mismatch","sql":"SIZE(arr)"}
 {"read":"hive","write":"presto","category":"gen: cast/type","sql":"1.0bd"}
 {"read":"hive","write":"presto","category":"gen: cast/type","sql":"x DIV y"}
@@ -496,7 +494,6 @@
 {"read":"hive","write":"snowflake","category":"gen: ddl/properties","sql":"ALTER TABLE Payments ADD COLUMNS (Stock DECIMAL(38, 0), dropid VARCHAR(500))"}
 {"read":"hive","write":"spark","category":"gen: cast/type","sql":"1.0bd"}
 {"read":"hive","write":"spark","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL < NULL"}
-{"read":"hive","write":"spark","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL = NULL"}
 {"read":"hive","write":"spark","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a SELECT k"}
 {"read":"hive","write":"spark2","category":"parse: Invalid expression / Unexpected token","sql":"FROM x INSERT OVERWRITE TABLE a SELECT k"}
 {"read":"hive","write":"teradata","category":"gen: transpile mismatch","sql":"DAYOFWEEK(d)"}
@@ -764,10 +761,8 @@
 {"read":"postgres","write":"","category":"parse: Required keyword","sql":"TABLE t UNION ALL TABLE u"}
 {"read":"postgres","write":"","category":"parse: Required keyword","sql":"TABLE t UNION TABLE u INTERSECT TABLE v"}
 {"read":"postgres","write":"","category":"parse: does not support CTE","sql":"WITH t AS (TABLE u) TABLE t"}
-{"read":"postgres","write":"athena","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"bigquery","category":"gen: transpile mismatch","sql":"CARDINALITY(arr)"}
 {"read":"postgres","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT MAKE_DATE(2024, 1, 31)"}
-{"read":"postgres","write":"bigquery","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"clickhouse","category":"gen: cast/type","sql":"SELECT CAST(v -> 'a' AS TEXT) FROM data"}
 {"read":"postgres","write":"clickhouse","category":"gen: transpile mismatch","sql":"BIT_AND(x)"}
 {"read":"postgres","write":"clickhouse","category":"gen: transpile mismatch","sql":"BIT_OR(x)"}
@@ -776,7 +771,6 @@
 {"read":"postgres","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT 1 AS x FETCH FIRST ROW ONLY"}
 {"read":"postgres","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT 1 AS x OFFSET 1 ROW FETCH FIRST 2 ROWS ONLY"}
 {"read":"postgres","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT BOOL_AND(x), BOOL_OR(x) FROM t"}
-{"read":"postgres","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT foo -> '12'"}
 {"read":"postgres","write":"clickhouse","category":"gen: transpile mismatch","sql":"SELECT payload -> 'amount', payload ->> 'amount'"}
 {"read":"postgres","write":"clickhouse","category":"gen: transpile mismatch","sql":"VAR_POP(x)"}
@@ -813,34 +807,15 @@
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT MAKE_INTERVAL(days => 3)"}
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT MAKE_INTERVAL(days => 3) /* sqlglot.anonymous */"}
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT MAKE_INTERVAL(secs => 7.5, mins => 6, hours => 5, DAYS => 4, weeks => 3, months => 2, years => 1)"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL BETWEEN 2 AND 3"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL IN (0)"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL LIKE 'x'"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT BETWEEN 2 AND 3"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT IN (0)"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT LIKE 'x'"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL BETWEEN 2 AND 3"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL IN (0)"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL LIKE 'x'"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT BETWEEN 2 AND 3"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT IN (0)"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE 'x'"}
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT SHA256(x)"}
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT TO_CHAR(x, 'IYYY-IW')"}
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT U&'d\\0061t\\0061', U&'d!+000061ta' UESCAPE '!', U&'a\\\\b', U&'\\D83D\\DE00'"}
-{"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT r.v, r.idx FROM t, LATERAL UNNEST(t.a) WITH ORDINALITY AS r(v, idx)"}
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT |/ 16 + 9, ||/ 27 + 37, |/ 16 * 4"}
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"x NOT SIMILAR TO '%b%'"}
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"x SIMILAR TO 'a_c%'"}
 {"read":"postgres","write":"duckdb","category":"gen: transpile mismatch","sql":"x SIMILAR TO ('a.c^$')"}
-{"read":"postgres","write":"hive","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"materialize","category":"gen: transpile mismatch","sql":"SELECT CARDINALITY(arr) FROM t"}
-{"read":"postgres","write":"mysql","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"mysql","category":"gen: transpile mismatch","sql":"WITH c AS (SELECT a AS v, b AS x FROM t UNION ALL SELECT a, b FROM u ORDER BY v LIMIT 1) SELECT x AS v FROM c"}
 {"read":"postgres","write":"mysql","category":"gen: transpile mismatch","sql":"WITH x AS (SELECT 1 AS id), y AS (SELECT 2 AS id) SELECT COALESCE(x.id, y.id) AS id FROM x FULL JOIN y ON x.id = y.id ORDER BY 1 LIMIT 1 OFFSET 1"}
 {"read":"postgres","write":"oracle","category":"gen: transpile mismatch","sql":"SELECT VARIANCE(x) FROM t"}
@@ -856,84 +831,30 @@
 {"read":"postgres","write":"postgres","category":"gen: cast/type","sql":"SELECT DATE_PART('month', date '20220502')"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT 'prefix' || JSON_EXTRACT_SCALAR(a, '$') FROM t"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT BTRIM(x, 'ab')"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL = NULL"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT JSONB_EXTRACT(a, n IN (1, 2))"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT JSON_EXTRACT(a, 'x' || 'y')"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT JSON_EXTRACT(a, 1 + 2)"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT JSON_EXTRACT(a, NOT x)"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT JSON_OBJECTAGG(k VALUE v) FROM t"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT MAKE_INTERVAL(secs => 7.5, mins => 6, hours => 5, DAYS => 4, weeks => 3, months => 2, years => 1)"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL BETWEEN 2 AND 3"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL IN (0)"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL LIKE 'x'"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT BETWEEN 2 AND 3"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT IN (0)"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT LIKE 'x'"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL BETWEEN 2 AND 3"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL IN (0)"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL LIKE 'x'"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT BETWEEN 2 AND 3"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT IN (0)"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE 'x'"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT TO_CHAR(x, 'iyyy-iw')"}
-{"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT r.v, r.idx FROM t, LATERAL UNNEST(t.a) WITH ORDINALITY AS r(v, idx)"}
 {"read":"postgres","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT |/ 16 + 9, ||/ 27 + 37, |/ 16 * 4"}
 {"read":"postgres","write":"postgres","category":"parse: Invalid expression / Unexpected token","sql":"TABLE ONLY (t)"}
 {"read":"postgres","write":"postgres","category":"parse: Invalid expression / Unexpected token","sql":"TABLE ONLY t"}
 {"read":"postgres","write":"postgres","category":"parse: Invalid expression / Unexpected token","sql":"TABLE t *"}
-{"read":"postgres","write":"presto","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"redshift","category":"gen: cast/type","sql":"SELECT DATE_PART('minute', timestamp '2023-01-04 04:05:06.789')"}
 {"read":"postgres","write":"redshift","category":"gen: cast/type","sql":"SELECT DATE_PART('month', date '20220502')"}
 {"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"CARDINALITY(arr)"}
 {"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT * FROM ((VALUES (1), (2)) ORDER BY 1 LIMIT 1 OFFSET 1) AS t(x)"}
 {"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT DATE_PART(part, CURRENT_DATE) FROM (SELECT 'year' AS part) AS t"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL BETWEEN 2 AND 3"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL IN (0)"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL LIKE 'x'"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT BETWEEN 2 AND 3"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT IN (0)"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT LIKE 'x'"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL BETWEEN 2 AND 3"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL IN (0)"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL LIKE 'x'"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT BETWEEN 2 AND 3"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT IN (0)"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE 'x'"}
-{"read":"postgres","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"snowflake","category":"gen: cast/type","sql":"SELECT DATE_PART('minute', timestamp '2023-01-04 04:05:06.789')"}
 {"read":"postgres","write":"snowflake","category":"gen: cast/type","sql":"SELECT DATE_PART('month', date '20220502')"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL = NULL"}
 {"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT MAKE_DATE(2024, 1, 31)"}
 {"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT MAKE_INTERVAL(days => 3)"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL BETWEEN 2 AND 3"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL IN (0)"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL LIKE 'x'"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT BETWEEN 2 AND 3"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT IN (0)"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS DISTINCT FROM NULL NOT LIKE 'x'"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL BETWEEN 2 AND 3"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL IN (0)"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL LIKE 'x'"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT BETWEEN 2 AND 3"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT IN (0)"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE '0' ESCAPE '!'"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE 'x'"}
 {"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT SHA256(x)"}
 {"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT SHA384(x)"}
 {"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT SHA512(x)"}
-{"read":"postgres","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"spark","category":"gen: cast/type","sql":"SELECT * FROM GENERATE_SERIES(DATE '2024-01-01', DATE '2024-01-05', '  +1 day  ')"}
 {"read":"postgres","write":"spark","category":"gen: cast/type","sql":"SELECT * FROM GENERATE_SERIES(DATE '2024-01-01', DATE '2024-01-05', '+ 1 day')"}
 {"read":"postgres","write":"spark","category":"gen: cast/type","sql":"SELECT * FROM GENERATE_SERIES(DATE '2024-01-01', DATE '2024-01-05', '+1 day')"}
@@ -946,7 +867,6 @@
 {"read":"postgres","write":"spark","category":"gen: cast/type","sql":"SELECT EXTRACT(ISODOW FROM DATE '2024-06-16')"}
 {"read":"postgres","write":"spark","category":"gen: transpile mismatch","sql":"CARDINALITY(arr)"}
 {"read":"postgres","write":"spark","category":"gen: transpile mismatch","sql":"SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount)"}
-{"read":"postgres","write":"spark","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"sqlite","category":"gen: cast/type","sql":"SELECT '{\"a\": 1}'::JSON ->> 'a'"}
 {"read":"postgres","write":"sqlite","category":"gen: cast/type","sql":"SELECT '{\"a\": 1}'::JSONB ->> 'a'"}
 {"read":"postgres","write":"sqlite","category":"gen: cast/type","sql":"SELECT RANDOM() < 0.1"}
@@ -996,7 +916,6 @@
 {"read":"postgres","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE 'x'"}
 {"read":"postgres","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT STRING_AGG(DISTINCT x, ',' ORDER BY x) FROM t"}
 {"read":"postgres","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT STRING_AGG(DISTINCT x, ',') FROM t"}
-{"read":"postgres","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT d + INTERVAL '1 day' FROM t"}
 {"read":"postgres","write":"sqlite","category":"gen: transpile mismatch","sql":"SELECT d - INTERVAL '2 hours' FROM t"}
 {"read":"postgres","write":"sqlite","category":"gen: transpile mismatch","sql":"WITH t AS (SELECT 1 AS x) (SELECT x FROM t UNION ALL SELECT 2) ORDER BY 1 DESC LIMIT 1"}
@@ -1009,7 +928,6 @@
 {"read":"postgres","write":"trino","category":"gen: cast/type","sql":"SELECT * FROM GENERATE_SERIES(TIMESTAMP '2024-01-01 00:00:00', TIMESTAMP '2024-01-01 02:00:00', '+1. hours')"}
 {"read":"postgres","write":"trino","category":"gen: cast/type","sql":"SELECT * FROM GENERATE_SERIES(TIMESTAMP '2024-01-01 00:00:00', TIMESTAMP '2024-01-01 02:00:00', '1. hours')"}
 {"read":"postgres","write":"trino","category":"gen: cast/type","sql":"SELECT * FROM GENERATE_SERIES(TIMESTAMP '2024-01-01', TIMESTAMP '2024-01-03', '+12 hours')"}
-{"read":"postgres","write":"trino","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"postgres","write":"tsql","category":"gen: cast/type","sql":"SELECT DATE_PART('day', '2017-01-02'::DATE)"}
 {"read":"postgres","write":"tsql","category":"gen: cast/type","sql":"SELECT DATE_PART('month', '2017-03-01'::DATE)"}
 {"read":"postgres","write":"tsql","category":"gen: transpile mismatch","sql":"SELECT MAKE_DATE(2024, 1, 31)"}
@@ -1232,7 +1150,6 @@
 {"read":"snowflake","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT LISTAGG(col) FROM t"}
 {"read":"snowflake","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT LISTAGG(col) WITHIN GROUP (ORDER BY col) FROM t"}
 {"read":"snowflake","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT SHA2(x, 256)"}
-{"read":"snowflake","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT a = b IS NULL FROM t"}
 {"read":"snowflake","write":"presto","category":"gen: cast/type","sql":"TRY_TO_NUMBER(x)"}
 {"read":"snowflake","write":"presto","category":"gen: transpile mismatch","sql":"ARRAY_GENERATE_RANGE(0, 3)"}
 {"read":"snowflake","write":"redshift","category":"gen: transpile mismatch","sql":"SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 = t2.c2 (+)"}
@@ -1505,7 +1422,6 @@
 {"read":"sqlite","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT CONCAT_WS(',', a, b) FROM t"}
 {"read":"sqlite","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DATE('2020-01-31', '+1 month')"}
 {"read":"sqlite","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT DATE('2020-03-15', 'start of month', '+1 day')"}
-{"read":"sqlite","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL = NULL"}
 {"read":"sqlite","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT GROUP_CONCAT(x, :separator) FROM t"}
 {"read":"sqlite","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT GROUP_CONCAT(x, NULL ORDER BY y) FILTER(WHERE z > 0) FROM t"}
 {"read":"sqlite","write":"duckdb","category":"gen: transpile mismatch","sql":"SELECT GROUP_CONCAT(x, NULL) FROM t"}
@@ -1544,7 +1460,6 @@
 {"read":"sqlite","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT CHAR(72, 105, x)"}
 {"read":"sqlite","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT CONCAT(a, b) FROM t"}
 {"read":"sqlite","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT CONCAT_WS(',', a, b) FROM t"}
-{"read":"sqlite","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT FALSE IS DISTINCT FROM NULL = NULL"}
 {"read":"sqlite","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT IIF(a, b, c, d)"}
 {"read":"sqlite","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT x FROM t LIMIT -1 OFFSET 5"}
 {"read":"sqlite","write":"postgres","category":"parse: The number of provided arguments","sql":"SELECT IF(a, b, c, d)"}

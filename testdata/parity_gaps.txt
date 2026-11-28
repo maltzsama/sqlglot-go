@@ -162,15 +162,9 @@
 {"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c NOT MATCH_ANY ('x') USING ANALYZER 'standard'"}
 {"dialect":"doris","category":"parse: Invalid expression / Unexpected token","sql":"SELECT * FROM t WHERE c match_regexp '^key_word.*'"}
 {"dialect":"dremio","category":"parse: The number of provided arguments","sql":"SELECT REGEXP_SPLIT(tags, ',', 'ALL', 1000) AS t"}
-{"dialect":"duckdb","category":"gen: canonicalization","sql":"PIVOT (SELECT s.region, s.amount FROM (VALUES ('east', 2), ('west', 5)) AS s(region, amount) JOIN (VALUES ('east')) AS r(region) ON s.region = r.region) ON s.region USING SUM(s.amount)"}
-{"dialect":"duckdb","category":"gen: canonicalization","sql":"SELECT a, COUNT(*) OVER w AS c FROM tbl WHERE a > 0 GROUP BY a HAVING COUNT(*) > 0 WINDOW w AS (ORDER BY a) QUALIFY c > 0 USING SAMPLE SYSTEM (50 PERCENT) ORDER BY a LIMIT 3 OFFSET 1"}
-{"dialect":"duckdb","category":"gen: canonicalization","sql":"WITH sales AS (SELECT s.region, s.amount FROM (VALUES ('east', 2), ('west', 5)) AS s(region, amount) JOIN (VALUES ('east')) AS r(region) ON s.region = r.region) PIVOT sales ON region USING SUM(amount)"}
-{"dialect":"duckdb","category":"parse: Expected table name but got <Token token_type","sql":"SELECT * FROM a JOIN BY (TYPE INNER) straight_join AS b ON a.id = b.id"}
-{"dialect":"duckdb","category":"parse: Invalid expression / Unexpected token","sql":"INSERT INTO abc.s.sort BY NAME SELECT 1 AS n"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"'\\\n'"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"INSERT OVERWRITE DIRECTORY 'x' ROW FORMAT DELIMITED FIELDS TERMINATED BY '\u0001' COLLECTION ITEMS TERMINATED BY ',' MAP KEYS TERMINATED BY ':' LINES TERMINATED BY '' STORED AS TEXTFILE SELECT * FROM `a`.`b`"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"SELECT FALSE IS DISTINCT FROM NULL < NULL"}
-{"dialect":"hive","category":"gen: canonicalization","sql":"SELECT FALSE IS DISTINCT FROM NULL = NULL"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"SELECT a, ABS(b) AS b, SUM(c) FROM tabl AS t GROUP BY a, ABS(b) GROUPING SETS ((a, ABS(b)), a)"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"SELECT a, SUM(c) FROM t GROUP BY a, DATE_FORMAT(b, 'yyyy') GROUPING SETS ((a, DATE_FORMAT(b, 'yyyy')), a)"}
 {"dialect":"hive","category":"gen: canonicalization","sql":"SELECT a, b, SUM(c) FROM tabl AS t GROUP BY a, b GROUPING SETS ((a, b), a)"}
@@ -542,7 +536,6 @@
 {"dialect":"sqlite","category":"gen: canonicalization","sql":"PRAGMA main.\"table_info\"(items)"}
 {"dialect":"sqlite","category":"gen: canonicalization","sql":"REINDEX tbl"}
 {"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT \"IIF\"(0, 1, 1, 2)"}
-{"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT 'x' LIKE 'x' NOT LIKE '1'"}
 {"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT * FROM station WHERE city IS NOT ''"}
 {"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT * FROM t WHERE NULL IS NOT y"}
 {"dialect":"sqlite","category":"gen: canonicalization","sql":"SELECT * FROM t WHERE a REGEXP 'x'"}
