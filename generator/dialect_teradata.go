@@ -27,6 +27,7 @@ func init() {
 func teradataDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 	return map[exp.Kind]func(*Generator, exp.Expression) string{
 		exp.KindArgMax:      clickhouseRename("MAX_BY"),
+		exp.KindHexString:   teradataHexStringSQL,
 		exp.KindArgMin:      clickhouseRename("MIN_BY"),
 		exp.KindMax:         teradataMaxOrGreatest,
 		exp.KindMin:         teradataMinOrLeast,
@@ -329,4 +330,13 @@ func (g *Generator) teradataCreateable(e exp.Expression, postName []exp.Expressi
 	// Upstream concatenates self.sep() unconditionally (generators/teradata.py:159), so a
 	// name-only creatable keeps the trailing separator there too.
 	return name + props + g.sep() + schema
+}
+
+// teradataHexStringSQL ports TeradataGenerator.hexstring_sql (generators/teradata.py:105-111):
+// a character hex literal renders as its quoted hex text with the XC suffix.
+func teradataHexStringSQL(g *Generator, e exp.Expression) string {
+	if boolValue(e.Arg("is_character")) {
+		return g.gen(exp.LiteralString(e.Text("this"))) + "XC"
+	}
+	return g.hexstringSQL(e)
 }

@@ -1779,7 +1779,7 @@ var argTypes = map[Kind][]argSpec{
 	// add their own optional flag (query.py:480-487); SessionParameter/PropertyEQ/
 	// Distance/DistanceNd transcribed from core.py:1837-1838, 2150-2159.
 	KindBitString:  defaultArgTypes,
-	KindHexString:  {{"this", true}, {"is_integer", false}},
+	KindHexString:  {{"this", true}, {"is_integer", false}, {"is_character", false}},
 	KindByteString: {{"this", true}, {"is_bytes", false}},
 	// KindIntroducer (query.py:581): {"this": True, "expression": True}.
 	KindIntroducer:       {{"this", true}, {"expression", true}},

@@ -2431,6 +2431,10 @@ func (p *Parser) parseSessionParameter() exp.Expression {
 // this port (ROADMAP), so for now `'a' 'b'` falls through to plain alias handling instead - the
 // bail is neutral either way (a STRING is not a column op, so parseColumnOps adds nothing).
 func (p *Parser) parseAtom() exp.Expression {
+	// parsers/teradata.py:126-128: a character hex literal is not an atom of its own.
+	if p.dialect.Name == "teradata" && p.isHexCharacterString() {
+		return nil
+	}
 	if identifierTokens[p.curr.TokenType] {
 		firstTok := p.curr
 		if column := p.parseColumn(); column != nil {
@@ -2804,6 +2808,9 @@ func (p *Parser) parseParen() exp.Expression {
 }
 
 func (p *Parser) parsePrimary() exp.Expression {
+	if p.dialect.Name == "teradata" && p.isHexCharacterString() {
+		return p.parseTeradataHexCharacter()
+	}
 	if p.dialect.Name == "duckdb" {
 		if positional, ok := p.parseDuckDBPositionalColumn(); ok {
 			return positional
