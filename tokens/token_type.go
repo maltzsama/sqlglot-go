@@ -244,6 +244,7 @@ const (
 	COMMAND
 	COMMENT
 	COMMIT
+	CONNECT
 	CONNECT_BY
 	CONSTRAINT
 	COPY
@@ -265,6 +266,7 @@ const (
 	DESC
 	DESCRIBE
 	DETACH
+	DISCONNECT
 	DICTIONARY
 	DISTINCT
 	DISTRIBUTE_BY
@@ -718,6 +720,7 @@ var tokenTypeNames = map[TokenType]string{
 	COMMAND:                 "COMMAND",
 	COMMENT:                 "COMMENT",
 	COMMIT:                  "COMMIT",
+	CONNECT:                 "CONNECT",
 	CONNECT_BY:              "CONNECT_BY",
 	CONSTRAINT:              "CONSTRAINT",
 	COPY:                    "COPY",
@@ -739,6 +742,7 @@ var tokenTypeNames = map[TokenType]string{
 	DESC:                    "DESC",
 	DESCRIBE:                "DESCRIBE",
 	DETACH:                  "DETACH",
+	DISCONNECT:              "DISCONNECT",
 	DICTIONARY:              "DICTIONARY",
 	DISTINCT:                "DISTINCT",
 	DISTRIBUTE_BY:           "DISTRIBUTE_BY",

@@ -1889,6 +1889,9 @@ func (p *Parser) parseVersion() exp.Expression {
 }
 
 func (p *Parser) parseTableAlias(aliasTokensArg map[tokens.TokenType]bool) exp.Expression {
+	if p.dialect.Name == "duckdb" && p.duckDBNearestAhead() {
+		return nil
+	}
 	if p.match(tokens.MATCH_CONDITION, false) {
 		return nil
 	}
@@ -1981,6 +1984,9 @@ func (p *Parser) parseJoinParts() (method, side, kind *tokens.Token) {
 }
 
 func (p *Parser) parseJoin(skipJoinToken bool, parseBracket bool, aliasTokensArg map[tokens.TokenType]bool) exp.Expression {
+	if p.dialect.Name == "duckdb" {
+		return p.parseDuckDBJoin(skipJoinToken, parseBracket, aliasTokensArg)
+	}
 	if p.dialect.Name == "clickhouse" {
 		// parsers/clickhouse.py:682-690 passes parse_bracket=True so ARRAY JOIN accepts
 		// bracket literals as join sources.

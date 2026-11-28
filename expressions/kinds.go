@@ -1091,6 +1091,9 @@ const (
 	KindTypeof
 	KindParseDatetime
 	KindDetach
+	KindConnectTo
+	KindDisconnect
+	KindNearest
 	KindOnCluster
 	KindPartitionId
 	KindReplacePartition
@@ -2057,6 +2060,9 @@ var argTypes = map[Kind][]argSpec{
 	KindTypeof:                   {{"this", true}},
 	KindParseDatetime:            {{"this", true}, {"format", false}, {"zone", false}, {"default_year", false}},
 	KindDetach:                   {{"this", true}, {"kind", false}, {"exists", false}, {"cluster", false}, {"permanent", false}, {"sync", false}},
+	KindConnectTo:                {{"this", true}},
+	KindDisconnect:               {},
+	KindNearest:                  {{"this", true}, {"count", true}, {"approximate", false}, {"similarity", false}},
 	KindOnCluster:                {{"this", true}},
 	KindPartitionId:              {{"this", true}},
 	KindReplacePartition:         {{"expression", true}, {"source", true}},
@@ -3548,6 +3554,9 @@ var className = map[Kind]string{
 	KindTypeof:                   "Typeof",
 	KindParseDatetime:            "ParseDatetime",
 	KindDetach:                   "Detach",
+	KindConnectTo:                "ConnectTo",
+	KindDisconnect:               "Disconnect",
+	KindNearest:                  "Nearest",
 	KindOnCluster:                "OnCluster",
 	KindPartitionId:              "PartitionId",
 	KindReplacePartition:         "ReplacePartition",

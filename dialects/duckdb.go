@@ -31,6 +31,8 @@ func DuckDB() *Dialect {
 	d.Name = "duckdb"
 	// generators/duckdb.py: QUERY_HINTS = False.
 	d.NoQueryHints = true
+	d.SupportsNearestJoin = true
+	d.SemiAntiJoinNoSide = true
 	// generators/duckdb.py PAD_FILL_PATTERN_IS_REQUIRED = True.
 	d.PadFillPatternIsRequired = true
 	// generators/duckdb.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
@@ -113,12 +115,14 @@ func DuckDB() *Dialect {
 		"@>":           tokens.AT_GT,
 		"<@":           tokens.LT_AT,
 		"ATTACH":       tokens.ATTACH,
+		"CONNECT":      tokens.CONNECT,
 		"BINARY":       tokens.VARBINARY,
 		"BITSTRING":    tokens.BIT,
 		"BPCHAR":       tokens.TEXT,
 		"CHAR":         tokens.TEXT,
 		"DATETIME":     tokens.TIMESTAMPNTZ,
 		"DETACH":       tokens.DETACH,
+		"DISCONNECT":   tokens.DISCONNECT,
 		"FORCE":        tokens.FORCE,
 		"INSTALL":      tokens.INSTALL,
 		"INT8":         tokens.BIGINT,

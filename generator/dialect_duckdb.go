@@ -1486,30 +1486,20 @@ func duckDBDiffUnit(unit expressions.Expression) any {
 	return unit
 }
 
-// duckDBJoinSQL ports the DuckDBGenerator.join_sql override (generators/duckdb.py:3145-3160):
-// DuckDB has no ON-less `LEFT/INNER JOIN UNNEST(...)`, so a synthetic UNNEST join gets a
-// dummy ON TRUE; a plain comma join has its synthetic side/kind cleared first.
+// duckDBJoinSQL ports DuckDBGenerator.join_sql (generators/duckdb.py:3314-3336). MARK and
+// SINGLE joins, and RIGHT SEMI/ANTI joins, render as `JOIN BY (TYPE <side_kind>)`. DuckDB has
+// no ON-less `LEFT/INNER JOIN UNNEST(...)`, so such a join gets a dummy ON TRUE; any other
+// plain comma-style join has its synthetic side and kind cleared first.
 func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
-	// DuckDB renders SEMI/ANTI joins without the LEFT/RIGHT side keyword.
-	if kind := strings.ToUpper(e.Text("kind")); kind == "SEMI" || kind == "ANTI" {
-		switch side := strings.ToUpper(e.Text("side")); side {
-		case "LEFT":
-			// DuckDB's SEMI/ANTI joins are left-sided by default.
-			e.Set("side", nil)
-		case "RIGHT":
-			// DuckDB 1.4 expresses right-sided SEMI/ANTI joins as a typed join.
-			joinOp := "RIGHT_" + kind
-			savedSide, savedKind := e.Arg("side"), e.Arg("kind")
-			e.Set("side", nil)
-			e.Set("kind", nil)
-			out := g.joinSQL(e)
-			e.Set("side", savedSide)
-			e.Set("kind", savedKind)
-			return strings.Replace(out, "JOIN ", "JOIN BY (TYPE "+joinOp+") ", 1)
-		}
+	side := strings.ToUpper(e.Text("side"))
+	kind := strings.ToUpper(e.Text("kind"))
+	if kind == "MARK" || kind == "SINGLE" || (side == "RIGHT" && (kind == "SEMI" || kind == "ANTI")) {
+		typ := strings.Join(nonEmptyStrings(side, kind), "_")
+		return g.joinSQLWithOp(e, "JOIN BY (TYPE "+typ+")")
 	}
-	if !truthy(e.Arg("using")) && !truthy(e.Arg("on")) && strings.ToUpper(e.Text("method")) == "" {
-		switch strings.ToUpper(e.Text("kind")) {
+	if !truthy(e.Arg("using")) && !truthy(e.Arg("on")) && !truthy(e.Arg("nearest")) &&
+		strings.ToUpper(e.Text("method")) == "" {
+		switch kind {
 		case "", "INNER", "OUTER":
 			if this := asExpression(e.Arg("this")); this != nil && this.Kind() == expressions.KindUnnest {
 				e.Set("on", expressions.True_())
@@ -1520,6 +1510,17 @@ func duckDBJoinSQL(g *Generator, e expressions.Expression) string {
 		}
 	}
 	return g.joinSQL(e)
+}
+
+// nonEmptyStrings returns the non-empty values in order (Python's `"_".join(x for x in ... if x)`).
+func nonEmptyStrings(values ...string) []string {
+	out := make([]string, 0, len(values))
+	for _, v := range values {
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // generators/duckdb.py:1729 exp.SHA renders as SHA1.

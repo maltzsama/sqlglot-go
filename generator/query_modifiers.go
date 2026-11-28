@@ -6,9 +6,22 @@ import (
 	"github.com/maltzsama/sqlglot-go/expressions"
 )
 
+// joinSQL ports generator.join_sql with no join_op override.
 func (g *Generator) joinSQL(e expressions.Expression) string {
+	return g.joinSQLWithOp(e, "")
+}
+
+// joinSQLWithOp ports generator.join_sql(expression, join_op) (generator.py:3079-3140). A
+// non-empty joinOp replaces the whole `[side] [kind] JOIN` operator, as DuckDB's
+// `JOIN BY (TYPE ...)` spelling does.
+func (g *Generator) joinSQLWithOp(e expressions.Expression, joinOp string) string {
 	side := e.Text("side")
 	kind := e.Text("kind")
+	// generator.py:3080-3083: dialects with SEMI_ANTI_JOIN_WITH_SIDE False drop the side
+	// keyword from SEMI/ANTI joins (duckdb.py:1620).
+	if g.dialect.SemiAntiJoinNoSide && (kind == "SEMI" || kind == "ANTI") {
+		side = ""
+	}
 	globalSQL := ""
 	if global := e.Text("global_"); global != "" {
 		globalSQL = strings.ToUpper(global)
@@ -20,6 +33,11 @@ func (g *Generator) joinSQL(e expressions.Expression) string {
 	matchCond := g.sqlKey(e, "match_condition")
 	if matchCond != "" {
 		matchCond = " MATCH_CONDITION (" + matchCond + ")"
+	}
+	// generator.py:3099-3100: a NEAREST join modifier renders between MATCH_CONDITION and ON.
+	nearestSQL := g.sqlKey(e, "nearest")
+	if nearestSQL != "" {
+		nearestSQL = " " + nearestSQL
 	}
 	onSQL := g.sqlKey(e, "on")
 	using := listFromValue(e.Arg("using"))
@@ -60,7 +78,7 @@ func (g *Generator) joinSQL(e expressions.Expression) string {
 		} else {
 			onSQL = space + "ON " + onSQL
 		}
-	} else if opSQL == "" {
+	} else if opSQL == "" && nearestSQL == "" {
 		// generator.py:2850: CROSS/OUTER APPLY joins carry the `cross_apply` flag on the
 		// Lateral child (the join's `this`, set in parser_pivot.go parseLateral), NOT on the
 		// Join node — so read it from `this`. Without this, APPLY joins emit a spurious ", ".
@@ -69,7 +87,9 @@ func (g *Generator) joinSQL(e expressions.Expression) string {
 		}
 		return ", " + thisSQL
 	}
-	if opSQL != "STRAIGHT_JOIN" {
+	if joinOp != "" {
+		opSQL = joinOp
+	} else if opSQL != "STRAIGHT_JOIN" {
 		if opSQL != "" {
 			opSQL += " JOIN"
 		} else {
@@ -77,7 +97,7 @@ func (g *Generator) joinSQL(e expressions.Expression) string {
 		}
 	}
 	pivots := g.expressions(exprsOptions{expression: e, key: "pivots", emptySep: true, flat: true})
-	return g.seg(opSQL) + " " + thisSQL + withinSQL + matchCond + onSQL + pivots
+	return g.seg(opSQL) + " " + thisSQL + withinSQL + matchCond + nearestSQL + onSQL + pivots
 }
 
 func (g *Generator) clusterSQL(e expressions.Expression) string {

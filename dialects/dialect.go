@@ -55,7 +55,7 @@ type Dialect struct {
 	// Version is the dialect version that version-gated generation and parsing compare against
 	// (dialect.py Dialect.version). Nil means the latest, which is the upstream default
 	// (sys.maxsize, dialects/dialect.py:1165).
-	Version *[3]int
+	Version         *[3]int
 	Name            string
 	QuoteStart      string
 	QuoteEnd        string
@@ -766,6 +766,11 @@ type Dialect struct {
 	IdentifyPivotStrings bool
 	// DirectedJoins ports DIRECTED_JOINS (snowflake True): `[kind] DIRECTED JOIN`.
 	DirectedJoins bool
+	// SupportsNearestJoin ports SUPPORTS_NEAREST_JOIN (generator.py:379; duckdb True).
+	SupportsNearestJoin bool
+	// SemiAntiJoinNoSide is the inverse of SEMI_ANTI_JOIN_WITH_SIDE (generator.py:441; duckdb
+	// False): SEMI and ANTI joins render without their side keyword.
+	SemiAntiJoinNoSide bool
 	// RlikeFullMatch ports snowflake RANGE_PARSERS[RLIKE] building RegexpLike(full_match=true).
 	RlikeFullMatch bool
 	// MapIntervalUnits maps an interval unit through DATE_PART_MAPPING (snowflake W -> WEEK).
