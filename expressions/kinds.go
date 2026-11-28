@@ -983,6 +983,11 @@ const (
 	// KindFormatPhrase (core.py:2290, `class FormatPhrase(Expression)`): Teradata
 	// `col (FORMAT '<fmt>')` output-format override.
 	KindFormatPhrase
+	// Teradata conversion nodes (core.py:2351-2382): TeradataConversion `x (DATE, FORMAT 'f')`,
+	// TeradataTitle `x (TITLE 't')`, TeradataNamed `x (NAMED n)` (an Alias subclass upstream).
+	KindTeradataConversion
+	KindTeradataTitle
+	KindTeradataNamed
 	// KindPrevValueFor mirrors NextValueFor for MariaDB's `PREVIOUS VALUE FOR <seq>` sequence
 	// access (beyond upstream, which has no MariaDB dialect). See DEVIATIONS
 	// "Opt-in behavioral extensions".
@@ -1963,6 +1968,9 @@ var argTypes = map[Kind][]argSpec{
 	KindQueryBand:                     {{"this", true}, {"scope", false}, {"update", false}},
 	KindLockingStatement:              {{"this", true}, {"expression", true}},
 	KindFormatPhrase:                  {{"this", true}, {"format", true}},
+	KindTeradataConversion:            {{"this", true}, {"to", true}, {"format", false}},
+	KindTeradataTitle:                 {{"this", true}, {"title", true}},
+	KindTeradataNamed:                 {{"this", true}, {"alias", true}},
 	KindClusteredColumnConstraint:     defaultArgTypes,
 	KindNonClusteredColumnConstraint:  defaultArgTypes,
 	KindOpenJSON:                      {{"this", true}, {"path", false}, {"expressions", false}},
@@ -3499,6 +3507,9 @@ var className = map[Kind]string{
 	KindQueryBand:                     "QueryBand",
 	KindLockingStatement:              "LockingStatement",
 	KindFormatPhrase:                  "FormatPhrase",
+	KindTeradataConversion:            "TeradataConversion",
+	KindTeradataTitle:                 "TeradataTitle",
+	KindTeradataNamed:                 "TeradataNamed",
 	KindClusteredColumnConstraint:     "ClusteredColumnConstraint",
 	KindNonClusteredColumnConstraint:  "NonClusteredColumnConstraint",
 	KindOpenJSON:                      "OpenJSON",

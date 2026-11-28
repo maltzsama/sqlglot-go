@@ -26,16 +26,19 @@ func init() {
 
 func teradataDispatch() map[exp.Kind]func(*Generator, exp.Expression) string {
 	return map[exp.Kind]func(*Generator, exp.Expression) string{
-		exp.KindArgMax:      clickhouseRename("MAX_BY"),
-		exp.KindHexString:   teradataHexStringSQL,
-		exp.KindArgMin:      clickhouseRename("MIN_BY"),
-		exp.KindMax:         teradataMaxOrGreatest,
-		exp.KindMin:         teradataMinOrLeast,
-		exp.KindPow:         func(g *Generator, e exp.Expression) string { return g.binary(e, "**") },
-		exp.KindRand:        teradataRandomSQL,
-		exp.KindSelect:      teradataSelect,
-		exp.KindStrPosition: opaqueStrPosition(instrStrPositionSQL),
-		exp.KindStrToDate:   teradataStrToDateSQL,
+		exp.KindArgMax:             clickhouseRename("MAX_BY"),
+		exp.KindHexString:          teradataHexStringSQL,
+		exp.KindTeradataConversion: teradataConversionSQL,
+		exp.KindTeradataTitle:      teradataTitleSQL,
+		exp.KindTeradataNamed:      teradataNamedSQL,
+		exp.KindArgMin:             clickhouseRename("MIN_BY"),
+		exp.KindMax:                teradataMaxOrGreatest,
+		exp.KindMin:                teradataMinOrLeast,
+		exp.KindPow:                func(g *Generator, e exp.Expression) string { return g.binary(e, "**") },
+		exp.KindRand:               teradataRandomSQL,
+		exp.KindSelect:             teradataSelect,
+		exp.KindStrPosition:        opaqueStrPosition(instrStrPositionSQL),
+		exp.KindStrToDate:          teradataStrToDateSQL,
 		exp.KindTimeToStr: func(g *Generator, e exp.Expression) string {
 			args := []any{e.Arg("this")}
 			if format := asExpression(e.Arg("format")); format != nil {
@@ -339,4 +342,24 @@ func teradataHexStringSQL(g *Generator, e exp.Expression) string {
 		return g.gen(exp.LiteralString(e.Text("this"))) + "XC"
 	}
 	return g.hexstringSQL(e)
+}
+
+// teradataConversionSQL ports teradataconversion_sql (generators/teradata.py:128-131).
+func teradataConversionSQL(g *Generator, e exp.Expression) string {
+	to := g.sqlKey(e, "to")
+	fmt := g.sqlKey(e, "format")
+	if fmt != "" {
+		fmt = ", FORMAT " + fmt
+	}
+	return g.sqlKey(e, "this") + " (" + to + fmt + ")"
+}
+
+// teradataTitleSQL ports teradatatitle_sql (generators/teradata.py:134-135).
+func teradataTitleSQL(g *Generator, e exp.Expression) string {
+	return g.sqlKey(e, "this") + " (TITLE " + g.sqlKey(e, "title") + ")"
+}
+
+// teradataNamedSQL ports teradatanamed_sql (generators/teradata.py:137-138).
+func teradataNamedSQL(g *Generator, e exp.Expression) string {
+	return g.sqlKey(e, "this") + " (NAMED " + g.sqlKey(e, "alias") + ")"
 }
