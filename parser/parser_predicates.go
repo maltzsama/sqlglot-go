@@ -1,11 +1,32 @@
 package parser
 
 import (
+	"github.com/maltzsama/sqlglot-go/dialects"
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/tokens"
 )
 
 func (p *Parser) parseRange(this exp.Expression) exp.Expression {
+	return p.parseRangeIs(this, false)
+}
+
+// isPredicateAhead ports _is_predicate_ahead (parser.py:6402-6411): an IS, ISNULL or NOTNULL
+// token (or NOT NULL) starts a postfix predicate when the dialect does not bind IS tightly.
+func (p *Parser) isPredicateAhead() bool {
+	if p.dialect.IsPredicatePrecedence == dialects.IsPredicatePrecedenceHigh {
+		return false
+	}
+	switch p.curr.TokenType {
+	case tokens.IS, tokens.ISNULL, tokens.NOTNULL, tokens.NOT:
+	default:
+		return false
+	}
+	return p.curr.TokenType != tokens.NOT || p.next.TokenType == tokens.NULL
+}
+
+// parseRangeIs ports _parse_range(this, parse_is) (parser.py:6448-...): parse_is=false stops
+// before a postfix IS predicate, which the equality level then consumes.
+func (p *Parser) parseRangeIs(this exp.Expression, parseIs bool) exp.Expression {
 	if this == nil {
 		this = p.parseBitwise()
 	}
@@ -30,6 +51,10 @@ func (p *Parser) parseRange(this exp.Expression) exp.Expression {
 	// the operator that follows it; a negated link gets parenthesized when another range
 	// operator (or NOT) follows so precedence survives regeneration.
 	for {
+		// parser.py:6457-6458: stop before a postfix IS predicate unless the caller consumes it.
+		if !parseIs && p.isPredicateAhead() {
+			break
+		}
 		negate := p.match(tokens.NOT)
 		matched := true
 		before := this
@@ -343,7 +368,7 @@ func (p *Parser) parseIs(this exp.Expression) exp.Expression {
 		if negate {
 			constructor = exp.NullSafeEQ
 		}
-		left, right := p.predicateOperands(this, p.parseBitwise())
+		left, right := p.predicateOperands(this, p.parseIsRhsDistinct())
 		return p.expression(constructor(exp.Args{"this": left, "expression": right}), nil, nil)
 	}
 	var expression exp.Expression
@@ -450,4 +475,47 @@ func isExactEqualityOrComparison(kind exp.Kind) bool {
 		return true
 	}
 	return false
+}
+
+// parseIsRhsDistinct ports _parse_is_rhs(distinct=True) (parser.py:6540-6546): the operand of
+// IS [NOT] DISTINCT FROM binds at the dialect's IS precedence.
+func (p *Parser) parseIsRhsDistinct() exp.Expression {
+	switch p.dialect.IsPredicatePrecedence {
+	case dialects.IsPredicatePrecedenceLow:
+		return p.parseEqualityIs(false)
+	case dialects.IsPredicatePrecedenceEquality:
+		return p.parseComparison()
+	case dialects.IsPredicatePrecedenceComparison:
+		return p.parseRange(nil)
+	}
+	return p.parseBitwise()
+}
+
+// predicateOperandsBinary ports the non-IS branch of _build_predicate (parser.py:6447-...): an
+// equality or comparison whose operand is an IS-style predicate gets that operand parenthesized.
+func (p *Parser) predicateOperandsBinary(this, expression exp.Expression) (exp.Expression, exp.Expression) {
+	inner := func(e exp.Expression) exp.Expression {
+		if e != nil && e.Kind() == exp.KindNot {
+			return asNodeThis(e)
+		}
+		return e
+	}
+	isPredicateKind := func(k exp.Kind) bool {
+		return k == exp.KindIs || k == exp.KindNullSafeEQ || k == exp.KindNullSafeNEQ
+	}
+	if l := inner(this); l != nil && isPredicateKind(l.Kind()) {
+		this = p.expression(exp.Paren(exp.Args{"this": this}), nil, nil)
+	}
+	if r := inner(expression); r != nil && isPredicateKind(r.Kind()) {
+		expression = p.expression(exp.Paren(exp.Args{"this": expression}), nil, nil)
+	}
+	return this, expression
+}
+
+// asNodeThis returns a Not node's operand.
+func asNodeThis(e exp.Expression) exp.Expression {
+	if t, ok := e.Arg("this").(exp.Expression); ok {
+		return t
+	}
+	return nil
 }

@@ -118,11 +118,31 @@ var equalityTokens = map[tokens.TokenType]func(exp.Args) exp.Expression{
 }
 
 func (p *Parser) parseEquality() exp.Expression {
+	return p.parseEqualityIs(true)
+}
+
+// parseEqualityIs ports _parse_equality(parse_is) (parser.py:6413-6432): a postfix IS
+// predicate can sit between equality operands when the dialect's IS precedence is below
+// equality, and can itself be an operand (x IS NULL = FALSE).
+func (p *Parser) parseEqualityIs(parseIs bool) exp.Expression {
 	this := p.parseComparison()
-	for constructor, ok := equalityTokens[p.curr.TokenType]; ok; constructor, ok = equalityTokens[p.curr.TokenType] {
-		p.advance()
-		comments := p.prevComments
-		this = p.expression(constructor(exp.Args{"this": this, "expression": p.parseComparison()}), nil, comments)
+	for {
+		if constructor, ok := equalityTokens[p.curr.TokenType]; ok {
+			p.advance()
+			comments := p.prevComments
+			left, right := p.predicateOperandsBinary(this, p.parseComparison())
+			this = p.expression(constructor(exp.Args{"this": left, "expression": right}), nil, comments)
+			continue
+		}
+		if parseIs && p.isPredicateAhead() {
+			index := p.index
+			this = p.parseComparisonFrom(p.parseRangeIs(this, true))
+			if p.index == index {
+				break
+			}
+			continue
+		}
+		break
 	}
 	return this
 }
@@ -135,11 +155,19 @@ var comparisonTokens = map[tokens.TokenType]func(exp.Args) exp.Expression{
 }
 
 func (p *Parser) parseComparison() exp.Expression {
-	this := p.parseRange(nil)
+	return p.parseComparisonFrom(nil)
+}
+
+// parseComparisonFrom ports _parse_comparison(this) (parser.py:6434-6445).
+func (p *Parser) parseComparisonFrom(this exp.Expression) exp.Expression {
+	if this == nil {
+		this = p.parseRange(nil)
+	}
 	for constructor, ok := comparisonTokens[p.curr.TokenType]; ok; constructor, ok = comparisonTokens[p.curr.TokenType] {
 		p.advance()
 		comments := p.prevComments
-		this = p.expression(constructor(exp.Args{"this": this, "expression": p.parseRange(nil)}), nil, comments)
+		left, right := p.predicateOperandsBinary(this, p.parseRange(nil))
+		this = p.expression(constructor(exp.Args{"this": left, "expression": right}), nil, comments)
 	}
 	return this
 }

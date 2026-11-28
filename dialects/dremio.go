@@ -15,6 +15,8 @@ import (
 func Dremio() *Dialect {
 	d := Base()
 	d.Name = "dremio"
+	// parsers/dremio.py:87 IS_PREDICATE_PRECEDENCE = COMPARISON.
+	d.IsPredicatePrecedence = IsPredicatePrecedenceComparison
 
 	// dialects/dremio.py:9-13 dialect flags.
 	d.SupportsUserDefinedTypes = false

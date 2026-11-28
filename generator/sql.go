@@ -501,12 +501,22 @@ func (g *Generator) binary(e expressions.Expression, op string) string {
 	sqls := []string{}
 	stack := []any{e}
 	binaryKind := e.Kind()
+	// generator.py:binary: IS chains flatten by their rendered operator, so a nested IS NOT
+	// keeps its NOT; other binaries flatten only when the negate flag matches.
+	isIs := binaryKind == expressions.KindIs && (op == "IS" || op == "IS NOT")
+	negate := boolValue(e.Arg("negate"))
 	for len(stack) > 0 {
 		node := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
-		if expr, ok := node.(expressions.Expression); ok && !isNilExpression(expr) && expr.Kind() == binaryKind {
+		if expr, ok := node.(expressions.Expression); ok && !isNilExpression(expr) && expr.Kind() == binaryKind &&
+			(expr == e || (isIs && !isBooleanRHS(expr)) || boolValue(expr.Arg("negate")) == negate) {
 			if opFunc := expr.Arg("operator"); truthy(opFunc) {
 				op = "OPERATOR(" + g.gen(opFunc) + ")"
+			} else if isIs {
+				op = "IS"
+				if boolValue(expr.Arg("negate")) {
+					op = "IS NOT"
+				}
 			}
 			stack = append(stack, expr.Arg("expression"))
 			stack = append(stack, " "+g.maybeComment(op, nil, expr.Comments(), false)+" ")
@@ -3477,4 +3487,11 @@ func (g *Generator) starMapSQL(e expressions.Expression) string {
 		parts = append(parts, g.gen(expressions.AliasExpr(value.Copy(), alias.Name(), false)))
 	}
 	return "STRUCT(" + strings.Join(parts, ", ") + ")"
+}
+
+// isBooleanRHS reports whether a binary's right operand is a boolean literal (generator.py:
+// binary's `not isinstance(node.expression, exp.Boolean)` guard).
+func isBooleanRHS(e expressions.Expression) bool {
+	rhs := asExpression(e.Arg("expression"))
+	return rhs != nil && rhs.Kind() == expressions.KindBoolean
 }

@@ -768,6 +768,9 @@ type Dialect struct {
 	DirectedJoins bool
 	// SupportsNearestJoin ports SUPPORTS_NEAREST_JOIN (generator.py:379; duckdb True).
 	SupportsNearestJoin bool
+	// IsPredicatePrecedence ports IS_PREDICATE_PRECEDENCE (parser.py:344-348): how far IS
+	// binds. The zero value is High, the base default; DuckDB and Postgres use Low.
+	IsPredicatePrecedence IsPredicatePrecedence
 	// SemiAntiJoinNoSide is the inverse of SEMI_ANTI_JOIN_WITH_SIDE (generator.py:441; duckdb
 	// False): SEMI and ANTI joins render without their side keyword.
 	SemiAntiJoinNoSide bool
@@ -1967,3 +1970,13 @@ func (d *Dialect) VersionAtLeast(major, minor int) bool {
 	}
 	return v[1] >= minor
 }
+
+// IsPredicatePrecedence ports the IsPredicatePrecedence enum (parser.py:344-348).
+type IsPredicatePrecedence int
+
+const (
+	IsPredicatePrecedenceHigh IsPredicatePrecedence = iota
+	IsPredicatePrecedenceComparison
+	IsPredicatePrecedenceEquality
+	IsPredicatePrecedenceLow
+)

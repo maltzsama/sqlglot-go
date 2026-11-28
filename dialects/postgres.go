@@ -11,6 +11,8 @@ func Postgres() *Dialect {
 	// dialects/postgres.py CONCAT_WS_COALESCE = True.
 	d.ConcatWsCoalesce = true
 	d.Name = "postgres"
+	// parsers/postgres.py:113 IS_PREDICATE_PRECEDENCE = LOW.
+	d.IsPredicatePrecedence = IsPredicatePrecedenceLow
 	// generators/postgres.py:263 QUERY_HINTS = False.
 	d.NoQueryHints = true
 	// Postgres tokenizes U&'...' as UNICODE_STRING, so it renders in that syntax.
