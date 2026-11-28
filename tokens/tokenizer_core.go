@@ -822,10 +822,15 @@ number:
 			}
 			scientific++
 			c.advance(1, false)
-		case upperASCII(c.peek) == 'E' && scientific == 0:
+		// tokenizer_core.py:1094-1100: an `e` directly followed by `_` is not an exponent in a
+		// dialect whose numbers may be underscore separated (DuckDB), so `1e_5` is `1 AS e_5`.
+		case upperASCII(c.peek) == 'E' && scientific == 0 &&
+			!(c.numbersCanBeUnderscoreSeparated && c.current+1 < c.size && c.input.at(c.current+1) == '_'):
 			scientific++
 			c.advance(1, false)
-		case c.peek == '_' && c.numbersCanBeUnderscoreSeparated:
+		// tokenizer_core.py:1101-1106: an underscore separates two digits only.
+		case c.peek == '_' && c.numbersCanBeUnderscoreSeparated && digitChars[c.char] &&
+			c.current+1 < c.size && digitChars[c.input.at(c.current+1)]:
 			isUnderscoreSeparated = true
 			c.advance(1, false)
 		case isIdentifierChar(c.peek):

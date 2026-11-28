@@ -8,6 +8,10 @@ func (g *Generator) sliceSQL(e expressions.Expression) string {
 	step := g.sqlKey(e, "step")
 	end := g.sqlKey(e, "expression")
 	begin := g.sqlKey(e, "this")
+	// generator.py:6242-6243: an omitted end is written as `-` before a step.
+	if end == "" && step != "" {
+		end = "-"
+	}
 
 	sql := end
 	if step != "" {
