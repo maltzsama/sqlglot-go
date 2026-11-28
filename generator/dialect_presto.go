@@ -301,7 +301,7 @@ func (g *Generator) prestoStructSQL(e exp.Expression) string {
 	if len(values) == 0 {
 		return "ROW()"
 	}
-	if schema, ok := prestoStructSchema(e); ok {
+	if schema, ok := prestoStructSchema(g, e); ok {
 		return "CAST(ROW(" + strings.Join(values, ", ") + ") AS ROW(" + schema + "))"
 	}
 	if prestoStructHasUntypedField(e) {
@@ -312,7 +312,7 @@ func (g *Generator) prestoStructSQL(e exp.Expression) string {
 
 // prestoStructSchema builds the ROW field list of a struct whose fields are all typed
 // (literals or nested structs). ok is false when any field is untyped.
-func prestoStructSchema(e exp.Expression) (string, bool) {
+func prestoStructSchema(g *Generator, e exp.Expression) (string, bool) {
 	fields := []string{}
 	for _, x := range e.Expressions() {
 		if x.Kind() != exp.KindPropertyEQ {
@@ -324,7 +324,7 @@ func prestoStructSchema(e exp.Expression) (string, bool) {
 		}
 		var dtype string
 		if value.Kind() == exp.KindStruct {
-			inner, ok := prestoStructSchema(value)
+			inner, ok := prestoStructSchema(g, value)
 			if !ok {
 				return "", false
 			}
@@ -332,7 +332,7 @@ func prestoStructSchema(e exp.Expression) (string, bool) {
 		} else if dtype = prestoLiteralType(value); dtype == "" {
 			return "", false
 		}
-		fields = append(fields, prestoFieldName(x)+" "+dtype)
+		fields = append(fields, g.sqlKey(x, "this")+" "+dtype)
 	}
 	return strings.Join(fields, ", "), len(fields) > 0
 }
@@ -348,29 +348,6 @@ func prestoStructHasUntypedField(e exp.Expression) bool {
 		}
 	}
 	return false
-}
-
-// prestoFieldName renders a struct key as written (the key identifier's name).
-func prestoFieldName(field exp.Expression) string {
-	if key := asExpression(field.Arg("this")); key != nil {
-		return key.Name()
-	}
-	return ""
-}
-
-// prestoStructWithSchema renders a struct value as CAST(ROW(...) AS ROW(schema)) with a schema
-// taken from a sibling element, as annotate_types gives every element of an array the type of its
-// first element (generators/presto.py:struct_sql).
-func prestoStructWithSchema(g *Generator, e exp.Expression, schema string) string {
-	values := []string{}
-	for _, x := range e.Expressions() {
-		if x.Kind() == exp.KindPropertyEQ {
-			values = append(values, g.gen(asExpression(x.Arg("expression"))))
-		} else {
-			values = append(values, g.gen(x))
-		}
-	}
-	return "CAST(ROW(" + strings.Join(values, ", ") + ") AS ROW(" + schema + "))"
 }
 
 func prestoLiteralType(e exp.Expression) string {
@@ -1237,10 +1214,11 @@ func foldExclusiveSequence(start, end, step exp.Expression) (string, bool) {
 		}
 		st = v
 	}
-	if st == 0 || (st > 0 && s > en) || (st < 0 && s < en) {
+	adjusted := en - st
+	if st == 0 || (st > 0 && s > adjusted) || (st < 0 && s < adjusted) {
 		return "ARRAY[]", true
 	}
-	args := []string{strconv.FormatInt(s, 10), strconv.FormatInt(en-st, 10)}
+	args := []string{strconv.FormatInt(s, 10), strconv.FormatInt(adjusted, 10)}
 	if stepGiven {
 		args = append(args, strconv.FormatInt(st, 10))
 	}
@@ -1255,14 +1233,54 @@ func prestoDateDiffSQL(g *Generator, e exp.Expression) string {
 	expr := e.Arg("expression")
 	unit := prestoUnit(e)
 	if truthy(e.Arg("date_part_boundary")) {
-		if this != nil {
-			this = exp.DateTrunc(exp.Args{"unit": unit.Copy(), "this": this})
+		rawUnit := asExpression(e.Arg("unit"))
+		dow, isWeek := prestoWeekUnitToDow(rawUnit)
+		if isWeek {
+			unit = exp.LiteralString("WEEK")
+			// DATE_TRUNC('WEEK', ...) starts on Monday, so both operands shift by the same delta to
+			// align the week start without changing the diff (generators/presto.py:182-190).
+			shift := 1
+			if dow != 7 {
+				shift = 1 - dow
+			}
+			if shift != 0 {
+				delta := exp.Interval(exp.Args{"this": exp.LiteralString(strconv.Itoa(shift)), "unit": exp.Var(exp.Args{"this": "DAY"})})
+				this = exp.Add(exp.Args{"this": this, "expression": delta})
+				expr = exp.Add(exp.Args{"this": expr, "expression": delta.Copy()})
+			}
 		}
-		if expr != nil {
-			expr = exp.DateTrunc(exp.Args{"unit": unit.Copy(), "this": expr})
+		if rawUnit == nil || rawUnit.Kind() != exp.KindWeekStart || isWeek {
+			if this != nil {
+				this = exp.DateTrunc(exp.Args{"unit": unit.Copy(), "this": this})
+			}
+			if expr != nil {
+				expr = exp.DateTrunc(exp.Args{"unit": unit.Copy(), "this": expr})
+			}
 		}
 	}
 	return g.funcCall("DATE_DIFF", []any{unit, expr, this}, "(", ")", true)
+}
+
+// prestoWeekUnitToDow ports week_unit_to_dow (dialects/dialect.py:2114-2134): WEEK and ISOWEEK
+// start on Monday (1), WeekStart names map to their ISO day number.
+func prestoWeekUnitToDow(unit exp.Expression) (int, bool) {
+	if unit == nil {
+		return 0, false
+	}
+	if unit.Kind() == exp.KindVar {
+		switch strings.ToUpper(unit.Name()) {
+		case "WEEK", "ISOWEEK":
+			return 1, true
+		}
+		return 0, false
+	}
+	if unit.Kind() == exp.KindWeekStart {
+		days := map[string]int{"MONDAY": 1, "TUESDAY": 2, "WEDNESDAY": 3, "THURSDAY": 4, "FRIDAY": 5, "SATURDAY": 6, "SUNDAY": 7}
+		if dow, ok := days[strings.ToUpper(unit.Name())]; ok {
+			return dow, true
+		}
+	}
+	return 0, false
 }
 
 // castToSameType is exp.cast (expressions/builders.py:457): an operand already cast to the
