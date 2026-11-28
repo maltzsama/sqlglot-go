@@ -466,7 +466,7 @@ func duckDBArrowJSONExtractArray(g *Generator, e expressions.Expression) string 
 		// BigQuery returns SQL NULL when any element is an object or array.
 		extractSQL := g.gen(extract)
 		jsonArray := "CAST(" + extractSQL + " AS JSON[])"
-		nonScalar := "LIST_FILTER(" + jsonArray + ", LAMBDA x : JSON_TYPE(x) IN ('OBJECT', 'ARRAY'))"
+		nonScalar := "LIST_FILTER(" + jsonArray + ", " + duckDBLambda(g, "x", "JSON_TYPE(x) IN ('OBJECT', 'ARRAY')") + ")"
 		return "CASE WHEN " + extractSQL + " IS NULL THEN NULL WHEN LENGTH(" + nonScalar + ") = 0 THEN " +
 			g.gen(expressions.Cast(expressions.Args{"this": extract, "to": to})) + " ELSE NULL END"
 	}
@@ -1356,6 +1356,19 @@ func duckDBTableSampleSQL(g *Generator, e expressions.Expression) string {
 		}
 	}
 	return g.tableSampleSQLWithKeyword(e, keyword)
+}
+
+// duckDBLambda writes a lambda the way DuckDB of this dialect version reads it: the LAMBDA form
+// from 1.3 on (generators/duckdb.py:2776-2785), and the arrow form before that. Parameters are
+// wrapped in parentheses only when there is more than one, as Generator.lambda_sql does.
+func duckDBLambda(g *Generator, params, body string) string {
+	if g.dialect.VersionAtLeast(1, 3) {
+		return "LAMBDA " + params + " : " + body
+	}
+	if strings.Contains(params, ", ") {
+		params = "(" + params + ")"
+	}
+	return params + " -> " + body
 }
 
 // duckDBLambdaSQL renders DuckDB's `LAMBDA x, y : body` form when the parser saw the keyword.
