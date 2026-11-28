@@ -1520,7 +1520,6 @@
 {"read":"teradata","write":"bigquery","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'MM')"}
 {"read":"teradata","write":"bigquery","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'Q')"}
 {"read":"teradata","write":"databricks","category":"gen: cast/type","sql":"CAST(x AS BYTEINT)"}
-{"read":"teradata","write":"databricks","category":"gen: cast/type","sql":"SELECT amount (BIGINT) AS converted FROM events"}
 {"read":"teradata","write":"databricks","category":"gen: transpile mismatch","sql":"CHARACTERS('')"}
 {"read":"teradata","write":"databricks","category":"gen: transpile mismatch","sql":"CHARACTERS('a  ')"}
 {"read":"teradata","write":"databricks","category":"gen: transpile mismatch","sql":"CHARACTERS('abc')"}
@@ -1529,7 +1528,6 @@
 {"read":"teradata","write":"databricks","category":"gen: transpile mismatch","sql":"CHARACTERS(x)"}
 {"read":"teradata","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT CURDATE()"}
 {"read":"teradata","write":"databricks","category":"gen: transpile mismatch","sql":"SELECT curdate()"}
-{"read":"teradata","write":"databricks","category":"parse: Expecting )","sql":"SUM(amount) (DECIMAL(12, 2)) (BIGINT)"}
 {"read":"teradata","write":"duckdb","category":"gen: cast/type","sql":"RANDOM(l, u)"}
 {"read":"teradata","write":"duckdb","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE))"}
 {"read":"teradata","write":"duckdb","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'DAY')"}
@@ -1552,7 +1550,6 @@
 {"read":"teradata","write":"postgres","category":"gen: transpile mismatch","sql":"CHARACTERS(x)"}
 {"read":"teradata","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT CURDATE()"}
 {"read":"teradata","write":"postgres","category":"gen: transpile mismatch","sql":"SELECT curdate()"}
-{"read":"teradata","write":"postgres","category":"parse: Expecting )","sql":"SELECT x (NAMED result) FROM t"}
 {"read":"teradata","write":"snowflake","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'MM')"}
 {"read":"teradata","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM t SAMPLE 0.25"}
 {"read":"teradata","write":"snowflake","category":"gen: transpile mismatch","sql":"SELECT * FROM t SAMPLE 0.6, 0.25"}
@@ -1562,7 +1559,6 @@
 {"read":"teradata","write":"snowflake","category":"generate: error","sql":"LOCKING ROW FOR ACCESS SELECT * FROM t"}
 {"read":"teradata","write":"teradata","category":"gen: cast/type","sql":"CAST(-128 AS BYTEINT)"}
 {"read":"teradata","write":"teradata","category":"gen: cast/type","sql":"CAST(x AS BYTEINT)"}
-{"read":"teradata","write":"teradata","category":"gen: cast/type","sql":"SELECT amount (BIGINT) AS converted FROM events"}
 {"read":"teradata","write":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE))"}
 {"read":"teradata","write":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'D')"}
 {"read":"teradata","write":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'MM')"}
@@ -1575,8 +1571,6 @@
 {"read":"teradata","write":"teradata","category":"gen: transpile mismatch","sql":"DAYOFWEEK(d)"}
 {"read":"teradata","write":"teradata","category":"gen: transpile mismatch","sql":"SELECT CURDATE()"}
 {"read":"teradata","write":"teradata","category":"gen: transpile mismatch","sql":"SELECT curdate()"}
-{"read":"teradata","write":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result) FROM t"}
-{"read":"teradata","write":"teradata","category":"parse: Expecting )","sql":"SUM(amount) (DECIMAL(12, 2)) (BIGINT)"}
 {"read":"teradata","write":"tsql","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE))"}
 {"read":"teradata","write":"tsql","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'DAY')"}
 {"read":"teradata","write":"tsql","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'IW')"}
