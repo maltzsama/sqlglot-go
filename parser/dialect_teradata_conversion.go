@@ -296,3 +296,42 @@ func (p *Parser) parseTeradataTableFunction() exp.Expression {
 	}
 	return p.expression(exp.New(exp.KindTableFromRows, exp.Args{"this": this}), nil, nil)
 }
+
+// teradataDeleteAliasTokens ports TABLE_ALIAS_TOKENS - {ALL} (parsers/teradata.py:268-271).
+func teradataDeleteAliasTokens() map[tokens.TokenType]bool {
+	out := make(map[tokens.TokenType]bool, len(tableAliasTokens))
+	for tt := range tableAliasTokens {
+		if tt != tokens.ALL {
+			out[tt] = true
+		}
+	}
+	return out
+}
+
+// parseTeradataExecute ports TeradataParser._parse_execute (parsers/teradata.py:193-212): a macro
+// call `EXECUTE db.macro(args)` builds an Execute. Other EXECUTE forms, such as EXECUTE IMMEDIATE,
+// are kept as a Command.
+func (p *Parser) parseTeradataExecute() exp.Expression {
+	start := p.prev
+	this := p.parseTableParts(true, false, false, false)
+	var expressions []exp.Expression
+	if p.match(tokens.L_PAREN) && !p.match(tokens.R_PAREN) {
+		for {
+			argument := p.parseAssignment()
+			if argument == nil {
+				// Do not discard omitted arguments or replace them with NULL.
+				return p.parseAsCommand(start)
+			}
+			expressions = append(expressions, argument)
+			if !p.match(tokens.COMMA) {
+				break
+			}
+		}
+		p.matchRParen(nil)
+	}
+	if p.curr.IsValid() {
+		// Preserve other EXECUTE forms, such as EXECUTE IMMEDIATE.
+		return p.parseAsCommand(start)
+	}
+	return p.expression(exp.Execute(exp.Args{"this": this, "expressions": expressions}), nil, nil)
+}

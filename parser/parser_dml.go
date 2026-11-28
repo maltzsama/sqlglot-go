@@ -185,8 +185,14 @@ func (p *Parser) parseUpdate() exp.Expression {
 func (p *Parser) parseDelete() exp.Expression {
 	hint := p.parseHint()
 	var tables []exp.Expression
-	tableNoJoin := func() exp.Expression { return p.parseTable(false, false, nil, false, false, false, false) }
-	tableWithJoins := func() exp.Expression { return p.parseTable(false, true, nil, false, false, false, false) }
+	// parsers/teradata.py:268-275 _parse_delete: Teradata table aliases exclude ALL, which then
+	// may follow a DELETE that has no WHERE clause.
+	var aliasTokens map[tokens.TokenType]bool
+	if p.dialect.Name == "teradata" {
+		aliasTokens = teradataDeleteAliasTokens()
+	}
+	tableNoJoin := func() exp.Expression { return p.parseTable(false, false, aliasTokens, false, false, false, false) }
+	tableWithJoins := func() exp.Expression { return p.parseTable(false, true, aliasTokens, false, false, false, false) }
 	if !p.match(tokens.FROM, false) {
 		if parsed := p.parseCsv(tableNoJoin); len(parsed) > 0 {
 			tables = parsed
@@ -195,7 +201,7 @@ func (p *Parser) parseDelete() exp.Expression {
 	returning := p.parseReturning()
 	var this exp.Expression
 	if p.match(tokens.FROM) {
-		this = p.parseTable(false, true, nil, false, false, false, false)
+		this = p.parseTable(false, true, aliasTokens, false, false, false, false)
 	}
 	// parsers/clickhouse.py:2411 (via the shared _parse_delete): ON CLUSTER.
 	var cluster exp.Expression
@@ -210,6 +216,9 @@ func (p *Parser) parseDelete() exp.Expression {
 	returning = firstExpression(returning, p.parseReturning())
 	order := p.parseOrder(nil, false)
 	limit := p.parseLimit(nil, false, false)
+	if p.dialect.Name == "teradata" && where == nil {
+		p.match(tokens.ALL)
+	}
 	return p.expression(exp.Delete(exp.Args{
 		"hint":      hint,
 		"tables":    tables,

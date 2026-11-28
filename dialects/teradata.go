@@ -49,6 +49,7 @@ func Teradata() *Dialect {
 		"BYTEINT":     tokens.SMALLINT,
 		"COLLECT":     tokens.COMMAND,
 		"DEL":         tokens.DELETE,
+		"EXEC":        tokens.EXECUTE,
 		"EQ":          tokens.EQ,
 		"GE":          tokens.GTE,
 		"GT":          tokens.GT,
@@ -69,6 +70,8 @@ func Teradata() *Dialect {
 	} {
 		cfg.Keywords[keyword] = tokenType
 	}
+	// parsers/teradata.py Tokenizer: COMMANDS = base COMMANDS - {EXECUTE}, so EXECUTE parses as a statement.
+	delete(cfg.Commands, tokens.EXECUTE)
 	// dialects/teradata.py:78 KEYWORDS.pop("/*+").
 	cfg.HintStart = ""
 	// dialects/teradata.py:81-83 SINGLE_TOKENS.pop("%"): Teradata has no % modulo operator.

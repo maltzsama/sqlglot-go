@@ -669,15 +669,6 @@
 {"dialect":"teradata","category":"gen: canonicalization","sql":"DAYOFWEEK(CURRENT_DATE)"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"DAYOFWEEK(NULL)"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"DAYOFWEEK(d)"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"DEL FROM db.t ALL"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"DEL FROM t ALL"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"DELETE FROM db.t ALL"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"DELETE FROM t ALL"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"DELETE db.t ALL"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"DELETE t ALL"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"EXEC example_macro"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"EXECUTE example_macro()"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"EXECUTE example_macro(arg_a=1, arg_b='value')"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT INTO db.t (1, CURRENT_TIMESTAMP(0), 'value')"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT INTO db.t (2, NULL, 'null')"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT INTO t (1, CURRENT_TIMESTAMP(0), 'value')"}
@@ -709,7 +700,6 @@
 {"dialect":"teradata","category":"gen: cast/type","sql":"CAST(x AS byteint)"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"DAYOFWEEK(CAST('2026-11-15 12:00:00' AS TIMESTAMP))"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"DAYOFWEEK(CAST('2026-11-15' AS DATE))"}
-{"dialect":"teradata","category":"gen: cast/type","sql":"EXECUTE example_macro(DATE '2024-01-02', COALESCE(NULL, 3), 'a;b')"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"INSERT INTO db.t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"INSERT INTO t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"INSERT db.t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
@@ -723,15 +713,6 @@
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT COALESCE(BEGIN(p), END(p)) FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT END(t.p) AS bound_value FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT END(t.p) FROM t"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DEL FROM t AS \"ALL\" ALL"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DEL FROM t AS d ALL"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DELETE FROM t AS \"ALL\" ALL"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DELETE FROM t AS d ALL"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DELETE t AS \"ALL\" ALL"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DELETE t AS d ALL"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"EXEC example_db.example_macro(1)"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"EXEC example_macro()"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"EXEC example_macro(1,, 3)"}
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT BEGIN(p) AS bound_value FROM t"}
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT END(p) AS bound_value FROM t"}
 {"dialect":"trino","category":"gen: canonicalization","sql":"SELECT * FROM t ORDER BY x FETCH FIRST ROW ONLY"}

@@ -17,6 +17,7 @@ func init() {
 			tokens.DATABASE: (*Parser).parseTeradataDatabase,
 			tokens.REPLACE:  (*Parser).parseCreate,
 			tokens.LOCK:     (*Parser).parseTeradataLocking,
+			tokens.EXECUTE:  (*Parser).parseTeradataExecute,
 		},
 		// parsers/teradata.py:145-153 FUNCTION_PARSERS: TRYCAST aliases the base TRY_CAST,
 		// RANGE_N and TRANSLATE have dedicated grammars.
