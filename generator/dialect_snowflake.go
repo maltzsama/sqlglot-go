@@ -435,6 +435,26 @@ func snowflakeSelectSourceNames(selectExpr expressions.Expression) map[string]bo
 	return names
 }
 
+// findExplodeNode finds the explode node in a projection, as select.find(exp.Explode) does. The
+// outer variants are Explode subclasses upstream (array.py:238-262), so both kinds match here too.
+// It reports whether the node is a posexplode and whether it is an outer explode.
+func findExplodeNode(item expressions.Expression) (expressions.Expression, bool, bool) {
+	for _, candidate := range []struct {
+		kind              expressions.Kind
+		posexplode, outer bool
+	}{
+		{expressions.KindExplode, false, false},
+		{expressions.KindExplodeOuter, false, true},
+		{expressions.KindPosexplode, true, false},
+		{expressions.KindPosexplodeOuter, true, true},
+	} {
+		if node := item.Find(candidate.kind); node != nil {
+			return node, candidate.posexplode, candidate.outer
+		}
+	}
+	return nil, false, false
+}
+
 // explodeProjectionToUnnest ports explode_projection_to_unnest (transforms.py:402-552). A projection whose subtree contains an Explode (even
 // inside a nested subquery, which is why the outer SELECT is rewritten for the correlated
 // FLATTEN case) becomes a positional IFF over two FLATTEN sources plus a generated series.
@@ -467,12 +487,7 @@ func explodeProjectionToUnnest(selectExpr expressions.Expression, indexOffset in
 	seriesTableAlias := asExpression(series.Arg("alias")).This()
 
 	for _, selectItem := range selectExpr.Selects() {
-		explode := selectItem.Find(expressions.KindExplode)
-		isPosexplode := false
-		if explode == nil {
-			explode = selectItem.Find(expressions.KindPosexplode)
-			isPosexplode = explode != nil
-		}
+		explode, isPosexplode, isOuter := findExplodeNode(selectItem)
 		if explode == nil {
 			continue
 		}
@@ -492,10 +507,7 @@ func explodeProjectionToUnnest(selectExpr expressions.Expression, indexOffset in
 			renamed := expressions.AliasExpr(selectItem.This(), "", false)
 			replaceSelectItem(selectExpr, selectItem, renamed)
 			alias = renamed
-			explode = renamed.Find(expressions.KindPosexplode)
-			if explode == nil {
-				explode = renamed.Find(expressions.KindExplode)
-			}
+			explode, _, _ = findExplodeNode(renamed)
 		} else if selectItem.Kind() == expressions.KindAlias {
 			// Keep the alias Identifier node: upstream stores it (not just its name) so a
 			// quoted alias such as "MyCol" stays quoted in every rebuilt reference
@@ -511,13 +523,32 @@ func explodeProjectionToUnnest(selectExpr expressions.Expression, indexOffset in
 			renamed := expressions.AliasExpr(selectItem, "", false)
 			replaceSelectItem(selectExpr, selectItem, renamed)
 			alias = renamed
-			explode = renamed.Find(expressions.KindExplode)
-			if explode == nil {
-				explode = renamed.Find(expressions.KindPosexplode)
-			}
+			explode, _, _ = findExplodeNode(renamed)
 		}
 
 		explodeArg := explode.This()
+		if isOuter {
+			// transforms.py:458-468: an outer explode of an empty array yields one NULL row, so
+			// the array becomes [ARRAY(x)[SAFE_ORDINAL(0)]] when empty.
+			bracket := expressions.Bracket(expressions.Args{
+				"this":        explodeArg.Copy(),
+				"expressions": []expressions.Expression{expressions.LiteralNumber("0")},
+				"safe":        true,
+				"offset":      true,
+			})
+			cond := expressions.EQ(expressions.Args{
+				"this": expressions.ArraySize(expressions.Args{"this": expressions.Coalesce(expressions.Args{
+					"this":        explodeArg.Copy(),
+					"expressions": []expressions.Expression{expressions.Array(expressions.Args{})},
+				})}),
+				"expression": expressions.LiteralNumber("0"),
+			})
+			explodeArg = expressions.If(expressions.Args{
+				"this":  cond,
+				"true":  expressions.Array(expressions.Args{"expressions": []expressions.Expression{bracket}}),
+				"false": explodeArg,
+			})
+		}
 		// This ensures that we won't use EXPLODE's argument as a new selection
 		if explodeArg != nil && explodeArg.Kind() == expressions.KindColumn {
 			takenSelectNames[explodeArg.OutputName()] = true
