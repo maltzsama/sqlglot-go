@@ -34,6 +34,8 @@ func DuckDB() *Dialect {
 	d.NoQueryHints = true
 	d.SupportsNearestJoin = true
 	d.SemiAntiJoinNoSide = true
+	// parsers/duckdb.py:125 IS_PREDICATE_PRECEDENCE = LOW.
+	d.IsPredicatePrecedence = IsPredicatePrecedenceLow
 	// generators/duckdb.py PAD_FILL_PATTERN_IS_REQUIRED = True.
 	d.PadFillPatternIsRequired = true
 	// generators/duckdb.py LIMIT_FETCH = "LIMIT": render FETCH as LIMIT.
@@ -151,6 +153,8 @@ func DuckDB() *Dialect {
 		cfg.Keywords[keyword] = tokenType
 	}
 	delete(cfg.Keywords, "/*+")
+	// dialects/duckdb.py:148 KEYWORDS.pop("SORT BY"): `sort` followed by BY is an ordinary name.
+	delete(cfg.Keywords, "SORT BY")
 	delete(cfg.Commands, tokens.SHOW)
 	cfg.HintStart = ""
 	d.TokenizerConfig = tokens.CompileConfig(cfg)

@@ -1320,7 +1320,24 @@ func duckDBIgnoreNullsSQL(g *Generator, e expressions.Expression) string {
 // (generators/duckdb.py:1739) before the base PIVOT rendering: DuckDB only accepts simple
 // column names inside a (UN)PIVOT.
 func duckDBPivot(g *Generator, e expressions.Expression) string {
-	return g.pivotSQL(unqualifyColumnsDeep(e))
+	// generators/duckdb.py:1598-1604 _unqualify_pivot_columns: DuckDB binds the pivot clauses
+	// (ON, USING, GROUP BY, ...) without a table qualifier. The source and CTEs keep theirs.
+	for _, key := range expressions.ArgKeys(e.Kind()) {
+		if key == "this" || key == "with_" {
+			continue
+		}
+		switch v := e.Arg(key).(type) {
+		case expressions.Expression:
+			e.Set(key, unqualifyColumnsDeep(v))
+		case []expressions.Expression:
+			items := make([]expressions.Expression, len(v))
+			for i, item := range v {
+				items[i] = unqualifyColumnsDeep(item)
+			}
+			e.Set(key, items)
+		}
+	}
+	return g.pivotSQL(e)
 }
 
 // duckDBTableSampleSQL ports tablesample_sql (generators/duckdb.py:3118-3133).

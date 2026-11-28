@@ -1988,7 +1988,10 @@ func (p *Parser) parseJoinParts() (method, side, kind *tokens.Token) {
 		prev := p.prev
 		side = &prev
 	}
-	if p.matchSet(joinKinds) {
+	// parsers/duckdb.py:132 JOIN_KINDS = Parser.JOIN_KINDS - {STRAIGHT_JOIN}: DuckDB reads
+	// straight_join as an ordinary name, so it is never a join kind there.
+	excludedStraightJoin := p.dialect.Name == "duckdb" && p.curr.TokenType == tokens.STRAIGHT_JOIN
+	if !excludedStraightJoin && p.matchSet(joinKinds) {
 		prev := p.prev
 		kind = &prev
 	}
