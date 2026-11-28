@@ -270,24 +270,24 @@ func writeTranspileGaps(fails map[transpileGapKey]string) error {
 const (
 	minPassTranspileBase        = 956
 	minPassTranspileAthena      = 11
-	minPassTranspileBigQuery    = 734
-	minPassTranspileClickhouse  = 256
-	minPassTranspileDatabricks  = 290
+	minPassTranspileBigQuery    = 741
+	minPassTranspileClickhouse  = 255
+	minPassTranspileDatabricks  = 289
 	minPassTranspileDoris       = 104
 	minPassTranspileDremio      = 31
-	minPassTranspileDuckDB      = 1418
+	minPassTranspileDuckDB      = 1467
 	minPassTranspileHive        = 505
-	minPassTranspileMaterialize = 33
-	minPassTranspileMySQL       = 380
+	minPassTranspileMaterialize = 32
+	minPassTranspileMySQL       = 381
 	minPassTranspileOracle      = 202
-	minPassTranspilePostgres    = 446
-	minPassTranspilePresto      = 622
+	minPassTranspilePostgres    = 449
+	minPassTranspilePresto      = 621
 	minPassTranspileRedshift    = 187
 	minPassTranspileRisingWave  = 6
-	minPassTranspileSnowflake   = 1003
-	minPassTranspileSpark       = 851
-	minPassTranspileSpark2      = 90
-	minPassTranspileSQLite      = 203
+	minPassTranspileSnowflake   = 1004
+	minPassTranspileSpark       = 846
+	minPassTranspileSpark2      = 91
+	minPassTranspileSQLite      = 223
 	minPassTranspileStarrocks   = 102
 	minPassTranspileTeradata    = 94
 	minPassTranspileTrino       = 162
@@ -296,30 +296,30 @@ const (
 
 // Total floors catch dropped failing records that pass floors cannot detect.
 const (
-	minTotalTranspileBase        = 945
-	minTotalTranspileAthena      = 11
-	minTotalTranspileBigQuery    = 730
-	minTotalTranspileClickhouse  = 241
-	minTotalTranspileDatabricks  = 262
-	minTotalTranspileDoris       = 104
+	minTotalTranspileBase        = 1098
+	minTotalTranspileAthena      = 14
+	minTotalTranspileBigQuery    = 851
+	minTotalTranspileClickhouse  = 333
+	minTotalTranspileDatabricks  = 360
+	minTotalTranspileDoris       = 109
 	minTotalTranspileDremio      = 31
-	minTotalTranspileDuckDB      = 1428
-	minTotalTranspileHive        = 513
-	minTotalTranspileMaterialize = 32
-	minTotalTranspileMySQL       = 350
-	minTotalTranspileOracle      = 190
-	minTotalTranspilePostgres    = 445
-	minTotalTranspilePresto      = 615
-	minTotalTranspileRedshift    = 190
-	minTotalTranspileRisingWave  = 6
-	minTotalTranspileSnowflake   = 991
-	minTotalTranspileSpark       = 841
-	minTotalTranspileSpark2      = 89
-	minTotalTranspileSQLite      = 153
-	minTotalTranspileStarrocks   = 101
-	minTotalTranspileTeradata    = 74
-	minTotalTranspileTrino       = 150
-	minTotalTranspileTSQL        = 389
+	minTotalTranspileDuckDB      = 1884
+	minTotalTranspileHive        = 556
+	minTotalTranspileMaterialize = 39
+	minTotalTranspileMySQL       = 432
+	minTotalTranspileOracle      = 224
+	minTotalTranspilePostgres    = 612
+	minTotalTranspilePresto      = 642
+	minTotalTranspileRedshift    = 223
+	minTotalTranspileRisingWave  = 10
+	minTotalTranspileSnowflake   = 1151
+	minTotalTranspileSpark       = 962
+	minTotalTranspileSpark2      = 121
+	minTotalTranspileSQLite      = 420
+	minTotalTranspileStarrocks   = 117
+	minTotalTranspileTeradata    = 140
+	minTotalTranspileTrino       = 220
+	minTotalTranspileTSQL        = 468
 )
 
 // TestTranspileCorpus is the cross-dialect harness over upstream's validate_all read/write

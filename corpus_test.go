@@ -233,56 +233,56 @@ func writeGaps(fails map[gapKey]string) error {
 // burndown list. Pass and total floors are monotonic: raise them, never lower them.
 const (
 	minPassBase        = 980
-	minPassBigQuery    = 689
+	minPassBigQuery    = 734
 	minPassMySQL       = 428
 	minPassPostgres    = 468
-	minPassAthena      = 51
-	minPassTrino       = 115
-	minPassPresto      = 170
+	minPassAthena      = 58
+	minPassTrino       = 155
+	minPassPresto      = 168
 	minPassHive        = 141
-	minPassTSQL        = 613
-	minPassClickhouse  = 468
-	minPassStarrocks   = 145
-	minPassDoris       = 56
-	minPassOracle      = 249
-	minPassRedshift    = 171
-	minPassMaterialize = 24
+	minPassTSQL        = 709
+	minPassClickhouse  = 500
+	minPassStarrocks   = 174
+	minPassDoris       = 75
+	minPassOracle      = 302
+	minPassRedshift    = 195
+	minPassMaterialize = 25
 	minPassRisingWave  = 7
-	minPassSpark       = 227
-	minPassDatabricks  = 176
-	minPassDuckDB      = 565
-	minPassSnowflake   = 1543
-	minPassSQLite      = 136
+	minPassSpark       = 252
+	minPassDatabricks  = 208
+	minPassDuckDB      = 690
+	minPassSnowflake   = 1590
+	minPassSQLite      = 230
 	minPassDremio      = 46
-	minPassTeradata    = 84
+	minPassTeradata    = 154
 	minPassKsqlDB      = 57
 )
 
 // Total floors catch dropped failing records that pass floors cannot detect.
 const (
 	minTotalBase        = 980
-	minTotalBigQuery    = 689
+	minTotalBigQuery    = 779
 	minTotalMySQL       = 428
 	minTotalPostgres    = 468
-	minTotalAthena      = 51
-	minTotalTrino       = 115
-	minTotalPresto      = 170
-	minTotalHive        = 141
-	minTotalTSQL        = 613
-	minTotalClickhouse  = 468
-	minTotalStarrocks   = 145
-	minTotalDoris       = 56
-	minTotalOracle      = 249
-	minTotalRedshift    = 171
-	minTotalMaterialize = 24
-	minTotalRisingWave  = 7
-	minTotalSpark       = 227
-	minTotalDatabricks  = 176
-	minTotalDuckDB      = 565
-	minTotalSnowflake   = 1543
-	minTotalSQLite      = 136
-	minTotalDremio      = 46
-	minTotalTeradata    = 84
+	minTotalAthena      = 63
+	minTotalTrino       = 187
+	minTotalPresto      = 172
+	minTotalHive        = 166
+	minTotalTSQL        = 864
+	minTotalClickhouse  = 555
+	minTotalStarrocks   = 233
+	minTotalDoris       = 100
+	minTotalOracle      = 437
+	minTotalRedshift    = 210
+	minTotalMaterialize = 25
+	minTotalRisingWave  = 8
+	minTotalSpark       = 272
+	minTotalDatabricks  = 249
+	minTotalDuckDB      = 736
+	minTotalSnowflake   = 1739
+	minTotalSQLite      = 321
+	minTotalDremio      = 47
+	minTotalTeradata    = 307
 	minTotalKsqlDB      = 57
 )
 
