@@ -657,10 +657,6 @@
 {"dialect":"starrocks","category":"parse: Invalid expression / Unexpected token","sql":"UNINSTALL PLUGIN auditdemo"}
 {"dialect":"starrocks","category":"parse: Required keyword","sql":"SELECT TIME_SLICE(dt, INTERVAL 5 MINUTE)"}
 {"dialect":"starrocks","category":"parse: Required keyword","sql":"SELECT TIME_SLICE(dt, INTERVAL 7 DAY)"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"'0A'XC"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"'0A'XCV"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"('0A'XC)"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"('0A'XCV)"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"CHARACTERS('')"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"CHARACTERS('a  ')"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"CHARACTERS('abc')"}
@@ -690,7 +686,6 @@
 {"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT db.t (2, NULL, 'null')"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT t (1, CURRENT_TIMESTAMP(0), 'value')"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"INSERT t (2, NULL, 'null')"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT '41'XCV"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT 2 ** MOD(8, 5)"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT AVG(x) OVER (ORDER BY d ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM t"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT BEGIN(p) FROM t"}
@@ -698,15 +693,9 @@
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT CURRENT_TIME AS request_time"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT CURTIME() AS request_time"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT END(p) FROM t"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT EXISTS(SELECT '0A'XC)"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT EXISTS(SELECT '0A'XCV)"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT EXISTS(SELECT '41'XC FROM u)"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT EXISTS(SELECT '41'XCV FROM u)"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT curdate()"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT curtime() AS request_time"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"TRUNC(x, 'YYYY')"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"VALUES ('0A'XC)"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"VALUES ('0A'XCV)"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"characters(x)"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"curdate()"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"current_time"}
@@ -725,24 +714,12 @@
 {"dialect":"teradata","category":"gen: cast/type","sql":"INSERT INTO t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"INSERT db.t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"INSERT t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
-{"dialect":"teradata","category":"gen: cast/type","sql":"SELECT ('41'XC)::VARCHAR(10)"}
-{"dialect":"teradata","category":"gen: cast/type","sql":"SELECT ('41'XCV)::VARCHAR(10)"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"SELECT amount (BIGINT) AS converted FROM events"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE))"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'MM')"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"amount (INTEGER)::BIGINT"}
 {"dialect":"teradata","category":"gen: ddl/properties","sql":"CREATE TABLE z (a BYTEINT, b SMALLINT)"}
-{"dialect":"teradata","category":"parse: Expected AS after CAST","sql":"CAST('0A'XC AS VARCHAR(10))"}
-{"dialect":"teradata","category":"parse: Expected AS after CAST","sql":"CAST('0A'XCV AS VARCHAR(10))"}
-{"dialect":"teradata","category":"parse: Expected AS after CAST","sql":"CAST('323032342D30312D3031'XC AS DATE FORMAT 'YYYY-MM-DD')"}
-{"dialect":"teradata","category":"parse: Expected AS after CAST","sql":"CAST('323032342D30312D3031'XCV AS DATE FORMAT 'YYYY-MM-DD')"}
-{"dialect":"teradata","category":"parse: Expected END after CASE","sql":"SELECT CASE WHEN a = 1 THEN '41'XC ELSE '42'XC END FROM t"}
-{"dialect":"teradata","category":"parse: Expected END after CASE","sql":"SELECT CASE WHEN a = 1 THEN '41'XCV ELSE '42'XCV END FROM t"}
 {"dialect":"teradata","category":"parse: Expected END after CASE","sql":"SELECT CASE WHEN x = 1 THEN BEGIN(p) ELSE END(p) END AS bound_value FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"COALESCE('0A'XC, NULL)"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"COALESCE('0A'XCV, NULL)"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"LENGTH('0A'XC)"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"LENGTH('0A'XCV)"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT (x + 1) (NAMED result) FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT (x + 1) (TITLE 'Heading') FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT BEGIN(t.p) AS bound_value FROM t"}
@@ -752,8 +729,6 @@
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT COALESCE(x, 1) (TITLE 'Heading') FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT END(t.p) AS bound_value FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT END(t.p) FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT SUM(a) OVER (PARTITION BY '41'XC) FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT SUM(a) OVER (PARTITION BY '41'XCV) FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT UPPER(TITLE(x (TITLE 'Heading'))) FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT amount (NAMED r, DECIMAL(12, 2), TITLE 'Revenue') FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT t.x (TITLE '') AS result FROM t"}
@@ -772,9 +747,6 @@
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (TITLE 'Heading', FORMAT '999') FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x FROM t WHERE x (NAMED result) > 1"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SUM(amount) (DECIMAL(12, 2)) (BIGINT)"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"TO_CHAR(CURRENT_DATE, '59595959'XC)"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"TO_CHAR(CURRENT_DATE, '59595959'XCV)"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"TRUNC(CURRENT_DATE, '4D4D'XC)"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"date_text (FORMAT 'YYYYMMDD', DATE)"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"t.d (FORMAT 'YYYY-MM-DD') (CHAR(10))"}
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DEL FROM t AS \"ALL\" ALL"}
@@ -786,28 +758,6 @@
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"EXEC example_db.example_macro(1)"}
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"EXEC example_macro()"}
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"EXEC example_macro(1,, 3)"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT ''XC AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT ''XCV AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT ''xc AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT ''xcv AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0'XC AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0'XCV AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0'xc AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0'xcv AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0A'XC AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0A'XCV AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0A'xc AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '0A'xcv AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '41'XC::VARCHAR(10)"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '41'XCV::VARCHAR(10)"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '7B31327D'XC AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '7B31327D'XCV AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '7B31327D'xc AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT '7B31327D'xcv AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 'aBcD'XC AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 'aBcD'XCV AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 'aBcD'xc AS s"}
-{"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT 'aBcD'xcv AS s"}
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT BEGIN(p) AS bound_value FROM t"}
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"SELECT END(p) AS bound_value FROM t"}
 {"dialect":"trino","category":"gen: canonicalization","sql":"SELECT * FROM t ORDER BY x FETCH FIRST ROW ONLY"}

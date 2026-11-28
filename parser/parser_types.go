@@ -649,6 +649,11 @@ func (p *Parser) parseDcolon() exp.Expression {
 // NATIONAL_STRING -> National, and UNICODE_STRING (e.g. Presto's `U&'...'`) -> UnicodeString.
 // The UESCAPE clause of UNICODE_STRING (parser.py:1135-1140) is deferred - `escape` stays unset.
 func (p *Parser) parseString() exp.Expression {
+	// parsers/teradata.py:130-133: a character hex literal is rejected where a plain string is expected.
+	if p.dialect.Name == "teradata" && p.isHexCharacterString() {
+		p.raiseError("Hexadecimal character literals are not supported in this context")
+		return nil
+	}
 	if p.match(tokens.STRING) {
 		return p.expression(exp.LiteralString(p.prev.Text), &p.prev, nil)
 	}

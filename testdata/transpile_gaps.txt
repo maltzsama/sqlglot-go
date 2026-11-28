@@ -1566,8 +1566,6 @@
 {"read":"teradata","write":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE))"}
 {"read":"teradata","write":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'D')"}
 {"read":"teradata","write":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'MM')"}
-{"read":"teradata","write":"teradata","category":"gen: transpile mismatch","sql":"'0A'XC"}
-{"read":"teradata","write":"teradata","category":"gen: transpile mismatch","sql":"'0A'XCV"}
 {"read":"teradata","write":"teradata","category":"gen: transpile mismatch","sql":"CHARACTERS('')"}
 {"read":"teradata","write":"teradata","category":"gen: transpile mismatch","sql":"CHARACTERS('a  ')"}
 {"read":"teradata","write":"teradata","category":"gen: transpile mismatch","sql":"CHARACTERS('abc')"}
@@ -1579,7 +1577,6 @@
 {"read":"teradata","write":"teradata","category":"gen: transpile mismatch","sql":"SELECT curdate()"}
 {"read":"teradata","write":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result) FROM t"}
 {"read":"teradata","write":"teradata","category":"parse: Expecting )","sql":"SUM(amount) (DECIMAL(12, 2)) (BIGINT)"}
-{"read":"teradata","write":"teradata","category":"parse: Expecting )","sql":"TRUNC(CURRENT_DATE, '4D4D'XC)"}
 {"read":"teradata","write":"tsql","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE))"}
 {"read":"teradata","write":"tsql","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'DAY')"}
 {"read":"teradata","write":"tsql","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'IW')"}
