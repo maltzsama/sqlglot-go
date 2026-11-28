@@ -192,6 +192,8 @@
 {"read": "", "write": "bigquery", "sql": "SELECT * FROM t FETCH FIRST ROWS ONLY", "want": "SELECT * FROM t LIMIT 1", "pretty": false, "identify": false}
 {"read": "", "write": "bigquery", "sql": "SELECT ARRAY_AGG(x ORDER BY y NULLS FIRST) FILTER(WHERE c > 1) FROM t", "want": "SELECT ARRAY_AGG(IF(c > 1, x, NULL) IGNORE NULLS ORDER BY y) FROM t", "pretty": false, "identify": false}
 {"read": "", "write": "bigquery", "sql": "SELECT CUME_DIST() OVER (PARTITION BY a, b) FROM t", "want": "SELECT CUME_DIST() OVER (PARTITION BY a, b ORDER BY a, b) FROM t", "pretty": false, "identify": false}
+{"read": "", "write": "bigquery", "sql": "SELECT DATE_ADD(TIME_STR_TO_TIME('2024-01-31 10:00:00'), 1, 'MONTH')", "want": "SELECT DATE_ADD(CAST('2024-01-31 10:00:00' AS DATETIME), INTERVAL 1 MONTH)", "pretty": false, "identify": false}
+{"read": "", "write": "bigquery", "sql": "SELECT DATE_ADD(TIME_STR_TO_TIME('2024-01-31 10:00:00', 'UTC'), 1, 'MONTH')", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(CAST('2024-01-31 10:00:00' AS TIMESTAMP)), INTERVAL 1 MONTH))", "pretty": false, "identify": false}
 {"read": "", "write": "bigquery", "sql": "SELECT DENSE_RANK() OVER (PARTITION BY a, b) FROM t", "want": "SELECT DENSE_RANK() OVER (PARTITION BY a, b ORDER BY a, b) FROM t", "pretty": false, "identify": false}
 {"read": "", "write": "bigquery", "sql": "SELECT FIRST_VALUE(x) OVER (PARTITION BY a, b) FROM t", "want": "SELECT FIRST_VALUE(x) OVER (PARTITION BY a, b ORDER BY a, b) FROM t", "pretty": false, "identify": false}
 {"read": "", "write": "bigquery", "sql": "SELECT IF(COALESCE(bar, 0) = 1, TRUE, FALSE) as foo FROM baz", "want": "SELECT IF(COALESCE(bar, 0) = 1, TRUE, FALSE) AS foo FROM baz", "pretty": false, "identify": false}
@@ -243,7 +245,7 @@
 {"read": "", "write": "clickhouse", "sql": "ARRAY_ANY(arr, x -> pred)", "want": "(LENGTH(arr) = 0 OR LENGTH(arrayFilter(x -> pred, arr)) <> 0)", "pretty": false, "identify": false}
 {"read": "", "write": "clickhouse", "sql": "ARRAY_MAX(x)", "want": "arrayMax(x)", "pretty": false, "identify": false}
 {"read": "", "write": "clickhouse", "sql": "ARRAY_MIN(x)", "want": "arrayMin(x)", "pretty": false, "identify": false}
-{"read": "", "write": "clickhouse", "sql": "ARRAY_REMOVE(the_array, target)", "want": "arrayFilter(_u -> _u <> target, the_array)", "pretty": false, "identify": false}
+{"read": "", "write": "clickhouse", "sql": "ARRAY_REMOVE(the_array, target)", "want": "arrayFilter(_u -> NOT has([target], _u), the_array)", "pretty": false, "identify": false}
 {"read": "", "write": "clickhouse", "sql": "ARRAY_REVERSE(x)", "want": "arrayReverse(x)", "pretty": false, "identify": false}
 {"read": "", "write": "clickhouse", "sql": "ARRAY_SLICE(x, 1, 3)", "want": "arraySlice(x, 1, 3)", "pretty": false, "identify": false}
 {"read": "", "write": "clickhouse", "sql": "ASCII('A')", "want": "ASCII('A')", "pretty": false, "identify": false}
@@ -475,7 +477,7 @@
 {"read": "", "write": "duckdb", "sql": "ARRAY_MAX(x)", "want": "LIST_MAX(x)", "pretty": false, "identify": false}
 {"read": "", "write": "duckdb", "sql": "ARRAY_MIN(x)", "want": "LIST_MIN(x)", "pretty": false, "identify": false}
 {"read": "", "write": "duckdb", "sql": "ARRAY_PREPEND(arr, x)", "want": "LIST_PREPEND(x, arr)", "pretty": false, "identify": false}
-{"read": "", "write": "duckdb", "sql": "ARRAY_REMOVE(the_array, target)", "want": "LIST_FILTER(the_array, LAMBDA _u : _u <> target)", "pretty": false, "identify": false}
+{"read": "", "write": "duckdb", "sql": "ARRAY_REMOVE(the_array, target)", "want": "LIST_FILTER(the_array, LAMBDA _u : _u IS DISTINCT FROM target)", "pretty": false, "identify": false}
 {"read": "", "write": "duckdb", "sql": "ARRAY_REVERSE(x)", "want": "ARRAY_REVERSE(x)", "pretty": false, "identify": false}
 {"read": "", "write": "duckdb", "sql": "ARRAY_SIZE(x)", "want": "ARRAY_LENGTH(x)", "pretty": false, "identify": false}
 {"read": "", "write": "duckdb", "sql": "ARRAY_SLICE(x, 1, 3)", "want": "ARRAY_SLICE(x, 1, 3)", "pretty": false, "identify": false}
@@ -1667,7 +1669,7 @@
 {"read": "", "write": "sqlite", "sql": "LEVENSHTEIN(col1, col2)", "want": "EDITDIST3(col1, col2)", "pretty": false, "identify": false}
 {"read": "", "write": "sqlite", "sql": "LOG(10, a)", "want": "LOG(10, a)", "pretty": false, "identify": false}
 {"read": "", "write": "sqlite", "sql": "LOG(2, a)", "want": "LOG(2, a)", "pretty": false, "identify": false}
-{"read": "", "write": "sqlite", "sql": "RAND()", "want": "RANDOM()", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "RAND()", "want": "(CAST(RANDOM() & 9007199254740991 AS REAL) / 9007199254740992)", "pretty": false, "identify": false}
 {"read": "", "write": "sqlite", "sql": "SELECT * FROM (SELECT * FROM my_table AS t) AS tbl", "want": "SELECT * FROM (SELECT * FROM my_table AS t) AS tbl", "pretty": false, "identify": false}
 {"read": "", "write": "sqlite", "sql": "SELECT * FROM (WITH t AS (SELECT 1 AS c) SELECT c FROM t) AS subq", "want": "SELECT * FROM (WITH t AS (SELECT 1 AS c) SELECT c FROM t) AS subq", "pretty": false, "identify": false}
 {"read": "", "write": "sqlite", "sql": "SELECT * FROM data LIMIT 10, 20", "want": "SELECT * FROM data LIMIT 20 OFFSET 10", "pretty": false, "identify": false}
@@ -1711,6 +1713,7 @@
 {"read": "", "write": "sqlite", "sql": "TIME_STR_TO_TIME('2020-01-01 12:13:14-08:00', 'America/Los_Angeles')", "want": "'2020-01-01 12:13:14-08:00'", "pretty": false, "identify": false}
 {"read": "", "write": "sqlite", "sql": "TIME_STR_TO_TIME('2020-01-01')", "want": "'2020-01-01'", "pretty": false, "identify": false}
 {"read": "", "write": "sqlite", "sql": "TIME_STR_TO_TIME(col, 'America/Los_Angeles')", "want": "col", "pretty": false, "identify": false}
+{"read": "", "write": "sqlite", "sql": "UPDATE OR IGNORE t SET b = 'x'", "want": "UPDATE OR IGNORE t SET b = 'x'", "pretty": false, "identify": false}
 {"read": "", "write": "sqlite", "sql": "WITH cte1 AS (SELECT a, b FROM table1), cte2 AS (SELECT c, e AS d FROM table2) SELECT b, d AS dd FROM cte1 AS t CROSS JOIN cte2 WHERE cte1.a = cte2.c", "want": "WITH cte1 AS (SELECT a, b FROM table1), cte2 AS (SELECT c, e AS d FROM table2) SELECT b, d AS dd FROM cte1 AS t CROSS JOIN cte2 WHERE cte1.a = cte2.c", "pretty": false, "identify": false}
 {"read": "", "write": "sqlite", "sql": "a / b", "want": "CAST(a AS REAL) / b", "pretty": false, "identify": false}
 {"read": "", "write": "sqlite", "sql": "x ILIKE '%y'", "want": "LOWER(x) LIKE LOWER('%y')", "pretty": false, "identify": false}
@@ -1806,6 +1809,7 @@
 {"read": "", "write": "trino", "sql": "SELECT * FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2020-01-01', DATE '2020-02-01', INTERVAL 1 WEEK))", "want": "SELECT * FROM UNNEST(SEQUENCE(CAST('2020-01-01' AS DATE), CAST('2020-02-01' AS DATE), (1 * INTERVAL '7' DAY)))", "pretty": false, "identify": false}
 {"read": "", "write": "trino", "sql": "SELECT 1 AS \"x\"\"\"", "want": "SELECT 1 AS \"x\"\"\"", "pretty": false, "identify": false}
 {"read": "", "write": "trino", "sql": "SELECT 1 EXCEPT ALL SELECT 1", "want": "SELECT 1 EXCEPT ALL SELECT 1", "pretty": false, "identify": false}
+{"read": "", "write": "trino", "sql": "SELECT ADD_MONTHS(d, 1)", "want": "SELECT DATE_ADD('MONTH', 1, d)", "pretty": false, "identify": false}
 {"read": "", "write": "trino", "sql": "SELECT ARRAY_EXCEPT(ARRAY(1, 2, 3), ARRAY(2))", "want": "SELECT ARRAY_EXCEPT(ARRAY[1, 2, 3], ARRAY[2])", "pretty": false, "identify": false}
 {"read": "", "write": "trino", "sql": "SELECT ARRAY_POSITION(ARRAY(1, 2, 3), 2)", "want": "SELECT ARRAY_POSITION(ARRAY[1, 2, 3], 2)", "pretty": false, "identify": false}
 {"read": "", "write": "trino", "sql": "SELECT CUME_DIST() OVER (PARTITION BY a, b) FROM t", "want": "SELECT CUME_DIST() OVER (PARTITION BY a, b) FROM t", "pretty": false, "identify": false}
@@ -2109,7 +2113,7 @@
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT * FROM t, UNNEST(`t2`.`t3`) AS `col`", "want": "SELECT * FROM t CROSS JOIN UNNEST(`t2`.`t3`) AS `col`", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT * FROM t1, UNNEST(`t1`) AS `col`", "want": "SELECT * FROM t1 CROSS JOIN UNNEST(`t1`) AS `col`", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT * FROM t1, UNNEST(`t1`.`t2`.`t3`.`t4`) AS `col`", "want": "SELECT * FROM t1 CROSS JOIN UNNEST(`t1`.`t2`.`t3`.`t4`) AS `col`", "pretty": false, "identify": false}
-{"read": "bigquery", "write": "bigquery", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET ", "want": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS offset", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "bigquery", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET", "want": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS offset", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS pos", "want": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS pos", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT 0xA", "want": "SELECT 0xA", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT 1 & 1", "want": "SELECT 1 & 1", "pretty": false, "identify": false}
@@ -2189,6 +2193,8 @@
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT DATE_TRUNC(date, WEEK(THURSDAY))", "want": "SELECT DATE_TRUNC(date, WEEK(THURSDAY))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT DATE_TRUNC(date, WEEK(TUESDAY))", "want": "SELECT DATE_TRUNC(date, WEEK(TUESDAY))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT DATE_TRUNC(date, WEEK(WEDNESDAY))", "want": "SELECT DATE_TRUNC(date, WEEK(WEDNESDAY))", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "bigquery", "sql": "SELECT EXTRACT(ISOWEEK FROM DATE '2017-01-01') AS w", "want": "SELECT EXTRACT(ISOWEEK FROM CAST('2017-01-01' AS DATE)) AS w", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "bigquery", "sql": "SELECT EXTRACT(ISOYEAR FROM DATE '2018-12-31') AS y", "want": "SELECT EXTRACT(ISOYEAR FROM CAST('2018-12-31' AS DATE)) AS y", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT EXTRACT(WEEK(THURSDAY) FROM d)", "want": "SELECT EXTRACT(WEEK(THURSDAY) FROM d)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT FORMAT_DATE('%Y%m%d', '2023-12-25')", "want": "SELECT FORMAT_DATE('%Y%m%d', '2023-12-25')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "bigquery", "sql": "SELECT FORMAT_DATETIME('%F %T', DATETIME '2023-10-15 14:30:45')", "want": "SELECT FORMAT_DATETIME('%F %T', CAST('2023-10-15 14:30:45' AS DATETIME))", "pretty": false, "identify": false}
@@ -2361,13 +2367,15 @@
 {"read": "bigquery", "write": "databricks", "sql": "SAFE_SUBTRACT(x, y)", "want": "TRY_SUBTRACT(x, y)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT * FROM UNNEST([STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob', 92), STRUCT('Diana', 95)])", "want": "SELECT * FROM EXPLODE(ARRAY(STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob' AS name, 92 AS score), STRUCT('Diana' AS name, 95 AS score)))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT * FROM UNNEST([STRUCT('Alice' AS name, STRUCT(85 AS math, 90 AS english) AS scores), STRUCT('Bob' AS name, STRUCT(92 AS math, 88 AS english) AS scores)])", "want": "SELECT * FROM EXPLODE(ARRAY(STRUCT('Alice' AS name, STRUCT(85 AS math, 90 AS english) AS scores), STRUCT('Bob' AS name, STRUCT(92 AS math, 88 AS english) AS scores)))", "pretty": false, "identify": false}
-{"read": "bigquery", "write": "databricks", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET ", "want": "SELECT * FROM tbl CROSS JOIN LATERAL (SELECT * EXCEPT (pos), pos AS offset FROM POSEXPLODE(col)) AS _t0(ref, offset)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "databricks", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET", "want": "SELECT * FROM tbl CROSS JOIN LATERAL (SELECT * EXCEPT (pos), pos AS offset FROM POSEXPLODE(col)) AS _t0(ref, offset)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS pos", "want": "SELECT * FROM tbl CROSS JOIN LATERAL (SELECT * EXCEPT (pos), pos AS pos FROM POSEXPLODE(col)) AS _t0(ref, pos)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT DATETIME_ADD('2023-01-01T00:00:00', INTERVAL 1 MILLISECOND)", "want": "SELECT TIMESTAMPADD(MILLISECOND, '1', '2023-01-01T00:00:00')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT DATETIME_DIFF('2023-01-01T00:00:00', '2023-01-01T05:00:00', MILLISECOND)", "want": "SELECT TIMESTAMPDIFF(MILLISECOND, '2023-01-01T05:00:00', '2023-01-01T00:00:00')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT DATETIME_SUB('2023-01-01T00:00:00', INTERVAL 1 MILLISECOND)", "want": "SELECT TIMESTAMPADD(MILLISECOND, '1' * -1, '2023-01-01T00:00:00')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT DATETIME_TRUNC('2023-01-01T01:01:01', HOUR)", "want": "SELECT DATE_TRUNC('HOUR', '2023-01-01T01:01:01')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY)", "want": "SELECT DATE_ADD(CURRENT_DATE, -2)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "databricks", "sql": "SELECT EXTRACT(ISOWEEK FROM DATE '2017-01-01') AS w", "want": "SELECT EXTRACT(WEEK FROM CAST('2017-01-01' AS DATE)) AS w", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "databricks", "sql": "SELECT EXTRACT(ISOYEAR FROM DATE '2018-12-31') AS y", "want": "SELECT EXTRACT(YEAROFWEEK FROM CAST('2018-12-31' AS DATE)) AS y", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT TIMESTAMP_ADD(TIMESTAMP \"2008-12-25 15:30:00+00\", INTERVAL 10 MINUTE)", "want": "SELECT DATE_ADD(MINUTE, '10', CAST('2008-12-25 15:30:00+00' AS TIMESTAMP))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT TIMESTAMP_DIFF(TIMESTAMP_SECONDS(60), TIMESTAMP_SECONDS(0), minute)", "want": "SELECT TIMESTAMPDIFF(MINUTE, CAST(FROM_UNIXTIME(0) AS TIMESTAMP), CAST(FROM_UNIXTIME(60) AS TIMESTAMP))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "databricks", "sql": "SELECT UNIX_SECONDS('2008-12-25 15:30:00+00')", "want": "SELECT UNIX_SECONDS('2008-12-25 15:30:00+00')", "pretty": false, "identify": false}
@@ -2508,6 +2516,8 @@
 {"read": "bigquery", "write": "duckdb", "sql": "SELECT DATE_TRUNC(date, WEEK(THURSDAY))", "want": "SELECT CAST(DATE_TRUNC('WEEK', date + INTERVAL '-3' DAY) + INTERVAL '3' DAY AS DATE)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "duckdb", "sql": "SELECT DATE_TRUNC(date, WEEK(TUESDAY))", "want": "SELECT CAST(DATE_TRUNC('WEEK', date + INTERVAL '-1' DAY) + INTERVAL '1' DAY AS DATE)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "duckdb", "sql": "SELECT DATE_TRUNC(date, WEEK(WEDNESDAY))", "want": "SELECT CAST(DATE_TRUNC('WEEK', date + INTERVAL '-2' DAY) + INTERVAL '2' DAY AS DATE)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "duckdb", "sql": "SELECT EXTRACT(ISOWEEK FROM DATE '2017-01-01') AS w", "want": "SELECT EXTRACT(WEEK FROM CAST('2017-01-01' AS DATE)) AS w", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "duckdb", "sql": "SELECT EXTRACT(ISOYEAR FROM DATE '2018-12-31') AS y", "want": "SELECT EXTRACT(ISOYEAR FROM CAST('2018-12-31' AS DATE)) AS y", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "duckdb", "sql": "SELECT FORMAT_DATE('%Y%m%d', '2023-12-25')", "want": "SELECT STRFTIME(CAST('2023-12-25' AS DATE), '%Y%m%d')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "duckdb", "sql": "SELECT FORMAT_DATETIME('%F %T', DATETIME '2023-10-15 14:30:45')", "want": "SELECT STRFTIME(CAST('2023-10-15 14:30:45' AS TIMESTAMP), '%Y-%m-%d %H:%M:%S')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "duckdb", "sql": "SELECT FORMAT_DATETIME('%Y%m%d %H:%M:%S', DATETIME '2023-12-25 15:30:00')", "want": "SELECT STRFTIME(CAST('2023-12-25 15:30:00' AS TIMESTAMP), '%Y%m%d %H:%M:%S')", "pretty": false, "identify": false}
@@ -2651,7 +2661,7 @@
 {"read": "bigquery", "write": "hive", "sql": "SELECT * FROM UNNEST([STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob', 92), STRUCT('Diana', 95)])", "want": "SELECT * FROM EXPLODE(ARRAY(STRUCT('Alice', 85), STRUCT('Bob', 92), STRUCT('Diana', 95)))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "hive", "sql": "SELECT * FROM UNNEST([STRUCT('Alice' AS name, STRUCT(85 AS math, 90 AS english) AS scores), STRUCT('Bob' AS name, STRUCT(92 AS math, 88 AS english) AS scores)])", "want": "SELECT * FROM EXPLODE(ARRAY(STRUCT('Alice', STRUCT(85, 90)), STRUCT('Bob', STRUCT(92, 88))))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "hive", "sql": "SELECT * FROM a WHERE b IN UNNEST([1, 2, 3])", "want": "SELECT * FROM a WHERE b IN (SELECT EXPLODE(ARRAY(1, 2, 3)))", "pretty": false, "identify": false}
-{"read": "bigquery", "write": "hive", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET ", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS offset, ref", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "hive", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS offset, ref", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "hive", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS pos", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS pos, ref", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "hive", "sql": "SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 as a, 'abc' AS b), STRUCT(str_col AS abc)", "want": "SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1, 'abc'), STRUCT(str_col)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "hive", "sql": "TO_HEX(x)", "want": "LOWER(HEX(x))", "pretty": false, "identify": false}
@@ -2724,6 +2734,9 @@
 {"read": "bigquery", "write": "postgres", "sql": "SAFE_DIVIDE(x + 1, 2 * y)", "want": "CASE WHEN (2 * y) <> 0 THEN CAST((x + 1) AS DOUBLE PRECISION) / (2 * y) ELSE NULL END", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "postgres", "sql": "SAFE_DIVIDE(x, y)", "want": "CASE WHEN y <> 0 THEN CAST(x AS DOUBLE PRECISION) / y ELSE NULL END", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "postgres", "sql": "SELECT '\\n'", "want": "SELECT '\n'", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "postgres", "sql": "SELECT DATE(2024, 1, 31)", "want": "SELECT MAKE_DATE(2024, 1, 31)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "postgres", "sql": "SELECT EXTRACT(ISOWEEK FROM DATE '2017-01-01') AS w", "want": "SELECT EXTRACT(WEEK FROM CAST('2017-01-01' AS DATE)) AS w", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "postgres", "sql": "SELECT EXTRACT(ISOYEAR FROM DATE '2018-12-31') AS y", "want": "SELECT EXTRACT(ISOYEAR FROM CAST('2018-12-31' AS DATE)) AS y", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "postgres", "sql": "SELECT JSON '{\"a\": 1}'", "want": "SELECT CAST('{\"a\": 1}' AS JSON)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "postgres", "sql": "SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONTH)", "want": "SELECT CAST(DATE_TRUNC('MONTH', CAST('2008-11-25' AS DATE)) + INTERVAL '1 MONTH' - INTERVAL '1 DAY' AS DATE)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "postgres", "sql": "SELECT MOD(x, 10)", "want": "SELECT x % 10", "pretty": false, "identify": false}
@@ -2773,6 +2786,8 @@
 {"read": "bigquery", "write": "presto", "sql": "SELECT * FROM a WHERE b IN UNNEST([1, 2, 3])", "want": "SELECT * FROM a WHERE b IN (SELECT UNNEST(ARRAY[1, 2, 3]))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "presto", "sql": "SELECT DATETIME_DIFF(DATETIME '2017-10-15 00:00:00', DATETIME '2017-10-14 00:00:00', WEEK)", "want": "SELECT DATE_DIFF('WEEK', DATE_TRUNC('WEEK', CAST('2017-10-14 00:00:00' AS TIMESTAMP) + INTERVAL '1' DAY), DATE_TRUNC('WEEK', CAST('2017-10-15 00:00:00' AS TIMESTAMP) + INTERVAL '1' DAY))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "presto", "sql": "SELECT DATETIME_DIFF(DATETIME '2021-02-01 00:00:00', DATETIME '2021-01-31 00:00:00', MONTH)", "want": "SELECT DATE_DIFF('MONTH', DATE_TRUNC('MONTH', CAST('2021-01-31 00:00:00' AS TIMESTAMP)), DATE_TRUNC('MONTH', CAST('2021-02-01 00:00:00' AS TIMESTAMP)))", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "presto", "sql": "SELECT EXTRACT(ISOWEEK FROM DATE '2017-01-01') AS w", "want": "SELECT EXTRACT(WEEK FROM CAST('2017-01-01' AS DATE)) AS w", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "presto", "sql": "SELECT EXTRACT(ISOYEAR FROM DATE '2018-12-31') AS y", "want": "SELECT EXTRACT(YEAR_OF_WEEK FROM CAST('2018-12-31' AS DATE)) AS y", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "presto", "sql": "SELECT GENERATE_UUID()", "want": "SELECT CAST(UUID() AS VARCHAR)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "presto", "sql": "SELECT JSON '{\"a\": 1}'", "want": "SELECT JSON_PARSE('{\"a\": 1}')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "presto", "sql": "SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONTH)", "want": "SELECT LAST_DAY_OF_MONTH(CAST('2008-11-25' AS DATE))", "pretty": false, "identify": false}
@@ -2854,6 +2869,8 @@
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT DATETIME_DIFF('2023-01-01T00:00:00', '2023-01-01T05:00:00', MILLISECOND)", "want": "SELECT TIMESTAMPDIFF(MILLISECOND, '2023-01-01T05:00:00', '2023-01-01T00:00:00')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT DATE_SUB(DATE '2008-12-25', INTERVAL 5 DAY)", "want": "SELECT DATEADD(DAY, '5' * -1, CAST('2008-12-25' AS DATE))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT EXTRACT(ISOWEEK FROM CAST('2013-12-25' AS DATE))", "want": "SELECT DATE_PART(WEEKISO, CAST('2013-12-25' AS DATE))", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "snowflake", "sql": "SELECT EXTRACT(ISOWEEK FROM DATE '2017-01-01') AS w", "want": "SELECT DATE_PART(WEEKISO, CAST('2017-01-01' AS DATE)) AS w", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "snowflake", "sql": "SELECT EXTRACT(ISOYEAR FROM DATE '2018-12-31') AS y", "want": "SELECT DATE_PART(YEAROFWEEKISO, CAST('2018-12-31' AS DATE)) AS y", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT FORMAT_TIMESTAMP(\"%b-%d-%Y\", TIMESTAMP \"2050-12-25 15:30:55+00\")", "want": "SELECT TO_CHAR(CAST(CAST('2050-12-25 15:30:55+00' AS TIMESTAMPTZ) AS TIMESTAMP), 'mon-DD-yyyy')", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT GENERATE_UUID()", "want": "SELECT UUID_STRING()", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT INSTR('foo@example.com', '@')", "want": "SELECT CHARINDEX('@', 'foo@example.com')", "pretty": false, "identify": false}
@@ -2901,8 +2918,11 @@
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT value FROM UNNEST([1, 2, 3]) AS value", "want": "SELECT value FROM TABLE(FLATTEN(INPUT => [1, 2, 3])) AS _t0(seq, key, path, index, value, this)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT value FROM UNNEST([STRUCT(1 AS x)]) AS value", "want": "SELECT value FROM TABLE(FLATTEN(INPUT => [OBJECT_CONSTRUCT('x', 1)])) AS _t0(seq, key, path, index, value, this)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT x FROM UNNEST([STRUCT('x' AS x)])", "want": "SELECT value['x'] AS x FROM TABLE(FLATTEN(INPUT => [OBJECT_CONSTRUCT('x', 'x')])) AS _t0(seq, key, path, index, value, this)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "snowflake", "sql": "SELECT x, offset FROM UNNEST([10, 20]) AS x WITH OFFSET ORDER BY offset", "want": "SELECT x, offset FROM TABLE(FLATTEN(INPUT => [10, 20])) AS _t0(seq, key, path, offset, x, this) ORDER BY offset NULLS FIRST", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "snowflake", "sql": "SELECT x, pos FROM UNNEST([10, 20]) AS x WITH OFFSET AS pos ORDER BY pos", "want": "SELECT x, pos FROM TABLE(FLATTEN(INPUT => [10, 20])) AS _t0(seq, key, path, pos, x, this) ORDER BY pos NULLS FIRST", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT x, y, z FROM UNNEST([STRUCT(1 AS x, 2 AS y, 3 AS z)])", "want": "SELECT value['x'] AS x, value['y'] AS y, value['z'] AS z FROM TABLE(FLATTEN(INPUT => [OBJECT_CONSTRUCT('x', 1, 'y', 2, 'z', 3)])) AS _t0(seq, key, path, index, value, this)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT x, yval, zval FROM UNNEST([STRUCT('x' AS x, ['y1', 'y2', 'y3'] AS y, ['z1', 'z2', 'z3'] AS z)]), UNNEST(y) AS yval, UNNEST(z) AS zval", "want": "SELECT value['x'] AS x, yval, zval FROM TABLE(FLATTEN(INPUT => [OBJECT_CONSTRUCT('x', 'x', 'y', ['y1', 'y2', 'y3'], 'z', ['z1', 'z2', 'z3'])])) AS _t0(seq, key, path, index, value, this) CROSS JOIN TABLE(FLATTEN(INPUT => value['y'])) AS _t1(seq, key, path, index, yval, this) CROSS JOIN TABLE(FLATTEN(INPUT => value['z'])) AS _t2(seq, key, path, index, zval, this)", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "snowflake", "sql": "SELECT x.pos AS field, POS FROM UNNEST([STRUCT(42 AS pos)]) AS x WITH OFFSET AS pos WHERE pos = 0", "want": "SELECT x['pos'] AS field, POS FROM TABLE(FLATTEN(INPUT => [OBJECT_CONSTRUCT('pos', 42)])) AS _t0(seq, key, path, pos, x, this) WHERE pos = 0", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SELECT ~1", "want": "SELECT BITNOT(1)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "SHA256(x)", "want": "SHA2_BINARY(x, 256)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "snowflake", "sql": "STRING('2008-12-25 15:30:00', 'America/New_York')", "want": "CAST(CONVERT_TIMEZONE('UTC', 'America/New_York', '2008-12-25 15:30:00') AS VARCHAR)", "pretty": false, "identify": false}
@@ -2948,12 +2968,14 @@
 {"read": "bigquery", "write": "spark", "sql": "SELECT * FROM UNNEST(['7', '14']) AS x", "want": "SELECT * FROM EXPLODE(ARRAY('7', '14')) AS _t0(x)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "SELECT * FROM a WHERE b IN UNNEST([1, 2, 3])", "want": "SELECT * FROM a WHERE b IN (SELECT EXPLODE(ARRAY(1, 2, 3)))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "SELECT * FROM produce AS p PIVOT(SUM(p.sales) AS sales FOR p.quarter IN ('Q1' AS Q1, 'Q2' AS Q1))", "want": "SELECT * FROM produce AS p PIVOT(SUM(p.sales) AS sales FOR quarter IN ('Q1' AS Q1, 'Q2' AS Q1))", "pretty": false, "identify": false}
-{"read": "bigquery", "write": "spark", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET ", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS offset, ref", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS offset, ref", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS pos", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS pos, ref", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "SELECT ARRAY_AGG(DISTINCT x IGNORE NULLS ORDER BY x LIMIT 10) AS x", "want": "SELECT COLLECT_LIST(DISTINCT x ORDER BY x LIMIT 10) IGNORE NULLS AS x", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "SELECT ARRAY_AGG(DISTINCT x IGNORE NULLS ORDER BY x) AS x", "want": "SELECT COLLECT_LIST(DISTINCT x) IGNORE NULLS AS x", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "SELECT DATETIME_ADD('2023-01-01T00:00:00', INTERVAL 1 MILLISECOND)", "want": "SELECT '2023-01-01T00:00:00' + INTERVAL '1' MILLISECOND", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "SELECT DATETIME_SUB('2023-01-01T00:00:00', INTERVAL 1 MILLISECOND)", "want": "SELECT '2023-01-01T00:00:00' - INTERVAL '1' MILLISECOND", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark", "sql": "SELECT EXTRACT(ISOWEEK FROM DATE '2017-01-01') AS w", "want": "SELECT EXTRACT(WEEK FROM CAST('2017-01-01' AS DATE)) AS w", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark", "sql": "SELECT EXTRACT(ISOYEAR FROM DATE '2018-12-31') AS y", "want": "SELECT EXTRACT(YEAROFWEEK FROM CAST('2018-12-31' AS DATE)) AS y", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "SELECT GENERATE_UUID()", "want": "SELECT CAST(UUID() AS STRING)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONTH)", "want": "SELECT LAST_DAY(CAST('2008-11-25' AS DATE))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark", "sql": "SELECT PERCENTILE_CONT(x, 0.5 RESPECT NULLS) OVER ()", "want": "SELECT PERCENTILE_CONT(x, 0.5) RESPECT NULLS OVER ()", "pretty": false, "identify": false}
@@ -2979,14 +3001,15 @@
 {"read": "bigquery", "write": "spark2", "sql": "SAFE_DIVIDE(x, y)", "want": "IF(y <> 0, x / y, NULL)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark2", "sql": "SELECT * FROM UNNEST([STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob', 92), STRUCT('Diana', 95)])", "want": "SELECT * FROM EXPLODE(ARRAY(STRUCT('Alice' AS name, 85 AS score), STRUCT('Bob' AS name, 92 AS score), STRUCT('Diana' AS name, 95 AS score)))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark2", "sql": "SELECT * FROM UNNEST([STRUCT('Alice' AS name, STRUCT(85 AS math, 90 AS english) AS scores), STRUCT('Bob' AS name, STRUCT(92 AS math, 88 AS english) AS scores)])", "want": "SELECT * FROM EXPLODE(ARRAY(STRUCT('Alice' AS name, STRUCT(85 AS math, 90 AS english) AS scores), STRUCT('Bob' AS name, STRUCT(92 AS math, 88 AS english) AS scores)))", "pretty": false, "identify": false}
-{"read": "bigquery", "write": "spark2", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET ", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS offset, ref", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "spark2", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS offset, ref", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark2", "sql": "SELECT * FROM tbl CROSS JOIN UNNEST(col) AS ref WITH OFFSET AS pos", "want": "SELECT * FROM tbl LATERAL VIEW POSEXPLODE(col) AS pos, ref", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark2", "sql": "SELECT GENERATE_UUID()", "want": "SELECT CAST(UUID() AS STRING)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark2", "sql": "SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 as a, 'abc' AS b), STRUCT(str_col AS abc)", "want": "SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 AS a, 'abc' AS b), STRUCT(str_col AS abc)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark2", "sql": "SHA256(x)", "want": "UNHEX(SHA2(x, 256))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "spark2", "sql": "SHA512(x)", "want": "UNHEX(SHA2(x, 512))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "sqlite", "sql": "LOWER(TO_HEX(x))", "want": "LOWER(HEX(x))", "pretty": false, "identify": false}
-{"read": "bigquery", "write": "sqlite", "sql": "SELECT DATE_SUB(d, INTERVAL 1 MONTH) FROM t", "want": "SELECT DATE(d, '-1 MONTH') FROM t", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "sqlite", "sql": "SELECT DATE_SUB(d, INTERVAL 1 MONTH) FROM t", "want": "SELECT DATE(d, '-1 MONTH', 'floor') FROM t", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "sqlite", "sql": "SELECT RAND() < 0.1", "want": "SELECT (CAST(RANDOM() & 9007199254740991 AS REAL) / 9007199254740992) < 0.1", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "sqlite", "sql": "TO_HEX(x)", "want": "LOWER(HEX(x))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "sqlite", "sql": "UPPER(TO_HEX(x))", "want": "HEX(x)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "starrocks", "sql": "DATE_DIFF(DATE '2010-07-07', DATE '2008-12-25', DAY)", "want": "DATEDIFF(CAST('2010-07-07' AS DATE), CAST('2008-12-25' AS DATE))", "pretty": false, "identify": false}
@@ -3012,6 +3035,8 @@
 {"read": "bigquery", "write": "trino", "sql": "SELECT * FROM UNNEST([STRUCT('Alice' AS name, STRUCT(85 AS math, 90 AS english) AS scores), STRUCT('Bob' AS name, STRUCT(92 AS math, 88 AS english) AS scores)])", "want": "SELECT * FROM UNNEST(ARRAY[CAST(ROW('Alice', CAST(ROW(85, 90) AS ROW(math INTEGER, english INTEGER))) AS ROW(name VARCHAR, scores ROW(math INTEGER, english INTEGER))), CAST(ROW('Bob', CAST(ROW(92, 88) AS ROW(math INTEGER, english INTEGER))) AS ROW(name VARCHAR, scores ROW(math INTEGER, english INTEGER)))])", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "trino", "sql": "SELECT DATETIME_DIFF(DATETIME '2017-10-15 00:00:00', DATETIME '2017-10-14 00:00:00', WEEK)", "want": "SELECT DATE_DIFF('WEEK', DATE_TRUNC('WEEK', CAST('2017-10-14 00:00:00' AS TIMESTAMP) + INTERVAL '1' DAY), DATE_TRUNC('WEEK', CAST('2017-10-15 00:00:00' AS TIMESTAMP) + INTERVAL '1' DAY))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "trino", "sql": "SELECT DATETIME_DIFF(DATETIME '2021-02-01 00:00:00', DATETIME '2021-01-31 00:00:00', MONTH)", "want": "SELECT DATE_DIFF('MONTH', DATE_TRUNC('MONTH', CAST('2021-01-31 00:00:00' AS TIMESTAMP)), DATE_TRUNC('MONTH', CAST('2021-02-01 00:00:00' AS TIMESTAMP)))", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "trino", "sql": "SELECT EXTRACT(ISOWEEK FROM DATE '2017-01-01') AS w", "want": "SELECT EXTRACT(WEEK FROM CAST('2017-01-01' AS DATE)) AS w", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "trino", "sql": "SELECT EXTRACT(ISOYEAR FROM DATE '2018-12-31') AS y", "want": "SELECT EXTRACT(YEAR_OF_WEEK FROM CAST('2018-12-31' AS DATE)) AS y", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "trino", "sql": "SELECT GENERATE_UUID()", "want": "SELECT CAST(UUID() AS VARCHAR)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "trino", "sql": "SELECT STRUCT(1, 2, 3), STRUCT(), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 as a, 'abc' AS b), STRUCT(str_col AS abc)", "want": "SELECT ROW(1, 2, 3), ROW(), ROW('abc'), ROW(1, t.str_col), CAST(ROW(1, 'abc') AS ROW(a INTEGER, b VARCHAR)), ROW(str_col)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "trino", "sql": "SELECT TIMESTAMP_DIFF(TIMESTAMP_SECONDS(60), TIMESTAMP_SECONDS(0), minute)", "want": "SELECT DATE_DIFF('MINUTE', FROM_UNIXTIME(0), FROM_UNIXTIME(60))", "pretty": false, "identify": false}
@@ -3029,6 +3054,7 @@
 {"read": "bigquery", "write": "tsql", "sql": "SELECT DATE_DIFF(d1, d2, WEEK(SUNDAY))", "want": "SELECT DATEDIFF(WEEK, d2, d1)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "tsql", "sql": "SELECT DATE_TRUNC(CAST('2024-05-15' AS DATE), MONTH)", "want": "SELECT DATETRUNC(MONTH, CAST('2024-05-15' AS DATE))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "tsql", "sql": "SELECT DATE_TRUNC(CAST('2024-05-15' AS DATE), WEEK(MONDAY))", "want": "SELECT DATETRUNC(ISO_WEEK, CAST('2024-05-15' AS DATE))", "pretty": false, "identify": false}
+{"read": "bigquery", "write": "tsql", "sql": "SELECT EXTRACT(ISOWEEK FROM DATE '2017-01-01') AS w", "want": "SELECT DATEPART(ISO_WEEK, CAST('2017-01-01' AS DATE)) AS w", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "tsql", "sql": "SELECT LAST_DAY(CAST('2008-11-25' AS DATE), MONTH)", "want": "SELECT EOMONTH(CAST('2008-11-25' AS DATE))", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "tsql", "sql": "SELECT TIME('2008-12-25 15:30:00')", "want": "SELECT CAST('2008-12-25 15:30:00' AS TIME)", "pretty": false, "identify": false}
 {"read": "bigquery", "write": "tsql", "sql": "SELECT TIME(15, 30, 00)", "want": "SELECT TIMEFROMPARTS(15, 30, 00, 0, 0)", "pretty": false, "identify": false}
@@ -3214,10 +3240,14 @@
 {"read": "clickhouse", "write": "doris", "sql": "toStartOfYEAR(x)", "want": "DATE_TRUNC(x, 'YEAR')", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "CREATE DATABASE x", "want": "CREATE SCHEMA x", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "DROP DATABASE x", "want": "DROP SCHEMA x", "pretty": false, "identify": false}
+{"read": "clickhouse", "write": "duckdb", "sql": "SELECT * FROM t ORDER BY ALL DESC, x", "want": "SELECT * FROM t ORDER BY \"ALL\" DESC, x", "pretty": false, "identify": false}
+{"read": "clickhouse", "write": "duckdb", "sql": "SELECT * FROM t ORDER BY t.ALL", "want": "SELECT * FROM t ORDER BY t.\"ALL\"", "pretty": false, "identify": false}
+{"read": "clickhouse", "write": "duckdb", "sql": "SELECT * FROM t ORDER BY x, ALL", "want": "SELECT * FROM t ORDER BY x, \"ALL\"", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "SELECT 1 AS x ORDER BY x NULLS FIRST FETCH FIRST 1 ROWS ONLY UNION ALL SELECT 2 AS x", "want": "(SELECT 1 AS x ORDER BY x NULLS FIRST LIMIT 1) UNION ALL SELECT 2 AS x", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "SELECT 2 AS x UNION ALL SELECT 1 AS x ORDER BY x NULLS FIRST FETCH FIRST 1 ROWS ONLY", "want": "SELECT 2 AS x UNION ALL (SELECT 1 AS x ORDER BY x NULLS FIRST LIMIT 1)", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "SELECT CAST('2020-01-01' AS Nullable(DateTime)) + INTERVAL '500' MICROSECOND", "want": "SELECT CAST('2020-01-01' AS TIMESTAMP) + INTERVAL '500' MICROSECOND", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "SELECT LTRIM(s), RTRIM(s), TRIM(s)", "want": "SELECT LTRIM(s), RTRIM(s), TRIM(s)", "pretty": false, "identify": false}
+{"read": "clickhouse", "write": "duckdb", "sql": "SELECT ROW_NUMBER() OVER (ORDER BY ALL) FROM t", "want": "SELECT ROW_NUMBER() OVER (ORDER BY \"ALL\") FROM t", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "SELECT SHA256(x)", "want": "SELECT UNHEX(SHA256(x))", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "SELECT col[1]", "want": "SELECT col[1]", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "SELECT formatDateTime(x, '%%M %%B %%A %%i %%W %H:%i %M %W')", "want": "SELECT STRFTIME(x, '%%M %%B %%A %%i %%W %H:%M %B %A')", "pretty": false, "identify": false}
@@ -3228,6 +3258,7 @@
 {"read": "clickhouse", "write": "duckdb", "sql": "SELECT lead(salary, 1, 0) OVER (ORDER BY hire_date) AS prev_sal FROM employees", "want": "SELECT LEAD(salary, 1, 0) OVER (ORDER BY hire_date) AS prev_sal FROM employees", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "SELECT parseDateTime('2024-03-04 %M %B %A', '%Y-%m-%d %%M %%B %%A')", "want": "SELECT STRPTIME('2024-03-04 %M %B %A', '%Y-%m-%d %%M %%B %%A')", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "SELECT trimLeft(s, 'xy'), trimRight(s, 'xy'), trimBoth(s, 'xy')", "want": "SELECT LTRIM(s, 'xy'), RTRIM(s, 'xy'), TRIM(s, 'xy')", "pretty": false, "identify": false}
+{"read": "clickhouse", "write": "duckdb", "sql": "SELECT x, y FROM t ORDER BY all DESC", "want": "SELECT x, y FROM t ORDER BY ALL DESC", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "dateTrunc('MONTH', x)", "want": "DATE_TRUNC('MONTH', x)", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "groupBitAnd(x)", "want": "BIT_AND(x)", "pretty": false, "identify": false}
 {"read": "clickhouse", "write": "duckdb", "sql": "groupBitOr(x)", "want": "BIT_OR(x)", "pretty": false, "identify": false}
@@ -3520,6 +3551,7 @@
 {"read": "databricks", "write": "spark", "sql": "CREATE TABLE t (ts TIMESTAMP(9))", "want": "CREATE TABLE t (ts TIMESTAMP)", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "LISTAGG(ALL x, ', ')", "want": "LISTAGG(x, ', ')", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "LISTAGG(ALL x, '-') WITHIN GROUP (ORDER BY x DESC)", "want": "LISTAGG(x, '-') WITHIN GROUP (ORDER BY x DESC)", "pretty": false, "identify": false}
+{"read": "databricks", "write": "spark", "sql": "MERGE WITH SCHEMA EVOLUTION INTO target AS t USING source AS s ON t.id = s.id WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *", "want": "MERGE WITH SCHEMA EVOLUTION INTO target AS t USING source AS s ON t.id = s.id WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "SELECT * FROM foo TIMESTAMP AS OF '2020-01-01 00:00:00' AS bar", "want": "SELECT * FROM foo TIMESTAMP AS OF '2020-01-01 00:00:00' AS bar", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "SELECT * FROM quarterly_sales PIVOT(SUM(amount) amount, 'dummy' bar FOR quarter IN ('2023_Q1'))", "want": "SELECT * FROM quarterly_sales PIVOT(SUM(amount) AS amount, 'dummy' AS bar FOR quarter IN ('2023_Q1'))", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "SELECT * FROM {df}", "want": "SELECT * FROM {df}", "pretty": false, "identify": false}
@@ -3528,6 +3560,7 @@
 {"read": "databricks", "write": "spark", "sql": "SELECT ARRAY_INSERT(ARRAY('a', 'b', 'c'), 1, 'z')", "want": "SELECT ARRAY_INSERT(ARRAY('a', 'b', 'c'), 1, 'z')", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "want": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "SELECT GET_JSON_OBJECT(c1, '$.item[1].price')", "want": "SELECT GET_JSON_OBJECT(c1, '$.item[1].price')", "pretty": false, "identify": false}
+{"read": "databricks", "write": "spark", "sql": "SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY x DESC), PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY x DESC) FROM VALUES (0), (10) AS t(x)", "want": "SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY x DESC), PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY x DESC) FROM VALUES (0), (10) AS t(x)", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "SELECT SUBSTRING_INDEX('a.b.c.d', '.', 2)", "want": "SELECT SUBSTRING_INDEX('a.b.c.d', '.', 2)", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "SELECT TIMESTAMPDIFF(MONTH, foo, bar)", "want": "SELECT TIMESTAMPDIFF(MONTH, foo, bar)", "pretty": false, "identify": false}
 {"read": "databricks", "write": "spark", "sql": "SELECT TRY_DIVIDE(a, b)", "want": "SELECT TRY_DIVIDE(a, b)", "pretty": false, "identify": false}
@@ -3733,6 +3766,7 @@
 {"read": "duckdb", "write": "bigquery", "sql": "ISINF(x)", "want": "IS_INF(x)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "ISNAN(x)", "want": "IS_NAN(x)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "LIST_CONCAT([1, 2], [3, 4])", "want": "ARRAY_CONCAT([1, 2], [3, 4])", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "bigquery", "sql": "LIST_DISTINCT(LIST(x) FILTER(WHERE c))", "want": "IF(COUNTIF(c) = 0, NULL, COALESCE(ARRAY_AGG(DISTINCT IF(c, x, NULL) IGNORE NULLS), []))", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "LIST_DISTINCT(LIST(x))", "want": "IF(COUNT(*) = 0, NULL, COALESCE(ARRAY_AGG(DISTINCT x IGNORE NULLS), []))", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "LIST_DISTINCT(LIST_SORT(LIST(x), 'DESC', 'NULLS FIRST'))", "want": "IF(COUNT(*) = 0, NULL, COALESCE(ARRAY_AGG(DISTINCT x IGNORE NULLS ORDER BY x DESC), []))", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "LIST_SORT(LIST_DISTINCT(LIST(x)))", "want": "IF(COUNT(*) = 0, NULL, COALESCE(ARRAY_AGG(DISTINCT x IGNORE NULLS ORDER BY x), []))", "pretty": false, "identify": false}
@@ -3758,10 +3792,17 @@
 {"read": "duckdb", "write": "bigquery", "sql": "SELECT ARRAY_LENGTH(LIST_DISTINCT(LIST(x))) FROM UNNEST([NULL]) AS t(x)", "want": "SELECT ARRAY_LENGTH(IF(COUNT(*) = 0, NULL, COALESCE(ARRAY_AGG(DISTINCT x IGNORE NULLS), []))) FROM UNNEST([NULL]) AS x", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "SELECT ARRAY_LENGTH([(SELECT 1 FROM (SELECT 1) AS t WHERE FALSE)])", "want": "SELECT ARRAY_LENGTH([(SELECT 1 FROM (SELECT 1) AS t WHERE FALSE)])", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "SELECT COUNT_IF(x)", "want": "SELECT COUNTIF(x)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "bigquery", "sql": "SELECT FIRST_VALUE(a) OVER (ORDER BY b RANGE BETWEEN 1 PRECEDING AND CURRENT ROW) FROM t", "want": "SELECT FIRST_VALUE(a) OVER (ORDER BY b RANGE BETWEEN 1 PRECEDING AND CURRENT ROW) FROM t", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "bigquery", "sql": "SELECT FIRST_VALUE(a) OVER (PARTITION BY b ORDER BY b ASC, c, d DESC NULLS FIRST) FROM t ORDER BY c", "want": "SELECT FIRST_VALUE(a) OVER (PARTITION BY b ORDER BY b ASC, c IS NULL, c, d IS NULL DESC, d DESC) FROM t ORDER BY c NULLS LAST", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "bigquery", "sql": "SELECT FIRST_VALUE(a) OVER (w ORDER BY b RANGE BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING) FROM t WINDOW w AS (PARTITION BY b)", "want": "SELECT FIRST_VALUE(a) OVER (PARTITION BY b ORDER BY b RANGE BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING) FROM t", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "bigquery", "sql": "SELECT FIRST_VALUE(a) OVER v, LAG(a) OVER w FROM t WINDOW w AS (PARTITION BY b ORDER BY c), v AS (w)", "want": "SELECT FIRST_VALUE(a) OVER (PARTITION BY b ORDER BY c IS NULL, c), LAG(a) OVER w FROM t WINDOW w AS (PARTITION BY b ORDER BY c NULLS LAST)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "bigquery", "sql": "SELECT LAST_VALUE(a IGNORE NULLS) OVER (PARTITION BY b ORDER BY b ASC, c, d DESC NULLS FIRST) FROM t ORDER BY c", "want": "SELECT LAST_VALUE(a IGNORE NULLS) OVER (PARTITION BY b ORDER BY b ASC, c IS NULL, c, d IS NULL DESC, d DESC) FROM t ORDER BY c NULLS LAST", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "bigquery", "sql": "SELECT LAST_VALUE(a) OVER (ORDER BY b OR c RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM t", "want": "SELECT LAST_VALUE(a) OVER (ORDER BY (b OR c) IS NULL, b OR c RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "SELECT MAKE_DATE(2016, 12, 25)", "want": "SELECT DATE(2016, 12, 25)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "SELECT MAKE_TIME(15, 30, 00)", "want": "SELECT TIME(15, 30, 00)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "SELECT MAKE_TIMESTAMP(x)", "want": "SELECT TIMESTAMP_MICROS(x)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "SELECT MD5(some_string)", "want": "SELECT TO_HEX(MD5(some_string))", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "bigquery", "sql": "SELECT NTH_VALUE(a, 2 RESPECT NULLS) OVER (PARTITION BY b ORDER BY b ASC, c, d DESC NULLS FIRST) FROM t ORDER BY c", "want": "SELECT NTH_VALUE(a, 2 RESPECT NULLS) OVER (PARTITION BY b ORDER BY b ASC, c IS NULL, c, d IS NULL DESC, d DESC) FROM t ORDER BY c NULLS LAST", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "SELECT RANGE(5, 1, -1)", "want": "SELECT GENERATE_ARRAY(5, 1 + 1, -1)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "SELECT REGEXP_EXTRACT(a, 'pattern') FROM t", "want": "SELECT REGEXP_EXTRACT(a, 'pattern') FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "bigquery", "sql": "SELECT SUM(X) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)", "want": "SELECT SUM(X) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)", "pretty": false, "identify": false}
@@ -4099,17 +4140,20 @@
 {"read": "duckdb", "write": "postgres", "sql": "LIST_CONTAINS([1, 2, NULL], NULL)", "want": "CASE WHEN NULL IS NULL THEN NULL ELSE COALESCE(NULL = ANY(ARRAY[1, 2, NULL]), FALSE) END", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "LIST_HAS_ANY([1, 2, 3], [1,2])", "want": "ARRAY[1, 2, 3] && ARRAY[1, 2]", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "ROUND(x::DECIMAL, 4)", "want": "ROUND(CAST(x AS DECIMAL(18, 3)), 4)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "postgres", "sql": "SELECT 'xabc' NOT SIMILAR TO 'abc'", "want": "SELECT NOT ('xabc' SIMILAR TO 'abc')", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT * FROM a JOIN BY (TYPE left) b USING (id)", "want": "SELECT * FROM a LEFT JOIN b USING (id)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE NOT EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT DATE_ADD(TIMESTAMP '2024-01-01 12:00:00', INTERVAL 30 SECOND) - DATE_ADD(TIMESTAMP '2024-01-01 12:00:00', INTERVAL 30 SECOND)", "want": "SELECT CAST('2024-01-01 12:00:00' AS TIMESTAMP) + INTERVAL '30 SECOND' - (CAST('2024-01-01 12:00:00' AS TIMESTAMP) + INTERVAL '30 SECOND')", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT DATE_DIFF('MONTH', CAST('2026-01-31' AS DATE), CAST('2026-03-01' AS DATE))", "want": "SELECT CAST(EXTRACT(year FROM AGE(DATE_TRUNC('MONTH', CAST(CAST('2026-03-01' AS DATE) AS TIMESTAMP)), DATE_TRUNC('MONTH', CAST(CAST('2026-01-31' AS DATE) AS TIMESTAMP)))) * 12 + EXTRACT(month FROM AGE(DATE_TRUNC('MONTH', CAST(CAST('2026-03-01' AS DATE) AS TIMESTAMP)), DATE_TRUNC('MONTH', CAST(CAST('2026-01-31' AS DATE) AS TIMESTAMP)))) AS BIGINT)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT INTERVAL '1.0 QUARTER'", "want": "SELECT INTERVAL '3 MONTH'", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "postgres", "sql": "SELECT MAKE_DATE(2024, 1, 31)", "want": "SELECT MAKE_DATE(2024, 1, 31)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT MAX(x) FROM t", "want": "SELECT MAX(x) FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT MIN(x) FROM t", "want": "SELECT MIN(x) FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT QUANTILE_CONT(x, q) FROM t", "want": "SELECT PERCENTILE_CONT(q) WITHIN GROUP (ORDER BY x) FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT QUANTILE_DISC(x, q) FROM t", "want": "SELECT PERCENTILE_DISC(q) WITHIN GROUP (ORDER BY x) FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT RANGE(5, 1, -1)", "want": "SELECT GENERATE_SERIES(5, 1 + 1, -1)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "postgres", "sql": "SELECT REGEXP_FULL_MATCH('abc', 'abc') || '!', '!' || REGEXP_FULL_MATCH('abc', 'abc')", "want": "SELECT ('abc' SIMILAR TO 'abc') || '!', '!' || ('abc' SIMILAR TO 'abc')", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT REGEXP_MATCHES('ThOmAs', 'thomas', 'i')", "want": "SELECT 'ThOmAs' ~* 'thomas'", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT REGEXP_MATCHES(x, 'a', '')", "want": "SELECT x ~ 'a'", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "postgres", "sql": "SELECT REGEXP_MATCHES(x, 'a', 'ic')", "want": "SELECT x ~ 'a'", "pretty": false, "identify": false}
@@ -4278,12 +4322,12 @@
 {"read": "duckdb", "write": "spark", "sql": "SELECT DATEDIFF('month', CAST('1996-10-30' AS TIMESTAMPTZ), CAST('1997-02-28 10:30:00' AS TIMESTAMPTZ))", "want": "SELECT DATEDIFF(MONTH, CAST('1996-10-30' AS TIMESTAMP), CAST('1997-02-28 10:30:00' AS TIMESTAMP))", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark", "sql": "SELECT LIST_FILTER([4, 5, 6], LAMBDA x : x > 4)", "want": "SELECT FILTER(ARRAY(4, 5, 6), x -> x > 4)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark", "sql": "SELECT LIST_TRANSFORM(STR_SPLIT_REGEX('abc , dfg ', ','), LAMBDA x : TRIM(x))", "want": "SELECT TRANSFORM(SPLIT('abc , dfg ', ','), x -> TRIM(x))", "pretty": false, "identify": false}
-{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(1, 1)", "want": "SELECT ARRAY()", "pretty": false, "identify": false}
-{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(1, 2)", "want": "SELECT SEQUENCE(1, 1)", "pretty": false, "identify": false}
-{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(1, 5)", "want": "SELECT SEQUENCE(1, 4)", "pretty": false, "identify": false}
-{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(1, 5, 2)", "want": "SELECT SEQUENCE(1, 3, 2)", "pretty": false, "identify": false}
-{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(5, 1, -1)", "want": "SELECT SEQUENCE(5, 2, -1)", "pretty": false, "identify": false}
-{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(5, 1, 0)", "want": "SELECT ARRAY()", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(1, 1)", "want": "SELECT IF(TRUE, ARRAY(), SEQUENCE(1, 0))", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(1, 2)", "want": "SELECT IF(FALSE, ARRAY(), SEQUENCE(1, 1))", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(1, 5)", "want": "SELECT IF(FALSE, ARRAY(), SEQUENCE(1, 4))", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(1, 5, 2)", "want": "SELECT IF(FALSE, ARRAY(), SEQUENCE(1, 3, 2))", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(5, 1, -1)", "want": "SELECT IF(FALSE, ARRAY(), SEQUENCE(5, 2, -1))", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "spark", "sql": "SELECT RANGE(5, 1, 0)", "want": "SELECT IF(TRUE, ARRAY(), SEQUENCE(5, 1, 0))", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark", "sql": "SELECT STRFTIME(CAST('2020-01-01' AS TIMESTAMP), CONCAT('%Y', '%m'))", "want": "SELECT DATE_FORMAT(CAST('2020-01-01' AS TIMESTAMP_NTZ), CONCAT('yyyy', 'MM'))", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark", "sql": "SELECT STRPTIME('2016-1-1 3:4:5', '%Y-%m-%d %H:%M:%S')", "want": "SELECT TO_TIMESTAMP('2016-1-1 3:4:5', 'yyyy-M-d H:m:s')", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark", "sql": "SELECT STRPTIME('2016-1-1', '%Y-%m-%d')", "want": "SELECT TO_TIMESTAMP('2016-1-1', 'yyyy-M-d')", "pretty": false, "identify": false}
@@ -4310,18 +4354,24 @@
 {"read": "duckdb", "write": "spark", "sql": "cast([[1]] as int[][])", "want": "CAST(ARRAY(ARRAY(1)) AS ARRAY<ARRAY<INT>>)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark2", "sql": "SELECT ARRAY_SLICE([1, 2, 3, 4], 2, 3)", "want": "SELECT SLICE(ARRAY(1, 2, 3, 4), 2, 2)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "spark2", "sql": "SELECT TIMESTAMP 'foo'", "want": "SELECT CAST('foo' AS TIMESTAMP)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "(SELECT DISTINCT a FROM t) EXCEPT (SELECT DISTINCT a FROM u)", "want": "SELECT * FROM (SELECT DISTINCT a FROM t) EXCEPT SELECT * FROM (SELECT DISTINCT a FROM u)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "DATE_DIFF('day', b, a)", "want": "CAST((JULIANDAY(a, 'start of day') - JULIANDAY(b, 'start of day')) AS INTEGER)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "PRINTF('%d-%s', 1, 'a')", "want": "FORMAT('%d-%s', 1, 'a')", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT * FROM RANGE(1, 5)", "want": "SELECT * FROM GENERATE_SERIES(1, 5 - 1)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT * FROM RANGE(5, 1, -1)", "want": "SELECT * FROM GENERATE_SERIES(5, 1 + 1, -1)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE NOT EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 WHERE EXISTS(SELECT 1 FROM t2 WHERE t1.x = t2.x)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT 0 UNION ALL (SELECT a FROM t ORDER BY a DESC LIMIT 1)", "want": "SELECT 0 UNION ALL SELECT * FROM (SELECT a FROM t ORDER BY a DESC LIMIT 1)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT CAST('{\"a\": 1}' AS JSON)", "want": "SELECT JSON('{\"a\": 1}')", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT CAST(NULL AS JSON)", "want": "SELECT JSON(NULL)", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT CAST(x AS JSON) FROM (SELECT '{\"a\": 1}' AS x) AS t", "want": "SELECT JSON(x) FROM (SELECT '{\"a\": 1}' AS x) AS t", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT COALESCE(SUM(x), 0) FROM t GROUP BY () HAVING COUNT(*) > 1", "want": "SELECT COALESCE(SUM(x), 0) FROM t HAVING COUNT(*) > 1", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT CONCAT(a, b) FROM t", "want": "SELECT CONCAT(a, b) FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT CONCAT_WS(',', a, b) FROM t", "want": "SELECT CONCAT_WS(',', a, b) FROM t", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT COUNT(*) FROM t GROUP BY ()", "want": "SELECT COUNT(*) FROM t", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'", "want": "SELECT STRFTIME('%Y-%m-%d %H:%M:%f', 'now')", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT DATE_ADD(d, INTERVAL (-1) DAY) FROM t", "want": "SELECT DATE(d, '-1 DAY') FROM t", "pretty": false, "identify": false}
-{"read": "duckdb", "write": "sqlite", "sql": "SELECT DATE_ADD(d, INTERVAL (-n) MONTH) FROM t", "want": "SELECT DATE(d, (-n) || ' MONTH') FROM t", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT DATE_ADD(d, INTERVAL (-n) MONTH) FROM t", "want": "SELECT DATE(d, (-n) || ' MONTH', 'floor') FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT DATE_ADD(d, INTERVAL (NULL) DAY) FROM t", "want": "SELECT DATE(d, (NULL) || ' DAY') FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT DATE_ADD(d, INTERVAL (n + 1) DAY) FROM t", "want": "SELECT DATE(d, (n + 1) || ' DAY') FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT DATE_ADD(d, INTERVAL (n) DAY) FROM t", "want": "SELECT DATE(d, (n) || ' DAY') FROM t", "pretty": false, "identify": false}
@@ -4330,8 +4380,10 @@
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT DATE_ADD(d, INTERVAL 2 HOUR) FROM t", "want": "SELECT DATETIME(d, '2 HOUR') FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT FIRST_VALUE(c RESPECT NULLS) OVER (PARTITION BY gb ORDER BY ob) FROM t", "want": "SELECT FIRST_VALUE(c) OVER (PARTITION BY gb ORDER BY ob NULLS LAST) FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT GREATEST(a, b, c) FROM t", "want": "SELECT MAX(COALESCE(a, b, c), COALESCE(b, c, a), COALESCE(c, a, b)) FROM t", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT INTERVAL 1 DAY + d FROM t", "want": "SELECT DATE(d, '1 DAY') FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT STRING_AGG(DISTINCT x, ',') FROM t", "want": "SELECT GROUP_CONCAT(DISTINCT x) FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "SELECT STRING_AGG(x, ',' ORDER BY y) FILTER (WHERE y > 0) OVER (PARTITION BY z)", "want": "SELECT GROUP_CONCAT(x, ',') FILTER(WHERE y > 0) OVER (PARTITION BY z)", "pretty": false, "identify": false}
+{"read": "duckdb", "write": "sqlite", "sql": "SELECT SUM(COUNT(*)) OVER () FROM t GROUP BY ()", "want": "SELECT SUM(COUNT(*)) OVER () FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "sqlite", "sql": "WITH t AS (SELECT i, i * i * i * i * i AS i5 FROM RANGE(1, 5) t(i)) SELECT * FROM t", "want": "WITH t AS (SELECT i, i * i * i * i * i AS i5 FROM (SELECT value AS i FROM GENERATE_SERIES(1, 5 - 1)) AS t) SELECT * FROM t", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 ANTI JOIN t2 ON t1.x = t2.x", "pretty": false, "identify": false}
 {"read": "duckdb", "write": "starrocks", "sql": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "want": "SELECT * FROM t1 SEMI JOIN t2 ON t1.x = t2.x", "pretty": false, "identify": false}
@@ -4468,6 +4520,7 @@
 {"read": "hive", "write": "duckdb", "sql": "1s", "want": "TRY_CAST(1 AS SMALLINT)", "pretty": false, "identify": false}
 {"read": "hive", "write": "duckdb", "sql": "APPROX_COUNT_DISTINCT(a)", "want": "APPROX_COUNT_DISTINCT(a)", "pretty": false, "identify": false}
 {"read": "hive", "write": "duckdb", "sql": "ARRAY_CONTAINS(x, 1)", "want": "ARRAY_CONTAINS(x, 1)", "pretty": false, "identify": false}
+{"read": "hive", "write": "duckdb", "sql": "ARRAY_REMOVE(the_array, target)", "want": "CASE WHEN target IS NULL THEN NULL ELSE LIST_FILTER(the_array, LAMBDA _u : _u IS DISTINCT FROM target) END", "pretty": false, "identify": false}
 {"read": "hive", "write": "duckdb", "sql": "CAST(1 AS INT)", "want": "TRY_CAST(1 AS INT)", "pretty": false, "identify": false}
 {"read": "hive", "write": "duckdb", "sql": "COLLECT_LIST(x)", "want": "ARRAY_AGG(x) FILTER(WHERE x IS NOT NULL)", "pretty": false, "identify": false}
 {"read": "hive", "write": "duckdb", "sql": "CREATE TABLE db.example_table (col_a struct<struct_col_a:int, struct_col_b:string>)", "want": "CREATE TABLE db.example_table (col_a STRUCT(struct_col_a INT, struct_col_b TEXT))", "pretty": false, "identify": false}
@@ -4944,6 +4997,9 @@
 {"read": "mysql", "write": "bigquery", "sql": "SELECT 0x0000CC", "want": "SELECT FROM_HEX('0000CC')", "pretty": false, "identify": false}
 {"read": "mysql", "write": "bigquery", "sql": "SELECT 0xCC", "want": "SELECT FROM_HEX('CC')", "pretty": false, "identify": false}
 {"read": "mysql", "write": "bigquery", "sql": "SELECT 0xCC ", "want": "SELECT FROM_HEX('CC')", "pretty": false, "identify": false}
+{"read": "mysql", "write": "bigquery", "sql": "SELECT DATE_ADD(DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 DAY), INTERVAL 1 MONTH)", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(DATE_SUB(CURRENT_TIMESTAMP(), INTERVAL '1' DAY)), INTERVAL '1' MONTH))", "pretty": false, "identify": false}
+{"read": "mysql", "write": "bigquery", "sql": "SELECT DATE_ADD(TIMESTAMPADD(HOUR, 1, CURRENT_TIMESTAMP), INTERVAL 1 MONTH)", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)), INTERVAL '1' MONTH))", "pretty": false, "identify": false}
+{"read": "mysql", "write": "bigquery", "sql": "SELECT DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 MONTH)", "want": "SELECT TIMESTAMP(DATETIME_SUB(DATETIME(CURRENT_TIMESTAMP()), INTERVAL '1' MONTH))", "pretty": false, "identify": false}
 {"read": "mysql", "write": "bigquery", "sql": "SELECT MAKETIME(15, 30, 00)", "want": "SELECT TIME(15, 30, 00)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "bigquery", "sql": "SELECT b'1011'", "want": "SELECT 11", "pretty": false, "identify": false}
 {"read": "mysql", "write": "bigquery", "sql": "SELECT x'0000CC'", "want": "SELECT FROM_HEX('0000CC')", "pretty": false, "identify": false}
@@ -5001,6 +5057,7 @@
 {"read": "mysql", "write": "duckdb", "sql": "SELECT FORMAT(12332.123456, 4)", "want": "SELECT FORMAT('{:,.4f}', 12332.123456)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "duckdb", "sql": "SELECT FORMAT(12332.2, 0)", "want": "SELECT FORMAT('{:,.0f}', 12332.2)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "duckdb", "sql": "SELECT LEFT(x, n), RIGHT(x, -1)", "want": "SELECT LEFT(x, CASE WHEN n < 0 THEN 0 ELSE n END), RIGHT(x, CASE WHEN -1 < 0 THEN 0 ELSE -1 END)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "duckdb", "sql": "SELECT MID('abcdef', 2, 3)", "want": "SELECT SUBSTRING('abcdef', 2, 3)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "duckdb", "sql": "SELECT STDDEV_POP(x), STDDEV_POP(x), VAR_POP(x) FROM t", "want": "SELECT STDDEV_POP(x), STDDEV_POP(x), VAR_POP(x) FROM t", "pretty": false, "identify": false}
 {"read": "mysql", "write": "duckdb", "sql": "SELECT TIMESTAMPADD(DAY, 1, '2024-01-01') - TIMESTAMPADD(DAY, 1, '2024-01-01')", "want": "SELECT CAST('2024-01-01' AS TIMESTAMP) + INTERVAL 1 DAY - (CAST('2024-01-01' AS TIMESTAMP) + INTERVAL 1 DAY)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "duckdb", "sql": "SELECT TIMESTAMPADD(MONTH, 1, '2024-01-31')", "want": "SELECT CAST('2024-01-31' AS TIMESTAMP) + INTERVAL 1 MONTH", "pretty": false, "identify": false}
@@ -5148,6 +5205,7 @@
 {"read": "mysql", "write": "mysql", "sql": "SELECT LAST_VALUE(col1) OVER (PARTITION BY col3 ORDER BY col2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM table1", "want": "SELECT LAST_VALUE(col1) OVER (PARTITION BY col3 ORDER BY col2 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM table1", "pretty": false, "identify": false}
 {"read": "mysql", "write": "mysql", "sql": "SELECT LEAD(col1, 1) RESPECT NULLS OVER (ORDER BY col2) FROM table1", "want": "SELECT LEAD(col1, 1) RESPECT NULLS OVER (ORDER BY col2) FROM table1", "pretty": false, "identify": false}
 {"read": "mysql", "write": "mysql", "sql": "SELECT LEFT(x, n), RIGHT(x, -1)", "want": "SELECT LEFT(x, n), RIGHT(x, -1)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "mysql", "sql": "SELECT MID('abcdef', 2, 3)", "want": "SELECT SUBSTRING('abcdef', 2, 3)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "mysql", "sql": "SELECT STD(x), STDDEV(x), VARIANCE(x) FROM t", "want": "SELECT STDDEV_POP(x), STDDEV_POP(x), VAR_POP(x) FROM t", "pretty": false, "identify": false}
 {"read": "mysql", "write": "mysql", "sql": "SELECT TIMESTAMPADD(DAY, 1, '2024-01-01') - TIMESTAMPADD(DAY, 1, '2024-01-01')", "want": "SELECT DATE_ADD('2024-01-01', INTERVAL 1 DAY) - DATE_ADD('2024-01-01', INTERVAL 1 DAY)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "mysql", "sql": "SELECT TIMESTAMPADD(MONTH, 1, '2024-01-31')", "want": "SELECT DATE_ADD('2024-01-31', INTERVAL 1 MONTH)", "pretty": false, "identify": false}
@@ -5227,6 +5285,9 @@
 {"read": "mysql", "write": "postgres", "sql": "SELECT ISNULL(NULL = NULL)", "want": "SELECT ((NULL = NULL) IS NULL)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "postgres", "sql": "SELECT JSON_EXTRACT(a, '$') FROM t", "want": "SELECT JSON_EXTRACT_PATH(a, VARIADIC '{}') FROM t", "pretty": false, "identify": false}
 {"read": "mysql", "write": "postgres", "sql": "SELECT JSON_EXTRACT_SCALAR(a, '$') FROM t", "want": "SELECT JSON_EXTRACT_PATH_TEXT(a, VARIADIC '{}') FROM t", "pretty": false, "identify": false}
+{"read": "mysql", "write": "postgres", "sql": "SELECT JSON_OBJECTAGG(k, v) FROM t", "want": "SELECT JSON_OBJECT_AGG(k, v) FROM t", "pretty": false, "identify": false}
+{"read": "mysql", "write": "postgres", "sql": "SELECT LEFT(x, n), RIGHT(x, -1)", "want": "SELECT LEFT(x, CASE WHEN n < 0 THEN 0 ELSE n END), RIGHT(x, CASE WHEN -1 < 0 THEN 0 ELSE -1 END)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "postgres", "sql": "SELECT MID('abcdef', 2, 3)", "want": "SELECT SUBSTRING('abcdef' FROM 2 FOR 3)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "postgres", "sql": "SELECT TIMESTAMPADD(MONTH, 1, '2024-01-31')", "want": "SELECT '2024-01-31' + INTERVAL '1 MONTH'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "postgres", "sql": "SELECT TIMESTAMPADD(SECOND, 30, '2024-01-01 12:00:00')", "want": "SELECT '2024-01-01 12:00:00' + INTERVAL '30 SECOND'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "postgres", "sql": "SELECT a FROM tbl FOR SHARE", "want": "SELECT a FROM tbl FOR SHARE", "pretty": false, "identify": false}
@@ -5371,6 +5432,7 @@
 {"read": "mysql", "write": "sqlite", "sql": "CREATE TABLE z (a INT PRIMARY KEY AUTO_INCREMENT)", "want": "CREATE TABLE z (a INTEGER PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "CREATE TABLE z (a INT UNIQUE PRIMARY KEY AUTO_INCREMENT)", "want": "CREATE TABLE z (a INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "CREATE TABLE z (a INT) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARACTER SET=utf8 COLLATE=utf8_bin COMMENT='x'", "want": "CREATE TABLE z (a INTEGER)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "DATEDIFF(a, b)", "want": "CAST((JULIANDAY(a, 'start of day') - JULIANDAY(b, 'start of day')) AS INTEGER)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "DATE_ADD(d, INTERVAL n WEEK)", "want": "DATE(d, (n * 7) || ' DAY')", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(DISTINCT a, b, c ORDER BY d SEPARATOR '')", "want": "GROUP_CONCAT(DISTINCT a || b || c, '' ORDER BY d)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "GROUP_CONCAT(DISTINCT a, b, c SEPARATOR '')", "want": "GROUP_CONCAT(DISTINCT a || b || c, '')", "pretty": false, "identify": false}
@@ -5393,7 +5455,7 @@
 {"read": "mysql", "write": "sqlite", "sql": "SELECT DATE_SUB(d, INTERVAL (n + 1) DAY) FROM t", "want": "SELECT DATE(d, (-(n + 1)) || ' DAY') FROM t", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT DATE_SUB(d, INTERVAL -2 DAY) FROM t", "want": "SELECT DATE(d, '2 DAY') FROM t", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT DATE_SUB(d, INTERVAL -n DAY) FROM t", "want": "SELECT DATE(d, (n) || ' DAY') FROM t", "pretty": false, "identify": false}
-{"read": "mysql", "write": "sqlite", "sql": "SELECT DATE_SUB(d, INTERVAL 1 MONTH) FROM t", "want": "SELECT DATE(d, '-1 MONTH') FROM t", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT DATE_SUB(d, INTERVAL 1 MONTH) FROM t", "want": "SELECT DATE(d, '-1 MONTH', 'floor') FROM t", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT DATE_SUB(d, INTERVAL 2 HOUR) FROM t", "want": "SELECT DATETIME(d, '-2 HOUR') FROM t", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT DATE_SUB(d, INTERVAL n DAY) FROM t", "want": "SELECT DATE(d, (-n) || ' DAY') FROM t", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT GREATEST(a, b) FROM t", "want": "SELECT MAX(a, b) FROM t", "pretty": false, "identify": false}
@@ -5404,7 +5466,12 @@
 {"read": "mysql", "write": "sqlite", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT JSON_EXTRACT(a, CONCAT('$.', f))", "want": "SELECT a -> ('$.' || f)", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT LEAST(a, b) FROM t", "want": "SELECT MIN(a, b) FROM t", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT MID('abcdef', 2, 3)", "want": "SELECT SUBSTRING('abcdef', 2, 3)", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT RAND() < 0.1", "want": "SELECT (CAST(RANDOM() & 9007199254740991 AS REAL) / 9007199254740992) < 0.1", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT TIMESTAMP '2024-01-15 23:30:00' + INTERVAL 1 DAY", "want": "SELECT DATETIME(DATETIME('2024-01-15 23:30:00'), '1 DAY')", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT b'1011'", "want": "SELECT 11", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT d + INTERVAL 1 DAY FROM t", "want": "SELECT DATE(d, '1 DAY') FROM t", "pretty": false, "identify": false}
+{"read": "mysql", "write": "sqlite", "sql": "SELECT d - INTERVAL 1 MONTH FROM t", "want": "SELECT DATE(d, '-1 MONTH', 'floor') FROM t", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT x'0000CC'", "want": "SELECT x'0000CC'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "SELECT x'CC'", "want": "SELECT x'CC'", "pretty": false, "identify": false}
 {"read": "mysql", "write": "sqlite", "sql": "WITH a AS (SELECT 1 AS x) (WITH a AS (SELECT 2 AS x) SELECT * FROM a) LIMIT 1", "want": "WITH a AS (SELECT 1 AS x) SELECT * FROM (WITH a AS (SELECT 2 AS x) SELECT * FROM a) LIMIT 1", "pretty": false, "identify": false}
@@ -5635,6 +5702,7 @@
 {"read": "oracle", "write": "postgres", "sql": "REGEXP_REPLACE(subject, pattern, NULL)", "want": "REGEXP_REPLACE(subject, pattern, NULL, 'g')", "pretty": false, "identify": false}
 {"read": "oracle", "write": "postgres", "sql": "REGEXP_REPLACE(subject, pattern, replacement)", "want": "REGEXP_REPLACE(subject, pattern, replacement, 'g')", "pretty": false, "identify": false}
 {"read": "oracle", "write": "postgres", "sql": "SELECT DBMS_RANDOM.VALUE()", "want": "SELECT RANDOM()", "pretty": false, "identify": false}
+{"read": "oracle", "write": "postgres", "sql": "SELECT JSON_OBJECTAGG(KEY k VALUE v) FROM t", "want": "SELECT JSON_OBJECT_AGG(k, v) FROM t", "pretty": false, "identify": false}
 {"read": "oracle", "write": "postgres", "sql": "SELECT SUM(VARIANCE(x)) OVER () FROM t GROUP BY y", "want": "SELECT SUM(CASE COUNT(x) WHEN 0 THEN NULL WHEN 1 THEN 0 ELSE VAR_SAMP(x) END) OVER () FROM t GROUP BY y", "pretty": false, "identify": false}
 {"read": "oracle", "write": "postgres", "sql": "SELECT VARIANCE(DISTINCT x) FROM t", "want": "SELECT CASE COUNT(DISTINCT x) WHEN 0 THEN NULL WHEN 1 THEN 0 ELSE VAR_SAMP(DISTINCT x) END FROM t", "pretty": false, "identify": false}
 {"read": "oracle", "write": "postgres", "sql": "SELECT VARIANCE(x) FROM t", "want": "SELECT CASE COUNT(x) WHEN 0 THEN NULL WHEN 1 THEN 0 ELSE VAR_SAMP(x) END FROM t", "pretty": false, "identify": false}
@@ -5833,6 +5901,7 @@
 {"read": "postgres", "write": "bigquery", "sql": "BIT_AND(x)", "want": "BIT_AND(x)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "bigquery", "sql": "BIT_OR(x)", "want": "BIT_OR(x)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "bigquery", "sql": "BIT_XOR(x)", "want": "BIT_XOR(x)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "bigquery", "sql": "CARDINALITY(arr)", "want": "ARRAY_LENGTH(arr)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "bigquery", "sql": "JSON_EXTRACT_PATH('{\"f2\":{\"f3\":1},\"f4\":{\"f5\":99,\"f6\":\"foo\"}}','f4')", "want": "JSON_EXTRACT('{\"f2\":{\"f3\":1},\"f4\":{\"f5\":99,\"f6\":\"foo\"}}', '$.f4')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "bigquery", "sql": "SELECT * FROM \"test_table\" ORDER BY RANDOM() LIMIT 5", "want": "SELECT * FROM `test_table` ORDER BY RAND() NULLS LAST LIMIT 5", "pretty": false, "identify": false}
 {"read": "postgres", "write": "bigquery", "sql": "SELECT * FROM (VALUES (1)) AS t1", "want": "SELECT * FROM UNNEST([STRUCT(1 AS _c0)]) AS t1", "pretty": false, "identify": false}
@@ -5841,6 +5910,7 @@
 {"read": "postgres", "write": "bigquery", "sql": "SELECT GENERATE_SERIES(1, 5)", "want": "SELECT _gen_series_value FROM UNNEST(GENERATE_ARRAY(1, 5)) AS _gen_series_value", "pretty": false, "identify": false}
 {"read": "postgres", "write": "bigquery", "sql": "SELECT GENERATE_SERIES(1, 5) AS x", "want": "SELECT x FROM UNNEST(GENERATE_ARRAY(1, 5)) AS x", "pretty": false, "identify": false}
 {"read": "postgres", "write": "bigquery", "sql": "SELECT GENERATE_SERIES(1, 5) AS x WHERE x > 2 ORDER BY x DESC LIMIT 3", "want": "SELECT x FROM UNNEST(GENERATE_ARRAY(1, 5)) AS x WHERE x > 2 ORDER BY x DESC NULLS FIRST LIMIT 3", "pretty": false, "identify": false}
+{"read": "postgres", "write": "bigquery", "sql": "SELECT MAKE_DATE(2024, 1, 31)", "want": "SELECT DATE(2024, 1, 31)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "bigquery", "sql": "SELECT MAKE_TIME(15, 30, 00)", "want": "SELECT TIME(15, 30, 00)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "bigquery", "sql": "SELECT U&'a\nb'", "want": "SELECT 'a\\nb'", "pretty": false, "identify": false}
 {"read": "postgres", "write": "bigquery", "sql": "SELECT U&'can''t'", "want": "SELECT 'can\\'t'", "pretty": false, "identify": false}
@@ -5902,7 +5972,9 @@
 {"read": "postgres", "write": "databricks", "sql": "SELECT * FROM GENERATE_SERIES(TIMESTAMP '2024-01-01', TIMESTAMP '2024-01-03', '+12 hours')", "want": "SELECT * FROM EXPLODE(SEQUENCE(CAST('2024-01-01' AS TIMESTAMP), CAST('2024-01-03' AS TIMESTAMP), INTERVAL '12' HOURS))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "databricks", "sql": "SELECT * FROM GENERATE_SERIES(a, b)", "want": "SELECT * FROM EXPLODE(SEQUENCE(a, b))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "databricks", "sql": "SELECT * FROM a CROSS JOIN LATERAL UNNEST(a.arr) WITH ORDINALITY AS t(x, n)", "want": "SELECT * FROM a CROSS JOIN LATERAL (SELECT * EXCEPT (pos), CAST(pos AS BIGINT) + 1 AS n FROM POSEXPLODE(a.arr)) AS t(x, n)", "pretty": false, "identify": false}
-{"read": "postgres", "write": "databricks", "sql": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount)", "want": "SELECT PERCENTILE_APPROX(amount, 0.5)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "databricks", "sql": "SELECT EXTRACT('isodow' FROM DATE '2024-06-16')", "want": "SELECT EXTRACT(DOW_ISO FROM CAST('2024-06-16' AS DATE))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "databricks", "sql": "SELECT EXTRACT(ISODOW FROM DATE '2024-06-16')", "want": "SELECT EXTRACT(DOW_ISO FROM CAST('2024-06-16' AS DATE))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "databricks", "sql": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount)", "want": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount NULLS LAST)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "databricks", "sql": "WITH t AS (SELECT ARRAY[1, 2, 3] AS col) SELECT * FROM t WHERE 1 <= ANY(col) AND 2 = ANY(col)", "want": "WITH t AS (SELECT ARRAY(1, 2, 3) AS col) SELECT * FROM t WHERE EXISTS(col, x -> 1 <= x) AND EXISTS(col, x -> 2 = x)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "doris", "sql": "DELETE FROM orders AS o WHERE o.customer_id IN (SELECT c.id FROM customers AS c WHERE c.status_code = 'inactive')", "want": "DELETE FROM orders o WHERE o.customer_id IN (SELECT c.id FROM customers AS c WHERE c.status_code = 'inactive')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "doris", "sql": "DELETE FROM sales AS s WHERE s.id = 1", "want": "DELETE FROM sales s WHERE s.id = 1", "pretty": false, "identify": false}
@@ -5924,7 +5996,10 @@
 {"read": "postgres", "write": "duckdb", "sql": "ARRAY_CAT(ARRAY[1, 2], ARRAY[3, 4])", "want": "LIST_CONCAT([1, 2], [3, 4])", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "ARRAY_LENGTH(arr, 1)", "want": "ARRAY_LENGTH(arr, 1)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "ARRAY_LENGTH(arr, foo)", "want": "ARRAY_LENGTH(arr, foo)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "ARRAY_REMOVE(ARRAY[1, 2, NULL, 2], 2)", "want": "LIST_FILTER([1, 2, NULL, 2], LAMBDA _u : _u IS DISTINCT FROM 2)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "ARRAY_REMOVE(ARRAY[1, 2, NULL, 2], NULL)", "want": "LIST_FILTER([1, 2, NULL, 2], LAMBDA _u : _u IS DISTINCT FROM NULL)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "ARRAY_TO_STRING(arr, delim)", "want": "ARRAY_TO_STRING(arr, delim)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "CARDINALITY(arr)", "want": "ARRAY_LENGTH(arr)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "CAST(DIV(4, 2) AS DECIMAL(5, 3))", "want": "CAST(CAST(4 // 2 AS DECIMAL) AS DECIMAL(5, 3))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "CONCAT(a, b)", "want": "CONCAT(a, b)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "CREATE TABLE x (a UUID, b BYTEA)", "want": "CREATE TABLE x (a UUID, b BLOB)", "pretty": false, "identify": false}
@@ -5956,6 +6031,7 @@
 {"read": "postgres", "write": "duckdb", "sql": "SELECT * FROM GENERATE_SERIES(TIMESTAMP '2024-01-01', TIMESTAMP '2024-01-03', '+12 hours')", "want": "SELECT * FROM GENERATE_SERIES(CAST('2024-01-01' AS TIMESTAMP), CAST('2024-01-03' AS TIMESTAMP), INTERVAL '12' HOURS)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT ARRAY[1, 2, 3] @> ARRAY[1, 2]", "want": "SELECT [1, 2, 3] @> [1, 2]", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT ARRAY[]::INT[] AS foo", "want": "SELECT CAST([] AS INT[]) AS foo", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "SELECT ARRAY_REMOVE(ARRAY[TRUE, FALSE, NULL], _u OR FALSE) FROM (VALUES (TRUE)) AS t(_u)", "want": "SELECT LIST_FILTER([TRUE, FALSE, NULL], LAMBDA _u_2 : _u_2 IS DISTINCT FROM (_u OR FALSE)) FROM (VALUES (TRUE)) AS t(_u)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT ARRAY_TO_STRING(ARRAY[1, 2, 3, NULL, 5], ',', '*')", "want": "SELECT ARRAY_TO_STRING(LIST_TRANSFORM([1, 2, 3, NULL, 5], LAMBDA x : COALESCE(CAST(x AS TEXT), '*')), ',')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT BTRIM(x, 'ab')", "want": "SELECT TRIM(x, 'ab')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT CAST('2024-01-01' AS TIMESTAMP) + INTERVAL '-10.75 MINUTE'", "want": "SELECT CAST('2024-01-01' AS TIMESTAMP) + INTERVAL '-10.75 MINUTE'", "pretty": false, "identify": false}
@@ -5969,6 +6045,7 @@
 {"read": "postgres", "write": "duckdb", "sql": "SELECT JSON_OBJECT('a': 1, 'a': 2 WITHOUT UNIQUE KEYS)", "want": "SELECT JSON_OBJECT('a', 1, 'a', 2)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT JSON_OBJECT('a': 1, 'b': NULL NULL ON NULL)", "want": "SELECT JSON_OBJECT('a', 1, 'b', NULL)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT JSON_OBJECT_AGG(k, v) FROM t", "want": "SELECT JSON_GROUP_OBJECT(k, v) FROM t", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "SELECT MAKE_DATE(2024, 1, 31)", "want": "SELECT MAKE_DATE(2024, 1, 31)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT MAKE_INTERVAL(1, 2, 3, 4, 5, 6, 7.5)", "want": "SELECT INTERVAL '1 year 2 month 3 week 4 day 5 hour 6 minute 7.5 second'", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT MAKE_INTERVAL(1, hours => 2, mins => 30)", "want": "SELECT INTERVAL '1 year 2 hour 30 minute'", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT MAKE_INTERVAL(days => 3)", "want": "SELECT INTERVAL '3 day'", "pretty": false, "identify": false}
@@ -5990,6 +6067,8 @@
 {"read": "postgres", "write": "duckdb", "sql": "SELECT NULL IS NOT DISTINCT FROM NULL NOT IN (0)", "want": "SELECT NULL IS NOT DISTINCT FROM (NOT NULL IN (0))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE '0' ESCAPE '!'", "want": "SELECT NULL IS NOT DISTINCT FROM (NULL NOT LIKE '0' ESCAPE '!')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE 'x'", "want": "SELECT NULL IS NOT DISTINCT FROM (NULL NOT LIKE 'x')", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "SELECT PERCENTILE_CONT(CAST(0.9 AS FLOAT)) WITHIN GROUP (ORDER BY x ASC) FROM t", "want": "SELECT QUANTILE_CONT(x, CAST(0.9 AS DOUBLE) ORDER BY x ASC) FROM t", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "SELECT PERCENTILE_DISC(CAST(0.9 AS FLOAT)) WITHIN GROUP (ORDER BY x ASC) FROM t", "want": "SELECT QUANTILE_DISC(x, CAST(0.9 AS DOUBLE) ORDER BY x ASC) FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT REGEXP_REPLACE('aaa', 'a', 'b')", "want": "SELECT REGEXP_REPLACE('aaa', 'a', 'b')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT REGEXP_REPLACE('mr .', '[^a-zA-Z]', '', 'g')", "want": "SELECT REGEXP_REPLACE('mr .', '[^a-zA-Z]', '', 'g')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT SHA256(x)", "want": "SELECT UNHEX(SHA256(x))", "pretty": false, "identify": false}
@@ -6004,10 +6083,14 @@
 {"read": "postgres", "write": "duckdb", "sql": "SELECT foo -> 1", "want": "SELECT foo -> '$[1]'", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT foo ->> 1", "want": "SELECT foo ->> '$[1]'", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "SELECT r.v, r.idx FROM t, LATERAL UNNEST(t.a) WITH ORDINALITY AS r(v, idx)", "want": "SELECT r.v, r.idx FROM t, LATERAL UNNEST(t.a) WITH ORDINALITY AS r(v, idx)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "SELECT |/ 16 + 9, ||/ 27 + 37, |/ 16 * 4", "want": "SELECT SQRT(16 + 9), CBRT(27 + 37), SQRT(16 * 4)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "TRUNC(3.14159, 2)", "want": "TRUNC(3.14159, 2)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "WITH dates AS (SELECT GENERATE_SERIES('2020-01-01'::DATE, '2024-01-01'::DATE, '1 day'::INTERVAL) AS date), date_table AS (SELECT DISTINCT DATE_TRUNC('MONTH', date) AS date FROM dates) SELECT * FROM date_table", "want": "WITH dates AS (SELECT UNNEST(GENERATE_SERIES(CAST('2020-01-01' AS DATE), CAST('2024-01-01' AS DATE), CAST('1 day' AS INTERVAL))) AS date), date_table AS (SELECT DISTINCT DATE_TRUNC('MONTH', date) AS date FROM dates) SELECT * FROM date_table", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "a # b", "want": "XOR(a, b)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "duckdb", "sql": "a || b", "want": "a || b", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "x NOT SIMILAR TO '%b%'", "want": "NOT x LIKE '%b%'", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "x SIMILAR TO 'a_c%'", "want": "x LIKE 'a_c%'", "pretty": false, "identify": false}
+{"read": "postgres", "write": "duckdb", "sql": "x SIMILAR TO ('a.c^$')", "want": "x LIKE 'a.c^$'", "pretty": false, "identify": false}
 {"read": "postgres", "write": "hive", "sql": "ARRAY_LENGTH(arr, 1)", "want": "SIZE(arr)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "hive", "sql": "CREATE TABLE x (a UUID, b BYTEA)", "want": "CREATE TABLE x (a UUID, b BINARY)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "hive", "sql": "GENERATE_SERIES('2019-01-01'::TIMESTAMP, NOW(), '1day')", "want": "EXPLODE(SEQUENCE(CAST('2019-01-01' AS TIMESTAMP), CAST(CURRENT_TIMESTAMP() AS TIMESTAMP), INTERVAL '1' DAY))", "pretty": false, "identify": false}
@@ -6025,6 +6108,7 @@
 {"read": "postgres", "write": "hive", "sql": "TRIM(TRAILING FROM ' XXX ')", "want": "RTRIM(' XXX ')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "hive", "sql": "TRUNC(3.14159, 2)", "want": "CAST(3.14159 AS BIGINT)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "hive", "sql": "WITH t AS (SELECT ARRAY[1, 2, 3] AS col) SELECT * FROM t WHERE 1 <= ANY(col) AND 2 = ANY(col)", "want": "WITH t AS (SELECT ARRAY(1, 2, 3) AS col) SELECT * FROM t WHERE EXISTS(col, x -> 1 <= x) AND EXISTS(col, x -> 2 = x)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "materialize", "sql": "SELECT CARDINALITY(arr) FROM t", "want": "SELECT CASE WHEN arr IS NULL THEN NULL ELSE COALESCE(ARRAY_LENGTH(arr, 1), 0) END FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "mysql", "sql": "DATE_TRUNC(DAY, TIMESTAMP '2001-02-16 20:38:40')", "want": "DATE_ADD('0000-01-01 00:00:00', INTERVAL (TIMESTAMPDIFF(DAY, '0000-01-01 00:00:00', CAST('2001-02-16 20:38:40' AS DATETIME))) DAY)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "mysql", "sql": "DATE_TRUNC(MONTH, TIMESTAMP '2001-02-16 20:38:40')", "want": "DATE_ADD('0000-01-01 00:00:00', INTERVAL (TIMESTAMPDIFF(MONTH, '0000-01-01 00:00:00', CAST('2001-02-16 20:38:40' AS DATETIME))) MONTH)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "mysql", "sql": "DATE_TRUNC(SECOND, TIMESTAMP '2001-02-16 20:38:40')", "want": "DATE_ADD('0000-01-01 00:00:00', INTERVAL (TIMESTAMPDIFF(SECOND, '0000-01-01 00:00:00', CAST('2001-02-16 20:38:40' AS DATETIME))) SECOND)", "pretty": false, "identify": false}
@@ -6102,8 +6186,8 @@
 {"read": "postgres", "write": "postgres", "sql": "SELECT CORR(a, b) OVER (PARTITION BY c)", "want": "SELECT CORR(a, b) OVER (PARTITION BY c)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT CURRENT_TIMESTAMP + INTERVAL '-3 MONTH'", "want": "SELECT CURRENT_TIMESTAMP + INTERVAL '-3 MONTH'", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT DATE_BIN('30 days', timestamp_col, (SELECT MIN(TIMESTAMP) from table)) FROM table", "want": "SELECT DATE_BIN('30 days', timestamp_col, (SELECT MIN(TIMESTAMP) FROM table)) FROM table", "pretty": false, "identify": false}
-{"read": "postgres", "write": "postgres", "sql": "SELECT DATE_PART('minute', timestamp '2023-01-04 04:05:06.789')", "want": "SELECT EXTRACT(MINUTE FROM CAST('2023-01-04 04:05:06.789' AS TIMESTAMP))", "pretty": false, "identify": false}
-{"read": "postgres", "write": "postgres", "sql": "SELECT DATE_PART('month', date '20220502')", "want": "SELECT EXTRACT(MONTH FROM CAST('20220502' AS DATE))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "postgres", "sql": "SELECT DATE_PART('minute', timestamp '2023-01-04 04:05:06.789')", "want": "SELECT DATE_PART('minute', CAST('2023-01-04 04:05:06.789' AS TIMESTAMP))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "postgres", "sql": "SELECT DATE_PART('month', date '20220502')", "want": "SELECT DATE_PART('month', CAST('20220502' AS DATE))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT E'a\\tb'", "want": "SELECT e'a\\tb'", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT FALSE IS DISTINCT FROM NULL = NULL", "want": "SELECT FALSE IS DISTINCT FROM (NULL = NULL)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT GENERATE_SERIES(1, 2) AS a, GENERATE_SERIES(11, 13) AS b", "want": "SELECT GENERATE_SERIES(1, 2) AS a, GENERATE_SERIES(11, 13) AS b", "pretty": false, "identify": false}
@@ -6117,6 +6201,7 @@
 {"read": "postgres", "write": "postgres", "sql": "SELECT JSON_EXTRACT(a, 1 + 2)", "want": "SELECT a -> (1 + 2)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT JSON_EXTRACT(a, NOT x)", "want": "SELECT a -> (NOT x)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT JSON_EXTRACT_PATH_TEXT(x, k1, k2, k3) FROM t", "want": "SELECT JSON_EXTRACT_PATH_TEXT(x, k1, k2, k3) FROM t", "pretty": false, "identify": false}
+{"read": "postgres", "write": "postgres", "sql": "SELECT JSON_OBJECTAGG(k VALUE v) FROM t", "want": "SELECT JSON_OBJECT_AGG(k, v) FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT JSON_OBJECT_AGG(k, v) FROM t", "want": "SELECT JSON_OBJECT_AGG(k, v) FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT MAKE_INTERVAL(1, 2, 3, 4, 5, 6, 7.5)", "want": "SELECT MAKE_INTERVAL(1, 2, 3, 4, 5, 6, 7.5)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT MAKE_INTERVAL(1, hours => 2, mins => 30)", "want": "SELECT MAKE_INTERVAL(1, hours => 2, mins => 30)", "pretty": false, "identify": false}
@@ -6165,6 +6250,7 @@
 {"read": "postgres", "write": "postgres", "sql": "SELECT r.v, r.idx FROM t, LATERAL UNNEST(t.a) WITH ORDINALITY AS r(v, idx)", "want": "SELECT r.v, r.idx FROM t, LATERAL UNNEST(t.a) WITH ORDINALITY AS r(v, idx)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT y, GENERATE_SERIES(1, 2) AS a, GENERATE_SERIES(11, 13) AS b FROM t", "want": "SELECT y, GENERATE_SERIES(1, 2) AS a, GENERATE_SERIES(11, 13) AS b FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "SELECT y, GENERATE_SERIES(1, 3) AS g FROM t", "want": "SELECT y, GENERATE_SERIES(1, 3) AS g FROM t", "pretty": false, "identify": false}
+{"read": "postgres", "write": "postgres", "sql": "SELECT |/ 16 + 9, ||/ 27 + 37, |/ 16 * 4", "want": "SELECT SQRT(16 + 9), CBRT(27 + 37), SQRT(16 * 4)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "STRING_TO_ARRAY('xx~^~yy~^~zz', '~^~', 'yy')", "want": "STRING_TO_ARRAY('xx~^~yy~^~zz', '~^~', 'yy')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "TABLE ONLY (t)", "want": "SELECT * FROM ONLY t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "postgres", "sql": "TABLE ONLY t", "want": "SELECT * FROM ONLY t", "pretty": false, "identify": false}
@@ -6220,6 +6306,7 @@
 {"read": "postgres", "write": "presto", "sql": "WITH RECURSIVE t1 AS (SELECT 1 AS n), t2 AS (SELECT 2 AS n) SELECT SUM(t1.n), SUM(t2.n) FROM t1, t2", "want": "WITH RECURSIVE t1(n) AS (SELECT 1 AS n), t2(n) AS (SELECT 2 AS n) SELECT SUM(t1.n), SUM(t2.n) FROM t1, t2", "pretty": false, "identify": false}
 {"read": "postgres", "write": "presto", "sql": "a || b", "want": "CONCAT(CAST(a AS VARCHAR), CAST(b AS VARCHAR))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "redshift", "sql": "'{\"a\":1,\"b\":2}'::json->'b'", "want": "JSON_EXTRACT_PATH_TEXT('{\"a\":1,\"b\":2}', 'b')", "pretty": false, "identify": false}
+{"read": "postgres", "write": "redshift", "sql": "CARDINALITY(arr)", "want": "GET_ARRAY_LENGTH(arr)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "redshift", "sql": "CAST(x AS NAME)", "want": "CAST(x AS NAME)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "redshift", "sql": "JSON_EXTRACT_PATH('{\"f2\":{\"f3\":1},\"f4\":{\"f5\":99,\"f6\":\"foo\"}}','f4')", "want": "JSON_EXTRACT_PATH_TEXT('{\"f2\":{\"f3\":1},\"f4\":{\"f5\":99,\"f6\":\"foo\"}}', 'f4')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "redshift", "sql": "JSON_EXTRACT_PATH(x, 'x', 'y', 'z')", "want": "JSON_EXTRACT_PATH_TEXT(x, 'x', 'y', 'z')", "pretty": false, "identify": false}
@@ -6228,8 +6315,9 @@
 {"read": "postgres", "write": "redshift", "sql": "SELECT * FROM ((VALUES (1), (2)) ORDER BY 1 LIMIT 1 OFFSET 1) AS t(x)", "want": "SELECT * FROM ((SELECT 1 UNION ALL SELECT 2 ORDER BY 1 LIMIT 1 OFFSET 1)) AS t(x)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "redshift", "sql": "SELECT CAST('01:03:05.124' AS TIMETZ(2))", "want": "SELECT CAST('01:03:05.124' AS TIME(2) WITH TIME ZONE)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "redshift", "sql": "SELECT CAST('2020-02-02 01:03:05.124' AS TIMESTAMPTZ(2))", "want": "SELECT CAST('2020-02-02 01:03:05.124' AS TIMESTAMP(2) WITH TIME ZONE)", "pretty": false, "identify": false}
-{"read": "postgres", "write": "redshift", "sql": "SELECT DATE_PART('minute', timestamp '2023-01-04 04:05:06.789')", "want": "SELECT EXTRACT(MINUTE FROM CAST('2023-01-04 04:05:06.789' AS TIMESTAMP))", "pretty": false, "identify": false}
-{"read": "postgres", "write": "redshift", "sql": "SELECT DATE_PART('month', date '20220502')", "want": "SELECT EXTRACT(MONTH FROM CAST('20220502' AS DATE))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "redshift", "sql": "SELECT DATE_PART('minute', timestamp '2023-01-04 04:05:06.789')", "want": "SELECT DATE_PART('minute', CAST('2023-01-04 04:05:06.789' AS TIMESTAMP))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "redshift", "sql": "SELECT DATE_PART('month', date '20220502')", "want": "SELECT DATE_PART('month', CAST('20220502' AS DATE))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "redshift", "sql": "SELECT DATE_PART(part, CURRENT_DATE) FROM (SELECT 'year' AS part) AS t", "want": "SELECT PGDATE_PART(part, CURRENT_DATE) FROM (SELECT 'year' AS part) AS t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "redshift", "sql": "SELECT JSON_EXTRACT_PATH_TEXT(x, k1, k2, k3) FROM t", "want": "SELECT JSON_EXTRACT_PATH_TEXT(x, k1, k2, k3) FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "redshift", "sql": "SELECT NULL IS DISTINCT FROM NULL BETWEEN 2 AND 3", "want": "SELECT NULL IS DISTINCT FROM (NULL BETWEEN 2 AND 3)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "redshift", "sql": "SELECT NULL IS DISTINCT FROM NULL IN (0)", "want": "SELECT NULL IS DISTINCT FROM (NULL IN (0))", "pretty": false, "identify": false}
@@ -6258,6 +6346,7 @@
 {"read": "postgres", "write": "snowflake", "sql": "SELECT DATE_PART('minute', timestamp '2023-01-04 04:05:06.789')", "want": "SELECT DATE_PART(MINUTE, CAST('2023-01-04 04:05:06.789' AS TIMESTAMP))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "snowflake", "sql": "SELECT DATE_PART('month', date '20220502')", "want": "SELECT DATE_PART(MONTH, CAST('20220502' AS DATE))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "snowflake", "sql": "SELECT FALSE IS DISTINCT FROM NULL = NULL", "want": "SELECT FALSE IS DISTINCT FROM (NULL = NULL)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "snowflake", "sql": "SELECT MAKE_DATE(2024, 1, 31)", "want": "SELECT DATE_FROM_PARTS(2024, 1, 31)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "snowflake", "sql": "SELECT MAKE_INTERVAL(days => 3)", "want": "SELECT INTERVAL '3 day'", "pretty": false, "identify": false}
 {"read": "postgres", "write": "snowflake", "sql": "SELECT MODE() WITHIN GROUP (ORDER BY x) FROM t", "want": "SELECT MODE(x) FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "snowflake", "sql": "SELECT NULL IS DISTINCT FROM NULL BETWEEN 2 AND 3", "want": "SELECT NULL IS DISTINCT FROM (NULL BETWEEN 2 AND 3)", "pretty": false, "identify": false}
@@ -6288,6 +6377,7 @@
 {"read": "postgres", "write": "snowflake", "sql": "merge into x as z using (select id) as y on a = b WHEN matched then update set Z.a = y.b", "want": "MERGE INTO x AS z USING (SELECT id) AS y ON a = b WHEN MATCHED THEN UPDATE SET Z.a = y.b", "pretty": false, "identify": false}
 {"read": "postgres", "write": "snowflake", "sql": "merge into x using (select id) as y on a = b WHEN matched then update set x.a = y.b", "want": "MERGE INTO x USING (SELECT id) AS y ON a = b WHEN MATCHED THEN UPDATE SET x.a = y.b", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "ARRAY_LENGTH(arr, 1)", "want": "SIZE(arr)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "spark", "sql": "CARDINALITY(arr)", "want": "SIZE(arr)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "CREATE TABLE x (a UUID, b BYTEA)", "want": "CREATE TABLE x (a STRING, b BINARY)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "GENERATE_SERIES('2019-01-01'::TIMESTAMP, NOW(), '1day')", "want": "EXPLODE(SEQUENCE(CAST('2019-01-01' AS TIMESTAMP), CAST(CURRENT_TIMESTAMP() AS TIMESTAMP), INTERVAL '1' DAY))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "JSON_EXTRACT_PATH('{\"f2\":{\"f3\":1},\"f4\":{\"f5\":99,\"f6\":\"foo\"}}','f4')", "want": "GET_JSON_OBJECT('{\"f2\":{\"f3\":1},\"f4\":{\"f5\":99,\"f6\":\"foo\"}}', '$.f4')", "pretty": false, "identify": false}
@@ -6305,7 +6395,10 @@
 {"read": "postgres", "write": "spark", "sql": "SELECT * FROM x WHERE SUBSTRING(col1 FROM 3 + LENGTH(col1) - 10 FOR 10) IN (col2)", "want": "SELECT * FROM x WHERE SUBSTRING(col1, 3 + LENGTH(col1) - 10, 10) IN (col2)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "SELECT CASE WHEN SUBSTRING('abcdefg' FROM 1 FOR 2) IN ('ab') THEN 1 ELSE 0 END", "want": "SELECT CASE WHEN SUBSTRING('abcdefg', 1, 2) IN ('ab') THEN 1 ELSE 0 END", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "SELECT CAST('a' AS VARCHAR COLLATE foo)", "want": "SELECT CAST('a' AS STRING COLLATE foo)", "pretty": false, "identify": false}
-{"read": "postgres", "write": "spark", "sql": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount)", "want": "SELECT PERCENTILE_APPROX(amount, 0.5)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "spark", "sql": "SELECT EXTRACT('isodow' FROM DATE '2024-06-16')", "want": "SELECT EXTRACT(DOW_ISO FROM CAST('2024-06-16' AS DATE))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "spark", "sql": "SELECT EXTRACT(ISODOW FROM DATE '2024-06-16')", "want": "SELECT EXTRACT(DOW_ISO FROM CAST('2024-06-16' AS DATE))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "spark", "sql": "SELECT MAKE_DATE(2024, 1, 31)", "want": "SELECT MAKE_DATE(2024, 1, 31)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "spark", "sql": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount)", "want": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount NULLS LAST)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "SELECT a = b IS NULL FROM t", "want": "SELECT (a = b) IS NULL FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "want": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname NULLS LAST", "pretty": false, "identify": false}
 {"read": "postgres", "write": "spark", "sql": "SELECT r.v, r.idx FROM t, LATERAL UNNEST(t.a) WITH ORDINALITY AS r(v, idx)", "want": "SELECT r.v, r.idx FROM t LATERAL VIEW POSEXPLODE(t.a) r AS idx, v", "pretty": false, "identify": false}
@@ -6340,10 +6433,12 @@
 {"read": "postgres", "write": "sqlite", "sql": "SELECT CAST('{\"a\": 1}' AS JSONB)", "want": "SELECT JSON('{\"a\": 1}')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT CAST(NULL AS JSON)", "want": "SELECT JSON(NULL)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT CAST(NULL AS JSONB)", "want": "SELECT JSON(NULL)", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "SELECT CAST(d AS TIMESTAMP) + INTERVAL '1 day' FROM t", "want": "SELECT DATETIME(DATETIME(d), '1 DAY') FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT CAST(x AS JSON) FROM (SELECT '{\"a\": 1}' AS x) AS t", "want": "SELECT JSON(x) FROM (SELECT '{\"a\": 1}' AS x) AS t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT CAST(x AS JSONB) FROM (SELECT '{\"a\": 1}' AS x) AS t", "want": "SELECT JSON(x) FROM (SELECT '{\"a\": 1}' AS x) AS t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT CONCAT(a, b) FROM t", "want": "SELECT CONCAT(a, b) FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT CONCAT_WS(',', a, b) FROM t", "want": "SELECT CONCAT_WS(',', a, b) FROM t", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "SELECT CURRENT_TIMESTAMP - INTERVAL '7 days'", "want": "SELECT DATETIME(CURRENT_TIMESTAMP, '-7 DAYS')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT FALSE IS DISTINCT FROM NULL = NULL", "want": "SELECT FALSE IS NOT (NULL = NULL)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT GREATEST(NULL, 1)", "want": "SELECT MAX(COALESCE(NULL, 1), COALESCE(1, NULL))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT GREATEST(a, b) FROM t", "want": "SELECT MAX(COALESCE(a, b), COALESCE(b, a)) FROM t", "pretty": false, "identify": false}
@@ -6368,9 +6463,12 @@
 {"read": "postgres", "write": "sqlite", "sql": "SELECT NULL IS NOT DISTINCT FROM NULL NOT IN (0)", "want": "SELECT NULL IS (NOT NULL IN (0))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE '0' ESCAPE '!'", "want": "SELECT NULL IS (NULL NOT LIKE '0' ESCAPE '!')", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT NULL IS NOT DISTINCT FROM NULL NOT LIKE 'x'", "want": "SELECT NULL IS (NULL NOT LIKE 'x')", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "SELECT RANDOM() < 0.1", "want": "SELECT (CAST(RANDOM() & 9007199254740991 AS REAL) / 9007199254740992) < 0.1", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT STRING_AGG(DISTINCT x, ',' ORDER BY x) FROM t", "want": "SELECT GROUP_CONCAT(DISTINCT x ORDER BY x NULLS LAST) FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT STRING_AGG(DISTINCT x, ',') FROM t", "want": "SELECT GROUP_CONCAT(DISTINCT x) FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "SELECT a = b IS NULL FROM t", "want": "SELECT (a = b) IS NULL FROM t", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "SELECT d + INTERVAL '1 day' FROM t", "want": "SELECT DATE(d, '1 DAY') FROM t", "pretty": false, "identify": false}
+{"read": "postgres", "write": "sqlite", "sql": "SELECT d - INTERVAL '2 hours' FROM t", "want": "SELECT DATETIME(d, '-2 HOURS') FROM t", "pretty": false, "identify": false}
 {"read": "postgres", "write": "sqlite", "sql": "WITH t AS (SELECT 1 AS x) (SELECT x FROM t UNION ALL SELECT 2) ORDER BY 1 DESC LIMIT 1", "want": "WITH t AS (SELECT 1 AS x) SELECT x FROM t UNION ALL SELECT 2 ORDER BY 1 DESC NULLS FIRST LIMIT 1", "pretty": false, "identify": false}
 {"read": "postgres", "write": "starrocks", "sql": "SELECT ARRAY[1, 2, 3] @> ARRAY[1, 2]", "want": "SELECT ARRAY_CONTAINS_ALL([1, 2, 3], [1, 2])", "pretty": false, "identify": false}
 {"read": "postgres", "write": "starrocks", "sql": "SELECT ARRAY[1, 2] <@ ARRAY[1, 2, 3]", "want": "SELECT ARRAY_CONTAINS_ALL([1, 2, 3], [1, 2])", "pretty": false, "identify": false}
@@ -6409,6 +6507,7 @@
 {"read": "postgres", "write": "tsql", "sql": "SELECT DATE_PART('YEAR', '2017-01-01'::DATE)", "want": "SELECT DATEPART(YEAR, CAST('2017-01-01' AS DATE))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "tsql", "sql": "SELECT DATE_PART('day', '2017-01-02'::DATE)", "want": "SELECT DATEPART(DAY, CAST('2017-01-02' AS DATE))", "pretty": false, "identify": false}
 {"read": "postgres", "write": "tsql", "sql": "SELECT DATE_PART('month', '2017-03-01'::DATE)", "want": "SELECT DATEPART(MONTH, CAST('2017-03-01' AS DATE))", "pretty": false, "identify": false}
+{"read": "postgres", "write": "tsql", "sql": "SELECT MAKE_DATE(2024, 1, 31)", "want": "SELECT DATEFROMPARTS(2024, 1, 31)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "tsql", "sql": "SELECT MAKE_TIME(23, 59, 59)", "want": "SELECT TIMEFROMPARTS(23, 59, 59, 0, 0)", "pretty": false, "identify": false}
 {"read": "postgres", "write": "tsql", "sql": "SELECT a FROM x EXCEPT SELECT a FROM y ORDER BY a", "want": "SELECT * FROM (SELECT a FROM x EXCEPT SELECT a FROM y) AS _l_0 ORDER BY CASE WHEN a IS NULL THEN 1 ELSE 0 END, a", "pretty": false, "identify": false}
 {"read": "postgres", "write": "tsql", "sql": "SELECT a FROM x INTERSECT SELECT a FROM y ORDER BY a", "want": "SELECT * FROM (SELECT a FROM x INTERSECT SELECT a FROM y) AS _l_0 ORDER BY CASE WHEN a IS NULL THEN 1 ELSE 0 END, a", "pretty": false, "identify": false}
@@ -6561,6 +6660,7 @@
 {"read": "presto", "write": "duckdb", "sql": "'x'", "want": "'x'", "pretty": false, "identify": false}
 {"read": "presto", "write": "duckdb", "sql": "ARBITRARY(x)", "want": "ANY_VALUE(x)", "pretty": false, "identify": false}
 {"read": "presto", "write": "duckdb", "sql": "ARRAY_JOIN(arr, delim)", "want": "ARRAY_TO_STRING(arr, delim)", "pretty": false, "identify": false}
+{"read": "presto", "write": "duckdb", "sql": "ARRAY_REMOVE(the_array, target)", "want": "CASE WHEN target IS NULL THEN NULL ELSE LIST_FILTER(the_array, LAMBDA _u : _u IS DISTINCT FROM target) END", "pretty": false, "identify": false}
 {"read": "presto", "write": "duckdb", "sql": "BITWISE_XOR(a, b)", "want": "XOR(a, b)", "pretty": false, "identify": false}
 {"read": "presto", "write": "duckdb", "sql": "CARDINALITY(x)", "want": "ARRAY_LENGTH(x)", "pretty": false, "identify": false}
 {"read": "presto", "write": "duckdb", "sql": "CAST(ARRAY[1, 2] AS ARRAY(BIGINT))", "want": "CAST([1, 2] AS BIGINT[])", "pretty": false, "identify": false}
@@ -7047,6 +7147,7 @@
 {"read": "redshift", "write": "duckdb", "sql": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "want": "SELECT '{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}' ->> '$.farm.barn.color'", "pretty": false, "identify": false}
 {"read": "redshift", "write": "duckdb", "sql": "SELECT REGEXP_SUBSTR(abc, 'pattern(group)', 2) FROM table", "want": "SELECT REGEXP_EXTRACT(SUBSTRING(abc, 2), 'pattern(group)') FROM \"table\"", "pretty": false, "identify": false}
 {"read": "redshift", "write": "duckdb", "sql": "SELECT col1, *, col2 EXCLUDE(col3) FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3)", "want": "SELECT * EXCLUDE (col3) FROM (SELECT col1, *, col2 FROM (SELECT 1 AS col1, 2 AS col2, 3 AS col3))", "pretty": false, "identify": false}
+{"read": "redshift", "write": "duckdb", "sql": "x SIMILAR TO 'a_c%'", "want": "x LIKE 'a_c%'", "pretty": false, "identify": false}
 {"read": "redshift", "write": "hive", "sql": "DATEDIFF('day', a, b)", "want": "DATEDIFF(b, a)", "pretty": false, "identify": false}
 {"read": "redshift", "write": "hive", "sql": "SELECT DATEADD(month, 18, '2008-02-28')", "want": "SELECT ADD_MONTHS('2008-02-28', 18)", "pretty": false, "identify": false}
 {"read": "redshift", "write": "hive", "sql": "SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')", "want": "SELECT CAST(DATEDIFF('2009-12-31', '2009-01-01') / 7 AS INT)", "pretty": false, "identify": false}
@@ -7071,10 +7172,11 @@
 {"read": "redshift", "write": "postgres", "sql": "SELECT CAST('2020-02-02 01:03:05.124' AS TIMESTAMP(2) WITH TIME ZONE)", "want": "SELECT CAST('2020-02-02 01:03:05.124' AS TIMESTAMPTZ(2))", "pretty": false, "identify": false}
 {"read": "redshift", "write": "postgres", "sql": "SELECT DATEADD(month, 18, '2008-02-28')", "want": "SELECT CAST('2008-02-28' AS TIMESTAMP) + INTERVAL '18 MONTH'", "pretty": false, "identify": false}
 {"read": "redshift", "write": "postgres", "sql": "SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')", "want": "SELECT CAST(EXTRACT(days FROM (CAST('2009-12-31' AS TIMESTAMP) - CAST('2009-01-01' AS TIMESTAMP))) / 7 AS BIGINT)", "pretty": false, "identify": false}
-{"read": "redshift", "write": "postgres", "sql": "SELECT DATE_PART(minute, timestamp '2023-01-04 04:05:06.789')", "want": "SELECT EXTRACT(MINUTE FROM CAST('2023-01-04 04:05:06.789' AS TIMESTAMP))", "pretty": false, "identify": false}
-{"read": "redshift", "write": "postgres", "sql": "SELECT DATE_PART(month, date '20220502')", "want": "SELECT EXTRACT(MONTH FROM CAST('20220502' AS DATE))", "pretty": false, "identify": false}
+{"read": "redshift", "write": "postgres", "sql": "SELECT DATE_PART(minute, timestamp '2023-01-04 04:05:06.789')", "want": "SELECT DATE_PART('minute', CAST('2023-01-04 04:05:06.789' AS TIMESTAMP))", "pretty": false, "identify": false}
+{"read": "redshift", "write": "postgres", "sql": "SELECT DATE_PART(month, date '20220502')", "want": "SELECT DATE_PART('month', CAST('20220502' AS DATE))", "pretty": false, "identify": false}
 {"read": "redshift", "write": "postgres", "sql": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "want": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "pretty": false, "identify": false}
 {"read": "redshift", "write": "postgres", "sql": "SELECT JSON_EXTRACT_PATH_TEXT(x, k1, k2, k3) FROM t", "want": "SELECT JSON_EXTRACT_PATH_TEXT(x, k1, k2, k3) FROM t", "pretty": false, "identify": false}
+{"read": "redshift", "write": "postgres", "sql": "SELECT PGDATE_PART(part, CURRENT_DATE) FROM (SELECT 'year' AS part) AS t", "want": "SELECT DATE_PART(part, CURRENT_DATE) FROM (SELECT 'year' AS part) AS t", "pretty": false, "identify": false}
 {"read": "redshift", "write": "postgres", "sql": "SELECT SPLIT_TO_ARRAY('12,345,6789')", "want": "SELECT STRING_TO_ARRAY('12,345,6789', ',')", "pretty": false, "identify": false}
 {"read": "redshift", "write": "postgres", "sql": "SELECT SYSDATE", "want": "SELECT CURRENT_TIMESTAMP", "pretty": false, "identify": false}
 {"read": "redshift", "write": "postgres", "sql": "SELECT TO_CHAR(foo, bar)", "want": "SELECT TO_CHAR(foo, bar)", "pretty": false, "identify": false}
@@ -7121,8 +7223,8 @@
 {"read": "redshift", "write": "redshift", "sql": "SELECT CAST('2020-02-02 01:03:05.124' AS TIMESTAMP(2) WITH TIME ZONE)", "want": "SELECT CAST('2020-02-02 01:03:05.124' AS TIMESTAMP(2) WITH TIME ZONE)", "pretty": false, "identify": false}
 {"read": "redshift", "write": "redshift", "sql": "SELECT DATEADD(month, 18, '2008-02-28')", "want": "SELECT DATEADD(MONTH, 18, '2008-02-28')", "pretty": false, "identify": false}
 {"read": "redshift", "write": "redshift", "sql": "SELECT DATEDIFF(week, '2009-01-01', '2009-12-31')", "want": "SELECT DATEDIFF(WEEK, '2009-01-01', '2009-12-31')", "pretty": false, "identify": false}
-{"read": "redshift", "write": "redshift", "sql": "SELECT DATE_PART(minute, timestamp '2023-01-04 04:05:06.789')", "want": "SELECT EXTRACT(MINUTE FROM CAST('2023-01-04 04:05:06.789' AS TIMESTAMP))", "pretty": false, "identify": false}
-{"read": "redshift", "write": "redshift", "sql": "SELECT DATE_PART(month, date '20220502')", "want": "SELECT EXTRACT(MONTH FROM CAST('20220502' AS DATE))", "pretty": false, "identify": false}
+{"read": "redshift", "write": "redshift", "sql": "SELECT DATE_PART(minute, timestamp '2023-01-04 04:05:06.789')", "want": "SELECT DATE_PART('minute', CAST('2023-01-04 04:05:06.789' AS TIMESTAMP))", "pretty": false, "identify": false}
+{"read": "redshift", "write": "redshift", "sql": "SELECT DATE_PART(month, date '20220502')", "want": "SELECT DATE_PART('month', CAST('20220502' AS DATE))", "pretty": false, "identify": false}
 {"read": "redshift", "write": "redshift", "sql": "SELECT DISTINCT ON (a) a, b FROM x ORDER BY c DESC", "want": "SELECT a, b FROM (SELECT a AS a, b AS b, ROW_NUMBER() OVER (PARTITION BY a ORDER BY c DESC) AS _row_number FROM x) AS _t WHERE _row_number = 1", "pretty": false, "identify": false}
 {"read": "redshift", "write": "redshift", "sql": "SELECT EXTRACT(EPOCH FROM CURRENT_DATE)", "want": "SELECT EXTRACT(EPOCH FROM CURRENT_DATE)", "pretty": false, "identify": false}
 {"read": "redshift", "write": "redshift", "sql": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "want": "SELECT JSON_EXTRACT_PATH_TEXT('{ \"farm\": {\"barn\": { \"color\": \"red\", \"feed stocked\": true }}}', 'farm', 'barn', 'color')", "pretty": false, "identify": false}
@@ -7288,6 +7390,7 @@
 {"read": "snowflake", "write": "bigquery", "sql": "SELECT TO_TIMESTAMP(16599817290000, 4)", "want": "SELECT TIMESTAMP_SECONDS(CAST(16599817290000 / POWER(10, 4) AS INT64))", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "bigquery", "sql": "SELECT TO_TIMESTAMP(1659981729000000000, 9)", "want": "SELECT TIMESTAMP_SECONDS(CAST(1659981729000000000 / POWER(10, 9) AS INT64))", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "bigquery", "sql": "SELECT TO_TIMESTAMP(col, 'DD-MM-YYYY HH12:MI:SS') FROM t", "want": "SELECT PARSE_TIMESTAMP('%d-%m-%Y %I:%M:%S', col) FROM t", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "bigquery", "sql": "SELECT TRY_CAST('1.2345' AS NUMBER(10, 3))", "want": "SELECT SAFE_CAST('1.2345' AS NUMERIC)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "bigquery", "sql": "SELECT a FROM test AS t QUALIFY ROW_NUMBER() OVER (PARTITION BY a ORDER BY Z) = 1", "want": "SELECT a FROM test AS t QUALIFY ROW_NUMBER() OVER (PARTITION BY a ORDER BY Z NULLS LAST) = 1", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "bigquery", "sql": "SELECT a FROM test WHERE a = 1 GROUP BY a HAVING a = 2 QUALIFY z ORDER BY a LIMIT 10", "want": "SELECT a FROM test WHERE a = 1 GROUP BY a HAVING a = 2 QUALIFY z ORDER BY a NULLS LAST LIMIT 10", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "bigquery", "sql": "SELECT cola, colb FROM (VALUES (1, 'test')) AS tab(cola, colb)", "want": "SELECT cola, colb FROM UNNEST([STRUCT(1 AS cola, 'test' AS colb)]) AS tab", "pretty": false, "identify": false}
@@ -7362,9 +7465,9 @@
 {"read": "snowflake", "write": "duckdb", "sql": "ARRAY_INSERT([1, 2, 3], 0, 99)", "want": "CASE WHEN [1, 2, 3] IS NULL THEN NULL ELSE LIST_CONCAT([99], [1, 2, 3]) END", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "ARRAY_INSERT([1, 2, 3], 1, 99)", "want": "CASE WHEN [1, 2, 3] IS NULL THEN NULL ELSE LIST_CONCAT([1, 2, 3][1:1], [99], [1, 2, 3][2:]) END", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "ARRAY_INSERT([1, 2, 3], 3, 99)", "want": "CASE WHEN [1, 2, 3] IS NULL THEN NULL ELSE LIST_CONCAT([1, 2, 3][1:3], [99], [1, 2, 3][4:]) END", "pretty": false, "identify": false}
-{"read": "snowflake", "write": "duckdb", "sql": "ARRAY_REMOVE([1, 2, 3], 2)", "want": "LIST_FILTER([1, 2, 3], LAMBDA _u : _u <> 2)", "pretty": false, "identify": false}
-{"read": "snowflake", "write": "duckdb", "sql": "ARRAY_REMOVE([1, 2, 3], NULL)", "want": "CASE WHEN NULL IS NULL THEN NULL ELSE LIST_FILTER([1, 2, 3], LAMBDA _u : _u <> NULL) END", "pretty": false, "identify": false}
-{"read": "snowflake", "write": "duckdb", "sql": "ARRAY_REMOVE(the_array, target)", "want": "CASE WHEN target IS NULL THEN NULL ELSE LIST_FILTER(the_array, LAMBDA _u : _u <> target) END", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "duckdb", "sql": "ARRAY_REMOVE([1, 2, NULL, 2], 2)", "want": "LIST_FILTER([1, 2, NULL, 2], LAMBDA _u : _u IS DISTINCT FROM 2)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "duckdb", "sql": "ARRAY_REMOVE([1, 2, NULL, 2], NULL)", "want": "CASE WHEN NULL IS NULL THEN NULL ELSE LIST_FILTER([1, 2, NULL, 2], LAMBDA _u : _u IS DISTINCT FROM NULL) END", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "duckdb", "sql": "ARRAY_REMOVE(the_array, target)", "want": "CASE WHEN target IS NULL THEN NULL ELSE LIST_FILTER(the_array, LAMBDA _u : _u IS DISTINCT FROM target) END", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "ARRAY_REMOVE_AT([1, 2, 3], -1)", "want": "CASE WHEN [1, 2, 3] IS NULL THEN NULL ELSE [1, 2, 3][1:LENGTH([1, 2, 3]) + -1] END", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "ARRAY_REMOVE_AT([1, 2, 3], -2)", "want": "CASE WHEN [1, 2, 3] IS NULL THEN NULL ELSE LIST_CONCAT([1, 2, 3][1:LENGTH([1, 2, 3]) + -2], [1, 2, 3][LENGTH([1, 2, 3]) + -2 + 2:]) END", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "ARRAY_REMOVE_AT([1, 2, 3], 0)", "want": "CASE WHEN [1, 2, 3] IS NULL THEN NULL ELSE [1, 2, 3][2:] END", "pretty": false, "identify": false}
@@ -7493,6 +7596,7 @@
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT * FROM t ASOF JOIN u MATCH_CONDITION (t.ts > u.ts) ON t.id = u.id AND t.category = u.category", "want": "SELECT * FROM t ASOF LEFT JOIN u ON (t.id = u.id AND t.category = u.category) AND t.ts > u.ts", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT * FROM t ASOF JOIN u MATCH_CONDITION (t.ts >= u.ts)", "want": "SELECT * FROM t ASOF LEFT JOIN u ON t.ts >= u.ts", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT * FROM t ASOF JOIN u MATCH_CONDITION (t.ts >= u.ts) ON t.id = u.id AND t.category = u.category", "want": "SELECT * FROM t ASOF LEFT JOIN u ON (t.id = u.id AND t.category = u.category) AND t.ts >= u.ts", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "duckdb", "sql": "SELECT * FROM t ORDER BY \"ALL\"", "want": "SELECT * FROM t ORDER BY \"ALL\"", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT * FROM t1 AT (TIMESTAMP => '2024-01-01'::TIMESTAMP) AS a", "want": "SELECT * FROM t1 AS a AT (TIMESTAMP => CAST('2024-01-01' AS TIMESTAMP))", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT * FROM t1 FULL OUTER JOIN t2", "want": "SELECT * FROM t1, t2", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT * FROM t1 INNER JOIN t2", "want": "SELECT * FROM t1, t2", "pretty": false, "identify": false}
@@ -7757,7 +7861,7 @@
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT REGEXP_INSTR(subject, pattern)", "want": "SELECT CASE WHEN subject IS NULL OR pattern IS NULL THEN NULL WHEN pattern = '' THEN 0 WHEN LENGTH(REGEXP_EXTRACT_ALL(subject, pattern)) < 1 THEN 0 ELSE 1 + COALESCE(LIST_SUM(LIST_TRANSFORM(STRING_SPLIT_REGEX(subject, pattern)[1:1], LAMBDA x : LENGTH(x))), 0) + COALESCE(LIST_SUM(LIST_TRANSFORM(REGEXP_EXTRACT_ALL(subject, pattern)[1:1 - 1], LAMBDA x : LENGTH(x))), 0) + 0 END", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT REGEXP_INSTR(subject, pattern, 1, 1, 0, 'im')", "want": "SELECT CASE WHEN subject IS NULL OR pattern IS NULL OR 1 IS NULL OR 1 IS NULL OR 0 IS NULL OR 'im' IS NULL THEN NULL WHEN pattern = '' THEN 0 WHEN LENGTH(REGEXP_EXTRACT_ALL(subject, '(?im)' || pattern)) < 1 THEN 0 ELSE 1 + COALESCE(LIST_SUM(LIST_TRANSFORM(STRING_SPLIT_REGEX(subject, '(?im)' || pattern)[1:1], LAMBDA x : LENGTH(x))), 0) + COALESCE(LIST_SUM(LIST_TRANSFORM(REGEXP_EXTRACT_ALL(subject, '(?im)' || pattern)[1:1 - 1], LAMBDA x : LENGTH(x))), 0) + 0 END", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT REGEXP_INSTR(subject, pattern, 1, 2)", "want": "SELECT CASE WHEN subject IS NULL OR pattern IS NULL OR 1 IS NULL OR 2 IS NULL THEN NULL WHEN pattern = '' THEN 0 WHEN LENGTH(REGEXP_EXTRACT_ALL(subject, pattern)) < 2 THEN 0 ELSE 1 + COALESCE(LIST_SUM(LIST_TRANSFORM(STRING_SPLIT_REGEX(subject, pattern)[1:2], LAMBDA x : LENGTH(x))), 0) + COALESCE(LIST_SUM(LIST_TRANSFORM(REGEXP_EXTRACT_ALL(subject, pattern)[1:2 - 1], LAMBDA x : LENGTH(x))), 0) + 0 END", "pretty": false, "identify": false}
-{"read": "snowflake", "write": "duckdb", "sql": "SELECT REGEXP_INSTR(subject, pattern, 5)", "want": "SELECT CASE WHEN subject IS NULL OR pattern IS NULL OR 5 IS NULL THEN NULL WHEN pattern = '' THEN 0 WHEN LENGTH(REGEXP_EXTRACT_ALL(SUBSTRING(subject, 5), pattern)) < 1 THEN 0 ELSE 1 + COALESCE(LIST_SUM(LIST_TRANSFORM(STRING_SPLIT_REGEX(SUBSTRING(subject, 5), pattern)[1:1], LAMBDA x : LENGTH(x))), 0) + COALESCE(LIST_SUM(LIST_TRANSFORM(REGEXP_EXTRACT_ALL(SUBSTRING(subject, 5), pattern)[1:1 - 1], LAMBDA x : LENGTH(x))), 0) + 5 - 1 END", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "duckdb", "sql": "SELECT REGEXP_INSTR(subject, pattern, 5)", "want": "SELECT CASE WHEN subject IS NULL OR pattern IS NULL OR 5 IS NULL THEN NULL WHEN pattern = '' THEN 0 WHEN LENGTH(REGEXP_EXTRACT_ALL(SUBSTRING(subject, 5), pattern)) < 1 THEN 0 ELSE 1 + COALESCE(LIST_SUM(LIST_TRANSFORM(STRING_SPLIT_REGEX(SUBSTRING(subject, 5), pattern)[1:1], LAMBDA x : LENGTH(x))), 0) + COALESCE(LIST_SUM(LIST_TRANSFORM(REGEXP_EXTRACT_ALL(SUBSTRING(subject, 5), pattern)[1:1 - 1], LAMBDA x : LENGTH(x))), 0) + (5 - 1) END", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT REGR_VALX(y, x)", "want": "SELECT CASE WHEN y IS NULL THEN CAST(NULL AS DOUBLE) ELSE x END", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT REGR_VALY(y, x)", "want": "SELECT CASE WHEN x IS NULL THEN CAST(NULL AS DOUBLE) ELSE y END", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT RLIKE(a, b)", "want": "SELECT REGEXP_FULL_MATCH(a, b)", "pretty": false, "identify": false}
@@ -7811,7 +7915,7 @@
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT TIMESTAMP_TZ_FROM_PARTS(2023, 6, 15, 14, 30, 45, 0, 'America/Los_Angeles')", "want": "SELECT MAKE_TIMESTAMP(2023, 6, 15, 14, 30, 45) AT TIME ZONE 'America/Los_Angeles'", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT TIME_FROM_PARTS(0, 100, 0)", "want": "SELECT CAST('00:00:00' AS TIME) + INTERVAL ((0 * 3600) + (100 * 60) + 0) SECOND", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT TIME_FROM_PARTS(12, 34, 56)", "want": "SELECT MAKE_TIME(12, 34, 56)", "pretty": false, "identify": false}
-{"read": "snowflake", "write": "duckdb", "sql": "SELECT TIME_FROM_PARTS(12, 34, 56, 987654321)", "want": "SELECT CAST('00:00:00' AS TIME) + INTERVAL ((12 * 3600) + (34 * 60) + 56 + (987654321 / 1000000000.0)) SECOND", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "duckdb", "sql": "SELECT TIME_FROM_PARTS(12, 34, 56, 987654321)", "want": "SELECT CAST('00:00:00' AS TIME) + INTERVAL ((12 * 3600) + (34 * 60) + (56 + (987654321 / 1000000000.0))) SECOND", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT TIME_SLICE(CAST('2024-03-15' AS DATE), 1, 'WK')", "want": "SELECT TIME_BUCKET(INTERVAL 1 WEEK, CAST('2024-03-15' AS DATE), CAST('1969-12-29' AS DATE))", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT TIME_SLICE(DATE '2021-03-18', 8, 'DAY')", "want": "SELECT TIME_BUCKET(INTERVAL 8 DAY, CAST('2021-03-18' AS DATE), CAST('1970-01-01' AS DATE))", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT TIME_SLICE(DATE '2021-03-18', 8, 'DAY', 'END')", "want": "SELECT CAST(TIME_BUCKET(INTERVAL 8 DAY, CAST('2021-03-18' AS DATE), CAST('1970-01-01' AS DATE)) + INTERVAL 8 DAY AS DATE)", "pretty": false, "identify": false}
@@ -7869,6 +7973,7 @@
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT id, MAP_INSERT(attrs, 'new_key', 'new_value') AS attrs_with_insert FROM demo_maps", "want": "SELECT id, MAP_CONCAT(attrs, MAP {'new_key': 'new_value'}) AS attrs_with_insert FROM demo_maps", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT id, MAP_SIZE(attrs) AS attr_count FROM demo_maps", "want": "SELECT id, CARDINALITY(attrs) AS attr_count FROM demo_maps", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT x'ABCD'", "want": "SELECT UNHEX('ABCD')", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "duckdb", "sql": "SELECT x, y FROM t ORDER BY all DESC NULLS LAST", "want": "SELECT x, y FROM t ORDER BY ALL DESC", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SELECT { 'Manitoba': 'Winnipeg', 'foo': 'bar' } AS province_capital", "want": "SELECT {'Manitoba': 'Winnipeg', 'foo': 'bar'} AS province_capital", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SET a = 1", "want": "SET VARIABLE a = 1", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "duckdb", "sql": "SHA1(X'002A'::BINARY)", "want": "SHA1(CAST(UNHEX('002A') AS BLOB))", "pretty": false, "identify": false}
@@ -8089,7 +8194,7 @@
 {"read": "snowflake", "write": "postgres", "sql": "trim(date_column, 'UTC')", "want": "TRIM('UTC' FROM date_column)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "presto", "sql": "ANY_VALUE(x)", "want": "ARBITRARY(x)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "presto", "sql": "ARRAY_CONSTRUCT(0, 1, 2)", "want": "ARRAY[0, 1, 2]", "pretty": false, "identify": false}
-{"read": "snowflake", "write": "presto", "sql": "ARRAY_GENERATE_RANGE(0, 3)", "want": "SEQUENCE(0, 2)", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "presto", "sql": "ARRAY_GENERATE_RANGE(0, 3)", "want": "IF(FALSE, ARRAY[], SEQUENCE(0, 2))", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "presto", "sql": "CURRENT_USER()", "want": "CURRENT_USER", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "presto", "sql": "DIV0(a - b, c - d)", "want": "IF((c - d) = 0 AND NOT (a - b) IS NULL, 0, CAST((a - b) AS DOUBLE) / (c - d))", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "presto", "sql": "DIV0(foo, bar)", "want": "IF(bar = 0 AND NOT foo IS NULL, 0, CAST(foo AS DOUBLE) / bar)", "pretty": false, "identify": false}
@@ -8844,6 +8949,7 @@
 {"read": "snowflake", "write": "sqlite", "sql": "CREATE TABLE t (a INT AUTOINCREMENT)", "want": "CREATE TABLE t (a INTEGER)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "sqlite", "sql": "CURRENT_DATE()", "want": "CURRENT_DATE", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "sqlite", "sql": "CURRENT_TIMESTAMP()", "want": "CURRENT_TIMESTAMP", "pretty": false, "identify": false}
+{"read": "snowflake", "write": "sqlite", "sql": "DATEDIFF(DAY, b, a)", "want": "CAST((JULIANDAY(a, 'start of day') - JULIANDAY(b, 'start of day')) AS INTEGER)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "sqlite", "sql": "DATEDIFF(NANOSECOND, b, a)", "want": "CAST((JULIANDAY(a) - JULIANDAY(b)) * 86400000000000.0 AS INTEGER)", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "sqlite", "sql": "DIV0(a - b, c - d)", "want": "IIF((c - d) = 0 AND NOT (a - b) IS NULL, 0, CAST((a - b) AS REAL) / (c - d))", "pretty": false, "identify": false}
 {"read": "snowflake", "write": "sqlite", "sql": "DIV0(foo, bar)", "want": "IIF(bar = 0 AND NOT foo IS NULL, 0, CAST(foo AS REAL) / bar)", "pretty": false, "identify": false}
@@ -9081,6 +9187,7 @@
 {"read": "spark", "write": "databricks", "sql": "SELECT DATE_ADD(MONTH, 20, col)", "want": "SELECT DATE_ADD(MONTH, 20, col)", "pretty": false, "identify": false}
 {"read": "spark", "write": "databricks", "sql": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "want": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "pretty": false, "identify": false}
 {"read": "spark", "write": "databricks", "sql": "SELECT GET_JSON_OBJECT(c1, '$.item[1].price')", "want": "SELECT GET_JSON_OBJECT(c1, '$.item[1].price')", "pretty": false, "identify": false}
+{"read": "spark", "write": "databricks", "sql": "SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY x DESC), PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY x DESC) FROM VALUES (0), (10) AS t(x)", "want": "SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY x DESC), PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY x DESC) FROM VALUES (0), (10) AS t(x)", "pretty": false, "identify": false}
 {"read": "spark", "write": "databricks", "sql": "SELECT TIMESTAMPDIFF(MONTH, foo, bar)", "want": "SELECT TIMESTAMPDIFF(MONTH, foo, bar)", "pretty": false, "identify": false}
 {"read": "spark", "write": "databricks", "sql": "SELECT TO_DATE(x, 'MM/dd/yyyy')", "want": "SELECT TO_DATE(x, 'MM/dd/yyyy')", "pretty": false, "identify": false}
 {"read": "spark", "write": "databricks", "sql": "SELECT TO_TIMESTAMP('2016-12-31 03:04:05', 'yyyy-MM-dd HH:mm:ss')", "want": "SELECT TO_TIMESTAMP('2016-12-31 03:04:05', 'yyyy-MM-dd HH:mm:ss')", "pretty": false, "identify": false}
@@ -9114,6 +9221,8 @@
 {"read": "spark", "write": "duckdb", "sql": "ARRAY_INSERT(ARRAY(1, 2, 3), 2, 99)", "want": "CASE WHEN [1, 2, 3] IS NULL THEN NULL ELSE LIST_CONCAT([1, 2, 3][1:1], [99], [1, 2, 3][2:]) END", "pretty": false, "identify": false}
 {"read": "spark", "write": "duckdb", "sql": "ARRAY_INSERT(ARRAY(1, 2, 3), 4, 99)", "want": "CASE WHEN [1, 2, 3] IS NULL THEN NULL ELSE LIST_CONCAT([1, 2, 3][1:3], [99], [1, 2, 3][4:]) END", "pretty": false, "identify": false}
 {"read": "spark", "write": "duckdb", "sql": "ARRAY_JOIN(arr, delim)", "want": "ARRAY_TO_STRING(arr, delim)", "pretty": false, "identify": false}
+{"read": "spark", "write": "duckdb", "sql": "ARRAY_REMOVE(ARRAY(1, 2, NULL, 2), 2)", "want": "LIST_FILTER([1, 2, NULL, 2], LAMBDA _u : _u IS DISTINCT FROM 2)", "pretty": false, "identify": false}
+{"read": "spark", "write": "duckdb", "sql": "ARRAY_REMOVE(the_array, target)", "want": "CASE WHEN target IS NULL THEN NULL ELSE LIST_FILTER(the_array, LAMBDA _u : _u IS DISTINCT FROM target) END", "pretty": false, "identify": false}
 {"read": "spark", "write": "duckdb", "sql": "ARRAY_SUM(ARRAY(1, 2))", "want": "LIST_SUM([1, 2])", "pretty": false, "identify": false}
 {"read": "spark", "write": "duckdb", "sql": "CONCAT_WS(' ', NULL, 'Smith')", "want": "CONCAT_WS(' ', NULL, 'Smith')", "pretty": false, "identify": false}
 {"read": "spark", "write": "duckdb", "sql": "CREATE TABLE blah (col_a INT) COMMENT \"Test comment: blah\" PARTITIONED BY (date STRING) USING ICEBERG TBLPROPERTIES('x' = '1')", "want": "CREATE TABLE blah (\n  col_a INT\n)", "pretty": true, "identify": false}
@@ -9270,7 +9379,7 @@
 {"read": "spark", "write": "hive", "sql": "x | 1", "want": "x | 1", "pretty": false, "identify": false}
 {"read": "spark", "write": "hive", "sql": "~x", "want": "~x", "pretty": false, "identify": false}
 {"read": "spark", "write": "materialize", "sql": "CREATE TABLE t (a INT, b STRING, UNIQUE (a))", "want": "CREATE TABLE t (a INT, b TEXT)", "pretty": false, "identify": false}
-{"read": "spark", "write": "materialize", "sql": "SELECT SIZE(ARRAY(1, 2))", "want": "SELECT ARRAY_LENGTH(ARRAY[1, 2], 1)", "pretty": false, "identify": false}
+{"read": "spark", "write": "materialize", "sql": "SELECT SIZE(arr) FROM t", "want": "SELECT CASE WHEN arr IS NULL THEN NULL ELSE COALESCE(ARRAY_LENGTH(arr, 1), 0) END FROM t", "pretty": false, "identify": false}
 {"read": "spark", "write": "mysql", "sql": "DATE_TRUNC(DAY, TIMESTAMP '2001-02-16 20:38:40')", "want": "DATE_ADD('0000-01-01 00:00:00', INTERVAL (TIMESTAMPDIFF(DAY, '0000-01-01 00:00:00', TIMESTAMP('2001-02-16 20:38:40'))) DAY)", "pretty": false, "identify": false}
 {"read": "spark", "write": "mysql", "sql": "DATE_TRUNC(MONTH, TIMESTAMP '2001-02-16 20:38:40')", "want": "DATE_ADD('0000-01-01 00:00:00', INTERVAL (TIMESTAMPDIFF(MONTH, '0000-01-01 00:00:00', TIMESTAMP('2001-02-16 20:38:40'))) MONTH)", "pretty": false, "identify": false}
 {"read": "spark", "write": "mysql", "sql": "DATE_TRUNC(SECOND, TIMESTAMP '2001-02-16 20:38:40')", "want": "DATE_ADD('0000-01-01 00:00:00', INTERVAL (TIMESTAMPDIFF(SECOND, '0000-01-01 00:00:00', TIMESTAMP('2001-02-16 20:38:40'))) SECOND)", "pretty": false, "identify": false}
@@ -9281,6 +9390,8 @@
 {"read": "spark", "write": "oracle", "sql": "SELECT * FROM sales TIMESTAMP AS OF '2026-10-10 12:00:00.123456' AS s", "want": "SELECT * FROM sales AS OF TIMESTAMP TO_TIMESTAMP('2026-10-10 12:00:00.123456', 'YYYY-MM-DD HH24:MI:SS.FF6') s", "pretty": false, "identify": false}
 {"read": "spark", "write": "oracle", "sql": "TO_NUMBER(x, fmt)", "want": "TO_NUMBER(x, fmt)", "pretty": false, "identify": false}
 {"read": "spark", "write": "postgres", "sql": "SELECT DATEDIFF(week, '2020-01-01', '2020-12-31')", "want": "SELECT CAST(EXTRACT(days FROM (CAST(CAST('2020-12-31' AS DATE) AS TIMESTAMP) - CAST(CAST('2020-01-01' AS DATE) AS TIMESTAMP))) / 7 AS BIGINT)", "pretty": false, "identify": false}
+{"read": "spark", "write": "postgres", "sql": "SELECT LEFT(x, n), RIGHT(x, -1)", "want": "SELECT LEFT(x, CASE WHEN n < 0 THEN 0 ELSE n END), RIGHT(x, CASE WHEN -1 < 0 THEN 0 ELSE -1 END)", "pretty": false, "identify": false}
+{"read": "spark", "write": "postgres", "sql": "SELECT MAKE_DATE(2024, 1, 31)", "want": "SELECT MAKE_DATE(2024, 1, 31)", "pretty": false, "identify": false}
 {"read": "spark", "write": "postgres", "sql": "SELECT RLIKE('John Doe', 'John.*')", "want": "SELECT 'John Doe' ~ 'John.*'", "pretty": false, "identify": false}
 {"read": "spark", "write": "postgres", "sql": "SELECT SHA2(x, 256)", "want": "SELECT ENCODE(SHA256(x), 'hex')", "pretty": false, "identify": false}
 {"read": "spark", "write": "postgres", "sql": "SELECT TO_UTC_TIMESTAMP('2016-08-31', 'Asia/Seoul')", "want": "SELECT CAST('2016-08-31' AS TIMESTAMP) AT TIME ZONE 'Asia/Seoul' AT TIME ZONE 'UTC'", "pretty": false, "identify": false}
@@ -9532,8 +9643,10 @@
 {"read": "spark", "write": "spark2", "sql": "SELECT DATEDIFF(MONTH, CAST('1996-10-30' AS TIMESTAMP), CAST('1997-02-28 10:30:00' AS TIMESTAMP))", "want": "SELECT CAST(MONTHS_BETWEEN(CAST('1997-02-28 10:30:00' AS TIMESTAMP), CAST('1996-10-30' AS TIMESTAMP)) AS INT)", "pretty": false, "identify": false}
 {"read": "spark", "write": "spark2", "sql": "SELECT DATE_ADD(my_date_column, 1)", "want": "SELECT DATE_ADD(my_date_column, 1)", "pretty": false, "identify": false}
 {"read": "spark", "write": "spark2", "sql": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "want": "SELECT ELEMENT_AT(ARRAY(1, 2, 3), 1)", "pretty": false, "identify": false}
+{"read": "spark", "write": "spark2", "sql": "SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY x DESC), PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY x DESC) FROM VALUES (0), (10) AS t(x)", "want": "SELECT PERCENTILE_APPROX(x, 0.25), PERCENTILE_APPROX(x, 0.25) FROM VALUES (0), (10) AS t(x)", "pretty": false, "identify": false}
 {"read": "spark", "write": "spark2", "sql": "SELECT TRY_CAST('a' AS INT)", "want": "SELECT CAST('a' AS INT)", "pretty": false, "identify": false}
 {"read": "spark", "write": "sqlite", "sql": "LEVENSHTEIN(col1, col2)", "want": "EDITDIST3(col1, col2)", "pretty": false, "identify": false}
+{"read": "spark", "write": "sqlite", "sql": "SELECT CAST('2024-01-15 23:30:00' AS TIMESTAMP_LTZ) + INTERVAL 1 DAY", "want": "SELECT DATETIME(DATETIME('2024-01-15 23:30:00'), '1 DAY')", "pretty": false, "identify": false}
 {"read": "spark", "write": "sqlite", "sql": "SELECT GET_JSON_OBJECT(a, CONCAT('$.', f))", "want": "SELECT a ->> ('$.' || f)", "pretty": false, "identify": false}
 {"read": "spark", "write": "starrocks", "sql": "SELECT MAP('a', 1, 'b', 2)", "want": "SELECT MAP('a', 1, 'b', 2)", "pretty": false, "identify": false}
 {"read": "spark", "write": "starrocks", "sql": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "want": "SELECT MAX_BY(a, b), MIN_BY(a, b) FROM t", "pretty": false, "identify": false}
@@ -9645,6 +9758,7 @@
 {"read": "sqlite", "write": "", "sql": "SELECT 1 UNION SELECT 2 INTERSECT SELECT 3", "want": "(SELECT 1 UNION SELECT 2) INTERSECT SELECT 3", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "", "sql": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE NO OTHERS)", "want": "SELECT SUM(X) OVER (PARTITION BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "", "sql": "UNICODE(x)", "want": "UNICODE(x)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "", "sql": "UPDATE OR IGNORE t SET b = 'x'", "want": "UPDATE OR IGNORE t SET b = 'x'", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "", "sql": "`x` + \"y\"", "want": "\"x\" + \"y\"", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "", "sql": "x -> '$.y'", "want": "JSON_EXTRACT(x, '$.y')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "", "sql": "x -> '$.y[0].z'", "want": "JSON_EXTRACT(x, '$.y[0].z')", "pretty": false, "identify": false}
@@ -9697,18 +9811,43 @@
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT CONCAT_WS(',', a, b) FROM t", "want": "SELECT CONCAT_WS(',', a, b) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT DATE('2020-01-31', '+1 month')", "want": "SELECT DATE('2020-01-31', '+1 month')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT DATE('2020-03-15', 'start of month', '+1 day')", "want": "SELECT DATE('2020-03-15', 'start of month', '+1 day')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT DATE('nOw'), STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')", "want": "SELECT CAST(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS DATE), STRFTIME(CURRENT_TIMESTAMP AT TIME ZONE 'UTC', '%Y-%m-%d %H:%M:%S.%g')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT FALSE IS DISTINCT FROM NULL = NULL", "want": "SELECT (FALSE IS DISTINCT FROM NULL) = NULL", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT GROUP_CONCAT(x, :separator) FROM t", "want": "SELECT LISTAGG(x, COALESCE($separator, '')) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT GROUP_CONCAT(x, CAST(NULL AS TEXT)) FROM t", "want": "SELECT LISTAGG(x, COALESCE(CAST(NULL AS TEXT), '')) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT GROUP_CONCAT(x, NULL ORDER BY y) FILTER(WHERE z > 0) FROM t", "want": "SELECT LISTAGG(x, COALESCE(NULL, '') ORDER BY y NULLS FIRST) FILTER(WHERE z > 0) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT GROUP_CONCAT(x, NULL) FROM t", "want": "SELECT LISTAGG(x, COALESCE(NULL, '')) FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT IF(a, b, c, d)", "want": "SELECT CASE WHEN a THEN b WHEN c THEN d END", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT IIF(a, b, c, d)", "want": "SELECT CASE WHEN a THEN b WHEN c THEN d END", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "want": "SELECT '[10, 20, [30, 40]]' ->> '$[1]'", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[2]', '$[0]', '$[1]')", "want": "SELECT TO_JSON(JSON_EXTRACT('[10, 20, [30, 40]]', ['$[2]', '$[0]', '$[1]']))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH('')", "want": "SELECT LENGTH(SPLIT_PART('', CHR(0), 1))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH('a' || CHAR(0) || 'b')", "want": "SELECT LENGTH(SPLIT_PART('a' || CHR(0) || 'b', CHR(0), 1))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH('ab' || CHAR(0))", "want": "SELECT LENGTH(SPLIT_PART('ab' || CHR(0), CHR(0), 1))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH('abc')", "want": "SELECT LENGTH(SPLIT_PART('abc', CHR(0), 1))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH('\u00e9\ud83d\ude0a' || CHAR(0) || 'x')", "want": "SELECT LENGTH(SPLIT_PART('\u00e9\ud83d\ude0a' || CHR(0) || 'x', CHR(0), 1))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH(123)", "want": "SELECT CASE TYPEOF(123) WHEN 'BLOB' THEN OCTET_LENGTH(CAST(123 AS BLOB)) ELSE LENGTH(SPLIT_PART(CAST(123 AS TEXT), CHR(0), 1)) END", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH(CHAR(0) || 'ab')", "want": "SELECT LENGTH(SPLIT_PART(CHR(0) || 'ab', CHR(0), 1))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH(CHAR(0))", "want": "SELECT LENGTH(SPLIT_PART(CHR(0), CHR(0), 1))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH(NULL)", "want": "SELECT CASE TYPEOF(NULL) WHEN 'BLOB' THEN OCTET_LENGTH(CAST(NULL AS BLOB)) ELSE LENGTH(SPLIT_PART(CAST(NULL AS TEXT), CHR(0), 1)) END", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH(x'')", "want": "SELECT CASE TYPEOF(UNHEX('')) WHEN 'BLOB' THEN OCTET_LENGTH(CAST(UNHEX('') AS BLOB)) ELSE LENGTH(SPLIT_PART(CAST(UNHEX('') AS TEXT), CHR(0), 1)) END", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT LENGTH(x'610062')", "want": "SELECT CASE TYPEOF(UNHEX('610062')) WHEN 'BLOB' THEN OCTET_LENGTH(CAST(UNHEX('610062') AS BLOB)) ELSE LENGTH(SPLIT_PART(CAST(UNHEX('610062') AS TEXT), CHR(0), 1)) END", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT MAX(a, b) FROM t", "want": "SELECT CASE WHEN a IS NULL OR b IS NULL THEN NULL ELSE GREATEST(a, b) END FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT MIN(a, b) FROM t", "want": "SELECT CASE WHEN a IS NULL OR b IS NULL THEN NULL ELSE LEAST(a, b) END FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT RANDOM()", "want": "SELECT CAST((((CAST(FLOOR(RANDOM() * 4294967296) AS INT128) * 4294967296) + CAST(FLOOR(RANDOM() * 4294967296) AS INT128)) % ((CAST(9223372036854775807 AS INT128) - CAST(-9223372036854775807 AS INT128)) + 1)) + CAST(-9223372036854775807 AS INT128) AS BIGINT)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%%%%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME(CAST('2024-02-29 12:34:56.123' AS TIMESTAMP), '%%%%f')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%%%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME(CAST('2024-02-29 12:34:56.123' AS TIMESTAMP), '%%%S.%g')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME(CAST('2024-02-29 12:34:56.123' AS TIMESTAMP), '%%f')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%S.%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME(CAST('2024-02-29 12:34:56.123' AS TIMESTAMP), '%S.%S.%g')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%Y-%m-%d %H:%M:%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME(CAST('2024-02-29 12:34:56.123' AS TIMESTAMP), '%Y-%m-%d %H:%M:%S.%g')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%Y-%m-%d', '2020-01-01 12:05:03')", "want": "SELECT STRFTIME(CAST('2020-01-01 12:05:03' AS TIMESTAMP), '%Y-%m-%d')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%Y-%m-%d', CURRENT_TIMESTAMP)", "want": "SELECT STRFTIME(CAST(CURRENT_TIMESTAMP AS TIMESTAMP), '%Y-%m-%d')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%f')", "want": "SELECT STRFTIME(CURRENT_TIMESTAMP AT TIME ZONE 'UTC', '%S.%g')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%f', '2024-02-29 12:34:00.007')", "want": "SELECT STRFTIME(CAST('2024-02-29 12:34:00.007' AS TIMESTAMP), '%S.%g')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%f', '2024-02-29 12:34:56')", "want": "SELECT STRFTIME(CAST('2024-02-29 12:34:56' AS TIMESTAMP), '%S.%g')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%f', NULL)", "want": "SELECT STRFTIME(CAST(NULL AS TIMESTAMP), '%S.%g')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%f', ts) FROM (SELECT '2024-02-29 12:34:56.123' AS ts) AS t", "want": "SELECT STRFTIME(CAST(ts AS TIMESTAMP), '%S.%g') FROM (SELECT '2024-02-29 12:34:56.123' AS ts) AS t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT STRFTIME('%f|%%f|%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME(CAST('2024-02-29 12:34:56.123' AS TIMESTAMP), '%S.%g|%%f|%S.%g')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT STRING_AGG(x, NULL) FROM t", "want": "SELECT LISTAGG(x, COALESCE(NULL, '')) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT UNICODE('')", "want": "SELECT NULLIF(UNICODE(''), -1)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT UNICODE('A')", "want": "SELECT NULLIF(UNICODE('A'), -1)", "pretty": false, "identify": false}
@@ -9716,6 +9855,9 @@
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT UNICODE('\ud83d\ude00')", "want": "SELECT NULLIF(UNICODE('\ud83d\ude00'), -1)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT UNICODE(LOWER(''))", "want": "SELECT NULLIF(UNICODE(LOWER('')), -1)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT UNICODE(NULL)", "want": "SELECT NULLIF(UNICODE(NULL), -1)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT x FROM t LIMIT -1", "want": "SELECT x FROM t LIMIT ALL", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT x FROM t LIMIT -1 OFFSET 5", "want": "SELECT x FROM t LIMIT ALL OFFSET 5", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "duckdb", "sql": "SELECT x FROM t LIMIT 5, -2", "want": "SELECT x FROM t LIMIT ALL OFFSET 5", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "SELECT x'CC'", "want": "SELECT UNHEX('CC')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "duckdb", "sql": "UNICODE(x)", "want": "NULLIF(UNICODE(x), -1)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "hive", "sql": "SELECT * FROM t1 FULL OUTER JOIN t2", "want": "SELECT * FROM t1 FULL OUTER JOIN t2 ON TRUE", "pretty": false, "identify": false}
@@ -9734,6 +9876,7 @@
 {"read": "sqlite", "write": "mysql", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "want": "SELECT CAST('[10, 20, [30, 40]]' AS JSON) ->> '$[1]'", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "mysql", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]', '$[0]')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "mysql", "sql": "SELECT JSON_EXTRACT(a, '$.k') FROM t", "want": "SELECT a ->> '$.k' FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "mysql", "sql": "SELECT LENGTH('\u00e9')", "want": "SELECT CHAR_LENGTH('\u00e9')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "mysql", "sql": "SELECT x'CC'", "want": "SELECT x'CC'", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "mysql", "sql": "UNICODE(x)", "want": "ORD(CONVERT(x USING utf32))", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "mysql", "sql": "a % b", "want": "a % b", "pretty": false, "identify": false}
@@ -9752,9 +9895,12 @@
 {"read": "sqlite", "write": "postgres", "sql": "SELECT CONCAT_WS(',', a, b) FROM t", "want": "SELECT CONCAT_WS(',', a, b) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "postgres", "sql": "SELECT FALSE IS DISTINCT FROM NULL = NULL", "want": "SELECT (FALSE IS DISTINCT FROM NULL) = NULL", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "postgres", "sql": "SELECT FALSE IS DISTINCT FROM TRUE IS DISTINCT FROM FALSE", "want": "SELECT (FALSE IS DISTINCT FROM TRUE) IS DISTINCT FROM FALSE", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "postgres", "sql": "SELECT IF(a, b, c, d)", "want": "SELECT CASE WHEN a THEN b WHEN c THEN d END", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "postgres", "sql": "SELECT IIF(a, b, c, d)", "want": "SELECT CASE WHEN a THEN b WHEN c THEN d END", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "postgres", "sql": "SELECT JSON_EXTRACT(a, '$.k') FROM t", "want": "SELECT JSON_EXTRACT_PATH_TEXT(a, 'k') FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "postgres", "sql": "SELECT JSON_GROUP_ARRAY(name) FROM t", "want": "SELECT JSON_AGG(name) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "postgres", "sql": "SELECT JSON_GROUP_OBJECT(name, value) FROM t", "want": "SELECT JSON_OBJECT_AGG(name, value) FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "postgres", "sql": "SELECT x FROM t LIMIT -1 OFFSET 5", "want": "SELECT x FROM t LIMIT ALL OFFSET 5", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "postgres", "sql": "UNICODE(x)", "want": "ASCII(x)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "redshift", "sql": "UNICODE(x)", "want": "ASCII(x)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "snowflake", "sql": "MIN(x)", "want": "MIN(x)", "pretty": false, "identify": false}
@@ -9814,6 +9960,7 @@
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT CONCAT_WS(',', a, b) FROM t", "want": "SELECT CONCAT_WS(',', a, b) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT DATE('2020-01-31', '+1 month')", "want": "SELECT DATE('2020-01-31', '+1 month')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT DATE('2020-03-15', 'start of month', '+1 day')", "want": "SELECT DATE('2020-03-15', 'start of month', '+1 day')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT DATE('nOw'), STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')", "want": "SELECT DATE('now'), STRFTIME('%Y-%m-%d %H:%M:%f', 'now')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT DATE_ADD(d, '1'') ; SELECT 1; --')", "want": "SELECT DATE(d, '1'') ; SELECT 1; --')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT DATE_SUB(d, '1'') ; SELECT 1; --')", "want": "SELECT DATE(d, '-1'') ; SELECT 1; --')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT FALSE IS DISTINCT FROM NULL = NULL", "want": "SELECT (FALSE IS NOT NULL) = NULL", "pretty": false, "identify": false}
@@ -9824,17 +9971,42 @@
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT GROUP_CONCAT(x, CAST(NULL AS TEXT)) FROM t", "want": "SELECT GROUP_CONCAT(x, CAST(NULL AS TEXT)) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT GROUP_CONCAT(x, NULL ORDER BY y) FILTER(WHERE z > 0) FROM t", "want": "SELECT GROUP_CONCAT(x, NULL ORDER BY y) FILTER(WHERE z > 0) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT GROUP_CONCAT(x, NULL) FROM t", "want": "SELECT GROUP_CONCAT(x, NULL) FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT IF(a, b, c, d)", "want": "SELECT CASE WHEN a THEN b WHEN c THEN d END", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT IF(a, b, c, d, e)", "want": "SELECT CASE WHEN a THEN b WHEN c THEN d ELSE e END", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT IIF(a, b, c, d)", "want": "SELECT CASE WHEN a THEN b WHEN c THEN d END", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT IIF(a, b, c, d, e)", "want": "SELECT CASE WHEN a THEN b WHEN c THEN d ELSE e END", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[1]')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[2]', '$[0]', '$[1]')", "want": "SELECT JSON_EXTRACT('[10, 20, [30, 40]]', '$[2]', '$[0]', '$[1]')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT JSON_GROUP_ARRAY(name) FROM t", "want": "SELECT JSON_GROUP_ARRAY(name) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT JSON_GROUP_OBJECT(name, value) FROM t", "want": "SELECT JSON_GROUP_OBJECT(name, value) FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH('')", "want": "SELECT LENGTH('')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH('a' || CHAR(0) || 'b')", "want": "SELECT LENGTH('a' || CHAR(0) || 'b')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH('ab' || CHAR(0))", "want": "SELECT LENGTH('ab' || CHAR(0))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH('abc')", "want": "SELECT LENGTH('abc')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH('\u00e9\ud83d\ude0a' || CHAR(0) || 'x')", "want": "SELECT LENGTH('\u00e9\ud83d\ude0a' || CHAR(0) || 'x')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH(123)", "want": "SELECT LENGTH(123)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH(CHAR(0) || 'ab')", "want": "SELECT LENGTH(CHAR(0) || 'ab')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH(CHAR(0))", "want": "SELECT LENGTH(CHAR(0))", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH(NULL)", "want": "SELECT LENGTH(NULL)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH(x'')", "want": "SELECT LENGTH(x'')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT LENGTH(x'610062')", "want": "SELECT LENGTH(x'610062')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT LIKE('%y%', 'xyz', '')", "want": "SELECT 'xyz' LIKE '%y%' ESCAPE ''", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT LIKE(y, x)", "want": "SELECT x LIKE y", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT MAX(a, b) FROM t", "want": "SELECT MAX(a, b) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT MIN(a, b) FROM t", "want": "SELECT MIN(a, b) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT RANDOM()", "want": "SELECT RANDOM()", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%%%%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME('%%%%f', '2024-02-29 12:34:56.123')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%%%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME('%%%f', '2024-02-29 12:34:56.123')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME('%%f', '2024-02-29 12:34:56.123')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%S.%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME('%S.%f', '2024-02-29 12:34:56.123')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%Y-%m-%d %H:%M:%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME('%Y-%m-%d %H:%M:%f', '2024-02-29 12:34:56.123')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%Y-%m-%d', '2020-01-01 12:05:03')", "want": "SELECT STRFTIME('%Y-%m-%d', '2020-01-01 12:05:03')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%Y-%m-%d', CURRENT_TIMESTAMP)", "want": "SELECT STRFTIME('%Y-%m-%d', CURRENT_TIMESTAMP)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%f')", "want": "SELECT STRFTIME('%f', 'now')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%f', '2024-02-29 12:34:00.007')", "want": "SELECT STRFTIME('%f', '2024-02-29 12:34:00.007')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%f', '2024-02-29 12:34:56')", "want": "SELECT STRFTIME('%f', '2024-02-29 12:34:56')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%f', NULL)", "want": "SELECT STRFTIME('%f', NULL)", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT STRFTIME('%f|%%f|%f', '2024-02-29 12:34:56.123')", "want": "SELECT STRFTIME('%f|%%f|%f', '2024-02-29 12:34:56.123')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT STRING_AGG(x, NULL) FROM t", "want": "SELECT GROUP_CONCAT(x, NULL) FROM t", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT UNICODE('')", "want": "SELECT UNICODE('')", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT UNICODE('A')", "want": "SELECT UNICODE('A')", "pretty": false, "identify": false}
@@ -9843,7 +10015,11 @@
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT UNICODE(LOWER(''))", "want": "SELECT UNICODE(LOWER(''))", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT UNICODE(NULL)", "want": "SELECT UNICODE(NULL)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "want": "SELECT fname, lname, age FROM person ORDER BY age DESC NULLS FIRST, fname ASC NULLS LAST, lname", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT x FROM t LIMIT -1", "want": "SELECT x FROM t", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT x FROM t LIMIT -1 OFFSET 5", "want": "SELECT x FROM t LIMIT -1 OFFSET 5", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "SELECT x FROM t LIMIT 5, -2", "want": "SELECT x FROM t LIMIT -1 OFFSET 5", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "sqlite", "sql": "SELECT x'CC'", "want": "SELECT x'CC'", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "sqlite", "sql": "update or ignore t set b = 'x'", "want": "UPDATE OR IGNORE t SET b = 'x'", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "teradata", "sql": "SELECT DATE_SUB('2023-01-01', -5, YEAR)", "want": "SELECT '2023-01-01' + INTERVAL '5' YEAR", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "teradata", "sql": "SELECT DATE_SUB('2023-01-01', 5, YEAR)", "want": "SELECT '2023-01-01' - INTERVAL '5' YEAR", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "trino", "sql": "SELECT CHAR(72, 105, x)", "want": "SELECT CHR(72) || CHR(105) || CHR(x)", "pretty": false, "identify": false}
@@ -9853,6 +10029,7 @@
 {"read": "sqlite", "write": "tsql", "sql": "SELECT CHAR(72, 105, x)", "want": "SELECT CHAR(72) + CHAR(105) + CHAR(x)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "tsql", "sql": "SELECT GROUP_CONCAT(x, ',' ORDER BY y)", "want": "SELECT STRING_AGG(x, ',') WITHIN GROUP (ORDER BY y)", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "tsql", "sql": "SELECT IIF(cond, 'True', 'False')", "want": "SELECT IIF(cond <> 0, 'True', 'False')", "pretty": false, "identify": false}
+{"read": "sqlite", "write": "tsql", "sql": "SELECT x FROM t LIMIT -1 OFFSET 5", "want": "SELECT x FROM t ORDER BY (SELECT NULL) OFFSET 5 ROWS", "pretty": false, "identify": false}
 {"read": "sqlite", "write": "tsql", "sql": "x ->> '$.a'", "want": "ISNULL(JSON_QUERY(x, '$.a'), JSON_VALUE(x, '$.a'))", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "", "sql": "ARRAY_INTERSECT(x, y)", "want": "ARRAY_INTERSECT(x, y)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "", "sql": "DATE_TRUNC('day', x)", "want": "TIMESTAMP_TRUNC(x, DAY)", "pretty": false, "identify": false}
@@ -9873,6 +10050,7 @@
 {"read": "starrocks", "write": "", "sql": "x -> '$.y[0].z'", "want": "JSON_EXTRACT(x, '$.y[0].z')", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "bigquery", "sql": "DATEDIFF(CAST('2010-07-07' AS DATE), CAST('2008-12-25' AS DATE))", "want": "DATE_DIFF(CAST('2010-07-07' AS DATE), CAST('2008-12-25' AS DATE), DAY)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "bigquery", "sql": "REGEXP('foo', '.*')", "want": "REGEXP_CONTAINS('foo', '.*')", "pretty": false, "identify": false}
+{"read": "starrocks", "write": "clickhouse", "sql": "ARRAY_REMOVE([[1], [2]], NULL)", "want": "arrayFilter(_u -> NOT has([NULL], _u), [[1], [2]])", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "databricks", "sql": "SELECT id, t.type, t.scores FROM example_table, unnest(split(type, \";\"), scores) AS t(type,scores)", "want": "SELECT id, t.type, t.scores FROM example_table, LATERAL INLINE(ARRAYS_ZIP(SPLIT(type, CONCAT('\\\\Q', ';', '\\\\E')), scores)) AS t(type, scores)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "duckdb", "sql": "CREATE TABLE foo (col1 BIGINT, col2 BIGINT) ROLLUP (r1(col1, col2), r2(col1))", "want": "CREATE TABLE foo (col1 BIGINT, col2 BIGINT)", "pretty": false, "identify": false}
 {"read": "starrocks", "write": "duckdb", "sql": "SELECT DATEDIFF(CAST('2026-03-11 01:00:00' AS DATETIME), CAST('2026-03-10 23:00:00' AS DATETIME))", "want": "SELECT DATE_DIFF('DAY', CAST('2026-03-10 23:00:00' AS TIMESTAMP), CAST('2026-03-11 01:00:00' AS TIMESTAMP))", "pretty": false, "identify": false}
@@ -9960,7 +10138,9 @@
 {"read": "teradata", "write": "databricks", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
 {"read": "teradata", "write": "databricks", "sql": "DATABASE tduser", "want": "USE tduser", "pretty": false, "identify": false}
 {"read": "teradata", "write": "databricks", "sql": "SELECT CURDATE()", "want": "SELECT CURRENT_DATE", "pretty": false, "identify": false}
+{"read": "teradata", "write": "databricks", "sql": "SELECT amount (BIGINT) AS converted FROM events", "want": "SELECT CAST(amount AS BIGINT) AS converted FROM events", "pretty": false, "identify": false}
 {"read": "teradata", "write": "databricks", "sql": "SELECT curdate()", "want": "SELECT CURRENT_DATE", "pretty": false, "identify": false}
+{"read": "teradata", "write": "databricks", "sql": "SUM(amount) (DECIMAL(12, 2)) (BIGINT)", "want": "CAST(CAST(SUM(amount) AS DECIMAL(12, 2)) AS BIGINT)", "pretty": false, "identify": false}
 {"read": "teradata", "write": "duckdb", "sql": "CREATE VOLATILE TABLE a", "want": "CREATE TABLE a", "pretty": false, "identify": false}
 {"read": "teradata", "write": "duckdb", "sql": "LOCKING ROW FOR ACCESS SELECT * FROM t", "want": "SELECT * FROM t", "pretty": false, "identify": false}
 {"read": "teradata", "write": "duckdb", "sql": "RANDOM(l, u)", "want": "CAST((((CAST(FLOOR(RANDOM() * 4294967296) AS INT128) * 4294967296) + CAST(FLOOR(RANDOM() * 4294967296) AS INT128)) % ((CAST(u AS INT128) - CAST(l AS INT128)) + 1)) + CAST(l AS INT128) AS BIGINT)", "pretty": false, "identify": false}
@@ -10059,8 +10239,10 @@
 {"read": "teradata", "write": "teradata", "sql": "SELECT CURDATE()", "want": "SELECT CURRENT_DATE", "pretty": false, "identify": false}
 {"read": "teradata", "write": "teradata", "sql": "SELECT SUM(x) OVER (PARTITION BY p ORDER BY d) FROM t", "want": "SELECT SUM(x) OVER (PARTITION BY p ORDER BY d) FROM t", "pretty": false, "identify": false}
 {"read": "teradata", "write": "teradata", "sql": "SELECT SUM(x) OVER (PARTITION BY p) FROM t", "want": "SELECT SUM(x) OVER (PARTITION BY p) FROM t", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "SELECT amount (BIGINT) AS converted FROM events", "want": "SELECT CAST(amount AS BIGINT) AS converted FROM events", "pretty": false, "identify": false}
 {"read": "teradata", "write": "teradata", "sql": "SELECT curdate()", "want": "SELECT CURRENT_DATE", "pretty": false, "identify": false}
 {"read": "teradata", "write": "teradata", "sql": "SELECT x (NAMED result) FROM t", "want": "SELECT x AS result FROM t", "pretty": false, "identify": false}
+{"read": "teradata", "write": "teradata", "sql": "SUM(amount) (DECIMAL(12, 2)) (BIGINT)", "want": "CAST(CAST(SUM(amount) AS DECIMAL(12, 2)) AS BIGINT)", "pretty": false, "identify": false}
 {"read": "teradata", "write": "teradata", "sql": "TRUNC(3.14159, 2)", "want": "TRUNC(3.14159, 2)", "pretty": false, "identify": false}
 {"read": "teradata", "write": "teradata", "sql": "TRUNC(CAST('2024-05-15' AS DATE))", "want": "TRUNC(CAST('2024-05-15' AS DATE), 'DD')", "pretty": false, "identify": false}
 {"read": "teradata", "write": "teradata", "sql": "TRUNC(CAST('2024-05-15' AS DATE), 'CC')", "want": "TRUNC(CAST('2024-05-15' AS DATE), 'CC')", "pretty": false, "identify": false}
@@ -10164,6 +10346,18 @@
 {"read": "trino", "write": "bigquery", "sql": "MONTH(x)", "want": "EXTRACT(MONTH FROM x)", "pretty": false, "identify": false}
 {"read": "trino", "write": "bigquery", "sql": "QUARTER(x)", "want": "EXTRACT(QUARTER FROM x)", "pretty": false, "identify": false}
 {"read": "trino", "write": "bigquery", "sql": "REGEXP_EXTRACT_ALL('a1_a2a3_a4A5a6', 'a[0-9]')", "want": "REGEXP_EXTRACT_ALL('a1_a2a3_a4A5a6', 'a[0-9]')", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('day', 2, NOW())", "want": "SELECT DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('month', 1, CAST(t AS TIMESTAMP WITH TIME ZONE))", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(CAST(t AS TIMESTAMP)), INTERVAL 1 MONTH))", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('month', 1, DATE_ADD('day', -1, NOW()))", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL -1 DAY)), INTERVAL 1 MONTH))", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('month', 1, FROM_UNIXTIME(t))", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(TIMESTAMP_SECONDS(t)), INTERVAL 1 MONTH))", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('month', 12, DATE_ADD('month', -11, DATE_TRUNC('MONTH', (CAST(t AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE 'America/Los_Angeles'))))", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(TIMESTAMP(DATETIME_ADD(DATETIME(TIMESTAMP_TRUNC((TIMESTAMP(DATETIME(CAST(t AS TIMESTAMP), 'America/Los_Angeles'))), MONTH)), INTERVAL -11 MONTH))), INTERVAL 12 MONTH))", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('month', 2, CAST(t AS DATE))", "want": "SELECT DATE_ADD(CAST(t AS DATE), INTERVAL 2 MONTH)", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('month', 2, CAST(t AS TIMESTAMP))", "want": "SELECT DATE_ADD(CAST(t AS DATETIME), INTERVAL 2 MONTH)", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('month', 2, NOW())", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(CURRENT_TIMESTAMP()), INTERVAL 2 MONTH))", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('month', 2, t)", "want": "SELECT DATE_ADD(t, INTERVAL 2 MONTH)", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('quarter', 2, NOW())", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(CURRENT_TIMESTAMP()), INTERVAL 2 QUARTER))", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('week', 2, NOW())", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(CURRENT_TIMESTAMP()), INTERVAL 2 WEEK))", "pretty": false, "identify": false}
+{"read": "trino", "write": "bigquery", "sql": "SELECT DATE_ADD('year', 2, NOW())", "want": "SELECT TIMESTAMP(DATETIME_ADD(DATETIME(CURRENT_TIMESTAMP()), INTERVAL 2 YEAR))", "pretty": false, "identify": false}
 {"read": "trino", "write": "bigquery", "sql": "SELECT FROM_ISO8601_TIMESTAMP_NANOS('2020-05-11T11:15:05.000000000')", "want": "SELECT CAST('2020-05-11T11:15:05.000000000' AS TIMESTAMP)", "pretty": false, "identify": false}
 {"read": "trino", "write": "bigquery", "sql": "SELECT LOWER(TO_HEX(MD5(some_string)))", "want": "SELECT TO_HEX(MD5(some_string))", "pretty": false, "identify": false}
 {"read": "trino", "write": "bigquery", "sql": "SELECT LOWER(x) LIKE LOWER('a\\b^_') ESCAPE '^'", "want": "SELECT LOWER(x) LIKE LOWER('a\\\\\\\\b\\\\_')", "pretty": false, "identify": false}
@@ -10184,6 +10378,7 @@
 {"read": "trino", "write": "bigquery", "sql": "TO_HEX(x)", "want": "UPPER(TO_HEX(x))", "pretty": false, "identify": false}
 {"read": "trino", "write": "bigquery", "sql": "WEEK_OF_YEAR(x)", "want": "EXTRACT(ISOWEEK FROM x)", "pretty": false, "identify": false}
 {"read": "trino", "write": "bigquery", "sql": "YEAR(x)", "want": "EXTRACT(YEAR FROM x)", "pretty": false, "identify": false}
+{"read": "trino", "write": "clickhouse", "sql": "ARRAY_REMOVE(ARRAY[1, 2, NULL, 2], 2)", "want": "arrayFilter(_u -> NOT has([2], _u), [1, 2, NULL, 2])", "pretty": false, "identify": false}
 {"read": "trino", "write": "clickhouse", "sql": "SELECT SHA1(x), SHA256(x), SHA512(x)", "want": "SELECT SHA1(x), SHA256(x), SHA512(x)", "pretty": false, "identify": false}
 {"read": "trino", "write": "clickhouse", "sql": "WITH t(a, b) AS (VALUES (1, 'x'), (2, 'y')) SELECT * FROM t", "want": "WITH t(a, b) AS (SELECT * FROM (VALUES (1, 'x'), (2, 'y')) AS _values) SELECT * FROM t", "pretty": false, "identify": false}
 {"read": "trino", "write": "databricks", "sql": "SELECT \"t\".\"n\" FROM a CROSS JOIN UNNEST(a.arr) WITH ORDINALITY AS \"t\"(\"x\", \"n\")", "want": "SELECT `t`.`n` FROM a CROSS JOIN LATERAL (SELECT * EXCEPT (pos), CAST(pos AS BIGINT) + 1 AS `n` FROM POSEXPLODE(a.arr)) AS `t`(`x`, `n`)", "pretty": false, "identify": false}
@@ -10202,6 +10397,9 @@
 {"read": "trino", "write": "databricks", "sql": "SELECT t.* FROM a LEFT JOIN UNNEST(a.arr) WITH ORDINALITY AS t(x, n) ON TRUE", "want": "SELECT t.* FROM a LEFT JOIN LATERAL (SELECT * EXCEPT (pos), CAST(pos AS BIGINT) + 1 AS n FROM POSEXPLODE(a.arr)) AS t(x, n) ON TRUE", "pretty": false, "identify": false}
 {"read": "trino", "write": "databricks", "sql": "SELECT t.n, COUNT(*) FROM a CROSS JOIN UNNEST(a.arr) WITH ORDINALITY AS t(x, n) JOIN b ON b.id = t.n WHERE t.n = 1 GROUP BY t.n HAVING t.n > 0 ORDER BY t.n", "want": "SELECT t.n, COUNT(*) FROM a CROSS JOIN LATERAL (SELECT * EXCEPT (pos), CAST(pos AS BIGINT) + 1 AS n FROM POSEXPLODE(a.arr)) AS t(x, n) JOIN b ON b.id = t.n WHERE t.n = 1 GROUP BY t.n HAVING t.n > 0 ORDER BY t.n NULLS LAST", "pretty": false, "identify": false}
 {"read": "trino", "write": "dremio", "sql": "SELECT * FROM t FOR VERSION AS OF '123'", "want": "SELECT * FROM t AT SNAPSHOT '123'", "pretty": false, "identify": false}
+{"read": "trino", "write": "duckdb", "sql": "ARRAY_REMOVE(ARRAY[1, 2, NULL, 2], 2)", "want": "LIST_FILTER([1, 2, NULL, 2], LAMBDA _u : _u IS DISTINCT FROM 2)", "pretty": false, "identify": false}
+{"read": "trino", "write": "duckdb", "sql": "ARRAY_REMOVE(ARRAY[1, 2, NULL, 2], NULL)", "want": "CASE WHEN NULL IS NULL THEN NULL ELSE LIST_FILTER([1, 2, NULL, 2], LAMBDA _u : _u IS DISTINCT FROM NULL) END", "pretty": false, "identify": false}
+{"read": "trino", "write": "duckdb", "sql": "ARRAY_REMOVE(the_array, target)", "want": "CASE WHEN target IS NULL THEN NULL ELSE LIST_FILTER(the_array, LAMBDA _u : _u IS DISTINCT FROM target) END", "pretty": false, "identify": false}
 {"read": "trino", "write": "duckdb", "sql": "SELECT FORMAT('%s', 123)", "want": "SELECT FORMAT('{}', 123)", "pretty": false, "identify": false}
 {"read": "trino", "write": "duckdb", "sql": "SELECT FROM_ISO8601_TIMESTAMP_NANOS('2020-05-11T11:15:05.000000000')", "want": "SELECT CAST('2020-05-11T11:15:05.000000000' AS TIMESTAMPTZ)", "pretty": false, "identify": false}
 {"read": "trino", "write": "duckdb", "sql": "SELECT SLICE(ARRAY[10, 20, 30, 40, 50], 3, 3)", "want": "SELECT ARRAY_SLICE([10, 20, 30, 40, 50], 3, 5)", "pretty": false, "identify": false}
@@ -10424,6 +10622,7 @@
 {"read": "tsql", "write": "postgres", "sql": "SELECT * FROM t FOR JSON AUTO", "want": "SELECT * FROM t", "pretty": false, "identify": false}
 {"read": "tsql", "write": "postgres", "sql": "SELECT * FROM t ORDER BY (SELECT NULL) OFFSET 2 ROWS", "want": "SELECT * FROM t ORDER BY (SELECT NULL) NULLS FIRST OFFSET 2", "pretty": false, "identify": false}
 {"read": "tsql", "write": "postgres", "sql": "SELECT DATEADD(QUARTER, -1, GETDATE())", "want": "SELECT CURRENT_TIMESTAMP + INTERVAL '-3 MONTH'", "pretty": false, "identify": false}
+{"read": "tsql", "write": "postgres", "sql": "SELECT DATEFROMPARTS(2024, 1, 31)", "want": "SELECT MAKE_DATE(2024, 1, 31)", "pretty": false, "identify": false}
 {"read": "tsql", "write": "postgres", "sql": "SELECT DATEPART(DAY, CAST('2017-01-02' AS DATE))", "want": "SELECT EXTRACT(DAY FROM CAST('2017-01-02' AS DATE))", "pretty": false, "identify": false}
 {"read": "tsql", "write": "postgres", "sql": "SELECT DATEPART(MONTH, CAST('2017-03-01' AS DATE))", "want": "SELECT EXTRACT(MONTH FROM CAST('2017-03-01' AS DATE))", "pretty": false, "identify": false}
 {"read": "tsql", "write": "postgres", "sql": "SELECT DATEPART(YEAR, CAST('2017-01-01' AS DATE))", "want": "SELECT EXTRACT(YEAR FROM CAST('2017-01-01' AS DATE))", "pretty": false, "identify": false}
