@@ -949,3 +949,47 @@ func hiveSeriesCastTarget(start, end expressions.Expression) expressions.Express
 	}
 	return to
 }
+
+// Hive's constraint and property overrides (generators/hive.py:378-385): a clustered key keeps only
+// its column list, while NOT FOR REPLICATION and ON <filegroup> disappear.
+func init() {
+	registerDialectDispatch("hive", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindClusteredColumnConstraint: func(g *Generator, e expressions.Expression) string {
+			return "(" + g.expressions(exprsOptions{expression: e, key: "this", flat: true}) + ")"
+		},
+		expressions.KindNonClusteredColumnConstraint: func(g *Generator, e expressions.Expression) string {
+			return "(" + g.expressions(exprsOptions{expression: e, key: "this", flat: true}) + ")"
+		},
+		expressions.KindNotForReplicationColumnConstraint: func(*Generator, expressions.Expression) string { return "" },
+		expressions.KindOnProperty:                        func(*Generator, expressions.Expression) string { return "" },
+	})
+}
+
+// hiveConstraintSQL ports Hive's constraint_sql (generators/hive.py:469-475): table properties are
+// dropped from the constraint and its parts are joined by spaces.
+func hiveConstraintSQL(g *Generator, e expressions.Expression) string {
+	for _, prop := range e.FindAll(expressions.KindProperties) {
+		prop.Pop()
+	}
+	this := g.sqlKey(e, "this")
+	exprs := g.expressions(exprsOptions{expression: e, sep: " ", flat: true})
+	return "CONSTRAINT " + this + " " + exprs
+}
+
+// hiveSchemaSQL ports Hive's schema_sql (generators/hive.py:461-467): ascending sort keys drop their
+// explicit ASC before the schema renders.
+func hiveSchemaSQL(g *Generator, e expressions.Expression) string {
+	for _, ordered := range e.FindAll(expressions.KindOrdered) {
+		if desc, ok := ordered.Arg("desc").(bool); ok && !desc {
+			ordered.Set("desc", nil)
+		}
+	}
+	return g.schemaSQL(e)
+}
+
+func init() {
+	registerDialectDispatch("hive", map[expressions.Kind]func(*Generator, expressions.Expression) string{
+		expressions.KindConstraint: hiveConstraintSQL,
+		expressions.KindSchema:     hiveSchemaSQL,
+	})
+}
