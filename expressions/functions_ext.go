@@ -119,6 +119,8 @@ const (
 	KindFromISO8601Date            Kind = kindExtensionBase + iota
 	KindFromISO8601Timestamp       Kind = kindExtensionBase + iota
 	KindFromISO8601TimestampNanos  Kind = kindExtensionBase + iota
+	// PosexplodeOuter is Posexplode with the ExplodeOuter trait (array.py:260).
+	KindPosexplodeOuter Kind = kindExtensionBase + iota
 )
 
 // GENERATED init
@@ -755,6 +757,12 @@ func init() {
 	className[KindPosexplode] = "Posexplode"
 	kindByClassName["Posexplode"] = KindPosexplode
 	FunctionByName["POSEXPLODE"] = genericFunction(KindPosexplode)
+
+	argTypes[KindPosexplodeOuter] = []argSpec{{"this", true}}
+	traitsOf[KindPosexplodeOuter] = TraitCondition | TraitFunc | TraitUDTF | TraitDerivedTable
+	className[KindPosexplodeOuter] = "PosexplodeOuter"
+	kindByClassName["PosexplodeOuter"] = KindPosexplodeOuter
+	FunctionByName["POSEXPLODE_OUTER"] = genericFunction(KindPosexplodeOuter)
 }
 
 func init() {
