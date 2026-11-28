@@ -467,6 +467,13 @@ func (g *Generator) resolveOrderedForNullOrdering(e expressions.Expression) expr
 	if match != nil && match.Kind() == expressions.KindColumn && match.Arg("table") == nil && match.Name() == name {
 		return nil
 	}
+	// A projection that contains this ORDER BY (ARRAY_AGG(v ORDER BY v) AS v) cannot stand in for the
+	// key: rendering it would re-enter this Ordered forever. The bare column is used instead.
+	for ancestor := e.Parent(); ancestor != nil; ancestor = ancestor.Parent() {
+		if ancestor == match {
+			return nil
+		}
+	}
 	return match
 }
 
