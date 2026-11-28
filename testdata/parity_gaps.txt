@@ -695,6 +695,7 @@
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT END(p) FROM t"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT curdate()"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT curtime() AS request_time"}
+{"dialect":"teradata","category":"gen: canonicalization","sql":"SELECT x (NAMED result /* note */) AS a FROM t"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"TRUNC(x, 'YYYY')"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"characters(x)"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"curdate()"}
@@ -702,7 +703,6 @@
 {"dialect":"teradata","category":"gen: canonicalization","sql":"curtime()"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"dayofweek(d)"}
 {"dialect":"teradata","category":"gen: canonicalization","sql":"ts (TIME(6) WITH TIME ZONE)"}
-{"dialect":"teradata","category":"gen: canonicalization","sql":"x (CHAR(3))"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"CAST(-128 AS BYTEINT)"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"CAST(127 AS BYTEINT)"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"CAST(x AS BYTEINT)"}
@@ -714,41 +714,15 @@
 {"dialect":"teradata","category":"gen: cast/type","sql":"INSERT INTO t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"INSERT db.t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"INSERT t (COALESCE(NULL, 3), CAST(NULL AS TIMESTAMP(0)), CAST('cast-row' AS VARCHAR(20)))"}
-{"dialect":"teradata","category":"gen: cast/type","sql":"SELECT amount (BIGINT) AS converted FROM events"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE))"}
 {"dialect":"teradata","category":"gen: cast/type","sql":"TRUNC(CAST('2024-05-15' AS DATE), 'MM')"}
-{"dialect":"teradata","category":"gen: cast/type","sql":"amount (INTEGER)::BIGINT"}
 {"dialect":"teradata","category":"gen: ddl/properties","sql":"CREATE TABLE z (a BYTEINT, b SMALLINT)"}
 {"dialect":"teradata","category":"parse: Expected END after CASE","sql":"SELECT CASE WHEN x = 1 THEN BEGIN(p) ELSE END(p) END AS bound_value FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT (x + 1) (NAMED result) FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT (x + 1) (TITLE 'Heading') FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT BEGIN(t.p) AS bound_value FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT BEGIN(t.p) FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT COALESCE(BEGIN(p), END(p)) FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT COALESCE(x (NAMED inner_result), 0) AS result FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT COALESCE(x, 1) (TITLE 'Heading') FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT END(t.p) AS bound_value FROM t"}
 {"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT END(t.p) FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT UPPER(TITLE(x (TITLE 'Heading'))) FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT amount (NAMED r, DECIMAL(12, 2), TITLE 'Revenue') FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT t.x (TITLE '') AS result FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (FORMAT '999') (NAMED result) (TITLE 'Heading') AS a FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED \"result name\") AS a FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED \"result name\") FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED 'result name') FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED inner_result) + 1 AS result FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result /* note */) AS a FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result) (TITLE 'Heading') (FORMAT '999') AS a FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result) AS a FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result) FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result) a FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (NAMED result, TITLE 'Heading', FORMAT '999') FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (TITLE 'Display heading') FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x (TITLE 'Heading', FORMAT '999') FROM t"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SELECT x FROM t WHERE x (NAMED result) > 1"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"SUM(amount) (DECIMAL(12, 2)) (BIGINT)"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"date_text (FORMAT 'YYYYMMDD', DATE)"}
-{"dialect":"teradata","category":"parse: Expecting )","sql":"t.d (FORMAT 'YYYY-MM-DD') (CHAR(10))"}
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DEL FROM t AS \"ALL\" ALL"}
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DEL FROM t AS d ALL"}
 {"dialect":"teradata","category":"parse: Invalid expression / Unexpected token","sql":"DELETE FROM t AS \"ALL\" ALL"}

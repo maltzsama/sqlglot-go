@@ -25,9 +25,6 @@ func init() {
 			"RANGE_N":   (*Parser).parseTeradataRangeN,
 			"TRANSLATE": (*Parser).parseTeradataTranslate,
 		},
-		// parsers/teradata.py:199-211 _parse_column_ops: a `(FORMAT '<fmt>')` suffix on a
-		// column is a Teradata output-format override, not a function call.
-		ColumnOps: parseTeradataColumnOps,
 	})
 	// parsers/teradata.py:135-140 SET_PARSERS adds QUERY_BAND — the table itself is built
 	// in stmt_set.go's init, after the base SET_PARSERS/SET_TRIE it extends (this file's
@@ -131,15 +128,4 @@ func (p *Parser) parseTeradataQueryBand() exp.Expression {
 		"scope":  scope,
 		"update": update,
 	}), nil, nil)
-}
-
-// parseTeradataColumnOps ports the FORMAT-phrase arm of _parse_column_ops
-// (parsers/teradata.py:199-211).
-func parseTeradataColumnOps(p *Parser, this exp.Expression, _ int) exp.Expression {
-	if p.matchPair(tokens.L_PAREN, tokens.FORMAT, true) {
-		format := p.parseString()
-		p.matchRParen(nil)
-		return p.expression(exp.FormatPhrase(exp.Args{"this": this, "format": format}), nil, nil)
-	}
-	return this
 }

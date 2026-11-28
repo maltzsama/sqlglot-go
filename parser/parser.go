@@ -1078,6 +1078,9 @@ func (p *Parser) parseSelect(opts ...bool) exp.Expression {
 		// but wire the parser shape to match upstream.
 		top := p.parseLimit(nil, true, false)
 		projections := p.parseCsv(p.parseProjection)
+		if p.dialect.Name == "teradata" {
+			projections = p.teradataProjections(projections)
+		}
 		var exclude []exp.Expression
 		if p.dialectFamily("redshift") {
 			projections, exclude = p.redshiftProjectionsExclude(projections)
@@ -1798,6 +1801,16 @@ func (p *Parser) parseTableParts(schema bool, isDBReference bool, wildcard bool,
 }
 
 func (p *Parser) parseTablePart(schema bool) exp.Expression {
+	// parsers/teradata.py:368-374 _parse_table_part: TABLE(<tvf>) is a table function there.
+	if p.dialect.Name == "teradata" && !schema && p.matchPair(tokens.TABLE, tokens.L_PAREN, false) {
+		if function := p.tryParse(p.parseTeradataTableFunction, false); function != nil {
+			return function
+		}
+	}
+	return p.parseTablePartBaseWith(schema)
+}
+
+func (p *Parser) parseTablePartBaseWith(schema bool) exp.Expression {
 	this := p.parseTablePartBase(schema)
 	if overrides, ok := dialectParserOverrides[p.parserOverrideKey()]; ok && overrides.TablePart != nil {
 		return overrides.TablePart(p, schema, this)
@@ -2222,7 +2235,17 @@ func (p *Parser) parseSort(kind exp.Kind, tok tokens.TokenType) exp.Expression {
 // TIMESTAMPTZ set) as a Cast; a type that consumed more than its own keyword (e.g.
 // `DECIMAL(38, 0)`) but isn't followed by a literal is itself the result; otherwise this
 // wasn't a type after all and falls back to a plain column/identifier reference.
+// parseType ports the _parse_type override chain: the base type parse, then the Teradata
+// conversion-attribute loop (parsers/teradata.py:498-527) for the Teradata dialect.
 func (p *Parser) parseType(parseInterval, fallbackToIdentifier bool) exp.Expression {
+	this := p.parseTypeBase(parseInterval, fallbackToIdentifier)
+	if p.dialect.Name == "teradata" {
+		return p.parseTeradataTypeConversions(this, parseInterval, fallbackToIdentifier)
+	}
+	return this
+}
+
+func (p *Parser) parseTypeBase(parseInterval, fallbackToIdentifier bool) exp.Expression {
 	// parsers/mysql.py:545-558 MySQLParser._parse_type: "mysql binary is special and can
 	// work anywhere, even in order by operations; it operates like a no paren func" - a bare
 	// BINARY keyword prefix casts whatever follows, e.g. `ORDER BY BINARY a` ->
@@ -3723,11 +3746,16 @@ func (p *Parser) parseSubquery(this exp.Expression, parseAlias bool) exp.Express
 // parseFunction ports _parse_function (parser.py:7147-7175), including the ODBC `{fn ...}`
 // wrapper.
 func (p *Parser) parseFunction(functions map[string]func([]exp.Expression) exp.Expression, anonymous bool, optionalParens bool, anyToken bool) exp.Expression {
-	// parsers/teradata.py:190-198: a `(FORMAT ...)` suffix is a Teradata output-format
-	// override, so the name is not a function call.
-	if p.dialect.Name == "teradata" && p.next.IsValid() && p.next.TokenType == tokens.L_PAREN &&
-		p.index+2 < len(p.tokens) && p.tokens[p.index+2].TokenType == tokens.FORMAT {
-		return nil
+	// parsers/teradata.py:403-427 _parse_function: a conversion or attribute list after a bare
+	// word is not a function call, except for the no-paren builders resolved here.
+	if p.dialect.Name == "teradata" && optionalParens && p.teradataConversionFollows() {
+		if build, ok := p.teradataNoParenConversion(functions); ok {
+			if build != nil {
+				p.advance()
+				return p.expression(build(), nil, nil)
+			}
+			return nil
+		}
 	}
 	fnSyntax := false
 	if p.curr.TokenType == tokens.L_BRACE && p.next.IsValid() && stringsUpper(p.next.Text) == "FN" {
