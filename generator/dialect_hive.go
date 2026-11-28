@@ -184,6 +184,13 @@ func init() {
 			return "FROM_UNIXTIME(" + g.sqlKey(e, "this") + ")"
 		},
 		expressions.KindArrayFilter: renameFunc("FILTER"),
+		// generators/hive.py:281 Array: preprocess with inherit_struct_field_names.
+		expressions.KindArray: func(g *Generator, e expressions.Expression) string {
+			if truthy(e.Arg("struct_name_inheritance")) {
+				applyStructNameInheritance(e.Expressions())
+			}
+			return g.arraySQL(e)
+		},
 		expressions.KindAnonymous: func(g *Generator, e expressions.Expression) string {
 			name := strings.ToUpper(e.Text("this"))
 			args := e.Expressions()
