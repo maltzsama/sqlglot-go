@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -2879,10 +2880,42 @@ func duckDBRegrValSQL(checkKey, returnKey string) func(*Generator, expressions.E
 // duckDBFormatSQL ports format_sql (generators/duckdb.py:4415-4419): a lone %s placeholder
 // becomes DuckDB's positional {} format.
 func duckDBFormatSQL(g *Generator, e expressions.Expression) string {
-	if strings.EqualFold(e.Text("this"), "%s") && len(e.Expressions()) == 1 {
-		return "FORMAT('{}', " + g.gen(e.Expressions()[0]) + ")"
+	if truthy(e.Arg("is_fmt")) {
+		return g.funcCall("FORMAT", append([]any{e.This()}, anySlice(e.Expressions())...), "(", ")", true)
 	}
-	return g.functionFallbackSQL(e)
+	fmtText := e.Text("this")
+	this := asExpression(e.This())
+	isString := this != nil && this.IsString()
+	if isString && fmtText == "%S" && len(e.Expressions()) == 1 {
+		inner := g.funcCall("FORMAT", []any{expressions.LiteralString("{}"), e.Expressions()[0]}, "(", ")", true)
+		return g.funcCall("UPPER", []any{inner}, "(", ")", true)
+	}
+	if isString && strings.Contains(fmtText, "%s") && !strings.Contains(formatSpecifierPattern.ReplaceAllString(fmtText, ""), "%") {
+		// Brace formatting supports non-string %s arguments, as in PostgreSQL.
+		fmt := strings.ReplaceAll(fmtText, "{", "{{")
+		fmt = strings.ReplaceAll(fmt, "}", "}}")
+		fmt = formatSpecifierPattern.ReplaceAllStringFunc(fmt, func(m string) string {
+			if m == "%%" {
+				return "%"
+			}
+			return "{}"
+		})
+		return g.funcCall("FORMAT", append([]any{expressions.LiteralString(fmt)}, anySlice(e.Expressions())...), "(", ")", true)
+	}
+	return g.funcCall("PRINTF", append([]any{e.This()}, anySlice(e.Expressions())...), "(", ")", true)
+}
+
+// formatSpecifierPattern matches the `%%` and `%s` tokens that generators/duckdb.py:4700-4712
+// (re.sub(r"%%|%s", ...)) treats as literal percent or a brace placeholder.
+var formatSpecifierPattern = regexp.MustCompile(`%%|%s`)
+
+// anySlice converts expressions to the []any form funcCall takes.
+func anySlice(exprs []expressions.Expression) []any {
+	out := make([]any, 0, len(exprs))
+	for _, x := range exprs {
+		out = append(out, x)
+	}
+	return out
 }
 
 // duckDBAnonymousSQL handles the upstream DuckDB TRANSFORMS entries whose node our parser keeps

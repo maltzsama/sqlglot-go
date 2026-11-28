@@ -56,7 +56,6 @@ func TestDuckDBFunctions(t *testing.T) {
 		"SELECT STRPTIME('2020-01-01', '%Y-%m-%d')",
 		"SELECT LIST_SORT(x)",
 		"SELECT ARRAY_REVERSE_SORT(x)",
-		"SELECT LIST_SORT(x, 'DESC')",
 		"SELECT LIST_FILTER(x, LAMBDA _u : _u > 1)",
 		"SELECT LIST_TRANSFORM(x, LAMBDA _u : _u + 1)",
 		"SELECT LIST_DISTINCT(x)",
@@ -84,6 +83,8 @@ func TestDuckDBFunctions(t *testing.T) {
 	} {
 		assertRoundTrip(t, "duckdb", sql, sql)
 	}
+	// v30.35.0: a descending LIST_SORT(x, 'DESC') renders as ARRAY_REVERSE_SORT (generators/duckdb.py:569).
+	assertRoundTrip(t, "duckdb", "SELECT LIST_SORT(x, 'DESC')", "SELECT ARRAY_REVERSE_SORT(x)")
 }
 
 // TestDuckDBTemporalOps verifies the interval binary-op canonicalization.
@@ -250,8 +251,8 @@ func TestDuckDBCanonicalizations(t *testing.T) {
 		// parsers/duckdb.py:106-110 EXPONENT lists both CARET and DSTAR (Teradata takes
 		// only DSTAR), so `^` is exponentiation here, not xor.
 		"SELECT 2 ^ 3":                   "SELECT POWER(2, 3)",
-		"SELECT x ~ y":                   "SELECT REGEXP_FULL_MATCH(x, y)",
-		"SELECT x !~ y":                  "SELECT NOT REGEXP_FULL_MATCH(x, y)",
+		"SELECT x ~ y":                   "SELECT REGEXP_MATCHES(x, y)",
+		"SELECT x !~ y":                  "SELECT NOT REGEXP_MATCHES(x, y)",
 		"SELECT a ^@ b":                  "SELECT STARTS_WITH(a, b)",
 		"SELECT e'Hello world'":          "SELECT e'Hello world'",
 		"SELECT STRING_AGG(x, ', ')":     "SELECT LISTAGG(x, ', ')",

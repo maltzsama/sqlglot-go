@@ -38,6 +38,7 @@ func (p *Parser) parseIntervalSpan(this exp.Expression) exp.Expression {
 	// errors, both matching pinned upstream.
 	isUnit := p.curr.IsValid() && (p.curr.TokenType == tokens.VAR || p.dialect.ValidIntervalUnits[stringsUpper(p.curr.Text)])
 	var unit exp.Expression
+	fractionInString := false
 	if isUnit {
 		unit = p.parseFunction(nil, false, true, false)
 		if unit == nil {
@@ -61,6 +62,9 @@ func (p *Parser) parseIntervalSpan(this exp.Expression) exp.Expression {
 		if len(parts) == 1 {
 			this = exp.LiteralString(parts[0][1])
 			unit = p.expression(exp.Var(exp.Args{"this": stringsUpper(parts[0][2])}), nil, nil)
+			// parser.py:_parse_interval_span: a fraction written inside the string is kept, so
+			// DuckDB can render INTERVAL '1.5 DAY' back as written.
+			fractionInString = strings.Contains(parts[0][1], ".")
 		}
 	}
 
@@ -72,7 +76,11 @@ func (p *Parser) parseIntervalSpan(this exp.Expression) exp.Expression {
 		unit = p.expression(exp.IntervalSpan(exp.Args{"this": unit, "expression": expression}), nil, nil)
 	}
 
-	return p.expression(exp.Interval(exp.Args{"this": this, "unit": unit}), nil, nil)
+	args := exp.Args{"this": this, "unit": unit}
+	if fractionInString {
+		args["fraction_in_string"] = true
+	}
+	return p.expression(exp.Interval(args), nil, nil)
 }
 
 func (p *Parser) parseInterval(requireInterval bool) exp.Expression {

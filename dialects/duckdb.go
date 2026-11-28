@@ -2,6 +2,7 @@ package dialects
 
 import (
 	"maps"
+	"strings"
 
 	exp "github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/tokens"
@@ -201,11 +202,20 @@ func duckDBFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expressio
 		return exp.IgnoreNulls(exp.Args{"this": exp.FromArgList(exp.KindAnyValue, args)})
 	}
 	out["ARRAY_PREPEND"] = duckDBBuildArrayPrepend
-	out["ARRAY_REVERSE_SORT"] = duckDBBuildSortArrayDesc
+	out["ARRAY_REVERSE_SORT"] = duckDBBuildListSort("ARRAY_REVERSE_SORT", true)
 	out["ARRAY_INTERSECT"] = func(args []exp.Expression) exp.Expression {
 		return exp.ArrayIntersect(exp.Args{"expressions": args})
 	}
-	out["ARRAY_SORT"] = exp.FromArgListFunc(exp.KindSortArray)
+	// parsers/duckdb.py:234 LIST_INTERSECT and :186-195 ARRAY_SLICE / LIST_SLICE.
+	out["LIST_INTERSECT"] = out["ARRAY_INTERSECT"]
+	out["ARRAY_SLICE"] = duckDBBuildArraySlice
+	out["LIST_SLICE"] = duckDBBuildArraySlice
+	// parsers/duckdb.py:213 FORMAT is the is_fmt form; :247 PRINTF is the plain Format.
+	out["FORMAT"] = func(args []exp.Expression) exp.Expression {
+		return exp.Format(exp.Args{"this": seqGet(args, 0), "expressions": seqGetRest(args), "is_fmt": true})
+	}
+	out["PRINTF"] = exp.FromArgListFunc(exp.KindFormat)
+	out["ARRAY_SORT"] = duckDBBuildListSort("ARRAY_SORT", false)
 	out["BIT_AND"] = exp.FromArgListFunc(exp.KindBitwiseAndAgg)
 	out["BIT_OR"] = exp.FromArgListFunc(exp.KindBitwiseOrAgg)
 	out["BIT_XOR"] = exp.FromArgListFunc(exp.KindBitwiseXorAgg)
@@ -264,11 +274,12 @@ func duckDBFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expressio
 	out["LIST_MAX"] = exp.FromArgListFunc(exp.KindArrayMax)
 	out["LIST_MIN"] = exp.FromArgListFunc(exp.KindArrayMin)
 	out["LIST_PREPEND"] = duckDBBuildArrayPrepend
-	out["LIST_REVERSE_SORT"] = duckDBBuildSortArrayDesc
-	out["LIST_SORT"] = exp.FromArgListFunc(exp.KindSortArray)
+	out["LIST_REVERSE_SORT"] = duckDBBuildListSort("LIST_REVERSE_SORT", true)
+	out["LIST_SORT"] = duckDBBuildListSort("LIST_SORT", false)
 	out["LIST_TRANSFORM"] = exp.FromArgListFunc(exp.KindTransform)
 	out["LIST_VALUE"] = func(args []exp.Expression) exp.Expression {
-		return exp.Array(exp.Args{"expressions": args})
+		// parsers/duckdb.py:242: value_constructor when the only argument is a query.
+		return exp.Array(exp.Args{"expressions": args, "value_constructor": len(args) == 1 && args[0] != nil && args[0].Is(exp.TraitQuery)})
 	}
 	out["MAKE_DATE"] = exp.FromArgListFunc(exp.KindDateFromParts)
 	out["MAKE_TIME"] = exp.FromArgListFunc(exp.KindTimeFromParts)
@@ -309,9 +320,46 @@ func duckDBFunctions(d *Dialect) map[string]func([]exp.Expression) exp.Expressio
 	return out
 }
 
-// duckDBBuildSortArrayDesc ports _build_sort_array_desc (parsers/duckdb.py:18-19).
-func duckDBBuildSortArrayDesc(args []exp.Expression) exp.Expression {
-	return exp.SortArray(exp.Args{"this": seqGet(args, 0), "asc": exp.Boolean(exp.Args{"this": false})})
+// duckDBBuildListSort ports _build_list_sort (parsers/duckdb.py:_build_list_sort): the order
+// and NULLS arguments are case-insensitive literal strings, NULLs sort last by default, and a
+// call with any other order falls back to a plain function call under the same name.
+func duckDBBuildListSort(name string, desc bool) func([]exp.Expression) exp.Expression {
+	return func(args []exp.Expression) exp.Expression {
+		orders := []exp.Expression{}
+		if desc {
+			orders = append(orders, exp.LiteralString("DESC"))
+		}
+		if len(args) > 1 {
+			orders = append(orders, args[1:]...)
+		}
+		orderName := duckDBListSortOrderName(seqGet(orders, 0), "ASC")
+		nullOrderName := duckDBListSortOrderName(seqGet(orders, 1), "NULLS LAST")
+		valid := (orderName == "ASC" || orderName == "DESC") && (nullOrderName == "NULLS FIRST" || nullOrderName == "NULLS LAST")
+		if !valid {
+			return exp.Anonymous(exp.Args{"this": name, "expressions": args})
+		}
+		var asc exp.Expression
+		if orderName == "DESC" {
+			asc = exp.Boolean(exp.Args{"this": false})
+		}
+		return exp.SortArray(exp.Args{
+			"this":        seqGet(args, 0),
+			"asc":         asc,
+			"nulls_first": exp.Boolean(exp.Args{"this": nullOrderName == "NULLS FIRST"}),
+		})
+	}
+}
+
+// duckDBListSortOrderName ports _list_sort_order_name: the upper-cased string literal, the
+// default when the argument is absent, and "" for a non-literal string.
+func duckDBListSortOrderName(order exp.Expression, def string) string {
+	if order == nil {
+		return def
+	}
+	if order.IsString() {
+		return strings.ToUpper(order.Name())
+	}
+	return ""
 }
 
 // duckDBBuildArrayPrepend ports _build_array_prepend (parsers/duckdb.py:22-23).
@@ -429,4 +477,22 @@ func duckDBReservedKeywords() map[string]bool {
 		out[w] = true
 	}
 	return out
+}
+
+// duckDBBuildArraySlice ports the ARRAY_SLICE / LIST_SLICE builder (parsers/duckdb.py:186-195).
+func duckDBBuildArraySlice(args []exp.Expression) exp.Expression {
+	return exp.ArraySlice(exp.Args{
+		"this":  seqGet(args, 0),
+		"start": seqGet(args, 1),
+		"end":   seqGet(args, 2),
+		"step":  seqGet(args, 3),
+	})
+}
+
+// seqGetRest returns args[1:] or nil (Python's args[1:] on a short list).
+func seqGetRest(args []exp.Expression) []exp.Expression {
+	if len(args) <= 1 {
+		return nil
+	}
+	return args[1:]
 }

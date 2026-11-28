@@ -182,6 +182,7 @@ func init() {
 		expressions.KindLogicalOr:             duckDBLogicalSQL("BOOL_OR"),
 		expressions.KindLogicalAnd:            duckDBLogicalSQL("BOOL_AND"),
 		expressions.KindDateAdd:               duckDBDateDeltaSQL("+"),
+		expressions.KindInterval:              duckDBIntervalSQL,
 		expressions.KindDateSub:               duckDBDateDeltaSQL("-"),
 		expressions.KindDatetimeAdd:           duckDBDateDeltaSQL("+"),
 		expressions.KindDatetimeSub:           duckDBDateDeltaSQL("-"),
@@ -285,7 +286,14 @@ func duckDBArraySQL(g *Generator, e expressions.Expression) string {
 	if truthy(e.Arg("struct_name_inheritance")) {
 		applyStructNameInheritance(exprs)
 	}
-	if len(exprs) > 0 && exprs[0].Find(expressions.TraitQuery) != nil {
+	return inlineArrayUnlessQuery(g, e)
+}
+
+// inlineArrayUnlessQuery ports dialects/dialect.py:1513-1523: a single top-level query
+// renders as ARRAY(query) unless value_constructor marks a bracketed scalar subquery.
+func inlineArrayUnlessQuery(g *Generator, e expressions.Expression) string {
+	exprs := e.Expressions()
+	if len(exprs) == 1 && exprs[0] != nil && exprs[0].Is(expressions.TraitQuery) && !truthy(e.Arg("value_constructor")) {
 		return g.funcCall("ARRAY", []any{exprs[0]}, "(", ")", true)
 	}
 	return g.inlineArraySQL(e)
@@ -934,48 +942,49 @@ func implicitDatetimeCast(arg expressions.Expression) expressions.Expression {
 	})
 }
 
-// duckDBSortArraySQL ports _array_sort_sql (generators/duckdb.py:545-548): a descending sort
-// is ARRAY_REVERSE_SORT, everything else LIST_SORT.
+// duckDBSortArraySQL ports _array_sort_sql (generators/duckdb.py:561-575). array_sort_order
+// (dialects/dialect.py:3092-3100) reads literal asc and nulls_first flags; a non-literal flag
+// leaves the call as LIST_SORT(this) and is reported as unsupported.
 func duckDBSortArraySQL(g *Generator, e expressions.Expression) string {
 	arr := e.This()
-	ascExpr := asExpression(e.Arg("asc"))
-	nullsFirst := asExpression(e.Arg("nulls_first"))
-
-	isBool := func(node expressions.Expression) bool {
-		return node != nil && node.Kind() == expressions.KindBoolean
-	}
-	isTrue := func(node expressions.Expression) bool { return isBool(node) && truthy(node.Arg("this")) }
-
-	if !isBool(ascExpr) && !isBool(nullsFirst) {
-		return g.funcCall("LIST_SORT", []any{arr, ascExpr, nullsFirst}, "(", ")", true)
-	}
-
-	nullsAreFirst := isTrue(nullsFirst)
-	var nullsFirstSQL expressions.Expression
-	if nullsAreFirst {
-		nullsFirstSQL = expressions.LiteralString("NULLS FIRST")
-	}
-
-	if !isBool(ascExpr) {
-		return g.funcCall("LIST_SORT", []any{arr, ascExpr, nullsFirstSQL}, "(", ")", true)
-	}
-
-	descending := ascExpr != nil && !truthy(ascExpr.Arg("this"))
-	if !descending && !nullsAreFirst {
+	asc, nullsFirst, ok := arraySortOrder(e)
+	if !ok {
+		g.unsupported("LIST_SORT only takes literal orders")
 		return g.funcCall("LIST_SORT", []any{arr}, "(", ")", true)
 	}
-	if !nullsAreFirst {
-		return g.funcCall("ARRAY_REVERSE_SORT", []any{arr}, "(", ")", true)
+	if !nullsFirst {
+		name := "LIST_SORT"
+		if !asc {
+			name = "ARRAY_REVERSE_SORT"
+		}
+		return g.funcCall(name, []any{arr}, "(", ")", true)
 	}
-	direction := "ASC"
-	if descending {
-		direction = "DESC"
+	direction := "DESC"
+	if asc {
+		direction = "ASC"
 	}
-	return g.funcCall("LIST_SORT", []any{
-		arr,
-		expressions.LiteralString(direction),
-		expressions.LiteralString("NULLS FIRST"),
-	}, "(", ")", true)
+	return g.funcCall("LIST_SORT", []any{arr, expressions.LiteralString(direction), expressions.LiteralString("NULLS FIRST")}, "(", ")", true)
+}
+
+// arraySortOrder ports array_sort_order (dialects/dialect.py:3092-3100): asc defaults to true,
+// and ok is false when a flag is not a literal boolean.
+func arraySortOrder(e expressions.Expression) (asc bool, nullsFirst bool, ok bool) {
+	ascExpr := asExpression(e.Arg("asc"))
+	if ascExpr == nil {
+		ascExpr = expressions.True_()
+	}
+	if ascExpr.Kind() != expressions.KindBoolean {
+		return false, false, false
+	}
+	asc = truthy(ascExpr.Arg("this"))
+	nf := asExpression(e.Arg("nulls_first"))
+	if nf == nil {
+		return asc, false, true
+	}
+	if nf.Kind() != expressions.KindBoolean {
+		return false, false, false
+	}
+	return asc, truthy(nf.Arg("this")), true
 }
 
 // duckDBTimestampFromPartsSQL renders TimestampFromParts as MAKE_TIMESTAMP.
@@ -1419,8 +1428,26 @@ func duckDBDateDeltaSQL(op string) func(*Generator, expressions.Expression) stri
 		if toType != nil {
 			thisSQL = g.gen(expressions.Cast(expressions.Args{"this": e.This(), "to": toType}))
 		}
-		return thisSQL + " " + op + " " + g.gen(interval)
+		return dateDeltaToBinarySQL(g, e, thisSQL+" "+op+" "+g.gen(interval))
 	}
+}
+
+// dateDeltaToBinarySQL ports date_delta_to_binary_sql (dialects/dialect.py:2456-2464): the
+// binary form is parenthesized when its parent is a binary, unary or AT TIME ZONE expression,
+// except a parent Paren or an Add/Sub that has this node as its left operand.
+func dateDeltaToBinarySQL(g *Generator, e expressions.Expression, binary string) string {
+	parent := e.Parent()
+	if parent == nil {
+		return binary
+	}
+	if !(parent.Is(expressions.TraitBinary) || parent.Is(expressions.TraitUnary) || parent.Kind() == expressions.KindAtTimeZone) {
+		return binary
+	}
+	leftOperand := (parent.Kind() == expressions.KindAdd || parent.Kind() == expressions.KindSub) && parent.This() == e
+	if parent.Kind() == expressions.KindParen || leftOperand {
+		return binary
+	}
+	return "(" + binary + ")"
 }
 
 // duckDBWithinGroupSQL ports withingroup_sql (generators/duckdb.py:3196-3236) for the
@@ -1539,4 +1566,15 @@ func init() {
 		expressions.KindTimeStrToTime:   duckDBTimeStrToTimeSQL,
 		expressions.KindArrayRemove:     duckDBArrayRemoveSQL,
 	})
+}
+
+// duckDBIntervalSQL ports DuckDBGenerator.interval_sql (generators/duckdb.py:3307-3313):
+// DuckDB truncates INTERVAL '1.5' DAY to one day, but keeps the fraction of INTERVAL '1.5 DAY'.
+func duckDBIntervalSQL(g *Generator, e expressions.Expression) string {
+	this := asExpression(e.This())
+	unit := asExpression(e.Arg("unit"))
+	if truthy(e.Arg("fraction_in_string")) && this != nil && unit != nil && unit.Kind() == expressions.KindVar {
+		return "INTERVAL '" + this.Name() + " " + g.sqlKey(e, "unit") + "'"
+	}
+	return g.intervalSQL(e)
 }

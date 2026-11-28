@@ -1443,7 +1443,7 @@ var argTypes = map[Kind][]argSpec{
 	KindFloor:                 {{"this", true}, {"decimals", false}, {"to", false}},
 	KindGroupConcat:           {{"this", true}, {"separator", false}, {"on_overflow", false}, {"within_group", false}},
 	KindUnnest:                {{"expressions", true}, {"alias", false}, {"offset", false}, {"explode_array", false}},
-	KindArray:                 {{"expressions", false}, {"bracket_notation", false}, {"struct_name_inheritance", false}},
+	KindArray:                 {{"expressions", false}, {"bracket_notation", false}, {"struct_name_inheritance", false}, {"value_constructor", false}},
 	KindArrayAppend:           {{"this", true}, {"expression", true}, {"null_propagation", false}},
 	KindArrayConstructCompact: {{"expressions", false}},
 	KindArrayIntersect:        {{"expressions", true}, {"is_multiset", false}},
@@ -1481,7 +1481,7 @@ var argTypes = map[Kind][]argSpec{
 	KindRespectNulls:          defaultArgTypes,
 	KindPivotAny:              {{"this", false}},
 	KindPivotAlias:            {{"this", true}, {"alias", false}},
-	KindInterval:              {{"this", false}, {"unit", false}},
+	KindInterval:              {{"this", false}, {"unit", false}, {"fraction_in_string", false}},
 	KindIntervalSpan:          {{"this", true}, {"expression", true}},
 	KindJSONExtract:           {{"this", true}, {"expression", true}, {"only_json_types", false}, {"expressions", false}, {"variant_extract", false}, {"json_query", false}, {"option", false}, {"quote", false}, {"on_condition", false}, {"requires_json", false}, {"emits", false}},
 	KindJSONExtractScalar:     {{"this", true}, {"expression", true}, {"only_json_types", false}, {"expressions", false}, {"json_type", false}, {"scalar_only", false}, {"json_subtype", false}},
@@ -2158,7 +2158,7 @@ var argTypes = map[Kind][]argSpec{
 	KindGetbit:                 {{"this", true}, {"expression", true}, {"zero_is_msb", false}},
 	KindDateFromUnixDate:       defaultArgTypes,
 	KindReadParquet:            {{"expressions", true}},
-	KindFormat:                 {{"this", true}, {"expressions", false}},
+	KindFormat:                 {{"this", true}, {"expressions", false}, {"is_fmt", false}},
 	KindAcos:                   {{"this", true}},
 	KindAcosh:                  {{"this", true}},
 	KindArrayConcatAgg:         {{"this", true}},
@@ -3841,4 +3841,13 @@ func KindsWithTrait(trait Trait) []Kind {
 		}
 	}
 	return out
+}
+
+// QueryModifierKeys returns the QUERY_MODIFIERS arg keys in upstream order (expressions/core.py:2549).
+func QueryModifierKeys() []string {
+	keys := make([]string, 0, len(queryModifierArgTypes))
+	for _, spec := range queryModifierArgTypes {
+		keys = append(keys, spec.Key)
+	}
+	return keys
 }
