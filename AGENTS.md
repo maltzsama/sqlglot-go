@@ -1,6 +1,6 @@
 # sqlglot-go — agent guide
 
-A Go port of **[tobymao/sqlglot](https://github.com/tobymao/sqlglot) v30.17.0** (a pure-Python SQL
+A Go port of **[tobymao/sqlglot](https://github.com/tobymao/sqlglot) v30.33.0** (a pure-Python SQL
 parser, generator, and optimizer). It ports the **parse → AST → generate** core ~1:1 (tokenizer, AST,
 parser, generator, schema) plus the `qualify` and `scope` optimizer passes that column qualification
 and **lineage** build on, and the rest of the optimizer with its `optimize()` rule pipeline. It is
@@ -12,14 +12,14 @@ the SQL engine only; it has no application-specific code.
 
 ## Source of truth (READ THIS FIRST, always)
 
-- The pinned Python source is fetched to **`.reference/sqlglot-v30.17.0/`** (gitignored — run
+- The pinned Python source is fetched to **`.reference/sqlglot-v30.33.0/`** (gitignored — run
   `scripts/fetch-reference.sh` once). It is the **exact** upstream version being ported
-  (`sqlglot==30.17.0`, git SHA in `.reference/sqlglot-v30.17.0/GIT_SHA.txt`).
+  (`sqlglot==30.33.0`, git SHA in `.reference/sqlglot-v30.33.0/GIT_SHA.txt`).
 - Port from this reference, file by file, **as 1:1 as possible** — same file layout, same
   function/method names (Go-cased), same structure, same comments where they carry intent. When Go
   forces a divergence (static typing, no metaclasses, error/panic instead of exceptions), keep it
   minimal and note *why* in a comment that cites the reference line.
-- **Port the corresponding unit tests too**, 1:1, from `.reference/sqlglot-v30.17.0/tests/`. The
+- **Port the corresponding unit tests too**, 1:1, from `.reference/sqlglot-v30.33.0/tests/`. The
   upstream tests and `tests/fixtures/*.sql` are the correctness oracle — reuse the `.sql` fixtures
   verbatim (they live under each package's `testdata/`), reimplement the loader/assertions in Go.
 
@@ -58,7 +58,7 @@ and all 7609 cases in the per-dialect corpus pass
 (`testdata/dialect_identity.jsonl`; `testdata/parity_gaps.txt` is empty). Cross-dialect
 transpilation is verified the same way
 against upstream's `validate_all` read/write pairs (`testdata/transpile_corpus.jsonl`,
-`TestTranspileCorpus`): 8881/8881 pairs pass (0 open), tracked in `testdata/transpile_gaps.txt`.
+`TestTranspileCorpus`): 9091 of 10818 pairs pass against v30.33.0 (1725 open), tracked in `testdata/transpile_gaps.txt`.
 AST fidelity is enforced too: no statement fakes a round-trip via a raw-text
 `exp.Command` where upstream builds a structured node (`fidelity_test.go` +
 `testdata/fidelity_cases.txt`). Working for base, MySQL, Postgres, Presto, Trino, Hive, Athena, TSQL, ClickHouse, StarRocks, Doris,
@@ -110,7 +110,7 @@ where Python renders `db=`, so apply `s/\bdb=/schema=/` (qualifier only) to any 
 3. Pick a slice, port from `.reference/` 1:1, port its tests, keep `go test ./...` green.
 4. Verify against upstream: port the matching upstream tests, and for parser/generator work do a
    differential check against the pinned Python, e.g.
-   `PYTHONPATH=.reference/sqlglot-v30.17.0 python3 -c "import sqlglot; print(repr(sqlglot.parse_one('…','postgres')))"`
+   `PYTHONPATH=.reference/sqlglot-v30.33.0 python3 -c "import sqlglot; print(repr(sqlglot.parse_one('…','postgres')))"`
    and compare the AST / `.sql()` round-trip to the Go output.
 
 This port was built with a multi-model review pipeline (plan → implement → integrate → adversarial

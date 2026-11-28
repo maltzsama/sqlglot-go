@@ -8,7 +8,7 @@
 
 sqlglot-go is a Go library for tokenizing SQL, parsing it into a mutable AST, generating SQL, and
 transpiling between dialects. It ports those components, schema handling, and the SQL optimizer from
-[tobymao/sqlglot](https://github.com/tobymao/sqlglot) v30.17.0. It requires Go 1.23 or later and uses
+[tobymao/sqlglot](https://github.com/tobymao/sqlglot) v30.33.0. It requires Go 1.23 or later and uses
 only the Go standard library.
 
 ## Getting started
@@ -160,7 +160,7 @@ pair.
 | Trino | `trino` | 115/115 |
 | T-SQL | `tsql` | 613/613 |
 
-The transpile corpus passes **8,881 of 8,881** pairs, with **0** remaining gaps. Of the
+The transpile corpus passes **9,091 of 10,818** pairs against upstream v30.33.0, with **1,725** remaining gaps. Of the
 recorded pairs, 6,760 cross dialects.
 The identity corpus has no outstanding gaps
 ([parity_gaps.txt](./testdata/parity_gaps.txt) is empty); see
@@ -193,9 +193,9 @@ scripts/fetch-reference.sh
 go test -count=1 -run '^Test(Corpus|TranspileCorpus|Fidelity|UpstreamExtensionsTripwire)$' -v .
 ```
 
-For a live comparison, set `PYTHONPATH=.reference/sqlglot-v30.17.0` and invoke Python's
+For a live comparison, set `PYTHONPATH=.reference/sqlglot-v30.33.0` and invoke Python's
 `sqlglot.parse_one(...)`. To re-extract the transpile corpus and refresh its gap ledger, run
-`PYTHONPATH=.reference/sqlglot-v30.17.0 python3 scripts/extract_dialect_corpus.py --transpile-only`
+`PYTHONPATH=.reference/sqlglot-v30.33.0 python3 scripts/extract_dialect_corpus.py --transpile-only`
 and then `SQLGLOT_TRANSPILE_UPDATE=1 go test . -run '^TestTranspileCorpus$' -v`.
 
 ## License and attribution
