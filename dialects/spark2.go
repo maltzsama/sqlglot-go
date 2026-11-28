@@ -16,6 +16,8 @@ func Spark2() *Dialect {
 	// generators/spark2.py:113 CAN_IMPLEMENT_ARRAY_ANY = True (spark inherits it).
 	d.CanImplementArrayAny = true
 	d.Name = "spark2"
+	// IS_PREDICATE_PRECEDENCE as the pinned parser resolves it (parsers/*.py, inherited when unset).
+	d.IsPredicatePrecedence = IsPredicatePrecedenceLow
 	// generators/spark2.py:111 QUERY_HINTS = True (overrides Hive).
 	d.NoQueryHints = false
 	// generators/spark2.py NVL2_SUPPORTED = True.

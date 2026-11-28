@@ -14,6 +14,8 @@ import (
 func SQLite() *Dialect {
 	d := Base()
 	d.Name = "sqlite"
+	// IS_PREDICATE_PRECEDENCE as the pinned parser resolves it (parsers/*.py, inherited when unset).
+	d.IsPredicatePrecedence = IsPredicatePrecedenceEquality
 	// generators/sqlite.py TRANSFORMS: eliminate_distinct_on.
 	d.EliminateDistinctOn = true
 	// generators/sqlite.py TRANSFORMS: eliminate_semi_and_anti_joins.

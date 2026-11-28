@@ -13,6 +13,8 @@ import (
 func Databricks() *Dialect {
 	d := Spark()
 	d.Name = "databricks"
+	// IS_PREDICATE_PRECEDENCE as the pinned parser resolves it (parsers/*.py, inherited when unset).
+	d.IsPredicatePrecedence = IsPredicatePrecedenceLow
 	// dialects/databricks.py:30-31 JSONPathTokenizer: IDENTIFIERS adds the backtick.
 	d.JSONPathBacktickIdentifier = true
 	// generators/databricks.py:21 restores PARSE_JSON.

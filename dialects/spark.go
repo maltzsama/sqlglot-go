@@ -13,6 +13,8 @@ import (
 func Spark() *Dialect {
 	d := Spark2()
 	d.Name = "spark"
+	// IS_PREDICATE_PRECEDENCE as the pinned parser resolves it (parsers/*.py, inherited when unset).
+	d.IsPredicatePrecedence = IsPredicatePrecedenceLow
 	// generators/spark.py:69 PAD_FILL_PATTERN_IS_REQUIRED = False (overrides Hive).
 	d.PadFillPatternIsRequired = false
 	// generators/spark.py:72 SUPPORTS_UNIX_SECONDS = True.
