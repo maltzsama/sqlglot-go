@@ -2070,66 +2070,112 @@ func snowflakeEliminateDotVariantLookup(selectExpr expressions.Expression) {
 	}
 }
 
-// snowflakeTransformGenerateDateArray ports _transform_generate_date_array and
-// _unnest_generate_date_array (generators/snowflake.py:118-199) for a step of one unit.
+// snowflakeTransformGenerateDateArray ports _transform_generate_date_array (generators/snowflake.py:
+// 176-199). A GENERATE_DATE_ARRAY used as a value is first wrapped in an UNNEST subquery, then every
+// UNNEST over a one-unit date range is rewritten to a FLATTEN-based sequence in FROM or JOIN.
 func snowflakeTransformGenerateDateArray(selectExpr expressions.Expression) {
-	for _, series := range selectExpr.FindAll(expressions.KindGenerateDateArray) {
-		unnest := series.Parent()
-		if unnest == nil || unnest.Kind() != expressions.KindUnnest || len(unnest.Expressions()) != 1 {
-			continue
-		}
-		join := unnest.Parent()
-		if join == nil || join.Kind() != expressions.KindJoin {
-			continue
-		}
-		start := asExpression(series.Arg("start"))
-		end := asExpression(series.Arg("end"))
-		step := asExpression(series.Arg("step"))
-		if start == nil || end == nil || step == nil || step.Kind() != expressions.KindInterval || step.Name() != "1" {
-			continue
-		}
-		unit := asExpression(step.Arg("unit"))
-		if unit == nil {
-			continue
-		}
-		alias := asExpression(unnest.Arg("alias"))
-		var valueName expressions.Expression
-		if alias != nil {
-			if cols := listFromValue(alias.Arg("columns")); len(cols) > 0 {
-				valueName = asExpression(cols[0])
-			}
-		}
-		if valueName == nil {
-			valueName = expressions.ToIdentifier("value", false)
-		}
-		dateAdd := expressions.DateAdd(expressions.Args{
-			"this":       expressions.Cast(expressions.Args{"this": start.Copy(), "to": expressions.DTypeDate.IntoExpr(nil)}),
-			"expression": expressions.Cast(expressions.Args{"this": valueName.Copy(), "to": expressions.DTypeInt.IntoExpr(nil)}),
-			"unit":       unit.Copy(),
-		})
-		diff := expressions.DateDiff(expressions.Args{
-			"this":       end.Copy(),
-			"expression": start.Copy(),
-			"unit":       unit.Copy(),
-		})
-		count := expressions.Add(expressions.Args{"this": diff, "expression": expressions.LiteralNumber("1")})
-		unnest.Set("expressions", []expressions.Expression{expressions.GenerateSeries(expressions.Args{
-			"start":            expressions.LiteralNumber("0"),
-			"end":              count,
-			"is_end_exclusive": true,
-		})})
-		replaceName := valueName.Name()
-		for _, column := range selectExpr.FindAll(expressions.KindColumn) {
-			if column == nil || !strings.EqualFold(column.Name(), replaceName) || !snowflakeColumnInSelect(column, selectExpr) {
+	for pass := 0; pass < 8; pass++ {
+		changed := false
+		for _, series := range selectExpr.FindAll(expressions.KindGenerateDateArray) {
+			parent := series.Parent()
+			if parent == nil || parent.Kind() != expressions.KindUnnest {
+				unnest := expressions.Unnest(expressions.Args{"expressions": []expressions.Expression{series.Copy()}})
+				sub := expressions.Subquery(expressions.Args{"this": expressions.Select(expressions.Args{
+					"expressions": []expressions.Expression{expressions.ArrayAgg(expressions.Args{"this": expressions.Star(expressions.Args{})})},
+					"from_":       expressions.From(expressions.Args{"this": unnest}),
+				})})
+				series.Replace(sub)
+				changed = true
 				continue
 			}
-			if column.Parent() == selectExpr {
-				column.Replace(expressions.AliasExpr(dateAdd.Copy(), expressions.ToIdentifier(replaceName, false), false))
-			} else {
-				column.Replace(dateAdd.Copy())
+			if container := parent.Parent(); container != nil && (container.Kind() == expressions.KindFrom || container.Kind() == expressions.KindJoin) && len(parent.Expressions()) == 1 {
+				if snowflakeUnnestGenerateDateArray(selectExpr, parent) {
+					changed = true
+				}
 			}
 		}
-		join.Set("this", expressions.Lateral(expressions.Args{"this": unnest}))
-		join.Set("kind", nil)
+		if !changed {
+			return
+		}
 	}
+}
+
+// snowflakeUnnestGenerateDateArray ports _unnest_generate_date_array (generators/snowflake.py:118-173)
+// for a step of one unit. Returns false when the range does not qualify.
+func snowflakeUnnestGenerateDateArray(selectExpr, unnest expressions.Expression) bool {
+	series := asExpression(unnest.Expressions()[0])
+	if series == nil || series.Kind() != expressions.KindGenerateDateArray {
+		return false
+	}
+	start := asExpression(series.Arg("start"))
+	end := asExpression(series.Arg("end"))
+	step := asExpression(series.Arg("step"))
+	if start == nil || end == nil || step == nil || step.Kind() != expressions.KindInterval || step.Name() != "1" {
+		return false
+	}
+	unit := asExpression(step.Arg("unit"))
+	if unit == nil {
+		return false
+	}
+	alias := asExpression(unnest.Arg("alias"))
+	var valueName expressions.Expression
+	if alias != nil {
+		if cols := listFromValue(alias.Arg("columns")); len(cols) > 0 {
+			valueName = asExpression(cols[0])
+		}
+	}
+	if valueName == nil {
+		valueName = expressions.ToIdentifier("value", false)
+	}
+	dateAdd := expressions.DateAdd(expressions.Args{
+		"this":       castToSameType(start.Copy(), expressions.DataType(expressions.Args{"this": expressions.DTypeDate})),
+		"expression": expressions.Cast(expressions.Args{"this": valueName.Copy(), "to": expressions.DTypeInt.IntoExpr(nil)}),
+		"unit":       unit.Copy(),
+	})
+	diff := expressions.DateDiff(expressions.Args{
+		"this":       end.Copy(),
+		"expression": start.Copy(),
+		"unit":       unit.Copy(),
+	})
+	count := expressions.Add(expressions.Args{"this": diff, "expression": expressions.LiteralNumber("1")})
+	unnest.Set("expressions", []expressions.Expression{expressions.GenerateSeries(expressions.Args{
+		"start":            expressions.LiteralNumber("0"),
+		"end":              count,
+		"is_end_exclusive": true,
+	})})
+	container := unnest.Parent()
+	if container.Kind() == expressions.KindFrom {
+		// No outer scope to rewrite: wrap the FLATTEN sequence in a subquery that adds the date.
+		sub := expressions.Subquery(expressions.Args{
+			"this": expressions.Select(expressions.Args{
+				"expressions": []expressions.Expression{expressions.AliasExpr(dateAdd.Copy(), valueName.Copy(), false)},
+				"from_":       expressions.From(expressions.Args{"this": unnest.Copy()}),
+			}),
+			"alias": aliasCopy(alias),
+		})
+		unnest.Replace(sub)
+		return true
+	}
+	replaceName := valueName.Name()
+	for _, column := range selectExpr.FindAll(expressions.KindColumn) {
+		if column == nil || !strings.EqualFold(column.Name(), replaceName) || !snowflakeColumnInSelect(column, selectExpr) {
+			continue
+		}
+		if column.Parent() == selectExpr {
+			column.Replace(expressions.AliasExpr(dateAdd.Copy(), expressions.ToIdentifier(replaceName, false), false))
+		} else {
+			column.Replace(dateAdd.Copy())
+		}
+	}
+	container.Set("this", expressions.Lateral(expressions.Args{"this": unnest}))
+	container.Set("kind", nil)
+	return true
+}
+
+// aliasCopy copies an optional alias node, keeping nil as nil.
+func aliasCopy(alias expressions.Expression) expressions.Expression {
+	if alias == nil {
+		return nil
+	}
+	return alias.Copy()
 }
