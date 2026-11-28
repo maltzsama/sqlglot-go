@@ -1,6 +1,6 @@
 # sqlglot-go — agent guide
 
-A Go port of **[tobymao/sqlglot](https://github.com/tobymao/sqlglot) v30.33.0** (a pure-Python SQL
+A Go port of **[tobymao/sqlglot](https://github.com/tobymao/sqlglot)**, the upstream library maintained by its authors, which this repo does not release. The port tracks upstream release **v30.33.0** as its parity reference (a pure-Python SQL
 parser, generator, and optimizer). It ports the **parse → AST → generate** core ~1:1 (tokenizer, AST,
 parser, generator, schema) plus the `qualify` and `scope` optimizer passes that column qualification
 and **lineage** build on, and the rest of the optimizer with its `optimize()` rule pipeline. It is

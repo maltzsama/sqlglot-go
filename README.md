@@ -8,7 +8,7 @@
 
 sqlglot-go is a Go library for tokenizing SQL, parsing it into a mutable AST, generating SQL, and
 transpiling between dialects. It ports those components, schema handling, and the SQL optimizer from
-[tobymao/sqlglot](https://github.com/tobymao/sqlglot) v30.33.0. It requires Go 1.23 or later and uses
+[tobymao/sqlglot](https://github.com/tobymao/sqlglot), the upstream library maintained by its authors, tracking release v30.33.0 as its parity reference. It requires Go 1.23 or later and uses
 only the Go standard library.
 
 ## Getting started
