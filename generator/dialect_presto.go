@@ -291,28 +291,86 @@ func (g *Generator) prestoDataTypeSQL(e exp.Expression) string {
 // port infers them for literal values and reports anything else unsupported.
 func (g *Generator) prestoStructSQL(e exp.Expression) string {
 	values := []string{}
-	schema := []string{}
-	unknown := false
 	for _, x := range e.Expressions() {
 		if x.Kind() == exp.KindPropertyEQ {
-			value := asExpression(x.Arg("expression"))
-			if dtype := prestoLiteralType(value); dtype != "" {
-				schema = append(schema, g.sqlKey(x, "this")+" "+dtype)
-			} else {
-				unknown = true
-			}
-			values = append(values, g.gen(value))
+			values = append(values, g.gen(asExpression(x.Arg("expression"))))
 		} else {
 			values = append(values, g.gen(x))
 		}
 	}
-	if len(values) == 0 || len(schema) != len(values) {
-		if unknown {
-			g.unsupported("Cannot convert untyped key-value definitions (try annotate_types).")
-		}
-		return "ROW(" + strings.Join(values, ", ") + ")"
+	if len(values) == 0 {
+		return "ROW()"
 	}
-	return "CAST(ROW(" + strings.Join(values, ", ") + ") AS ROW(" + strings.Join(schema, ", ") + "))"
+	if schema, ok := prestoStructSchema(e); ok {
+		return "CAST(ROW(" + strings.Join(values, ", ") + ") AS ROW(" + schema + "))"
+	}
+	if prestoStructHasUntypedField(e) {
+		g.unsupported("Cannot convert untyped key-value definitions (try annotate_types).")
+	}
+	return "ROW(" + strings.Join(values, ", ") + ")"
+}
+
+// prestoStructSchema builds the ROW field list of a struct whose fields are all typed
+// (literals or nested structs). ok is false when any field is untyped.
+func prestoStructSchema(e exp.Expression) (string, bool) {
+	fields := []string{}
+	for _, x := range e.Expressions() {
+		if x.Kind() != exp.KindPropertyEQ {
+			return "", false
+		}
+		value := asExpression(x.Arg("expression"))
+		if value == nil {
+			return "", false
+		}
+		var dtype string
+		if value.Kind() == exp.KindStruct {
+			inner, ok := prestoStructSchema(value)
+			if !ok {
+				return "", false
+			}
+			dtype = "ROW(" + inner + ")"
+		} else if dtype = prestoLiteralType(value); dtype == "" {
+			return "", false
+		}
+		fields = append(fields, prestoFieldName(x)+" "+dtype)
+	}
+	return strings.Join(fields, ", "), len(fields) > 0
+}
+
+// prestoStructHasUntypedField reports a key-value field whose type cannot be inferred.
+func prestoStructHasUntypedField(e exp.Expression) bool {
+	for _, x := range e.Expressions() {
+		if x.Kind() == exp.KindPropertyEQ {
+			value := asExpression(x.Arg("expression"))
+			if value == nil || (value.Kind() != exp.KindStruct && prestoLiteralType(value) == "") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// prestoFieldName renders a struct key as written (the key identifier's name).
+func prestoFieldName(field exp.Expression) string {
+	if key := asExpression(field.Arg("this")); key != nil {
+		return key.Name()
+	}
+	return ""
+}
+
+// prestoStructWithSchema renders a struct value as CAST(ROW(...) AS ROW(schema)) with a schema
+// taken from a sibling element, as annotate_types gives every element of an array the type of its
+// first element (generators/presto.py:struct_sql).
+func prestoStructWithSchema(g *Generator, e exp.Expression, schema string) string {
+	values := []string{}
+	for _, x := range e.Expressions() {
+		if x.Kind() == exp.KindPropertyEQ {
+			values = append(values, g.gen(asExpression(x.Arg("expression"))))
+		} else {
+			values = append(values, g.gen(x))
+		}
+	}
+	return "CAST(ROW(" + strings.Join(values, ", ") + ") AS ROW(" + schema + "))"
 }
 
 func prestoLiteralType(e exp.Expression) string {

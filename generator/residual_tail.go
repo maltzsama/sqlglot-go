@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/maltzsama/sqlglot-go/expressions"
 	"github.com/maltzsama/sqlglot-go/tokens"
@@ -226,8 +227,22 @@ func (g *Generator) convertConcatArgs(e expressions.Expression) []any {
 // functionFallbackSQL here too, which renders the identical ARRAY(a, b, c) paren form.
 func (g *Generator) arraySQL(e expressions.Expression) string {
 	if g.isDialect("presto") {
-		// generators/presto.py:316-319 (the struct-field-name preprocess has no effect here).
-		return "ARRAY[" + g.expressions(exprsOptions{expression: e, flat: true}) + "]"
+		// generators/presto.py:316-319. Struct elements share the first element's schema, as
+		// annotate_types gives an array's elements one type.
+		elems := e.Expressions()
+		var rendered []string
+		schema, hasSchema := "", false
+		if len(elems) > 0 && elems[0].Kind() == expressions.KindStruct {
+			schema, hasSchema = prestoStructSchema(elems[0])
+		}
+		for i, x := range elems {
+			if hasSchema && i > 0 && x.Kind() == expressions.KindStruct {
+				rendered = append(rendered, prestoStructWithSchema(g, x, schema))
+			} else {
+				rendered = append(rendered, g.gen(x))
+			}
+		}
+		return "ARRAY[" + strings.Join(rendered, ", ") + "]"
 	}
 	if !g.isDialect("postgres") {
 		return g.functionFallbackSQL(e)
