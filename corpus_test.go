@@ -256,7 +256,7 @@ const (
 	minPassSnowflake   = 1590
 	minPassSQLite      = 231
 	minPassDremio      = 46
-	minPassTeradata    = 230
+	minPassTeradata    = 249
 	minPassKsqlDB      = 57
 )
 
