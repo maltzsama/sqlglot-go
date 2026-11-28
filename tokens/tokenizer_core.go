@@ -825,7 +825,7 @@ number:
 		// tokenizer_core.py:1094-1100: an `e` directly followed by `_` is not an exponent in a
 		// dialect whose numbers may be underscore separated (DuckDB), so `1e_5` is `1 AS e_5`.
 		case upperASCII(c.peek) == 'E' && scientific == 0 &&
-			!(c.numbersCanBeUnderscoreSeparated && c.current+1 < c.size && c.input.at(c.current+1) == '_'):
+			(!c.numbersCanBeUnderscoreSeparated || c.current+1 >= c.size || c.input.at(c.current+1) != '_'):
 			scientific++
 			c.advance(1, false)
 		// tokenizer_core.py:1101-1106: an underscore separates two digits only.

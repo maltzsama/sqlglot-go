@@ -1457,7 +1457,7 @@ func dateDeltaToBinarySQL(g *Generator, e expressions.Expression, binary string)
 	if parent == nil {
 		return binary
 	}
-	if !(parent.Is(expressions.TraitBinary) || parent.Is(expressions.TraitUnary) || parent.Kind() == expressions.KindAtTimeZone) {
+	if !parent.Is(expressions.TraitBinary) && !parent.Is(expressions.TraitUnary) && parent.Kind() != expressions.KindAtTimeZone {
 		return binary
 	}
 	leftOperand := (parent.Kind() == expressions.KindAdd || parent.Kind() == expressions.KindSub) && parent.This() == e

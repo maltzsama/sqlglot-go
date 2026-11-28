@@ -50,11 +50,8 @@ func (p *Parser) parseRangeIs(this exp.Expression, parseIs bool) exp.Expression 
 	// v30.17.0 (parser.py:6052-6082): range operators chain in a loop, each NOT bound to
 	// the operator that follows it; a negated link gets parenthesized when another range
 	// operator (or NOT) follows so precedence survives regeneration.
-	for {
+	for parseIs || !p.isPredicateAhead() {
 		// parser.py:6457-6458: stop before a postfix IS predicate unless the caller consumes it.
-		if !parseIs && p.isPredicateAhead() {
-			break
-		}
 		negate := p.match(tokens.NOT)
 		matched := true
 		before := this
